@@ -1,11 +1,13 @@
 using System.Text;
 using System.Text.Json.Serialization;
+using AiPlanner.Api.Filters;
 using AiPlanner.Api.Middleware;
 using AiPlanner.Application;
 using AiPlanner.Infrastructure;
 using AiPlanner.Infrastructure.Identity;
 using AiPlanner.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 
@@ -17,15 +19,21 @@ builder.AddServiceDefaults();
 // ---- Services -------------------------------------------------------------
 
 builder.Services
-    .AddControllers()
+    .AddControllers(o => o.Filters.Add<ValidationFilter>())
     .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
-// Aspire's SQL Server EF Core component: resolves the connection string for the
-// "aiplannerdb" resource (injected by AiPlanner.AppHost when run through Aspire,
-// or read from ConnectionStrings:aiplannerdb in appsettings.json when run
-// directly), and adds retry-on-failure, health checks, and OTel instrumentation
-// automatically.
-builder.AddSqlServerDbContext<ApplicationDbContext>("aiplannerdb");
+// The "aiplannerdb" connection string is injected by AiPlanner.AppHost when run
+// through Aspire, or read from ConnectionStrings:aiplannerdb in appsettings.json
+// when run directly.
+//
+// Registered with plain AddDbContext (not Aspire's AddSqlServerDbContext, which
+// pools contexts): ApplicationDbContext depends on the scoped ICurrentUserService,
+// and a pooled context would be created from the root provider and could carry
+// one request's user into another. EnrichSqlServerDbContext then layers on
+// Aspire's retry-on-failure, health checks, and OTel instrumentation.
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("aiplannerdb")));
+builder.EnrichSqlServerDbContext<ApplicationDbContext>();
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);

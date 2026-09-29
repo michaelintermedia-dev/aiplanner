@@ -58,6 +58,15 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         base.OnModelCreating(modelBuilder);
     }
 
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        // Every DateTime in this model is UTC, but SQL Server's datetime2 doesn't
+        // store a Kind, so values would come back as Unspecified and serialize
+        // without the trailing "Z" - clients would then read them as local time.
+        configurationBuilder.Properties<DateTime>().HaveConversion<UtcDateTimeConverter>();
+        configurationBuilder.Properties<DateTime?>().HaveConversion<UtcDateTimeConverter>();
+    }
+
     private static void SetSoftDeleteFilter<TEntity>(ModelBuilder modelBuilder) where TEntity : BaseEntity
     {
         modelBuilder.Entity<TEntity>().HasQueryFilter(e => !e.IsDeleted);

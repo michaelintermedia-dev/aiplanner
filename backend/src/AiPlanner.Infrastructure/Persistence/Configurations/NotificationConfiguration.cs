@@ -1,4 +1,4 @@
-using AiPlanner.Domain.Entities;
+﻿using AiPlanner.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -15,8 +15,8 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
         builder.Property(n => n.RowVersion).IsRowVersion();
         builder.HasIndex(n => new { n.UserId, n.Status, n.ScheduledForUtc });
 
-        builder.HasOne(n => n.Reminder).WithMany().HasForeignKey(n => n.ReminderId).OnDelete(DeleteBehavior.SetNull);
-        builder.HasOne(n => n.TaskItem).WithMany().HasForeignKey(n => n.TaskItemId).OnDelete(DeleteBehavior.SetNull);
-        builder.HasOne(n => n.Appointment).WithMany().HasForeignKey(n => n.AppointmentId).OnDelete(DeleteBehavior.SetNull);
+        builder.HasOne(n => n.Reminder).WithMany().HasForeignKey(n => n.ReminderId).OnDelete(DeleteBehavior.ClientSetNull);
+        builder.HasOne(n => n.TaskItem).WithMany().HasForeignKey(n => n.TaskItemId).OnDelete(DeleteBehavior.ClientSetNull);
+        builder.HasOne(n => n.Appointment).WithMany().HasForeignKey(n => n.AppointmentId).OnDelete(DeleteBehavior.ClientSetNull);
     }
 }

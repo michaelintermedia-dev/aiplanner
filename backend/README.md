@@ -1,4 +1,4 @@
-# AI Planner - Backend (Phase 1 + Phase 2)
+﻿# AI Planner - Backend (Phase 1 + Phase 2)
 
 .NET backend for the AI-powered calendar/task/voice-planning platform.
 
@@ -11,11 +11,11 @@ pushes them to a device yet), and no mobile/web client code yet.
 
 ## Stack
 
-- .NET 8 / ASP.NET Core Web API
-- **.NET Aspire** for local dev orchestration (auto-starts SQL Server in a
+- .NET 10 / ASP.NET Core Web API
+- **Aspire 13** for local dev orchestration (auto-starts SQL Server in a
   container, wires the connection string, gives a dashboard with logs/traces/
   health for every resource)
-- Entity Framework Core 8 (Code First) targeting **SQL Server Express**
+- Entity Framework Core 10 (Code First) targeting **SQL Server Express**
 - JWT bearer access tokens + rotating refresh tokens
 - BCrypt password hashing
 - Swagger / OpenAPI
@@ -43,16 +43,14 @@ backend/
 ```
 
 Dependencies only point inward: Api -> Infrastructure/Application -> Domain.
-Application never references Infrastructure or EF Core directly.
+Application never references Infrastructure (it uses base EF Core types like `DbSet`, but never a database provider).
 
 ## Prerequisites
 
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - **Docker Desktop (or Podman) running** - Aspire uses it to start the SQL
   Server container for you
 - `dotnet-ef` tool: `dotnet tool install --global dotnet-ef`
-- (One-time) `dotnet workload update` then `dotnet workload install aspire`
-  if you haven't used Aspire on this machine before
 
 ## Run it
 

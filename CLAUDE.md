@@ -19,14 +19,19 @@ here in full, only the decisions and constraints that shape implementation.
 
 ## Mandatory stack — do not substitute without explicit user request
 
-- **Backend**: .NET 8 / ASP.NET Core, C#, EF Core (Code First), REST API,
+- **Backend**: .NET 10 / ASP.NET Core, C#, EF Core 10 (Code First), REST API,
   clean/layered architecture (Domain / Application / Infrastructure / Api)
 - **Database**: Microsoft SQL Server Express (schema must stay compatible
   with scaling to a larger SQL Server edition later)
 - **Mobile**: React Native, shared codebase for iOS + Android (not yet built)
 - **Web**: React (not yet built)
 - **AI provider**: OpenAI (user has their own API key, to be wired in Phase 3)
-- **Local dev orchestration**: .NET Aspire (NOT docker-compose — see below)
+- **Local dev orchestration**: Aspire 13 (NOT docker-compose — see below)
+
+Migrated from .NET 8 to .NET 10 at the user's request (2026-09-30). Aspire
+13 ships as an MSBuild SDK (`Aspire.AppHost.Sdk/13.x`) — no workload needed.
+FluentValidation is held at 11.x and FluentAssertions at 6.x on purpose
+(FA 8+ is commercially licensed) — don't bump those majors without asking.
 
 ## Repo layout
 
@@ -53,10 +58,13 @@ web/       # not started
 ```
 
 Dependency rule: Api → Infrastructure/Application → Domain. Application
-never references Infrastructure or EF Core directly — everything goes
-through interfaces in `Application/Common/Interfaces` (`IApplicationDbContext`,
+never references Infrastructure — everything goes through interfaces in
+`Application/Common/Interfaces` (`IApplicationDbContext`,
 `ICurrentUserService`, `IDateTime`, `IPasswordHasher`, `ITokenService`),
-which Infrastructure implements.
+which Infrastructure implements. Application *does* reference the base
+`Microsoft.EntityFrameworkCore` package (for `DbSet<T>` and LINQ async
+operators like `ToListAsync`), but never a provider package
+(`.SqlServer`) — the database provider stays in Infrastructure.
 
 ## How to run it locally
 
@@ -74,7 +82,6 @@ deliberately removed in favor of this.
 First-time setup:
 ```bash
 dotnet tool install --global dotnet-ef
-dotnet workload update && dotnet workload install aspire   # if not already installed
 cd src/AiPlanner.Api
 dotnet user-secrets init
 dotnet user-secrets set "Jwt:Secret" "$(openssl rand -base64 48)"
@@ -87,9 +94,11 @@ dotnet ef migrations add InitialCreate --project src/AiPlanner.Infrastructure --
 dotnet ef database update --project src/AiPlanner.Infrastructure --startup-project src/AiPlanner.Api --connection "<from Aspire dashboard's 'sql' resource>"
 ```
 
-**This backend has never been `dotnet build`'d** — it was written in a
-sandbox with no .NET SDK, carefully by hand but unverified. Treat the first
-build as a real step, not a formality — fix whatever it surfaces.
+The backend was originally written without a compiler. It was first built
+and its unit tests passed on 2026-09-30, after the .NET 10 migration and fixes
+for missing package/framework references. It has **not yet been run
+end-to-end** (no migration created, no API calls exercised against a real
+database) — treat that as the next verification step.
 
 ## Status by phase (spec section 42)
 
@@ -175,6 +184,5 @@ build as a real step, not a formality — fix whatever it surfaces.
   Application-layer interface implemented in Infrastructure.
 - Don't skip the explicit complete/cancel/reopen actions in favor of letting
   `PUT` change status — this was a deliberate safety decision.
-- Don't assume the backend currently builds — verify with `dotnet build`
-  before assuming any given file is correct; it was written without a
-  compiler available and has not been checked end-to-end.
+- Don't assume runtime behavior is correct just because it compiles — the
+  services have not yet been exercised against a real database.

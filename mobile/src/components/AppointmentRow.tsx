@@ -1,5 +1,6 @@
 import { formatTime } from '@shared/dates'
 import type { Appointment } from '@shared/types'
+import { router } from 'expo-router'
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native'
 import { appointmentsApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
@@ -27,7 +28,13 @@ export function AppointmentRow({ appointment: a, last }: { appointment: Appointm
         <Text style={[styles.start, { color: c.text }]}>{formatTime(a.startUtc, zone)}</Text>
         <Text style={[styles.end, { color: c.muted }]}>{formatTime(a.endUtc, zone)}</Text>
       </View>
-      <Pressable style={styles.main} onLongPress={done ? undefined : showActions} delayLongPress={350}>
+      <Pressable
+        style={styles.main}
+        onPress={() => router.push({ pathname: '/appointment/[id]', params: { id: a.id } })}
+        onLongPress={done ? undefined : showActions}
+        delayLongPress={350}
+        accessibilityRole="button"
+        accessibilityHint="Opens the appointment. Long-press for quick actions.">
         <Text style={[styles.title, { color: done ? c.muted : c.text }, done && styles.struck]}>{a.title}</Text>
         <View style={styles.meta}>
           {a.location && <Text style={[styles.metaText, { color: c.muted }]}>{a.location}</Text>}

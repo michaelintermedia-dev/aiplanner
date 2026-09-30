@@ -1,5 +1,6 @@
 import { dateKey, formatDue, todayKey } from '@shared/dates'
 import type { Task } from '@shared/types'
+import { router } from 'expo-router'
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native'
 import { tasksApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
@@ -43,7 +44,13 @@ export function TaskRow({ task, last }: { task: Task; last?: boolean }) {
         ]}>
         {task.status === 'Completed' && <Text style={[styles.tick, { color: c.surface }]}>✓</Text>}
       </Pressable>
-      <Pressable style={styles.main} onLongPress={showActions} delayLongPress={350}>
+      <Pressable
+        style={styles.main}
+        onPress={() => router.push({ pathname: '/task/[id]', params: { id: task.id } })}
+        onLongPress={showActions}
+        delayLongPress={350}
+        accessibilityRole="button"
+        accessibilityHint="Opens the task. Long-press for quick actions.">
         <Text style={[styles.title, { color: done ? c.muted : c.text }, done && styles.struck]}>{task.title}</Text>
         <View style={styles.meta}>
           {task.status === 'Cancelled' && <Badge label="Cancelled" />}

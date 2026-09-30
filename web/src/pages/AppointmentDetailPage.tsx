@@ -6,7 +6,7 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { appointmentsApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { SourceCapture } from '../components/SourceCapture'
-import { reminderChoicesWith, reminderLabel } from '../lib/reminders'
+import { reminderChoicesWith, reminderLabel } from '@shared/reminders'
 import { useAction } from '../lib/useAction'
 
 export function AppointmentDetailPage() {

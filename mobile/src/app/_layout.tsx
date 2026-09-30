@@ -1,10 +1,9 @@
-import Ionicons from '@expo/vector-icons/Ionicons'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { DarkTheme, DefaultTheme, Tabs, ThemeProvider } from 'expo-router'
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
 import { StatusBar } from 'expo-status-bar'
 import { useEffect } from 'react'
-import { Pressable, Text, useColorScheme } from 'react-native'
+import { useColorScheme } from 'react-native'
 import { ApiError } from '@/api/client'
 import { AuthProvider } from '@/auth/AuthProvider'
 import { useAuth } from '@/auth/useAuth'
@@ -37,9 +36,12 @@ export default function RootLayout() {
   )
 }
 
-/** Shows the sign-in screen until there is a user, then the tabs. */
+/**
+ * Shows the sign-in screen until there is a user. Signed in, a stack: the tabs
+ * at the bottom, with item detail screens pushed on top.
+ */
 function Gate() {
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
   const c = useColors()
 
   useEffect(() => {
@@ -50,41 +52,16 @@ function Gate() {
   if (user === null) return <AuthScreen />
 
   return (
-    <Tabs
+    <Stack
       screenOptions={{
-        tabBarActiveTintColor: c.accent,
-        tabBarInactiveTintColor: c.muted,
-        tabBarStyle: { backgroundColor: c.surface, borderTopColor: c.border },
         headerStyle: { backgroundColor: c.surface },
         headerTintColor: c.text,
         headerShadowVisible: false,
-        headerRight: () => (
-          <Pressable onPress={logout} hitSlop={8} style={{ paddingHorizontal: 16 }} accessibilityRole="button">
-            <Text style={{ color: c.muted }}>Sign out</Text>
-          </Pressable>
-        ),
+        contentStyle: { backgroundColor: c.bg },
       }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Today',
-          tabBarIcon: ({ color, size }) => <Ionicons name="sunny-outline" color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="tasks"
-        options={{
-          title: 'Tasks',
-          tabBarIcon: ({ color, size }) => <Ionicons name="checkbox-outline" color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="calendar"
-        options={{
-          title: 'Calendar',
-          tabBarIcon: ({ color, size }) => <Ionicons name="calendar-outline" color={color} size={size} />,
-        }}
-      />
-    </Tabs>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="task/[id]" options={{ title: 'Task' }} />
+      <Stack.Screen name="appointment/[id]" options={{ title: 'Appointment' }} />
+    </Stack>
   )
 }

@@ -1,6 +1,7 @@
 import { addDays, dateKey, formatDateKey, formatTime, todayKey } from '@shared/dates'
 import type { CalendarItem } from '@shared/types'
 import { useQuery } from '@tanstack/react-query'
+import { router } from 'expo-router'
 import { useMemo, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { calendarApi } from '@/api/endpoints'
@@ -64,19 +65,24 @@ export default function CalendarScreen() {
             {items.length > 0 ? (
               <View style={[styles.list, { backgroundColor: c.surface, borderColor: c.border }]}>
                 {items.map((item, i) => (
-                  <Row key={item.id} last={i === items.length - 1}>
-                    <View style={[styles.bar, { backgroundColor: item.itemType === 'Appointment' ? c.appointment : c.task }]} />
-                    <Text style={[styles.time, { color: c.muted }]}>{item.hasTime ? formatTime(item.startUtc, zone) : 'All day'}</Text>
-                    <Text
-                      style={[
-                        styles.title,
-                        { color: item.status === 'Completed' || item.status === 'Cancelled' ? c.muted : c.text },
-                        (item.status === 'Completed' || item.status === 'Cancelled') && styles.struck,
-                      ]}
-                      numberOfLines={1}>
-                      {item.title}
-                    </Text>
-                  </Row>
+                  <Pressable
+                    key={item.id}
+                    onPress={() => router.push({ pathname: item.itemType === 'Task' ? '/task/[id]' : '/appointment/[id]', params: { id: item.id } })}
+                    accessibilityRole="button">
+                    <Row last={i === items.length - 1}>
+                      <View style={[styles.bar, { backgroundColor: item.itemType === 'Appointment' ? c.appointment : c.task }]} />
+                      <Text style={[styles.time, { color: c.muted }]}>{item.hasTime ? formatTime(item.startUtc, zone) : 'All day'}</Text>
+                      <Text
+                        style={[
+                          styles.title,
+                          { color: item.status === 'Completed' || item.status === 'Cancelled' ? c.muted : c.text },
+                          (item.status === 'Completed' || item.status === 'Cancelled') && styles.struck,
+                        ]}
+                        numberOfLines={1}>
+                        {item.title}
+                      </Text>
+                    </Row>
+                  </Pressable>
                 ))}
               </View>
             ) : (

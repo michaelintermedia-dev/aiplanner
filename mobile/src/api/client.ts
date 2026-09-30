@@ -50,6 +50,11 @@ export async function setSession(auth: AuthResponse | null) {
   else await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY)
 }
 
+/** The current access token, for requests made outside fetch (e.g. streaming audio). */
+export function getAccessToken(): string | null {
+  return accessToken
+}
+
 export function getStoredRefreshToken(): Promise<string | null> {
   return SecureStore.getItemAsync(REFRESH_TOKEN_KEY)
 }

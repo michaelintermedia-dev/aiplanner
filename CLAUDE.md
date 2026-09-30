@@ -13,9 +13,11 @@ Core loop:
 
 > Think → Speak or Type → AI Understands → Review → Save → Get Reminded
 
-Full product spec (all 46 sections) was provided by the user at project
-start — ask the user if you need the original spec doc; it is not repeated
-here in full, only the decisions and constraints that shape implementation.
+The full product spec (all 46 sections) is in [docs/SPEC.md](docs/SPEC.md) —
+read the relevant sections before starting a phase or feature. "Spec section
+N" references in code and docs point there. This file holds only the
+decisions and constraints that shape implementation; where the two differ,
+the decisions recorded here win (e.g. .NET 10).
 
 ## Mandatory stack — do not substitute without explicit user request
 

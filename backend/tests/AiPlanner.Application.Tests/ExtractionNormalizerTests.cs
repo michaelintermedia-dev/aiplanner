@@ -120,6 +120,26 @@ public class ExtractionNormalizerTests
     }
 
     [Theory]
+    [InlineData("2026-09-30", "10:00")] // earlier today (now is 15:00)
+    [InlineData("2026-09-29", null)] // yesterday, date only
+    public void Items_resolved_into_the_past_ask_the_user_to_check(string date, string? time)
+    {
+        var item = Normalize(Item(intent: "reminder", date: date, time: time));
+
+        item.Clarification.Should().Contain("already passed");
+    }
+
+    [Theory]
+    [InlineData("2026-09-30", "18:00")] // later today
+    [InlineData("2026-09-30", null)] // today, date only
+    public void Items_later_today_are_not_flagged_as_past(string date, string? time)
+    {
+        var item = Normalize(Item(date: date, time: time));
+
+        (item.Clarification ?? "").Should().NotContain("already passed");
+    }
+
+    [Theory]
     [InlineData("next thursday")]
     [InlineData("2026-13-45")]
     [InlineData("31/10/2026")]

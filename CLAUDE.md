@@ -138,9 +138,10 @@ Local dev notes:
   capture history, audio playback/deletion. `ITranscriptionService` +
   `IIntentExtractionService` (OpenAI: gpt-4o-transcribe, gpt-5.4-mini with a
   strict JSON schema); `ExtractionNormalizer` validates all AI output and does
-  the timezone conversion (34 unit tests). NOT yet exercised against the real
-  OpenAI API (account had no credits on 2026-09-30). Next: web + mobile
-  capture/review screens.
+  the timezone conversion (unit tested). Verified live against OpenAI on
+  2026-09-30: English + Russian text, a WAV voice upload (~5-7 s per
+  capture), confirm/reject/edit, duplicate-confirm refusal, audio delete.
+  Next: web + mobile capture/review screens.
 - ⬜ **Phase 4 — Notifications**: actual push/local notification delivery.
   Reminder *records* already exist (`Reminder` entity, `TriggerAtUtc`) from
   Phase 2 — Phase 4 is about dispatching them, not creating them.
@@ -221,6 +222,10 @@ Local dev notes:
   `UnauthorizedAccessException`, concurrency conflicts).
 - Controllers are thin: map `Result.Succeeded` to the right HTTP status,
   no business logic in controllers.
+- New rows must be added with `_db.X.Add(entity)`. `BaseEntity` assigns the
+  Guid key in its constructor, so an entity only attached through a
+  navigation property looks like an existing row to EF and gets an UPDATE
+  (surfacing as a 409 concurrency conflict).
 - New entities: inherit `BaseEntity` (gives `Id`, `UserId`, timestamps,
   `IsDeleted`, `RowVersion`) unless there's a specific reason not to
   (e.g. `User` itself, join tables like `TaskTag`).

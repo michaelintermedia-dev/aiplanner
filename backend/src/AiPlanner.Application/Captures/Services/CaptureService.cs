@@ -132,6 +132,9 @@ public class CaptureService : ICaptureService
             LanguageCode = transcription.LanguageCode,
             ProviderName = transcription.ProviderName,
         };
+        // Add explicitly: entities get their Guid key in the constructor, so EF would
+        // treat one merely attached via a navigation as an existing row (UPDATE).
+        _db.Transcripts.Add(transcript);
         voice.Transcript = transcript;
         voice.Status = VoiceCaptureStatus.Analyzing;
         await _db.SaveChangesAsync(ct);

@@ -125,6 +125,13 @@ public static class ExtractionNormalizer
                 break;
         }
 
+        // "Buy milk this evening" said at 22:00 resolves to a time that has passed;
+        // keep it, but make the user look at it rather than save a stale item.
+        if (intent != ExtractionIntent.Note && date is not null && IsInPast(date.Value, time, localNow))
+        {
+            questions.Add("This time has already passed - please check the date.");
+        }
+
         var reminder = raw.ReminderMinutesBefore is >= 0 and <= MaxReminderMinutes ? raw.ReminderMinutesBefore : null;
         if (intent == ExtractionIntent.Reminder)
         {
@@ -147,6 +154,11 @@ public static class ExtractionNormalizer
             questions.Count > 0 ? Truncate(string.Join(" ", questions.Distinct()), 500) : null,
             raw.Confidence is { } c && double.IsFinite(c) ? Math.Clamp(c, 0, 1) : null);
     }
+
+    private static bool IsInPast(DateOnly date, TimeOnly? time, DateTime localNow) =>
+        time is null
+            ? date < DateOnly.FromDateTime(localNow)
+            : date.ToDateTime(time.Value) < localNow;
 
     private static ExtractionIntent ParseIntent(string? value) =>
         Enum.TryParse<ExtractionIntent>(value?.Trim(), ignoreCase: true, out var intent) && Enum.IsDefined(intent)

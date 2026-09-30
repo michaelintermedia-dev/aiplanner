@@ -10,7 +10,11 @@ var aiPlannerDb = sql.AddDatabase("aiplannerdb");
 var api = builder.AddProject<Projects.AiPlanner_Api>("api")
     .WithReference(aiPlannerDb)
     .WaitFor(aiPlannerDb)
-    .WithExternalHttpEndpoints();
+    .WithExternalHttpEndpoints()
+    // Listen on all interfaces (not just localhost) so a phone on the same Wi-Fi
+    // can reach http://<this PC's IP>:58443. Local development only - the
+    // Windows Firewall rule limits it to the local subnet (see mobile/README.md).
+    .WithEndpoint("http", endpoint => endpoint.TargetHost = "0.0.0.0");
 
 // React web app (repo-root web/). Runs `npm run dev`; Aspire sets PORT and
 // injects the API URL (services__api__*), which vite.config.ts uses for its

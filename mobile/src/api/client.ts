@@ -1,4 +1,5 @@
 import type { AuthResponse } from '@shared/types'
+import Constants from 'expo-constants'
 import * as SecureStore from 'expo-secure-store'
 import { Platform } from 'react-native'
 
@@ -8,13 +9,23 @@ import { Platform } from 'react-native'
 // Tokens: the short-lived access token lives only in memory; the refresh token
 // is kept in the platform keychain/keystore via expo-secure-store.
 
+const API_PORT = 58443
+
 /**
- * API base URL. The Android emulator reaches the host machine at 10.0.2.2; the
- * iOS simulator can use localhost. For a physical device, set
- * EXPO_PUBLIC_API_URL to the computer's LAN address (see mobile/README.md).
+ * API base URL. In development the API runs on the same computer as the Expo
+ * dev server, so use the host the app bundle was loaded from: the PC's Wi-Fi
+ * IP for a phone on the same network, 127.0.0.1 over USB with `adb reverse`.
+ * EXPO_PUBLIC_API_URL overrides it; the last fallbacks cover a missing hostUri
+ * (Android emulator reaches the host at 10.0.2.2).
  */
-export const API_URL =
-  process.env.EXPO_PUBLIC_API_URL ?? (Platform.OS === 'android' ? 'http://10.0.2.2:58443' : 'http://localhost:58443')
+function resolveApiUrl(): string {
+  if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL
+  const devHost = Constants.expoConfig?.hostUri?.split(':')[0]
+  if (devHost) return `http://${devHost}:${API_PORT}`
+  return Platform.OS === 'android' ? `http://10.0.2.2:${API_PORT}` : `http://localhost:${API_PORT}`
+}
+
+export const API_URL = resolveApiUrl()
 
 const REFRESH_TOKEN_KEY = 'aiplanner.refreshToken'
 

@@ -32,19 +32,42 @@ adb shell am start -a android.intent.action.VIEW -d "exp://127.0.0.1:8081" host.
 Don't start Metro with `CI=1`: in CI mode it stops watching files, so code
 changes never reach the app.
 
+## Run it on a physical Android phone (Wi-Fi)
+
+The phone and the PC must be on the same Wi-Fi network.
+
+1. **Expo Go must match the project's SDK (57).** The Play Store version may
+   be older ("Project is incompatible with this version of Expo Go"). Install
+   the matching one over USB (USB debugging on) from the Expo CLI's cache,
+   and decline Play Store "updates" back to the older version:
+   ```bash
+   adb install -r %USERPROFILE%\.expo\android-apk-cache\Expo-Go-57.0.9.apk
+   ```
+2. **Windows Firewall, once:** allow ports 8081 (Metro) and 58443 (API) from
+   the local network only. In an administrator PowerShell:
+   ```powershell
+   New-NetFirewallRule -DisplayName 'AI Planner dev - Expo Metro (8081)' -Direction Inbound -Protocol TCP -LocalPort 8081 -RemoteAddress LocalSubnet -Action Allow -Profile Any
+   New-NetFirewallRule -DisplayName 'AI Planner dev - API (58443)' -Direction Inbound -Protocol TCP -LocalPort 58443 -RemoteAddress LocalSubnet -Action Allow -Profile Any
+   ```
+3. Start the backend (as above) and `npx expo start` in `mobile/`.
+4. In Expo Go, scan the QR code from the terminal, or "Enter URL manually":
+   `exp://<PC's Wi-Fi IP>:8081` (find the IP with `ipconfig`).
+
+The AppHost binds the API's http endpoint to all interfaces
+(`TargetHost = "0.0.0.0"`) for this. Over USB instead of Wi-Fi, run
+`adb reverse tcp:8081 tcp:8081` and `adb reverse tcp:58443 tcp:58443` and
+open `exp://127.0.0.1:8081`.
+
 ## Which API it talks to
 
-`src/api/client.ts` picks the API URL:
+`src/api/client.ts` uses **the host the app was loaded from** (Expo's
+`hostUri`) with port 58443 - so it follows Metro automatically: the PC's
+Wi-Fi IP for a phone on the network, `127.0.0.1` over USB with
+`adb reverse`. `EXPO_PUBLIC_API_URL` overrides it. Without a dev host it falls
+back to `http://10.0.2.2:58443` (Android emulator) or `http://localhost:58443`.
 
-| Where the app runs | Default URL |
-|---|---|
-| Android emulator | `http://10.0.2.2:58443` (the emulator's alias for the host machine) |
-| iOS simulator | `http://localhost:58443` |
-| Physical phone | set `EXPO_PUBLIC_API_URL`, e.g. `http://192.168.1.50:58443` |
-
-It uses plain HTTP because emulators don't trust the local dev certificate;
-the API only allows that in Development. A physical phone also needs the API
-to listen on the network, not just localhost - not set up yet.
+It uses plain HTTP because phones and emulators don't trust the local dev
+certificate; the API only allows that in Development.
 
 ## Layout
 

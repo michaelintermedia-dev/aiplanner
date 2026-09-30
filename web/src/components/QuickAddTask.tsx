@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { tasksApi } from '../api/endpoints'
-import type { TaskPriority } from '../api/types'
+import type { TaskPriority } from '@shared/types'
 import { useAuth } from '../auth/useAuth'
-import { zonedToUtc } from '../lib/dates'
+import { zonedToUtc } from '@shared/dates'
 import { useAction } from '../lib/useAction'
 
 /**

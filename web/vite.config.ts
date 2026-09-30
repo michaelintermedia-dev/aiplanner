@@ -1,5 +1,9 @@
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { fileURLToPath } from 'node:url'
+import { defineConfig, searchForWorkspaceRoot } from 'vite'
+
+// Code shared with the mobile app (API types, date helpers) lives in ../shared.
+const sharedDir = fileURLToPath(new URL('../shared', import.meta.url))
 
 // The browser only ever talks to the Vite dev server; /api is proxied to the
 // .NET API. That keeps the API origin out of the client code and avoids CORS
@@ -12,7 +16,11 @@ const apiUrl =
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: { '@shared': sharedDir },
+  },
   server: {
+    fs: { allow: [searchForWorkspaceRoot(process.cwd()), sharedDir] },
     port: Number(process.env.PORT ?? 3000),
     proxy: {
       '/api': { target: apiUrl, changeOrigin: true, secure: false },

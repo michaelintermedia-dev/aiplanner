@@ -14,6 +14,13 @@ export function dateKey(utc: string | Date, timeZone: string): string {
   )
 }
 
+/** "HH:mm" (24h) wall-clock time of the given instant in `timeZone`. */
+export function timeKey(utc: string | Date, timeZone: string): string {
+  return new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(
+    new Date(utc),
+  )
+}
+
 export function todayKey(timeZone: string): string {
   return dateKey(new Date(), timeZone)
 }

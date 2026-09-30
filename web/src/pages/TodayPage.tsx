@@ -6,7 +6,7 @@ import { AppointmentForm } from '../components/AppointmentForm'
 import { AppointmentRow } from '../components/AppointmentRow'
 import { QuickAddTask } from '../components/QuickAddTask'
 import { TaskRow } from '../components/TaskRow'
-import { formatDateKey, formatDue, formatTime } from '../lib/dates'
+import { formatDateKey, formatDue, formatTime } from '@shared/dates'
 
 function useNow(intervalMs = 30_000) {
   const [now, setNow] = useState(() => new Date())

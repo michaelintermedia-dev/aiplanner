@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { appointmentsApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
-import { todayKey, zonedToUtc } from '../lib/dates'
+import { todayKey, zonedToUtc } from '@shared/dates'
 import { useAction } from '../lib/useAction'
 
 const REMINDER_OPTIONS = [

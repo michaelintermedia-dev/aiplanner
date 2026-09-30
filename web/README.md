@@ -32,13 +32,17 @@ npm run dev        # http://localhost:3000, proxies /api to https://localhost:58
 ```
 src/
   api/          client.ts (the only place that does HTTP, token refresh),
-                endpoints.ts (typed API functions), types.ts (API contracts)
+                endpoints.ts (typed API from ../shared)
   auth/         AuthProvider + useAuth: session restore, login/register/logout,
                 and the user's timezone/locale
-  lib/          dates.ts (timezone-correct date helpers), useAction.ts
+  lib/          useAction.ts
   components/   TaskRow, QuickAddTask, AppointmentRow, AppointmentForm
   pages/        AuthPage, TodayPage, TasksPage, CalendarPage
 ```
+
+API types, endpoint definitions and date helpers (`@shared/types`,
+`@shared/endpoints`, `@shared/dates`) live in `../shared` and are shared with
+the mobile app.
 
 ## Conventions
 
@@ -47,7 +51,7 @@ src/
 - **Reads use `useQuery`, writes use `useAction`**, which refetches all
   queries afterwards so Today, Tasks and Calendar stay consistent.
 - **Dates are shown and entered in the user's profile timezone**, not the
-  browser's. Use the helpers in `lib/dates.ts`; the API always speaks UTC.
+  browser's. Use the helpers in `@shared/dates`; the API always speaks UTC.
 - **Date-only tasks** are sent as midnight at the start of that day in the
   user's timezone, with `hasDueTime: false`.
 - **Tokens:** the access token is kept in memory only; the refresh token is in

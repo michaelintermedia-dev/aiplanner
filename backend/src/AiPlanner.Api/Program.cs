@@ -110,7 +110,13 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// In Development the API also serves plain HTTP without redirecting, because
+// the Android emulator (http://10.0.2.2:58443) can't trust the local dev
+// certificate. Everywhere else, HTTP is redirected to HTTPS (spec section 41).
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseCors("ClientApps");
 

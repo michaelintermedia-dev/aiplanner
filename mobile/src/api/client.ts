@@ -1,12 +1,20 @@
 import type { AuthResponse } from '@shared/types'
+import * as SecureStore from 'expo-secure-store'
+import { Platform } from 'react-native'
 
-// Single place where HTTP happens (spec section 29). UI code calls the typed
+// Single place where HTTP happens (spec section 29). Screens call the typed
 // functions in endpoints.ts, never fetch() directly.
 //
-// Token storage: the short-lived access token lives only in memory. The
-// refresh token is kept in localStorage so a reload doesn't log the user out.
-// That is readable by any script on the page, so the planned hardening is to
-// move it to an HttpOnly cookie issued by the API.
+// Tokens: the short-lived access token lives only in memory; the refresh token
+// is kept in the platform keychain/keystore via expo-secure-store.
+
+/**
+ * API base URL. The Android emulator reaches the host machine at 10.0.2.2; the
+ * iOS simulator can use localhost. For a physical device, set
+ * EXPO_PUBLIC_API_URL to the computer's LAN address (see mobile/README.md).
+ */
+export const API_URL =
+  process.env.EXPO_PUBLIC_API_URL ?? (Platform.OS === 'android' ? 'http://10.0.2.2:58443' : 'http://localhost:58443')
 
 const REFRESH_TOKEN_KEY = 'aiplanner.refreshToken'
 
@@ -25,34 +33,14 @@ export class ApiError extends Error {
   }
 }
 
-function readRefreshToken(): string | null {
-  try {
-    return localStorage.getItem(REFRESH_TOKEN_KEY)
-  } catch {
-    return null
-  }
-}
-
-function writeRefreshToken(token: string | null) {
-  try {
-    if (token) localStorage.setItem(REFRESH_TOKEN_KEY, token)
-    else localStorage.removeItem(REFRESH_TOKEN_KEY)
-  } catch {
-    // Storage unavailable (private mode etc.) - the session just won't survive a reload.
-  }
-}
-
-export function setSession(auth: AuthResponse | null) {
+export async function setSession(auth: AuthResponse | null) {
   accessToken = auth?.accessToken ?? null
-  writeRefreshToken(auth?.refreshToken ?? null)
+  if (auth) await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, auth.refreshToken)
+  else await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY)
 }
 
-export function hasStoredSession() {
-  return readRefreshToken() !== null
-}
-
-export function getStoredRefreshToken() {
-  return readRefreshToken()
+export function getStoredRefreshToken(): Promise<string | null> {
+  return SecureStore.getItemAsync(REFRESH_TOKEN_KEY)
 }
 
 export function setOnSessionExpired(handler: () => void) {
@@ -66,18 +54,18 @@ export function setOnSessionExpired(handler: () => void) {
  */
 export function refreshSession(): Promise<boolean> {
   refreshInFlight ??= (async () => {
-    const refreshToken = readRefreshToken()
+    const refreshToken = await getStoredRefreshToken()
     if (!refreshToken) return false
-    const response = await fetch('/api/auth/refresh', {
+    const response = await fetch(`${API_URL}/api/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken }),
     })
     if (!response.ok) {
-      setSession(null)
+      await setSession(null)
       return false
     }
-    setSession((await response.json()) as AuthResponse)
+    await setSession((await response.json()) as AuthResponse)
     return true
   })().finally(() => {
     refreshInFlight = null
@@ -102,7 +90,7 @@ export async function request<T>(
   { anonymous = false }: { anonymous?: boolean } = {},
 ): Promise<T> {
   const send = () =>
-    fetch(`/api${path}`, {
+    fetch(`${API_URL}/api${path}`, {
       method,
       headers: {
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
@@ -111,7 +99,12 @@ export async function request<T>(
       body: body !== undefined ? JSON.stringify(body) : undefined,
     })
 
-  let response = await send()
+  let response: Response
+  try {
+    response = await send()
+  } catch {
+    throw new ApiError(0, [`Can't reach the server at ${API_URL}.`])
+  }
 
   if (response.status === 401 && !anonymous) {
     if (await refreshSession()) {

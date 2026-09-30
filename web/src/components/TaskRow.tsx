@@ -1,7 +1,7 @@
 import { tasksApi } from '../api/endpoints'
-import type { Task } from '../api/types'
+import type { Task } from '@shared/types'
 import { useAuth } from '../auth/useAuth'
-import { formatDue, todayKey, dateKey } from '../lib/dates'
+import { formatDue, todayKey, dateKey } from '@shared/dates'
 import { useAction } from '../lib/useAction'
 
 export function TaskRow({ task }: { task: Task }) {

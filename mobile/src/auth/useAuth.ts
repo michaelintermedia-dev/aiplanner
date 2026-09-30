@@ -1,6 +1,6 @@
-import { createContext, useContext } from 'react'
-import type { User } from '@shared/types'
 import type { ZoneContext } from '@shared/dates'
+import type { User } from '@shared/types'
+import { createContext, useContext } from 'react'
 
 export interface AuthState {
   /** undefined while the stored session is being restored on startup */

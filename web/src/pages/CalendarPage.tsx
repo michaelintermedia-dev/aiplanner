@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { calendarApi } from '../api/endpoints'
-import type { CalendarItem, CalendarView } from '../api/types'
+import type { CalendarItem, CalendarView } from '@shared/types'
 import { useAuth } from '../auth/useAuth'
 import { AppointmentForm } from '../components/AppointmentForm'
-import { addDays, dateKey, formatDateKey, formatTime, todayKey } from '../lib/dates'
+import { addDays, dateKey, formatDateKey, formatTime, todayKey } from '@shared/dates'
 
 /** Monday of the week containing `key` (weeks start on Monday, matching the API). */
 function weekStart(key: string): string {

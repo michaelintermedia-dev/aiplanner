@@ -1,7 +1,7 @@
 import { appointmentsApi } from '../api/endpoints'
-import type { Appointment } from '../api/types'
+import type { Appointment } from '@shared/types'
 import { useAuth } from '../auth/useAuth'
-import { formatTime } from '../lib/dates'
+import { formatTime } from '@shared/dates'
 import { useAction } from '../lib/useAction'
 
 export function AppointmentRow({ appointment: a }: { appointment: Appointment }) {

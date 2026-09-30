@@ -34,7 +34,11 @@
         }
       ],
       "expo-secure-store",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-audio",
+        { "microphonePermission": "AI Planner uses the microphone so you can capture tasks and appointments by voice." }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

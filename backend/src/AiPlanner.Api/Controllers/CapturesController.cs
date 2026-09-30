@@ -15,8 +15,9 @@ namespace AiPlanner.Api.Controllers;
 [Authorize]
 public class CapturesController : ControllerBase
 {
-    /// <summary>OpenAI's upload limit for transcription.</summary>
+    /// <summary>OpenAI's upload limit for transcription (per file).</summary>
     private const long MaxAudioBytes = 25 * 1024 * 1024;
+    private const long MaxTotalBytes = 50 * 1024 * 1024;
 
     private readonly ICaptureService _captures;
 
@@ -45,28 +46,45 @@ public class CapturesController : ControllerBase
         return result.Succeeded ? Ok(result.Value) : BadRequest(new { errors = result.Errors });
     }
 
-    /// <summary>POST /api/captures/voice (multipart/form-data, field "audio") - transcribe and analyze a recording.</summary>
+    /// <summary>
+    /// POST /api/captures/voice (multipart/form-data) - transcribe and analyze a
+    /// recording. Send one "audio" field, or several in speaking order (the
+    /// mobile app sends one per recorded segment).
+    /// </summary>
     [HttpPost("voice")]
-    [RequestSizeLimit(MaxAudioBytes + 64 * 1024)]
+    [RequestSizeLimit(MaxTotalBytes + 256 * 1024)]
     [RequestFormLimits(MultipartBodyLengthLimit = MaxAudioBytes + 64 * 1024)]
-    public async Task<ActionResult<CaptureDto>> CaptureVoice(IFormFile? audio, CancellationToken ct)
+    public async Task<ActionResult<CaptureDto>> CaptureVoice([FromForm] List<IFormFile> audio, CancellationToken ct)
     {
-        if (audio is null || audio.Length == 0)
+        var files = audio.Where(f => f.Length > 0).ToList();
+        if (files.Count == 0)
         {
             return BadRequest(new { errors = new[] { "Attach the recording as form field \"audio\"." } });
         }
-        if (audio.Length > MaxAudioBytes)
+        if (files.Count > CaptureService.MaxSegments)
         {
-            return BadRequest(new { errors = new[] { "The recording is too large (max 25 MB)." } });
+            return BadRequest(new { errors = new[] { $"Too many parts (max {CaptureService.MaxSegments})." } });
         }
-        if (!CaptureService.IsSupportedAudioFile(audio.FileName))
+        if (files.Any(f => f.Length > MaxAudioBytes) || files.Sum(f => f.Length) > MaxTotalBytes)
+        {
+            return BadRequest(new { errors = new[] { "The recording is too large (max 25 MB per part)." } });
+        }
+        if (files.Any(f => !CaptureService.IsSupportedAudioFile(f.FileName)))
         {
             return BadRequest(new { errors = new[] { "Unsupported audio format. Use m4a, mp3, wav, webm, ogg, flac or aac." } });
         }
 
-        await using var stream = audio.OpenReadStream();
-        var result = await _captures.CaptureVoiceAsync(stream, audio.FileName, audio.ContentType, ct);
-        return result.Succeeded ? Ok(result.Value) : BadRequest(new { errors = result.Errors });
+        var streams = files.Select(f => f.OpenReadStream()).ToList();
+        try
+        {
+            var segments = files.Select((f, i) => new AudioSegment(streams[i], f.FileName, f.ContentType)).ToList();
+            var result = await _captures.CaptureVoiceAsync(segments, ct);
+            return result.Succeeded ? Ok(result.Value) : BadRequest(new { errors = result.Errors });
+        }
+        finally
+        {
+            foreach (var s in streams) await s.DisposeAsync();
+        }
     }
 
     /// <summary>POST /api/captures/{id}/confirm - save the accepted (possibly edited) items, reject the rest.</summary>
@@ -78,11 +96,11 @@ public class CapturesController : ControllerBase
         return result.Errors.Contains("Capture not found.") ? NotFound(new { errors = result.Errors }) : BadRequest(new { errors = result.Errors });
     }
 
-    /// <summary>GET /api/captures/{id}/audio - the original recording.</summary>
+    /// <summary>GET /api/captures/{id}/audio?part=0 - the original recording (part N of CaptureDto.AudioParts).</summary>
     [HttpGet("{id:guid}/audio")]
-    public async Task<IActionResult> GetAudio(Guid id, CancellationToken ct)
+    public async Task<IActionResult> GetAudio(Guid id, [FromQuery] int part = 0, CancellationToken ct = default)
     {
-        var result = await _captures.OpenAudioAsync(id, ct);
+        var result = await _captures.OpenAudioAsync(id, part, ct);
         return result.Succeeded
             ? File(result.Value.Content, result.Value.MimeType, enableRangeProcessing: true)
             : NotFound(new { errors = result.Errors });

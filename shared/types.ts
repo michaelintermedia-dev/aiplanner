@@ -155,7 +155,8 @@ export interface Capture {
   /** The original words: typed text or the full transcript. Never replaced by the summary. */
   inputText: string
   languageCode: string | null
-  hasAudio: boolean
+  /** Playable recording segments (0 = text capture, or recording deleted). */
+  audioParts: number
   createdAtUtc: string
   items: CaptureItem[]
 }

@@ -11,8 +11,11 @@ public interface ICaptureService
 {
     Task<Result<CaptureDto>> CaptureTextAsync(CaptureTextRequest request, CancellationToken ct = default);
 
-    /// <summary>Stores the recording, transcribes it, then extracts items from the transcript.</summary>
-    Task<Result<CaptureDto>> CaptureVoiceAsync(Stream audio, string fileName, string? mimeType, CancellationToken ct = default);
+    /// <summary>
+    /// Stores the recording (one or more segments, in speaking order), transcribes
+    /// each segment, joins the text, then extracts items from it.
+    /// </summary>
+    Task<Result<CaptureDto>> CaptureVoiceAsync(IReadOnlyList<AudioSegment> segments, CancellationToken ct = default);
 
     Task<IReadOnlyList<CaptureSummaryDto>> GetListAsync(int take, CancellationToken ct = default);
 
@@ -21,8 +24,8 @@ public interface ICaptureService
     /// <summary>Creates the accepted items as real tasks/appointments/notes, all in one transaction.</summary>
     Task<Result<CaptureDto>> ConfirmAsync(Guid id, ConfirmCaptureRequest request, CancellationToken ct = default);
 
-    /// <summary>Opens the original recording, or fails if there is none (text capture, or already deleted).</summary>
-    Task<Result<(Stream Content, string MimeType)>> OpenAudioAsync(Guid id, CancellationToken ct = default);
+    /// <summary>Opens segment <paramref name="part"/> of the original recording, or fails if there is none.</summary>
+    Task<Result<(Stream Content, string MimeType)>> OpenAudioAsync(Guid id, int part = 0, CancellationToken ct = default);
 
     /// <summary>Deletes the recording but keeps the transcript and items (spec sections 40-41).</summary>
     Task<Result> DeleteAudioAsync(Guid id, CancellationToken ct = default);

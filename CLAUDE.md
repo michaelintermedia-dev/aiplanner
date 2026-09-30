@@ -143,7 +143,9 @@ Local dev notes:
   the timezone conversion (unit tested). Verified live against OpenAI on
   2026-09-30: English + Russian text, a WAV voice upload (~5-7 s per
   capture), confirm/reject/edit, duplicate-confirm refusal, audio delete.
-  Web capture/review done (see Web below). Next: mobile capture/review.
+  Web and mobile capture/review done (see Web / Mobile below). Voice
+  captures can have several audio parts (`VoiceCapture.AudioStorageKeys`,
+  a JSON column); `GET /api/captures/{id}/audio?part=N`.
 - ⬜ **Phase 4 — Notifications**: actual push/local notification delivery.
   Reminder *records* already exist (`Reminder` entity, `TriggerAtUtc`) from
   Phase 2 — Phase 4 is about dispatching them, not creating them.
@@ -163,10 +165,14 @@ Local dev notes:
   automated tests yet (verified by driving Chrome with Playwright, using a
   WAV file as a fake microphone for the voice path).
 - 🟡 **Mobile (React Native / Expo)**: sign in/up with session restore,
-  Today, Tasks (quick add with native date/time pickers, complete; long-press
-  to cancel/delete), Calendar week agenda, pull-to-refresh. Verified on the
-  Android emulator in Expo Go; iOS not tested (needs a Mac). No appointment
-  creation or edit forms yet, no automated tests yet.
+  Today with AI quick capture (text + big mic: hold/tap, segments, level
+  meter, silence warning, listen, send; review screen with editable items),
+  Tasks (quick add with native date/time pickers, complete; long-press to
+  cancel/delete), Calendar week agenda, pull-to-refresh. Verified on the
+  Android emulator in Expo Go (the emulator mic is the host's default Windows
+  input, which was silent on this machine, so real speech wasn't tested
+  on-device); iOS not tested (needs a Mac). No appointment creation or edit
+  forms for saved items yet, no automated tests yet.
 
 ## Design decisions already made — follow these, don't re-litigate
 
@@ -258,6 +264,15 @@ Client-side (web and mobile - keep them consistent):
   OpenAI rejects MediaRecorder WebM once it has been paused/resumed or
   flushed with requestData() ("corrupted or unsupported"). The web app
   converts with `web/src/lib/toWav.ts`; the preview plays that same WAV.
+- **Mobile records in segments**: a paused native .m4a isn't playable until
+  stopped, so every pause *stops* and finalizes a segment and continuing
+  starts a new one (`mobile/src/lib/useSegmentRecorder.ts`). Send uploads all
+  segments as repeated `audio` fields; the API transcribes each and joins the
+  text in order. A failed Send keeps the recording (never lose what was said).
+- **Mobile uploads files as expo-file-system `File`** (`new File(uri)`).
+  Expo's fetch - the global fetch in this SDK - rejects React Native's
+  `{ uri, name, type }` FormData parts ("Unsupported FormDataPart
+  implementation").
 
 ## What NOT to do
 

@@ -73,6 +73,8 @@ public class CaptureService : ICaptureService
         _logger = logger;
     }
 
+    public const int MaxSegments = 20;
+
     public static bool IsSupportedAudioFile(string fileName) => AudioExtensions.ContainsKey(Path.GetExtension(fileName));
 
     public async Task<Result<CaptureDto>> CaptureTextAsync(CaptureTextRequest request, CancellationToken ct = default)
@@ -82,40 +84,65 @@ public class CaptureService : ICaptureService
         return Result<CaptureDto>.Success(ToDto(extraction, transcript: null));
     }
 
-    public async Task<Result<CaptureDto>> CaptureVoiceAsync(Stream audio, string fileName, string? mimeType, CancellationToken ct = default)
+    public async Task<Result<CaptureDto>> CaptureVoiceAsync(IReadOnlyList<AudioSegment> segments, CancellationToken ct = default)
     {
         var userId = RequireUserId();
-        var extension = Path.GetExtension(fileName).ToLowerInvariant();
-        if (!AudioExtensions.TryGetValue(extension, out var defaultMime))
+        if (segments.Count == 0)
         {
-            return Result<CaptureDto>.Failure($"Unsupported audio format '{extension}'.");
+            return Result<CaptureDto>.Failure("No audio was uploaded.");
+        }
+        if (segments.Count > MaxSegments)
+        {
+            return Result<CaptureDto>.Failure($"Too many parts (max {MaxSegments}).");
+        }
+
+        var extensions = segments.Select(s => Path.GetExtension(s.FileName).ToLowerInvariant()).ToList();
+        if (extensions.FirstOrDefault(e => !AudioExtensions.ContainsKey(e)) is { } unsupported)
+        {
+            return Result<CaptureDto>.Failure($"Unsupported audio format '{unsupported}'.");
         }
 
         var voice = new VoiceCapture
         {
             UserId = userId,
-            MimeType = string.IsNullOrWhiteSpace(mimeType) ? defaultMime : mimeType,
+            MimeType = string.IsNullOrWhiteSpace(segments[0].MimeType) ? AudioExtensions[extensions[0]] : segments[0].MimeType,
             Status = VoiceCaptureStatus.PendingUpload,
         };
-        voice.AudioStorageKey = $"{userId:N}/{voice.Id:N}{extension}";
-
-        await _storage.SaveAsync(voice.AudioStorageKey, audio, ct);
+        for (var i = 0; i < segments.Count; i++)
+        {
+            var key = segments.Count == 1
+                ? $"{userId:N}/{voice.Id:N}{extensions[i]}"
+                : $"{userId:N}/{voice.Id:N}-{i + 1:D2}{extensions[i]}";
+            await _storage.SaveAsync(key, segments[i].Content, ct);
+            voice.AudioStorageKeys.Add(key);
+        }
         voice.Status = VoiceCaptureStatus.Transcribing;
         _db.VoiceCaptures.Add(voice);
         await _db.SaveChangesAsync(ct);
 
-        TranscriptionResult transcription;
+        TranscriptionResult[] parts;
         try
         {
-            await using var stored = await _storage.OpenReadAsync(voice.AudioStorageKey, ct)
-                ?? throw new InvalidOperationException("The recording was not found right after saving it.");
-            transcription = await _transcription.TranscribeAsync(stored, Path.GetFileName(voice.AudioStorageKey), voice.MimeType, ct);
+            // Segments are independent files: transcribe them in parallel, then
+            // join the text in speaking order.
+            parts = await Task.WhenAll(voice.AudioStorageKeys.Select(async (key, i) =>
+            {
+                await using var stored = await _storage.OpenReadAsync(key, ct)
+                    ?? throw new InvalidOperationException("The recording was not found right after saving it.");
+                var mime = string.IsNullOrWhiteSpace(segments[i].MimeType) ? AudioExtensions[extensions[i]] : segments[i].MimeType;
+                return await _transcription.TranscribeAsync(stored, Path.GetFileName(key), mime, ct);
+            }));
         }
         catch (AiProviderException ex)
         {
             await MarkFailedAsync(voice, $"Transcription failed: {ex.Message}", ct);
             throw;
         }
+
+        var transcription = new TranscriptionResult(
+            string.Join(" ", parts.Select(p => p.Text.Trim()).Where(t => t.Length > 0)),
+            parts.Select(p => p.LanguageCode).FirstOrDefault(l => l is not null),
+            parts[0].ProviderName);
 
         var text = transcription.Text.Trim();
         if (text.Length == 0)
@@ -250,32 +277,37 @@ public class CaptureService : ICaptureService
         return Result<CaptureDto>.Success(ToDto(extraction, extraction.Transcript));
     }
 
-    public async Task<Result<(Stream Content, string MimeType)>> OpenAudioAsync(Guid id, CancellationToken ct = default)
+    public async Task<Result<(Stream Content, string MimeType)>> OpenAudioAsync(Guid id, int part = 0, CancellationToken ct = default)
     {
         var extraction = await FindOwnedAsync(id, track: false, ct);
-        var voice = extraction?.Transcript?.VoiceCapture;
-        if (voice?.AudioStorageKey is null)
+        var keys = extraction?.Transcript?.VoiceCapture?.AudioStorageKeys;
+        if (keys is null || part < 0 || part >= keys.Count)
         {
             return Result<(Stream, string)>.Failure("No recording for this capture.");
         }
 
-        var stream = await _storage.OpenReadAsync(voice.AudioStorageKey, ct);
+        var stream = await _storage.OpenReadAsync(keys[part], ct);
+        var mime = AudioExtensions.GetValueOrDefault(Path.GetExtension(keys[part]), "application/octet-stream");
         return stream is null
             ? Result<(Stream, string)>.Failure("No recording for this capture.")
-            : Result<(Stream, string)>.Success((stream, voice.MimeType ?? "application/octet-stream"));
+            : Result<(Stream, string)>.Success((stream, mime));
     }
 
     public async Task<Result> DeleteAudioAsync(Guid id, CancellationToken ct = default)
     {
         var extraction = await FindOwnedAsync(id, track: true, ct);
         var voice = extraction?.Transcript?.VoiceCapture;
-        if (voice?.AudioStorageKey is null)
+        if (voice is null || voice.AudioStorageKeys.Count == 0)
         {
             return Result.Failure("No recording for this capture.");
         }
 
-        await _storage.DeleteAsync(voice.AudioStorageKey, ct);
-        voice.AudioStorageKey = null;
+        foreach (var key in voice.AudioStorageKeys)
+        {
+            await _storage.DeleteAsync(key, ct);
+        }
+        // Assign a new list (not Clear) so EF sees the JSON column change.
+        voice.AudioStorageKeys = [];
         await _db.SaveChangesAsync(ct);
         return Result.Success();
     }
@@ -479,7 +511,7 @@ public class CaptureService : ICaptureService
         e.Summary,
         transcript?.Text ?? e.RawInputText ?? string.Empty,
         transcript?.LanguageCode,
-        transcript?.VoiceCapture?.AudioStorageKey is not null,
+        transcript?.VoiceCapture?.AudioStorageKeys.Count ?? 0,
         e.CreatedAtUtc,
         e.Items
             .OrderBy(i => i.StartDateUtc ?? i.DueDateUtc ?? DateTime.MaxValue)

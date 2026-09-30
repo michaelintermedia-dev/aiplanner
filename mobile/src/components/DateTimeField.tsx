@@ -17,6 +17,7 @@ export function DateTimeField({
   placeholder,
   disabled,
   date,
+  prefix,
 }: {
   mode: 'date' | 'time'
   value: string | null
@@ -25,6 +26,8 @@ export function DateTimeField({
   disabled?: boolean
   /** For time pickers: the day the time belongs to (defaults to today). */
   date?: string | null
+  /** Shown before a chosen value, e.g. "until" for an end time. */
+  prefix?: string
 }) {
   const c = useColors()
   const { zone } = useAuth()
@@ -52,7 +55,7 @@ export function DateTimeField({
     ? placeholder
     : mode === 'date'
       ? formatDateKey(value, zone.locale, { weekday: 'short', month: 'short', day: 'numeric' })
-      : formatTime(zonedToUtc(day, value, zone.timeZone), zone)
+      : `${prefix ? `${prefix} ` : ''}${formatTime(zonedToUtc(day, value, zone.timeZone), zone)}`
   return (
     <View>
       <View style={[styles.chip, { borderColor: c.border, backgroundColor: c.surface, opacity: disabled ? 0.5 : 1 }]}>

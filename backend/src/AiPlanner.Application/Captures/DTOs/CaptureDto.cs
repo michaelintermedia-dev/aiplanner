@@ -12,6 +12,6 @@ public record CaptureDto(
     string? Summary,
     string InputText,
     string? LanguageCode,
-    bool HasAudio,
+    int AudioParts, // playable recording segments (0 = text capture, or recording deleted)
     DateTime CreatedAtUtc,
     IReadOnlyList<CaptureItemDto> Items);

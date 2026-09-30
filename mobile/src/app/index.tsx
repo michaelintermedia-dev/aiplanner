@@ -5,7 +5,7 @@ import { StyleSheet, Text, View } from 'react-native'
 import { todayApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
 import { AppointmentRow } from '@/components/AppointmentRow'
-import { QuickAddTask } from '@/components/QuickAddTask'
+import { CaptureBar } from '@/components/CaptureBar'
 import { Screen } from '@/components/Screen'
 import { TaskRow } from '@/components/TaskRow'
 import { Row, Section } from '@/components/ui'
@@ -36,7 +36,7 @@ export default function TodayScreen() {
         <Text style={[styles.clock, { color: c.muted }]}>{formatTime(now.toISOString(), zone)}</Text>
       </View>
 
-      <QuickAddTask />
+      <CaptureBar />
 
       {isPending && <Text style={{ color: c.muted }}>Loading…</Text>}
       {error && <Text style={{ color: c.danger }}>{error.message}</Text>}

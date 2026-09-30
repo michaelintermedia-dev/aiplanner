@@ -5,8 +5,12 @@ namespace AiPlanner.Domain.Entities;
 
 public class VoiceCapture : BaseEntity
 {
-    /// <summary>Key of the audio file in IFileStorageService; null after the user deletes the recording.</summary>
-    public string? AudioStorageKey { get; set; }
+    /// <summary>
+    /// Keys of the recording's audio files in IFileStorageService, in speaking
+    /// order. Usually one; the mobile app uploads one file per segment (each
+    /// pause finalizes a segment). Empty after the user deletes the recording.
+    /// </summary>
+    public List<string> AudioStorageKeys { get; set; } = [];
     public string? MimeType { get; set; }
     public int? DurationSeconds { get; set; }
     public VoiceCaptureStatus Status { get; set; } = VoiceCaptureStatus.PendingUpload;

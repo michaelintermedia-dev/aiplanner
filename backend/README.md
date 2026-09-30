@@ -125,6 +125,15 @@ Calendar
   GET    /api/calendar?view=day|week|month&date=2026-09-29
   GET    /api/calendar?from=<utc>&to=<utc>   (explicit range override)
 
+Captures (Phase 3 - AI quick capture; nothing is saved as a task until confirmed)
+  POST   /api/captures/text            {"text": "..."} -> title, summary, proposed items
+  POST   /api/captures/voice           multipart field "audio" (m4a/mp3/wav/webm/ogg/flac/aac, max 25 MB)
+  GET    /api/captures?take=50         history, newest first
+  GET    /api/captures/{id}
+  POST   /api/captures/{id}/confirm    {"items":[{id, include, intent, title, ...edited values}]}
+  GET    /api/captures/{id}/audio      original recording
+  DELETE /api/captures/{id}/audio      delete the recording, keep the transcript
+
 Health
   GET    /api/health
   GET    /health, /alive   (Aspire liveness/readiness, dev only)
@@ -136,7 +145,7 @@ authenticated user - there is no way to read or write another user's data.
 
 ## What's deliberately NOT here yet
 
-- Voice upload, transcription, AI extraction, review-screen endpoints (Phase 3)
+- Capture/review screens in the web and mobile apps (Phase 3 clients)
 - Actual notification *delivery* (push/local notifications) - Reminders are
   recorded with a `TriggerAtUtc`, but nothing polls/dispatches them yet (Phase 4)
 - Multi-device sync endpoints beyond what optimistic concurrency (RowVersion)

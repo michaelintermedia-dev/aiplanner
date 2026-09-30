@@ -14,6 +14,7 @@ public class AIExtractionItemConfiguration : IEntityTypeConfiguration<AIExtracti
         builder.Property(i => i.Summary).HasMaxLength(2000);
         builder.Property(i => i.Description).HasMaxLength(4000);
         builder.Property(i => i.Location).HasMaxLength(300);
+        builder.Property(i => i.Clarification).HasMaxLength(500);
         builder.Property(i => i.RowVersion).IsRowVersion();
         builder.HasIndex(i => new { i.AiExtractionId, i.Status });
     }

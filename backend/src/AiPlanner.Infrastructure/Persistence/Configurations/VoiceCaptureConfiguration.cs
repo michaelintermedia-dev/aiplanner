@@ -10,7 +10,8 @@ public class VoiceCaptureConfiguration : IEntityTypeConfiguration<VoiceCapture>
     {
         builder.ToTable("VoiceCaptures");
         builder.HasKey(v => v.Id);
-        builder.Property(v => v.AudioStorageKey).IsRequired().HasMaxLength(1000);
+        // Null once the user deletes the recording; the transcript is kept.
+        builder.Property(v => v.AudioStorageKey).HasMaxLength(1000);
         builder.Property(v => v.MimeType).HasMaxLength(100);
         builder.Property(v => v.RowVersion).IsRowVersion();
         builder.HasIndex(v => new { v.UserId, v.Status });

@@ -17,6 +17,10 @@ public class AIExtractionItem : BaseEntity
     public DateTime? StartDateUtc { get; set; }
     public DateTime? DueDateUtc { get; set; }
     public DateTime? EndDateUtc { get; set; }
+    /// <summary>False when only a date was understood (e.g. "by Thursday").</summary>
+    public bool HasTime { get; set; }
+    /// <summary>What the user should check or answer before saving (spec section 15, step 15).</summary>
+    public string? Clarification { get; set; }
     public string? Location { get; set; }
     public TaskPriority? Priority { get; set; }
     public int? ReminderMinutesBefore { get; set; }

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using AiPlanner.Application.Common.Exceptions;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
@@ -41,6 +42,13 @@ public class ExceptionHandlingMiddleware
             // throw this automatically; the client should re-fetch and retry.
             await WriteProblemAsync(context, HttpStatusCode.Conflict,
                 "This item was modified by another device. Reload it and try again.");
+        }
+        catch (AiProviderException ex)
+        {
+            // AI/speech provider failed (spec section 36). The message is generic by
+            // construction; provider details are only in the log.
+            _logger.LogWarning(ex, "AI provider failure processing {Method} {Path}", context.Request.Method, context.Request.Path);
+            await WriteProblemAsync(context, HttpStatusCode.BadGateway, "The AI service is unavailable right now. Please try again.", [ex.Message]);
         }
         catch (Exception ex)
         {

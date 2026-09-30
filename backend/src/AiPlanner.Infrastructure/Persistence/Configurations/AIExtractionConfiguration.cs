@@ -13,6 +13,10 @@ public class AIExtractionConfiguration : IEntityTypeConfiguration<AIExtraction>
         builder.Property(e => e.RawResponseJson).IsRequired();
         builder.Property(e => e.ProviderName).HasMaxLength(50);
         builder.Property(e => e.ModelName).HasMaxLength(100);
+        builder.Property(e => e.Title).HasMaxLength(300);
+        builder.Property(e => e.Summary).HasMaxLength(2000);
+        builder.Property(e => e.RawInputText).HasMaxLength(10000);
+        builder.HasIndex(e => new { e.UserId, e.CreatedAtUtc });
         builder.Property(e => e.RowVersion).IsRowVersion();
         builder.HasMany(e => e.Items).WithOne(i => i.AiExtraction).HasForeignKey(i => i.AiExtractionId).OnDelete(DeleteBehavior.Cascade);
     }

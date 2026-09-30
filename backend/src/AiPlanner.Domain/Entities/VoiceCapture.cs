@@ -5,7 +5,8 @@ namespace AiPlanner.Domain.Entities;
 
 public class VoiceCapture : BaseEntity
 {
-    public string AudioStorageKey { get; set; } = default!;
+    /// <summary>Key of the audio file in IFileStorageService; null after the user deletes the recording.</summary>
+    public string? AudioStorageKey { get; set; }
     public string? MimeType { get; set; }
     public int? DurationSeconds { get; set; }
     public VoiceCaptureStatus Status { get; set; } = VoiceCaptureStatus.PendingUpload;

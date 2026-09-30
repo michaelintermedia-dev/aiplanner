@@ -96,4 +96,19 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
 
         return base.SaveChangesAsync(cancellationToken);
     }
+
+    public Task<T> ExecuteInTransactionAsync<T>(Func<CancellationToken, Task<T>> operation, CancellationToken cancellationToken = default)
+    {
+        // With retry-on-failure enabled, a user-initiated transaction must run
+        // inside the execution strategy so a transient failure retries the
+        // whole unit rather than half of it.
+        var strategy = Database.CreateExecutionStrategy();
+        return strategy.ExecuteAsync(async ct =>
+        {
+            await using var transaction = await Database.BeginTransactionAsync(ct);
+            var result = await operation(ct);
+            await transaction.CommitAsync(ct);
+            return result;
+        }, cancellationToken);
+    }
 }

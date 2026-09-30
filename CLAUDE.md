@@ -92,7 +92,7 @@ dotnet tool install --global dotnet-ef
 cd src/AiPlanner.Api
 dotnet user-secrets init
 dotnet user-secrets set "Jwt:Secret" "$(openssl rand -base64 48)"
-dotnet user-secrets set "AiProvider:ApiKey" "sk-..."        # for Phase 3
+dotnet user-secrets set "AiProvider:ApiKey" "sk-..."        # OpenAI; models are set in appsettings.json
 ```
 
 Migrations (with AppHost running):
@@ -132,9 +132,15 @@ Local dev notes:
 - ✅ **Phase 2 — Core Productivity**: Tasks (CRUD + Ongoing/Complete/Cancel/
   Reopen), Appointments (CRUD + participants + Reschedule), Today dashboard,
   Calendar (day/week/month), basic reminders (recorded, not yet delivered).
-- ⬜ **Phase 3 — Voice & AI**: voice upload, speech-to-text, OpenAI-backed
-  extraction (`ITranscriptionService`, `IAiExtractionService` — interfaces
-  not yet written), AI review screen. **This is next.**
+- 🟡 **Phase 3 — Voice & AI**: backend done, clients not yet.
+  `api/captures` (text + voice upload → transcript → AI title/summary/items
+  → user confirms → real tasks/appointments/notes, in one transaction),
+  capture history, audio playback/deletion. `ITranscriptionService` +
+  `IIntentExtractionService` (OpenAI: gpt-4o-transcribe, gpt-5.4-mini with a
+  strict JSON schema); `ExtractionNormalizer` validates all AI output and does
+  the timezone conversion (34 unit tests). NOT yet exercised against the real
+  OpenAI API (account had no credits on 2026-09-30). Next: web + mobile
+  capture/review screens.
 - ⬜ **Phase 4 — Notifications**: actual push/local notification delivery.
   Reminder *records* already exist (`Reminder` entity, `TriggerAtUtc`) from
   Phase 2 — Phase 4 is about dispatching them, not creating them.
@@ -174,13 +180,23 @@ Local dev notes:
   update, specifically so a routine field edit can never silently resurrect
   a cancelled task or un-complete a finished one. Keep this pattern for any
   new entity with a lifecycle.
-- **AI/transcription must stay provider-agnostic behind interfaces**
-  (`ITranscriptionService`, `ISummarizationService`, `ITitleGenerationService`,
-  `IIntentExtractionService` — per spec section 16). Clients never call
-  OpenAI directly; everything routes through the .NET backend. When building
-  Phase 3, define these interfaces in Application, implement them in
-  Infrastructure using OpenAI's API, and validate AI output before persisting
-  (spec section 17 — "Do not blindly trust AI output").
+- **AI/transcription stays provider-agnostic behind interfaces**:
+  `ITranscriptionService` and `IIntentExtractionService` (Application/Ai),
+  implemented in Infrastructure/Ai. Title, summary and items come from ONE
+  extraction call rather than separate title/summarization services (the
+  spec's list in section 16 is "for example") - cheaper and consistent.
+  Clients never call OpenAI directly.
+- **Never trust AI output**: the model returns wall-clock local dates/times
+  as strings; `ExtractionNormalizer` parses, range-checks and converts them to
+  UTC, and turns anything unusable into a `Clarification` for the user. New
+  AI fields must go through it, with tests.
+- **Nothing AI-proposed is saved as a task/appointment until the user
+  confirms** (spec section 18). Confirm is all-or-nothing
+  (`IApplicationDbContext.ExecuteInTransactionAsync`) and refuses items that
+  were already decided, so it can't create duplicates.
+- **Don't log user content** (transcripts, captured text) - counts, ids and
+  timings only (spec section 37). Audio lives in `IFileStorageService`
+  (App_Data locally), never in SQL.
 - **Reminders are idempotent on Update**: re-`PUT`-ing a Task/Appointment
   with a reminder value cancels the old pending reminder and creates a new
   one rather than accumulating duplicates. Follow this pattern in Phase 3/4.

@@ -26,4 +26,11 @@ public interface IApplicationDbContext
     DbSet<RecurrenceRule> RecurrenceRules { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Runs <paramref name="operation"/> in one database transaction, so every
+    /// SaveChangesAsync inside it commits or rolls back together. Works with the
+    /// connection's retry-on-failure strategy (the whole operation is retried).
+    /// </summary>
+    Task<T> ExecuteInTransactionAsync<T>(Func<CancellationToken, Task<T>> operation, CancellationToken cancellationToken = default);
 }

@@ -1,10 +1,10 @@
-﻿import { useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState, type ReactNode } from 'react'
 import { todayApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { AppointmentForm } from '../components/AppointmentForm'
 import { AppointmentRow } from '../components/AppointmentRow'
-import { QuickAddTask } from '../components/QuickAddTask'
+import { CaptureBar } from '../components/CaptureBar'
 import { TaskRow } from '../components/TaskRow'
 import { formatDateKey, formatDue, formatTime } from '@shared/dates'
 
@@ -37,7 +37,7 @@ export function TodayPage() {
       </header>
 
       {addingAppointment && <AppointmentForm initialDate={data?.date} onDone={() => setAddingAppointment(false)} />}
-      <QuickAddTask />
+      <CaptureBar />
 
       {isPending && <p className="muted">Loading…</p>}
       {error && <p className="error">{error.message}</p>}

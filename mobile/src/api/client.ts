@@ -89,14 +89,16 @@ export async function request<T>(
   body?: unknown,
   { anonymous = false }: { anonymous?: boolean } = {},
 ): Promise<T> {
+  // FormData goes as multipart; fetch sets that Content-Type (with boundary) itself.
+  const isForm = body instanceof FormData
   const send = () =>
     fetch(`${API_URL}/api${path}`, {
       method,
       headers: {
-        ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+        ...(body !== undefined && !isForm ? { 'Content-Type': 'application/json' } : {}),
         ...(!anonymous && accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
     })
 
   let response: Response

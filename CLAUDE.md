@@ -59,7 +59,8 @@ backend/
 web/       # React web client - see web/README.md
 mobile/    # Expo React Native app - see mobile/README.md
 shared/    # dependency-free TS shared by web + mobile: API types,
-           # endpoint definitions (createApi), timezone date helpers
+           # endpoint definitions (createApi), timezone date helpers,
+           # captureDraft (review-screen item <-> confirm payload)
 docs/
   SPEC.md  # full product spec
 ```
@@ -141,7 +142,7 @@ Local dev notes:
   the timezone conversion (unit tested). Verified live against OpenAI on
   2026-09-30: English + Russian text, a WAV voice upload (~5-7 s per
   capture), confirm/reject/edit, duplicate-confirm refusal, audio delete.
-  Next: web + mobile capture/review screens.
+  Web capture/review done (see Web below). Next: mobile capture/review.
 - ⬜ **Phase 4 — Notifications**: actual push/local notification delivery.
   Reminder *records* already exist (`Reminder` entity, `TriggerAtUtc`) from
   Phase 2 — Phase 4 is about dispatching them, not creating them.
@@ -153,10 +154,13 @@ Local dev notes:
   (the `RecurrenceRule` entity and FK already exist in the schema from
   Phase 1, but nothing generates occurrences from it yet), search, voice
   history, widgets, calendar integrations, analytics.
-- 🟡 **Web (React)**: sign in/up, Today, Tasks (quick add, complete/cancel/
-  reopen/delete), Calendar (day/week/month) with appointment creation. Runs
-  under the Aspire AppHost as the `web` resource. No edit forms yet, no
-  automated tests yet (verified by driving Chrome with Playwright).
+- 🟡 **Web (React)**: sign in/up, Today with AI quick capture (text box +
+  mic via MediaRecorder → review screen where every item is editable →
+  Save/Cancel), Tasks (manual quick add, complete/cancel/reopen/delete),
+  Calendar (day/week/month) with appointment creation. Runs under the Aspire
+  AppHost as the `web` resource. No edit forms for saved items yet, no
+  automated tests yet (verified by driving Chrome with Playwright, using a
+  WAV file as a fake microphone for the voice path).
 - 🟡 **Mobile (React Native / Expo)**: sign in/up with session restore,
   Today, Tasks (quick add with native date/time pickers, complete; long-press
   to cancel/delete), Calendar week agenda, pull-to-refresh. Verified on the

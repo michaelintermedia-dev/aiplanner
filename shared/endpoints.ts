@@ -3,6 +3,9 @@ import type {
   AuthResponse,
   CalendarRange,
   CalendarView,
+  Capture,
+  CaptureSummary,
+  ConfirmCaptureItem,
   CreateAppointmentRequest,
   SaveTaskRequest,
   Task,
@@ -12,7 +15,8 @@ import type {
 
 /**
  * The HTTP function each client provides: it owns the base URL, token
- * attachment and refresh. `path` is relative to /api, e.g. "/tasks".
+ * attachment and refresh. `path` is relative to /api, e.g. "/tasks". A
+ * FormData body is sent as multipart; anything else as JSON.
  */
 export type RequestFn = <T>(
   method: string,
@@ -58,6 +62,17 @@ export function createApi(request: RequestFn) {
     calendar: {
       get: (view: CalendarView, date: string) =>
         request<CalendarRange>('GET', `/calendar?view=${view}&date=${date}`),
+    },
+    captures: {
+      /** Analyze typed text. Nothing is saved as a task/appointment until confirm(). */
+      text: (text: string) => request<Capture>('POST', '/captures/text', { text }),
+      /** Upload a recording: a FormData with the file in field "audio". */
+      voice: (form: FormData) => request<Capture>('POST', '/captures/voice', form),
+      list: (take = 50) => request<CaptureSummary[]>('GET', `/captures?take=${take}`),
+      get: (id: string) => request<Capture>('GET', `/captures/${id}`),
+      confirm: (id: string, items: ConfirmCaptureItem[]) =>
+        request<Capture>('POST', `/captures/${id}/confirm`, { items }),
+      deleteAudio: (id: string) => request<void>('DELETE', `/captures/${id}/audio`),
     },
   }
 }

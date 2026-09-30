@@ -137,8 +137,9 @@ Local dev notes:
   `api/captures` (text + voice upload → transcript → AI title/summary/items
   → user confirms → real tasks/appointments/notes, in one transaction),
   capture history, audio playback/deletion. `ITranscriptionService` +
-  `IIntentExtractionService` (OpenAI: gpt-4o-transcribe, gpt-5.4-mini with a
-  strict JSON schema); `ExtractionNormalizer` validates all AI output and does
+  `IIntentExtractionService` (OpenAI: gpt-4o-mini-transcribe - gpt-4o-transcribe
+  dropped everything after the first pause in resumed recordings -
+  and gpt-5.4-mini with a strict JSON schema); `ExtractionNormalizer` validates all AI output and does
   the timezone conversion (unit tested). Verified live against OpenAI on
   2026-09-30: English + Russian text, a WAV voice upload (~5-7 s per
   capture), confirm/reject/edit, duplicate-confirm refusal, audio delete.
@@ -246,6 +247,17 @@ Client-side (web and mobile - keep them consistent):
   start of that day in the user's timezone, with `hasDueTime: false`.
 - Refresh tokens rotate on every use (the old one is revoked), so a client
   must never fire two refreshes in parallel - share one in-flight request.
+- **Mic button behavior (same on web and mobile)**, decided with the user:
+  one button, press length decides the mode - hold ≥350 ms = push-to-talk
+  (release pauses), short tap = toggle (tap starts, tap pauses). Pausing
+  never sends: pressing again *continues the same recording*. While paused
+  the user can **listen back** to everything so far, then Send or Discard.
+  The mic stays at a fixed position (rightmost) so hold-to-talk never
+  misses. Recordings cap at 10 minutes.
+- **Upload recordings as WAV (16 kHz mono)**, not the browser's WebM:
+  OpenAI rejects MediaRecorder WebM once it has been paused/resumed or
+  flushed with requestData() ("corrupted or unsupported"). The web app
+  converts with `web/src/lib/toWav.ts`; the preview plays that same WAV.
 
 ## What NOT to do
 

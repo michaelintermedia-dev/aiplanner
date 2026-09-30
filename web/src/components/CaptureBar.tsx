@@ -1,10 +1,43 @@
 import type { Capture } from '@shared/types'
-import { useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { capturesApi } from '../api/endpoints'
-import { useAudioRecorder } from '../lib/useAudioRecorder'
+import { toWav } from '../lib/toWav'
+import { useAudioRecorder, type RecorderState } from '../lib/useAudioRecorder'
 import { CaptureReview } from './CaptureReview'
+import { MicButton } from './MicButton'
 
-type Phase = 'idle' | 'recording' | 'transcribing' | 'understanding'
+type Busy = null | 'transcribing' | 'understanding'
+
+/**
+ * While paused, an object URL for everything recorded so far, so the user can
+ * listen before sending. Rebuilt on every pause; revoked when replaced.
+ */
+function usePreview(state: RecorderState, pauseCount: number, snapshot: () => Promise<Blob | null>) {
+  const [preview, setPreview] = useState<{ url: string; pause: number } | null>(null)
+  useEffect(() => {
+    if (state !== 'paused') return
+    let created: string | null = null
+    let cancelled = false
+    // Preview the WAV that Send will upload: it's exactly what gets sent, and
+    // unlike the recorder's WebM it has a duration the player can show.
+    void snapshot()
+      .then((blob) => (blob && blob.size > 0 ? toWav(blob) : null))
+      .then((wav) => {
+        if (cancelled || !wav) return
+        created = URL.createObjectURL(wav)
+        setPreview({ url: created, pause: pauseCount })
+      })
+      .catch(() => {}) // No preview is fine; Send still works.
+    return () => {
+      cancelled = true
+      if (created) URL.revokeObjectURL(created)
+    }
+  }, [state, pauseCount, snapshot])
+  // A preview from an earlier pause has been revoked; never hand it to <audio>.
+  return state === 'paused' && preview?.pause === pauseCount ? preview.url : null
+}
+
+const formatDuration = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 
 /**
  * Quick capture (spec section 14): type or speak, the AI proposes items, the
@@ -13,13 +46,14 @@ type Phase = 'idle' | 'recording' | 'transcribing' | 'understanding'
 export function CaptureBar() {
   const recorder = useAudioRecorder()
   const [text, setText] = useState('')
-  const [phase, setPhase] = useState<Phase>('idle')
+  const [busy, setBusy] = useState<Busy>(null)
   const [error, setError] = useState<string | null>(null)
   const [capture, setCapture] = useState<Capture | null>(null)
   const [savedMessage, setSavedMessage] = useState<string | null>(null)
+  const preview = usePreview(recorder.state, recorder.pauseCount, recorder.snapshot)
 
-  const run = async (phaseName: Phase, work: () => Promise<Capture>) => {
-    setPhase(phaseName)
+  const run = async (phase: Exclude<Busy, null>, work: () => Promise<Capture>) => {
+    setBusy(phase)
     setError(null)
     setSavedMessage(null)
     try {
@@ -28,7 +62,7 @@ export function CaptureBar() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.')
     } finally {
-      setPhase('idle')
+      setBusy(null)
     }
   }
 
@@ -42,29 +76,24 @@ export function CaptureBar() {
     if (e.key === 'Enter' && !e.shiftKey) submitText(e)
   }
 
-  const toggleRecording = async () => {
-    setError(null)
-    setSavedMessage(null)
-    if (recorder.state === 'recording') {
-      const recording = await recorder.stop()
+  const sendRecording = async () => {
+    const recording = await recorder.stop()
+    await run('transcribing', async () => {
+      // Upload WAV, not the recorder's WebM - see toWav for why.
       const form = new FormData()
-      form.append('audio', recording.blob, recording.fileName)
-      await run('transcribing', () => capturesApi.voice(form))
-      return
-    }
-    try {
-      await recorder.start()
-      setPhase('recording')
-    } catch (err) {
-      setError(
-        err instanceof DOMException && err.name === 'NotAllowedError'
-          ? 'Microphone access was blocked. Allow it in the browser to record.'
-          : err instanceof Error
-            ? err.message
-            : 'Could not start recording.',
-      )
-    }
+      form.append('audio', await toWav(recording.blob), 'recording.wav')
+      return capturesApi.voice(form)
+    })
   }
+
+  const onMicError = (err: unknown) =>
+    setError(
+      err instanceof DOMException && err.name === 'NotAllowedError'
+        ? 'Microphone access was blocked. Allow it in the browser to record.'
+        : err instanceof Error
+          ? err.message
+          : 'Could not start recording.',
+    )
 
   if (capture) {
     return (
@@ -78,18 +107,24 @@ export function CaptureBar() {
     )
   }
 
-  const busy = phase === 'transcribing' || phase === 'understanding'
-  const recording = recorder.state === 'recording'
+  const hasAudio = recorder.state === 'recording' || recorder.state === 'paused'
 
   return (
     <form className="capture" onSubmit={submitText}>
-      {recording ? (
+      {hasAudio ? (
         <div className="capture-recording" aria-live="polite">
-          <span className="rec-dot" /> Listening… {Math.floor(recorder.seconds / 60)}:
-          {String(recorder.seconds % 60).padStart(2, '0')}
-          <button type="button" className="link" onClick={() => { recorder.cancel(); setPhase('idle') }}>
-            Discard
-          </button>
+          <span className={`rec-dot${recorder.state === 'paused' ? ' paused' : ''}`} />
+          <span className="rec-time">{formatDuration(recorder.seconds)}</span>
+          <span className="muted">
+            {recorder.state === 'recording'
+              ? 'Listening…'
+              : recorder.atLimit
+                ? 'That’s the 10-minute maximum — send it or discard.'
+                : 'Paused — listen back, continue with the mic, or send'}
+          </span>
+          {recorder.state === 'paused' && preview && (
+            <audio className="rec-preview" controls src={preview} aria-label="Listen to the recording so far" />
+          )}
         </div>
       ) : (
         <textarea
@@ -99,33 +134,47 @@ export function CaptureBar() {
           onChange={(e) => setText(e.target.value)}
           onKeyDown={onKeyDown}
           rows={2}
-          disabled={busy}
+          disabled={busy !== null}
           aria-label="Capture text"
         />
       )}
       <div className="capture-actions">
         {busy ? (
           <span className="muted capture-status" aria-live="polite">
-            <span className="spinner" /> {phase === 'transcribing' ? 'Transcribing and understanding…' : 'Understanding…'}
+            <span className="spinner" /> {busy === 'transcribing' ? 'Transcribing and understanding…' : 'Understanding…'}
           </span>
         ) : (
-          <span className="muted capture-hint">{savedMessage ?? 'Type or speak — I’ll turn it into tasks and events.'}</span>
+          <span className="muted capture-hint">
+            {hasAudio ? '' : (savedMessage ?? 'Type, or hold 🎤 to talk (tap to start/stop).')}
+          </span>
         )}
-        {recorder.state !== 'unsupported' && (
-          <button
-            type="button"
-            className={`mic${recording ? ' recording' : ''}`}
-            onClick={toggleRecording}
-            disabled={busy}
-            aria-label={recording ? 'Stop recording' : 'Record voice'}
-            title={recording ? 'Stop and process' : 'Record voice'}>
-            {recording ? '■' : '🎤'}
+        {hasAudio && (
+          <button type="button" className="link" onClick={recorder.discard}>
+            Discard
           </button>
         )}
-        {!recording && (
-          <button type="submit" className="primary" disabled={!text.trim() || busy}>
+        {hasAudio ? (
+          <button type="button" className="primary" onClick={sendRecording} disabled={busy !== null || recorder.seconds < 1}>
+            Send
+          </button>
+        ) : (
+          <button type="submit" className="primary" disabled={!text.trim() || busy !== null}>
             Understand
           </button>
+        )}
+        {/* Rightmost, so it never moves between presses - hold-to-talk aims at a fixed spot. */}
+        {recorder.state !== 'unsupported' && (
+          <MicButton
+            state={recorder.state}
+            record={async () => {
+              setError(null)
+              setSavedMessage(null)
+              await recorder.record()
+            }}
+            pause={recorder.pause}
+            disabled={busy !== null}
+            onError={onMicError}
+          />
         )}
       </div>
       {error && <p className="error">{error}</p>}

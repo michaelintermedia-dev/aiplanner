@@ -11,8 +11,12 @@ public class OpenAiOptions
     /// <summary>Model that turns text into title/summary/items.</summary>
     public string Model { get; set; } = "gpt-5.4-mini";
 
-    /// <summary>Speech-to-text model.</summary>
-    public string TranscriptionModel { get; set; } = "gpt-4o-transcribe";
+    /// <summary>
+    /// Speech-to-text model. gpt-4o-mini-transcribe rather than gpt-4o-transcribe:
+    /// on recordings that were paused and continued, gpt-4o-transcribe stopped at
+    /// the first cut and dropped the rest (tested 2026-09-30); mini kept it all.
+    /// </summary>
+    public string TranscriptionModel { get; set; } = "gpt-4o-mini-transcribe";
 
     /// <summary>Reasoning effort for the extraction model ("low" keeps capture fast).</summary>
     public string? ReasoningEffort { get; set; } = "low";

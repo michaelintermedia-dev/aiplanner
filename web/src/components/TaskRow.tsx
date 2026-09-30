@@ -1,0 +1,55 @@
+import { tasksApi } from '../api/endpoints'
+import type { Task } from '../api/types'
+import { useAuth } from '../auth/useAuth'
+import { formatDue, todayKey, dateKey } from '../lib/dates'
+import { useAction } from '../lib/useAction'
+
+export function TaskRow({ task }: { task: Task }) {
+  const { zone } = useAuth()
+  const complete = useAction(tasksApi.complete)
+  const reopen = useAction(tasksApi.reopen)
+  const cancel = useAction(tasksApi.cancel)
+  const remove = useAction(tasksApi.remove)
+
+  const done = task.status === 'Completed' || task.status === 'Cancelled'
+  const busy = complete.isPending || reopen.isPending || cancel.isPending || remove.isPending
+  const overdue =
+    !done && task.dueDateUtc !== null && dateKey(task.dueDateUtc, zone.timeZone) < todayKey(zone.timeZone)
+
+  return (
+    <li className={`row task${done ? ' done' : ''}`}>
+      <button
+        className={`check${task.status === 'Completed' ? ' checked' : ''}`}
+        aria-label={task.status === 'Completed' ? 'Mark as not done' : 'Mark as done'}
+        disabled={busy || task.status === 'Cancelled'}
+        onClick={() => (done ? reopen.mutate(task.id) : complete.mutate(task.id))}
+      />
+      <div className="row-main">
+        <span className="row-title">{task.title}</span>
+        <span className="row-meta">
+          {task.status === 'Cancelled' && <span className="badge">Cancelled</span>}
+          {task.status === 'Ongoing' && <span className="badge ongoing">Ongoing</span>}
+          {task.dueDateUtc && (
+            <span className={overdue ? 'overdue' : undefined}>{formatDue(task.dueDateUtc, task.hasDueTime, zone)}</span>
+          )}
+          {task.priority !== 'None' && <span className={`badge prio-${task.priority.toLowerCase()}`}>{task.priority}</span>}
+          {task.tags.map((tag) => (
+            <span key={tag} className="tag">
+              #{tag}
+            </span>
+          ))}
+        </span>
+      </div>
+      <div className="row-actions">
+        {!done && (
+          <button className="link" disabled={busy} onClick={() => cancel.mutate(task.id)}>
+            Cancel
+          </button>
+        )}
+        <button className="link danger" disabled={busy} onClick={() => remove.mutate(task.id)}>
+          Delete
+        </button>
+      </div>
+    </li>
+  )
+}

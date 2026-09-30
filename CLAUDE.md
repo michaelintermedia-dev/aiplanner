@@ -26,7 +26,7 @@ the decisions recorded here win (e.g. .NET 10).
 - **Database**: Microsoft SQL Server Express (schema must stay compatible
   with scaling to a larger SQL Server edition later)
 - **Mobile**: React Native, shared codebase for iOS + Android (not yet built)
-- **Web**: React (not yet built)
+- **Web**: React 19 + TypeScript (strict), Vite, React Router, TanStack Query
 - **AI provider**: OpenAI (user has their own API key, to be wired in Phase 3)
 - **Local dev orchestration**: Aspire 13 (NOT docker-compose — see below)
 
@@ -55,8 +55,10 @@ backend/
     AiPlanner.ServiceDefaults/  # shared OpenTelemetry/health-check/resilience wiring
   tests/
     AiPlanner.Application.Tests/
+web/       # React web client - see web/README.md
 mobile/    # not started
-web/       # not started
+docs/
+  SPEC.md  # full product spec
 ```
 
 Dependency rule: Api → Infrastructure/Application → Domain. Application
@@ -139,7 +141,11 @@ Local dev notes:
   (the `RecurrenceRule` entity and FK already exist in the schema from
   Phase 1, but nothing generates occurrences from it yet), search, voice
   history, widgets, calendar integrations, analytics.
-- ⬜ **Mobile (React Native) / Web (React)**: not started at all.
+- 🟡 **Web (React)**: sign in/up, Today, Tasks (quick add, complete/cancel/
+  reopen/delete), Calendar (day/week/month) with appointment creation. Runs
+  under the Aspire AppHost as the `web` resource. No edit forms yet, no
+  automated tests yet (verified by driving Chrome with Playwright).
+- ⬜ **Mobile (React Native)**: not started. Spec Phase 1 includes it.
 
 ## Design decisions already made — follow these, don't re-litigate
 
@@ -193,6 +199,15 @@ Local dev notes:
 - New entities: inherit `BaseEntity` (gives `Id`, `UserId`, timestamps,
   `IsDeleted`, `RowVersion`) unless there's a specific reason not to
   (e.g. `User` itself, join tables like `TaskTag`).
+
+Client-side (web now, mobile later - keep them consistent):
+
+- All HTTP goes through one API client module; UI never calls `fetch`.
+- Show and enter dates in the user's **profile** timezone (`User.TimeZoneId`),
+  not the device's. A task with a date but no time is sent as midnight at the
+  start of that day in the user's timezone, with `hasDueTime: false`.
+- Refresh tokens rotate on every use (the old one is revoked), so a client
+  must never fire two refreshes in parallel - share one in-flight request.
 
 ## What NOT to do
 

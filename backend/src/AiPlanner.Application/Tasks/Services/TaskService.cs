@@ -182,8 +182,14 @@ public class TaskService : ITaskService
             return Result<TaskItemDto>.Failure("Task not found.");
         }
 
+        if (task.Status is not (TaskItemStatus.Completed or TaskItemStatus.Cancelled))
+        {
+            return Result<TaskItemDto>.Failure("Only completed or cancelled tasks can be reopened.");
+        }
+
         task.Status = DetermineInitialStatus(isOngoing: false, task.DueDateUtc);
         task.CompletedAtUtc = null;
+        RestoreReminder(task);
 
         await _db.SaveChangesAsync(ct);
         return Result<TaskItemDto>.Success(ToDto(task));
@@ -275,7 +281,7 @@ public class TaskService : ITaskService
         }
     }
 
-    private static void ApplyReminder(TaskItem task, int? reminderMinutesBeforeDue)
+    private void ApplyReminder(TaskItem task, int? reminderMinutesBeforeDue)
     {
         if (reminderMinutesBeforeDue is null || task.DueDateUtc is null)
         {
@@ -289,7 +295,36 @@ public class TaskService : ITaskService
             TriggerAtUtc = task.DueDateUtc.Value.AddMinutes(-reminderMinutesBeforeDue.Value)
         };
 
+        // Add explicitly: attached only via the navigation of an already-tracked task,
+        // EF would treat the pre-keyed reminder as an existing row (UPDATE -> 409).
+        _db.Reminders.Add(reminder);
         task.Reminders.Add(reminder);
+    }
+
+    /// <summary>
+    /// On reopen, bring back the reminder that complete/cancel switched off, with
+    /// the same offset ("30 min before") - if that time is still ahead.
+    /// </summary>
+    private void RestoreReminder(TaskItem task)
+    {
+        var last = task.Reminders.OrderByDescending(r => r.CreatedAtUtc).FirstOrDefault();
+        if (last is null || !last.IsCancelled || task.DueDateUtc is null)
+        {
+            return;
+        }
+        var minutes = (int)Math.Round((task.DueDateUtc.Value - last.TriggerAtUtc).TotalMinutes);
+        if (task.DueDateUtc.Value.AddMinutes(-minutes) > _dateTime.UtcNow)
+        {
+            ApplyReminder(task, minutes);
+        }
+    }
+
+    private static int? PendingReminderMinutes(TaskItem t)
+    {
+        var pending = t.Reminders.Where(r => !r.IsCancelled).OrderBy(r => r.TriggerAtUtc).FirstOrDefault();
+        return pending is null || t.DueDateUtc is null
+            ? null
+            : (int)Math.Round((t.DueDateUtc.Value - pending.TriggerAtUtc).TotalMinutes);
     }
 
     private static void CancelPendingReminders(TaskItem task)
@@ -314,5 +349,7 @@ public class TaskService : ITaskService
         t.CompletedAtUtc,
         t.TaskTags.Select(tt => tt.Tag.Name).OrderBy(n => n).ToList(),
         t.CreatedAtUtc,
-        t.UpdatedAtUtc);
+        t.UpdatedAtUtc,
+        PendingReminderMinutes(t),
+        t.SourceAiExtractionId);
 }

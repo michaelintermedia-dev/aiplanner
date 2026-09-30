@@ -12,11 +12,13 @@ public class AppointmentService : IAppointmentService
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUserService _currentUser;
+    private readonly IDateTime _dateTime;
 
-    public AppointmentService(IApplicationDbContext db, ICurrentUserService currentUser)
+    public AppointmentService(IApplicationDbContext db, ICurrentUserService currentUser, IDateTime dateTime)
     {
         _db = db;
         _currentUser = currentUser;
+        _dateTime = dateTime;
     }
 
     public async Task<IReadOnlyList<AppointmentDto>> GetListAsync(AppointmentQueryParameters query, CancellationToken ct = default)
@@ -170,6 +172,30 @@ public class AppointmentService : IAppointmentService
         return Result<AppointmentDto>.Success(ToDto(appointment));
     }
 
+    /// <summary>Completed/cancelled -> scheduled again, restoring its reminder if still ahead.</summary>
+    public async Task<Result<AppointmentDto>> ReopenAsync(Guid id, CancellationToken ct = default)
+    {
+        var appointment = await FindOwnedAsync(id, track: true, ct);
+        if (appointment is null)
+        {
+            return Result<AppointmentDto>.Failure("Appointment not found.");
+        }
+        if (appointment.Status == AppointmentStatus.Scheduled)
+        {
+            return Result<AppointmentDto>.Failure("Only completed or cancelled appointments can be reopened.");
+        }
+
+        appointment.Status = AppointmentStatus.Scheduled;
+        var last = appointment.Reminders.OrderByDescending(r => r.CreatedAtUtc).FirstOrDefault();
+        if (last is { IsCancelled: true } && last.TriggerAtUtc > _dateTime.UtcNow)
+        {
+            ApplyReminder(appointment, (int)Math.Round((appointment.StartUtc - last.TriggerAtUtc).TotalMinutes));
+        }
+
+        await _db.SaveChangesAsync(ct);
+        return Result<AppointmentDto>.Success(ToDto(appointment));
+    }
+
     public async Task<Result> DeleteAsync(Guid id, CancellationToken ct = default)
     {
         var appointment = await FindOwnedAsync(id, track: true, ct);
@@ -207,21 +233,31 @@ public class AppointmentService : IAppointmentService
         return await q.FirstOrDefaultAsync(ct);
     }
 
-    private static void ApplyParticipants(Appointment appointment, IReadOnlyList<string>? names)
+    // New participants/reminders are added explicitly: their Guid keys are set in
+    // the constructor, so if attached only via a tracked appointment's navigation
+    // EF would treat them as existing rows (UPDATE -> 409 on edit).
+
+    private void ApplyParticipants(Appointment appointment, IReadOnlyList<string>? names)
     {
         if (names is null)
         {
             return;
         }
 
+        foreach (var existing in appointment.Participants.ToList())
+        {
+            _db.AppointmentParticipants.Remove(existing);
+        }
         appointment.Participants.Clear();
         foreach (var name in names.Select(n => n.Trim()).Where(n => n.Length > 0).Distinct())
         {
-            appointment.Participants.Add(new AppointmentParticipant { Appointment = appointment, Name = name });
+            var participant = new AppointmentParticipant { Appointment = appointment, AppointmentId = appointment.Id, Name = name };
+            _db.AppointmentParticipants.Add(participant);
+            appointment.Participants.Add(participant);
         }
     }
 
-    private static void ApplyReminder(Appointment appointment, int? reminderMinutesBeforeStart)
+    private void ApplyReminder(Appointment appointment, int? reminderMinutesBeforeStart)
     {
         if (reminderMinutesBeforeStart is null)
         {
@@ -235,7 +271,14 @@ public class AppointmentService : IAppointmentService
             TriggerAtUtc = appointment.StartUtc.AddMinutes(-reminderMinutesBeforeStart.Value)
         };
 
+        _db.Reminders.Add(reminder);
         appointment.Reminders.Add(reminder);
+    }
+
+    private static int? PendingReminderMinutes(Appointment a)
+    {
+        var pending = a.Reminders.Where(r => !r.IsCancelled).OrderBy(r => r.TriggerAtUtc).FirstOrDefault();
+        return pending is null ? null : (int)Math.Round((a.StartUtc - pending.TriggerAtUtc).TotalMinutes);
     }
 
     private static void CancelPendingReminders(Appointment appointment)
@@ -258,5 +301,7 @@ public class AppointmentService : IAppointmentService
         a.Status,
         a.Participants.Select(p => new AppointmentParticipantDto(p.Name, p.Email)).ToList(),
         a.CreatedAtUtc,
-        a.UpdatedAtUtc);
+        a.UpdatedAtUtc,
+        PendingReminderMinutes(a),
+        a.SourceAiExtractionId);
 }

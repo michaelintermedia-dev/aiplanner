@@ -38,6 +38,10 @@ export interface Task {
   tags: string[]
   createdAtUtc: string
   updatedAtUtc: string
+  /** Only on single-item reads (tasks.get); null in lists. */
+  reminderMinutesBefore?: number | null
+  /** The capture this task came from (transcript/recording). */
+  sourceCaptureId?: string | null
 }
 
 export interface SaveTaskRequest {
@@ -66,8 +70,13 @@ export interface Appointment {
   participants: { name: string; email: string | null }[]
   createdAtUtc: string
   updatedAtUtc: string
+  /** Only on single-item reads (appointments.get); null in lists. */
+  reminderMinutesBefore?: number | null
+  /** The capture this appointment came from (transcript/recording). */
+  sourceCaptureId?: string | null
 }
 
+/** Also the PUT body: an update replaces all fields. */
 export interface CreateAppointmentRequest {
   title: string
   description?: string | null

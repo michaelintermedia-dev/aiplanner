@@ -16,13 +16,14 @@ import type {
 /**
  * The HTTP function each client provides: it owns the base URL, token
  * attachment and refresh. `path` is relative to /api, e.g. "/tasks". A
- * FormData body is sent as multipart; anything else as JSON.
+ * FormData body is sent as multipart; anything else as JSON. With
+ * `as: 'blob'` the response body is returned as a Blob (audio downloads).
  */
 export type RequestFn = <T>(
   method: string,
   path: string,
   body?: unknown,
-  options?: { anonymous?: boolean },
+  options?: { anonymous?: boolean; as?: 'json' | 'blob' },
 ) => Promise<T>
 
 /** Typed API endpoints shared by the web and mobile clients. */
@@ -43,6 +44,8 @@ export function createApi(request: RequestFn) {
     },
     tasks: {
       list: (includeCompleted = false) => request<Task[]>('GET', `/tasks?includeCompleted=${includeCompleted}`),
+      /** One task with its reminder and source capture (for the detail view). */
+      get: (id: string) => request<Task>('GET', `/tasks/${id}`),
       create: (task: SaveTaskRequest) => request<Task>('POST', '/tasks', task),
       update: (id: string, task: SaveTaskRequest) => request<Task>('PUT', `/tasks/${id}`, task),
       complete: (id: string) => request<Task>('PATCH', `/tasks/${id}/complete`),
@@ -51,9 +54,14 @@ export function createApi(request: RequestFn) {
       remove: (id: string) => request<void>('DELETE', `/tasks/${id}`),
     },
     appointments: {
+      /** One appointment with its reminder and source capture (for the detail view). */
+      get: (id: string) => request<Appointment>('GET', `/appointments/${id}`),
       create: (appointment: CreateAppointmentRequest) => request<Appointment>('POST', '/appointments', appointment),
+      update: (id: string, appointment: CreateAppointmentRequest) =>
+        request<Appointment>('PUT', `/appointments/${id}`, appointment),
       complete: (id: string) => request<Appointment>('PATCH', `/appointments/${id}/complete`),
       cancel: (id: string) => request<Appointment>('PATCH', `/appointments/${id}/cancel`),
+      reopen: (id: string) => request<Appointment>('PATCH', `/appointments/${id}/reopen`),
       remove: (id: string) => request<void>('DELETE', `/appointments/${id}`),
     },
     today: {
@@ -72,6 +80,8 @@ export function createApi(request: RequestFn) {
       get: (id: string) => request<Capture>('GET', `/captures/${id}`),
       confirm: (id: string, items: ConfirmCaptureItem[]) =>
         request<Capture>('POST', `/captures/${id}/confirm`, { items }),
+      /** Part `part` (0-based, < Capture.audioParts) of the original recording. */
+      audio: (id: string, part = 0) => request<Blob>('GET', `/captures/${id}/audio?part=${part}`, undefined, { as: 'blob' }),
       deleteAudio: (id: string) => request<void>('DELETE', `/captures/${id}/audio`),
     },
   }

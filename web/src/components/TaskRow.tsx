@@ -1,3 +1,4 @@
+import { Link } from 'react-router'
 import { tasksApi } from '../api/endpoints'
 import type { Task } from '@shared/types'
 import { useAuth } from '../auth/useAuth'
@@ -25,7 +26,7 @@ export function TaskRow({ task }: { task: Task }) {
         onClick={() => (done ? reopen.mutate(task.id) : complete.mutate(task.id))}
       />
       <div className="row-main">
-        <span className="row-title">{task.title}</span>
+        <Link className="row-title" to={`/tasks/${task.id}`}>{task.title}</Link>
         <span className="row-meta">
           {task.status === 'Cancelled' && <span className="badge">Cancelled</span>}
           {task.status === 'Ongoing' && <span className="badge ongoing">Ongoing</span>}

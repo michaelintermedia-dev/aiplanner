@@ -16,4 +16,8 @@ public record AppointmentDto(
     AppointmentStatus Status,
     IReadOnlyList<AppointmentParticipantDto> Participants,
     DateTime CreatedAtUtc,
-    DateTime UpdatedAtUtc);
+    DateTime UpdatedAtUtc,
+    // Filled on single-item reads (detail view); null in lists.
+    int? ReminderMinutesBefore = null,
+    // The capture this appointment was created from.
+    Guid? SourceCaptureId = null);

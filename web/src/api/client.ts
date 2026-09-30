@@ -99,7 +99,7 @@ export async function request<T>(
   method: string,
   path: string,
   body?: unknown,
-  { anonymous = false }: { anonymous?: boolean } = {},
+  { anonymous = false, as = 'json' }: { anonymous?: boolean; as?: 'json' | 'blob' } = {},
 ): Promise<T> {
   // FormData goes as multipart; fetch sets that Content-Type (with boundary) itself.
   const isForm = body instanceof FormData
@@ -125,5 +125,6 @@ export async function request<T>(
 
   if (!response.ok) throw await toApiError(response)
   if (response.status === 204) return undefined as T
+  if (as === 'blob') return (await response.blob()) as T
   return (await response.json()) as T
 }

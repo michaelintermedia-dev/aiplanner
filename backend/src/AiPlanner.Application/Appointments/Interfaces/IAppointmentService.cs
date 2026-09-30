@@ -18,6 +18,7 @@ public interface IAppointmentService
     Task<Result<AppointmentDto>> CompleteAsync(Guid id, CancellationToken ct = default);
 
     Task<Result<AppointmentDto>> CancelAsync(Guid id, CancellationToken ct = default);
+    Task<Result<AppointmentDto>> ReopenAsync(Guid id, CancellationToken ct = default);
 
     Task<Result> DeleteAsync(Guid id, CancellationToken ct = default);
 }

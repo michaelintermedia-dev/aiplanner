@@ -74,6 +74,17 @@ public class AppointmentsController : ControllerBase
         return result.Succeeded ? Ok(result.Value) : NotFound(new { errors = result.Errors });
     }
 
+    /// <summary>Completed/cancelled -> scheduled again (its reminder is restored if still ahead).</summary>
+    [HttpPatch("{id:guid}/reopen")]
+    public async Task<ActionResult<AppointmentDto>> Reopen(Guid id, CancellationToken ct)
+    {
+        var result = await _appointmentService.ReopenAsync(id, ct);
+        if (result.Succeeded) return Ok(result.Value);
+        return result.Errors.Contains("Appointment not found.")
+            ? NotFound(new { errors = result.Errors })
+            : BadRequest(new { errors = result.Errors });
+    }
+
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {

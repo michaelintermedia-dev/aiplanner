@@ -985,6 +985,149 @@ label.inline-check {
   white-space: nowrap;
 }
 
+/* ---- Item detail ------------------------------------------------------- */
+
+a.row-title,
+a.cal-title {
+  color: inherit;
+  text-decoration: none;
+}
+
+a.row-title:hover,
+a.cal-title:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.detail {
+  gap: 18px;
+}
+
+.back {
+  align-self: flex-start;
+  padding-left: 0;
+}
+
+.detail-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-header h1 {
+  font-size: 1.8rem;
+  overflow-wrap: anywhere;
+}
+
+.struck {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.kind {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding-left: 8px;
+  border-left: 3px solid var(--task);
+  color: var(--muted);
+}
+
+.kind.appointment {
+  border-left-color: var(--appointment);
+}
+
+.badge.status-completed {
+  color: var(--ok);
+}
+
+.badge.status-cancelled {
+  color: var(--danger);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 20px;
+  margin: 0;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.facts dt {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.facts dd {
+  margin: 0;
+}
+
+.text-block p {
+  white-space: pre-wrap;
+}
+
+.detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.detail-actions .danger {
+  margin-left: auto;
+}
+
+textarea {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.source {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.source h2 {
+  margin: 0;
+}
+
+.source-text {
+  margin-top: 6px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border-radius: 8px;
+  white-space: pre-wrap;
+  font-size: 0.92rem;
+}
+
+.source-audio {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.audio-part {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.audio-part audio {
+  height: 36px;
+  max-width: 100%;
+}
+
 /* ---- Small screens ----------------------------------------------------- */
 
 @media (max-width: 760px) {

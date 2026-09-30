@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState, type ReactNode } from 'react'
+import { Link } from 'react-router'
 import { todayApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { AppointmentForm } from '../components/AppointmentForm'
@@ -69,7 +70,9 @@ export function TodayPage() {
             <Section title="Upcoming reminders">
               {data.upcomingReminders.map((r) => (
                 <li key={r.reminderId} className="row reminder">
-                  <span className="row-title">{r.title}</span>
+                  <Link className="row-title" to={`/${r.sourceType === 'Task' ? 'tasks' : 'appointments'}/${r.sourceId}`}>
+                    {r.title}
+                  </Link>
                   <span className="row-meta">{formatDue(r.triggerAtUtc, true, zone)}</span>
                 </li>
               ))}

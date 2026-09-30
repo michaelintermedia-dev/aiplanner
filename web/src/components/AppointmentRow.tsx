@@ -1,3 +1,4 @@
+import { Link } from 'react-router'
 import { appointmentsApi } from '../api/endpoints'
 import type { Appointment } from '@shared/types'
 import { useAuth } from '../auth/useAuth'
@@ -18,7 +19,7 @@ export function AppointmentRow({ appointment: a }: { appointment: Appointment })
         <small>{formatTime(a.endUtc, zone)}</small>
       </span>
       <div className="row-main">
-        <span className="row-title">{a.title}</span>
+        <Link className="row-title" to={`/appointments/${a.id}`}>{a.title}</Link>
         <span className="row-meta">
           {a.location && <span>{a.location}</span>}
           {done && <span className="badge">{a.status}</span>}

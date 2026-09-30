@@ -76,7 +76,10 @@ public class TasksController : ControllerBase
     public async Task<ActionResult<TaskItemDto>> Reopen(Guid id, CancellationToken ct)
     {
         var result = await _taskService.ReopenAsync(id, ct);
-        return result.Succeeded ? Ok(result.Value) : NotFound(new { errors = result.Errors });
+        if (result.Succeeded) return Ok(result.Value);
+        return result.Errors.Contains("Task not found.")
+            ? NotFound(new { errors = result.Errors })
+            : BadRequest(new { errors = result.Errors });
     }
 
     [HttpDelete("{id:guid}")]

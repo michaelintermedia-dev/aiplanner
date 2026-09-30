@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router'
 import { calendarApi } from '../api/endpoints'
 import type { CalendarItem, CalendarView } from '@shared/types'
 import { useAuth } from '../auth/useAuth'
@@ -100,7 +101,7 @@ export function CalendarPage() {
               {(itemsByDay.get(day) ?? []).map((item) => (
                 <li key={item.id} className={`cal-item ${item.itemType.toLowerCase()} status-${item.status.toLowerCase()}`}>
                   {item.hasTime && <span className="cal-time">{formatTime(item.startUtc, zone)}</span>}
-                  <span className="cal-title">{item.title}</span>
+                  <Link className="cal-title" to={`/${item.itemType === 'Task' ? 'tasks' : 'appointments'}/${item.id}`}>{item.title}</Link>
                 </li>
               ))}
             </ul>

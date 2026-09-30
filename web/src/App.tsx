@@ -1,6 +1,8 @@
 import { BrowserRouter, Navigate, NavLink, Outlet, Route, Routes } from 'react-router'
 import { useAuth } from './auth/useAuth'
+import { AppointmentDetailPage } from './pages/AppointmentDetailPage'
 import { AuthPage } from './pages/AuthPage'
+import { TaskDetailPage } from './pages/TaskDetailPage'
 import { CalendarPage } from './pages/CalendarPage'
 import { TasksPage } from './pages/TasksPage'
 import { TodayPage } from './pages/TodayPage'
@@ -43,6 +45,8 @@ export function App() {
           <Route path="/today" element={<TodayPage />} />
           <Route path="/tasks" element={<TasksPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
+          <Route path="/tasks/:id" element={<TaskDetailPage />} />
+          <Route path="/appointments/:id" element={<AppointmentDetailPage />} />
           <Route path="*" element={<Navigate to="/today" replace />} />
         </Route>
       </Routes>

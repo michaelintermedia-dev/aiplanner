@@ -34,6 +34,8 @@ export function useAudioRecorder({ maxSeconds = 10 * 60 }: { maxSeconds?: number
   const [seconds, setSeconds] = useState(0)
   /** Increments on every pause, so per-pause data (the preview) can tell pauses apart. */
   const [pauseCount, setPauseCount] = useState(0)
+  /** The live microphone stream while a recording exists (for the level meter). */
+  const [stream, setStream] = useState<MediaStream | null>(null)
   const recorder = useRef<MediaRecorder | null>(null)
   const chunks = useRef<Blob[]>([])
   const timer = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -67,12 +69,16 @@ export function useAudioRecorder({ maxSeconds = 10 * 60 }: { maxSeconds?: number
     stopTimer()
     recorder.current?.stream.getTracks().forEach((t) => t.stop())
     recorder.current = null
+    setStream(null)
   }, [stopTimer])
 
   useEffect(() => release, [release])
 
-  /** Starts a new recording, or continues a paused one from where it stopped. */
-  const record = useCallback(async () => {
+  /**
+   * Starts a new recording, or continues a paused one from where it stopped.
+   * `deviceId` picks the input for a new recording (ignored when continuing).
+   */
+  const record = useCallback(async (deviceId?: string | null) => {
     const r = recorder.current
     if (r?.state === 'paused') {
       if (elapsed.current >= maxSeconds) return // at the cap: send or discard
@@ -87,8 +93,11 @@ export function useAudioRecorder({ maxSeconds = 10 * 60 }: { maxSeconds?: number
     const format = pickFormat()
     if (!format) throw new Error('This browser cannot record audio.')
     // Throws NotAllowedError if the user blocks the microphone.
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-    const created = new MediaRecorder(stream, { mimeType: format.mimeType })
+    const media = await navigator.mediaDevices.getUserMedia({
+      audio: deviceId ? { deviceId: { exact: deviceId } } : true,
+    })
+    const created = new MediaRecorder(media, { mimeType: format.mimeType })
+    setStream(media)
     chunks.current = []
     created.ondataavailable = (e) => e.data.size > 0 && chunks.current.push(e.data)
     created.start()
@@ -162,5 +171,5 @@ export function useAudioRecorder({ maxSeconds = 10 * 60 }: { maxSeconds?: number
     setState('idle')
   }, [release])
 
-  return { state, seconds, pauseCount, atLimit: seconds >= maxSeconds, record, pause, stop, discard, snapshot }
+  return { state, seconds, pauseCount, stream, atLimit: seconds >= maxSeconds, record, pause, stop, discard, snapshot }
 }

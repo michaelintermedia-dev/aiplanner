@@ -3,7 +3,9 @@ import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { capturesApi } from '../api/endpoints'
 import { toWav } from '../lib/toWav'
 import { useAudioRecorder, type RecorderState } from '../lib/useAudioRecorder'
+import { useMicrophones } from '../lib/useMicrophones'
 import { CaptureReview } from './CaptureReview'
+import { LevelMeter } from './LevelMeter'
 import { MicButton } from './MicButton'
 
 type Busy = null | 'transcribing' | 'understanding'
@@ -51,6 +53,8 @@ export function CaptureBar() {
   const [capture, setCapture] = useState<Capture | null>(null)
   const [savedMessage, setSavedMessage] = useState<string | null>(null)
   const preview = usePreview(recorder.state, recorder.pauseCount, recorder.snapshot)
+  const mics = useMicrophones()
+  const [silent, setSilent] = useState(false)
 
   const run = async (phase: Exclude<Busy, null>, work: () => Promise<Capture>) => {
     setBusy(phase)
@@ -86,14 +90,38 @@ export function CaptureBar() {
     })
   }
 
-  const onMicError = (err: unknown) =>
+  const onMicError = (err: unknown) => {
+    const name = err instanceof DOMException ? err.name : ''
     setError(
-      err instanceof DOMException && err.name === 'NotAllowedError'
-        ? 'Microphone access was blocked. Allow it in the browser to record.'
-        : err instanceof Error
-          ? err.message
-          : 'Could not start recording.',
+      name === 'NotAllowedError'
+        ? 'Microphone access is blocked. Click the lock icon in the address bar and allow the microphone.'
+        : name === 'NotFoundError' || name === 'OverconstrainedError'
+          ? 'No microphone found. Plug one in, or pick another input from the Mic list.'
+          : name === 'NotReadableError'
+            ? 'The microphone is busy or unavailable (another app may be using it).'
+            : err instanceof Error
+              ? err.message
+              : 'Could not start recording.',
     )
+  }
+
+  const startRecording = async (deviceId = mics.selected) => {
+    setError(null)
+    setSavedMessage(null)
+    setSilent(false)
+    await recorder.record(deviceId)
+    mics.refresh() // device names become visible once permission is granted
+  }
+
+  // Switching input mid-recording restarts it on the new mic: the old take is
+  // usually the silent one the user is trying to fix.
+  const switchMic = async (deviceId: string | null) => {
+    mics.choose(deviceId)
+    if (recorder.state === 'recording' || recorder.state === 'paused') {
+      recorder.discard()
+      await startRecording(deviceId).catch(onMicError)
+    }
+  }
 
   if (capture) {
     return (
@@ -112,16 +140,25 @@ export function CaptureBar() {
   return (
     <form className="capture" onSubmit={submitText}>
       {hasAudio ? (
-        <div className="capture-recording" aria-live="polite">
+        <div className="capture-recording">
           <span className={`rec-dot${recorder.state === 'paused' ? ' paused' : ''}`} />
           <span className="rec-time">{formatDuration(recorder.seconds)}</span>
-          <span className="muted">
+          {recorder.stream && (
+            <LevelMeter stream={recorder.stream} active={recorder.state === 'recording'} onSilenceChange={setSilent} />
+          )}
+          <span className="muted" aria-live="polite">
             {recorder.state === 'recording'
               ? 'Listening…'
               : recorder.atLimit
-                ? 'That’s the 10-minute maximum — send it or discard.'
-                : 'Paused — listen back, continue with the mic, or send'}
+                ? 'That’s the 10-minute maximum — press Send, or Discard.'
+                : 'Paused — press Send to process it, ▶ to listen, or 🎤 to add more.'}
           </span>
+          {silent && recorder.state === 'recording' && (
+            <p className="mic-warning" role="alert">
+              I can’t hear anything. Check the microphone isn’t muted
+              {mics.devices.length > 1 ? ', or pick another input in the Mic list below' : ''}.
+            </p>
+          )}
           {recorder.state === 'paused' && preview && (
             <audio className="rec-preview" controls src={preview} aria-label="Listen to the recording so far" />
           )}
@@ -148,6 +185,22 @@ export function CaptureBar() {
             {hasAudio ? '' : (savedMessage ?? 'Type, or hold 🎤 to talk (tap to start/stop).')}
           </span>
         )}
+        {mics.devices.length > 1 && !busy && (
+          <label className="mic-select">
+            Mic
+            <select
+              value={mics.selected ?? ''}
+              onChange={(e) => void switchMic(e.target.value || null)}
+              aria-label="Microphone">
+              <option value="">System default</option>
+              {mics.devices.map((d) => (
+                <option key={d.deviceId} value={d.deviceId}>
+                  {d.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         {hasAudio && (
           <button type="button" className="link" onClick={recorder.discard}>
             Discard
@@ -166,11 +219,7 @@ export function CaptureBar() {
         {recorder.state !== 'unsupported' && (
           <MicButton
             state={recorder.state}
-            record={async () => {
-              setError(null)
-              setSavedMessage(null)
-              await recorder.record()
-            }}
+            record={() => (recorder.state === 'paused' ? recorder.record() : startRecording())}
             pause={recorder.pause}
             disabled={busy !== null}
             onError={onMicError}

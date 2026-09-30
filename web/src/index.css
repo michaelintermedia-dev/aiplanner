@@ -545,6 +545,38 @@ label.inline-check {
   flex-wrap: wrap;
 }
 
+.level-meter {
+  color: var(--muted);
+  width: 168px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.level-meter.live {
+  color: var(--accent);
+}
+
+.mic-warning {
+  flex-basis: 100%;
+  color: var(--warn);
+  font-size: 0.9rem;
+}
+
+.mic-select {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.mic-select select {
+  max-width: 220px;
+  min-height: 32px;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+}
+
 .rec-preview {
   height: 36px;
   flex-basis: 100%;

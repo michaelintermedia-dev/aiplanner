@@ -32,7 +32,6 @@ export function TaskDetailPage() {
 
   return (
     <div className="page detail">
-      <button className="link back" onClick={() => navigate(-1)}>← Back</button>
 
       {editing ? (
         <TaskEditForm task={task} onDone={() => setEditing(false)} />

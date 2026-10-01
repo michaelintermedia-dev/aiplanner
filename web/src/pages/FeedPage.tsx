@@ -1,7 +1,8 @@
 import { FEED_FILTERS, FEED_SORTS, feedGroupLabel, groupFeed } from '@shared/feed'
 import type { FeedSort } from '@shared/types'
 import { useInfiniteQuery } from '@tanstack/react-query'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ComponentType } from 'react'
+import { IoAlbumsOutline, IoCheckboxOutline, IoDocumentTextOutline, IoTimeOutline } from 'react-icons/io5'
 import { useSearchParams } from 'react-router'
 import { feedApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
@@ -10,10 +11,12 @@ import { FeedRow } from '../components/FeedRow'
 
 /** ?show= values for the filters; the URL keeps the filter so Back works. */
 const SHOW = ['all', 'tasks', 'events', 'notes'] as const
+/** Same icons as the mobile tab bar. */
+const ICONS: ComponentType[] = [IoAlbumsOutline, IoCheckboxOutline, IoTimeOutline, IoDocumentTextOutline]
 
 /**
- * The home screen: one continuous feed of tasks, events and notes, newest
- * first by default. The tabs filter it; every row opens its detail view.
+ * Home: one continuous feed of tasks, events and notes, newest first by
+ * default. The bottom bar filters it (as on mobile); rows open their details.
  */
 export function FeedPage() {
   const { zone } = useAuth()
@@ -46,39 +49,15 @@ export function FeedPage() {
   const groups = groupFeed(items, sort, zone.timeZone)
 
   return (
-    <div className="page">
+    <div className="page feed-page">
       <CaptureBar />
-
-      <div className="feed-toolbar">
-        <div className="segmented" role="tablist" aria-label="Show">
-          {FEED_FILTERS.map((f, i) => (
-            <button
-              key={f.label}
-              role="tab"
-              aria-selected={i === showIndex}
-              className={i === showIndex ? 'active' : undefined}
-              onClick={() => setParams(i === 0 ? {} : { show: SHOW[i] })}>
-              {f.label}
-            </button>
-          ))}
-        </div>
-        <label className="feed-sort">
-          Sort
-          <select value={sort} onChange={(e) => setSort(e.target.value as FeedSort)}>
-            {FEED_SORTS.map((s) => (
-              <option key={s.sort} value={s.sort}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+      <SortChip sort={sort} onChange={setSort} />
 
       {feed.isPending && <p className="muted">Loading…</p>}
       {feed.error && <p className="error">{feed.error.message}</p>}
       {feed.data && items.length === 0 && (
         <p className="empty">
-          {showIndex === 0 ? 'Nothing here yet — type or speak above to capture something.' : `No ${filter.label.toLowerCase()} yet.`}
+          {showIndex === 0 ? 'Nothing here yet — hold the mic or type above to capture something.' : `No ${filter.label.toLowerCase()} yet.`}
         </p>
       )}
 
@@ -96,6 +75,75 @@ export function FeedPage() {
       <div ref={sentinel} className="feed-end" aria-live="polite">
         {isFetchingNextPage ? 'Loading more…' : feed.data && !hasNextPage && items.length > 0 ? 'That’s everything.' : ''}
       </div>
+
+      <nav className="tab-bar" aria-label="Show">
+        <div className="tab-bar-inner" role="tablist">
+          {FEED_FILTERS.map((f, i) => {
+            const Icon = ICONS[i]
+            return (
+              <button
+                key={f.label}
+                role="tab"
+                aria-selected={i === showIndex}
+                className={i === showIndex ? 'active' : undefined}
+                onClick={() => {
+                  setParams(i === 0 ? {} : { show: SHOW[i] })
+                  window.scrollTo({ top: 0 })
+                }}>
+                <Icon />
+                <span>{f.label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </nav>
+    </div>
+  )
+}
+
+/** "⇅ Newest" chip with a small menu - same control as on mobile. */
+function SortChip({ sort, onChange }: { sort: FeedSort; onChange: (s: FeedSort) => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const label = FEED_SORTS.find((s) => s.sort === sort)?.label ?? 'Newest'
+
+  useEffect(() => {
+    if (!open) return
+    const close = (e: MouseEvent | KeyboardEvent) => {
+      if (e instanceof KeyboardEvent ? e.key === 'Escape' : !ref.current?.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', close)
+    document.addEventListener('keydown', close)
+    return () => {
+      document.removeEventListener('mousedown', close)
+      document.removeEventListener('keydown', close)
+    }
+  }, [open])
+
+  return (
+    <div className="menu-anchor sort-chip-anchor" ref={ref}>
+      <button className="chip" onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open} aria-label={`Sort: ${label}. Change sort`}>
+        ⇅ {label}
+      </button>
+      {open && (
+        <div className="menu" role="menu">
+          <span className="muted">Sort by</span>
+          {FEED_SORTS.map((s) => (
+            <button
+              key={s.sort}
+              role="menuitemradio"
+              aria-checked={s.sort === sort}
+              className={`menu-item${s.sort === sort ? ' selected' : ''}`}
+              onClick={() => {
+                onChange(s.sort)
+                setOpen(false)
+              }}>
+              {s.sort === sort ? '✓ ' : ''}
+              {s.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

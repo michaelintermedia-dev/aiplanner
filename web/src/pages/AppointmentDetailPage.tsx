@@ -33,7 +33,6 @@ export function AppointmentDetailPage() {
 
   return (
     <div className="page detail">
-      <button className="link back" onClick={() => navigate(-1)}>← Back</button>
 
       {editing ? (
         <AppointmentEditForm appt={appt} onDone={() => setEditing(false)} />

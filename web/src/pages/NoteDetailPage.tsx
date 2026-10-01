@@ -39,7 +39,6 @@ export function NoteDetailPage() {
 
   return (
     <div className="page detail">
-      <button className="link back" onClick={() => navigate(-1)}>← Back</button>
 
       {editing ? (
         <form className="card form" onSubmit={save}>

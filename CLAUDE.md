@@ -230,8 +230,14 @@ Local dev notes:
   Notes, each the same `FeedScreen` with a kind filter; on web the same as
   tabs on `/feed?show=…`. Every row opens its detail view
   (`task/[id]`, `appointment/[id]`, `note/[id]`; web `/tasks/:id` …).
-- Today and Calendar stay as date-based views: header icons on mobile,
-  sidebar on web. The capture bar sits on top of the feed.
+- **Web mirrors the mobile app** (user's call - keep them looking and
+  behaving the same): no sidebar; a header with title, back arrow on inner
+  pages, and Today / Calendar / account icons; the filter bar fixed at the
+  bottom; the "⇅ Newest" sort chip; the big round mic. Icons are Ionicons on
+  both (`@expo/vector-icons` on mobile, `react-icons/io5` on web). When
+  changing one app's UI, change the other to match.
+- Today and Calendar stay as date-based views (header icons on both). The
+  capture bar sits on top of the feed.
 - API: `GET /api/feed?kinds=&sort=&cursor=&take=`. `FeedService` loads small
   key rows for all the user's items, `FeedPager` (pure, unit-tested) orders
   and pages them with a keyset cursor, then details load for one page only.

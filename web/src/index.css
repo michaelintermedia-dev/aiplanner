@@ -247,67 +247,122 @@ label.inline-check {
   color: var(--danger);
 }
 
-/* ---- Layout ------------------------------------------------------------ */
+/* ---- App shell (same structure as the mobile app) ----------------------- */
 
-.shell {
-  display: flex;
+.app {
   min-height: 100vh;
-}
-
-.sidebar {
-  width: 210px;
-  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 20px 12px;
-  border-right: 1px solid var(--border);
-  background: var(--surface);
+}
+
+.app-header {
   position: sticky;
   top: 0;
-  height: 100vh;
+  z-index: 10;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
 }
 
-.brand {
+.app-header-inner {
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  min-height: 56px;
+}
+
+.app-title {
+  flex: 1;
+  font-size: 1.15rem;
   font-weight: 700;
-  font-size: 1.05rem;
-  padding: 0 10px 16px;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.sidebar a {
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.icon-button {
+  width: 40px;
+  height: 40px;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: none;
+  display: grid;
+  place-items: center;
+  font-size: 1.4rem;
   color: var(--text);
-  text-decoration: none;
-  padding: 8px 10px;
-  border-radius: 8px;
 }
 
-.sidebar a:hover {
+.icon-button:hover:not(:disabled) {
   background: var(--surface-2);
 }
 
-.sidebar a.active {
+.icon-button.active {
+  color: var(--accent);
   background: var(--accent-soft);
+}
+
+.menu-anchor {
+  position: relative;
+}
+
+.menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+}
+
+.menu > .muted {
+  font-size: 0.8rem;
+  padding: 2px 8px;
+}
+
+.menu > strong {
+  padding: 2px 8px 0;
+}
+
+.menu-item {
+  border: none;
+  background: none;
+  text-align: left;
+  padding: 8px;
+  min-height: 0;
+  border-radius: 8px;
+}
+
+.menu-item.selected {
   color: var(--accent);
   font-weight: 500;
 }
 
-.sidebar-footer {
-  margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  padding: 0 10px;
-}
-
-.sidebar-footer .link {
-  padding: 0;
+.menu-item.danger {
+  color: var(--danger);
 }
 
 .content {
   flex: 1;
   min-width: 0;
-  padding: 32px 40px;
+  padding: 20px 16px;
 }
 
 .page {
@@ -500,13 +555,29 @@ label.inline-check {
   gap: 8px;
 }
 
+/* The big round mic, as on mobile. */
 .mic {
-  width: 40px;
-  height: 40px;
+  width: 60px;
+  height: 60px;
   min-height: 0;
   padding: 0;
   border-radius: 50%;
-  font-size: 1.1rem;
+  font-size: 1.6rem;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 3px 10px rgb(0 0 0 / 0.18);
+  transition: transform 0.12s;
+}
+
+.mic:hover:not(:disabled) {
+  background: var(--accent);
+  filter: brightness(1.08);
+}
+
+.mic:active,
+.mic.recording {
+  transform: scale(1.08);
 }
 
 .mic.recording {
@@ -528,8 +599,7 @@ label.inline-check {
 }
 
 .mic.paused {
-  border-color: var(--danger);
-  color: var(--danger);
+  box-shadow: 0 0 0 3px var(--danger);
 }
 
 .rec-dot.paused {
@@ -1130,6 +1200,69 @@ textarea {
 
 /* ---- Feed -------------------------------------------------------------- */
 
+/* Room for the fixed bottom bar. */
+.feed-page {
+  padding-bottom: 72px;
+}
+
+.chip {
+  border-radius: 999px;
+  min-height: 36px;
+  padding: 6px 14px;
+}
+
+.sort-chip-anchor {
+  align-self: flex-end;
+  margin-bottom: -8px;
+}
+
+/* Bottom filter bar - the mobile app's tab bar. */
+.tab-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tab-bar-inner {
+  max-width: 760px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.tab-bar button {
+  border: none;
+  background: none;
+  border-radius: 0;
+  min-height: 58px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.tab-bar button svg {
+  font-size: 1.45rem;
+}
+
+.tab-bar button.active {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.tab-bar button:hover:not(.active) {
+  color: var(--text);
+  background: none;
+}
+
 .feed-toolbar {
   display: flex;
   justify-content: space-between;
@@ -1308,39 +1441,6 @@ textarea {
 /* ---- Small screens ----------------------------------------------------- */
 
 @media (max-width: 760px) {
-  .shell {
-    flex-direction: column;
-  }
-
-  .sidebar {
-    width: auto;
-    height: auto;
-    flex-direction: row;
-    align-items: center;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-    padding: 8px 12px;
-    z-index: 1;
-  }
-
-  .brand {
-    display: none;
-  }
-
-  .sidebar-footer {
-    margin-top: 0;
-    margin-left: auto;
-    padding: 0;
-  }
-
-  .sidebar-footer .muted {
-    display: none;
-  }
-
-  .content {
-    padding: 20px 16px;
-  }
-
   .calendar.week {
     grid-template-columns: 1fr;
   }

@@ -1,11 +1,9 @@
-import { draftProblems, toConfirmItem, toDraft, type ItemDraft } from '@shared/captureDraft'
-import type { Capture, ExtractionIntent, TaskPriority } from '@shared/types'
+import { draftProblems, INTENT_OPTIONS, toConfirmItem, toDraft, type ItemDraft } from '@shared/captureDraft'
+import type { Capture, TaskPriority } from '@shared/types'
 import { useState } from 'react'
 import { capturesApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { useAction } from '../lib/useAction'
-
-const INTENTS: ExtractionIntent[] = ['Task', 'Appointment', 'Reminder', 'Note']
 
 const REMINDERS = [
   { label: 'No reminder', value: '' },
@@ -105,15 +103,6 @@ function ItemEditor({ draft: d, onChange }: { draft: ItemDraft; onChange: (patch
           onChange={(e) => onChange({ include: e.target.checked })}
           aria-label={d.include ? 'Include this item' : 'Excluded'}
         />
-        <select
-          className="intent-select"
-          value={d.intent}
-          onChange={(e) => onChange({ intent: e.target.value as ExtractionIntent })}
-          aria-label="Type">
-          {INTENTS.map((i) => (
-            <option key={i}>{i}</option>
-          ))}
-        </select>
         <input
           className="review-title"
           value={d.title}
@@ -121,6 +110,23 @@ function ItemEditor({ draft: d, onChange }: { draft: ItemDraft; onChange: (patch
           aria-label="Title"
         />
       </div>
+
+      {d.include && (
+        // Any item can be any type (user's rule) - switching keeps the dates.
+        <div className="intent-chips" role="radiogroup" aria-label="Save as">
+          {INTENT_OPTIONS.map((o) => (
+            <button
+              key={o.intent}
+              type="button"
+              role="radio"
+              aria-checked={d.intent === o.intent}
+              className={`intent-chip intent-${o.intent.toLowerCase()}${d.intent === o.intent ? ' selected' : ''}`}
+              onClick={() => onChange({ intent: o.intent })}>
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {d.include && (
         <div className="review-fields">
@@ -177,7 +183,17 @@ function ItemEditor({ draft: d, onChange }: { draft: ItemDraft; onChange: (patch
         </div>
       )}
 
-      {d.include && d.description && <p className="muted review-description">{d.description}</p>}
+      {d.include && (
+        <label className="review-details">
+          {d.intent === 'Note' ? 'Note text' : 'Details'}
+          <textarea
+            rows={d.intent === 'Note' ? 4 : 2}
+            value={d.description ?? ''}
+            placeholder={d.intent === 'Note' ? 'What do you want to keep?' : 'Optional'}
+            onChange={(e) => onChange({ description: e.target.value || null })}
+          />
+        </label>
+      )}
       {d.include && d.clarification && <p className="clarification">❓ {d.clarification}</p>}
       {problems.length > 0 && <p className="error">{problems.join(' ')}</p>}
     </li>

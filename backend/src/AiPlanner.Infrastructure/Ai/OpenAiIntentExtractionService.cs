@@ -125,7 +125,8 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             - "confidence": 0 to 1, how sure you are that the item is right.
             - Top-level "title": 2-5 words naming the whole capture. Top-level "summary": 1-2 sentences if the input is longer than one sentence, otherwise null.
 
-            Only extract what the user actually said. Never invent items, people, places or times. If there is nothing actionable, return an empty "items" array (or a single note).
+            Only extract what the user actually said. Never invent items, people, places or times.
+            Never return nothing: if the input is a question, an idea, or anything that isn't clearly a task, appointment or reminder, return it as a single "note" whose "description" keeps the user's words. The user can change any item's type in the review.
             """;
     }
 

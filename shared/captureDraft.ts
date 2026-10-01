@@ -1,6 +1,14 @@
 import { addDays, dateKey, timeKey, zonedToUtc } from './dates'
 import type { CaptureItem, ConfirmCaptureItem, ExtractionIntent, TaskPriority } from './types'
 
+/** Every item can become any type in the review (user's rule); "Appointment" is shown as "Event". */
+export const INTENT_OPTIONS: { intent: ExtractionIntent; label: string }[] = [
+  { intent: 'Task', label: 'Task' },
+  { intent: 'Appointment', label: 'Event' },
+  { intent: 'Reminder', label: 'Reminder' },
+  { intent: 'Note', label: 'Note' },
+]
+
 /**
  * The editable form of a proposed item on the review screen (spec section 18).
  * Dates are wall-clock values in the user's timezone ("yyyy-MM-dd", "HH:mm"),

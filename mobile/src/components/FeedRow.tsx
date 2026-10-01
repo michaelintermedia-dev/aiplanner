@@ -1,5 +1,6 @@
 import { feedWhen, isDone, KIND_LABEL } from '@shared/feed'
 import type { FeedItem } from '@shared/types'
+import Ionicons from '@expo/vector-icons/Ionicons'
 import { router } from 'expo-router'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { tasksApi } from '@/api/endpoints'
@@ -63,7 +64,7 @@ export function FeedRow({ item }: { item: FeedItem }) {
           {item.tags.map((t) => (
             <Text key={t} style={[styles.metaText, { color: c.muted }]}>#{t}</Text>
           ))}
-          {item.fromCapture && <Text style={styles.metaText}>🎤</Text>}
+          {item.fromCapture && <Ionicons name="mic-outline" size={14} color={c.muted} accessibilityLabel="Created from a capture" />}
         </View>
       </Pressable>
     </View>

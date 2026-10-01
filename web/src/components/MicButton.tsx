@@ -1,4 +1,5 @@
 import { useRef, type KeyboardEvent, type PointerEvent } from 'react'
+import { IoMic, IoPause } from 'react-icons/io5'
 import type { RecorderState } from '../lib/useAudioRecorder'
 
 /** Presses held at least this long are push-to-talk; shorter ones are taps. */
@@ -85,7 +86,7 @@ export function MicButton({
       aria-pressed={recording}
       aria-label={label}
       title={label}>
-      {recording ? '❚❚' : '🎤'}
+      {recording ? <IoPause aria-hidden /> : <IoMic aria-hidden />}
     </button>
   )
 }

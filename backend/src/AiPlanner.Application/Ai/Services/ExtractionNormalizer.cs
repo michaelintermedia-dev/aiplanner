@@ -51,6 +51,21 @@ public static class ExtractionNormalizer
             ?? Clean(inputText, 60)
             ?? "Capture";
 
+        // Nothing is ever a dead end (user's rule): if the AI found nothing it
+        // could use - a question, a stray thought - keep the words as a note the
+        // user can save as-is or turn into a task/event/reminder in the review.
+        if (items.Count == 0 && Clean(inputText, 4000) is { } text)
+        {
+            items.Add(new NormalizedItem(
+                ExtractionIntent.Note,
+                Clean(raw.Title, MaxTitleLength) ?? Clean(inputText, 80) ?? "Note",
+                Summary: null,
+                Description: text,
+                StartUtc: null, EndUtc: null, DueUtc: null, HasTime: false,
+                Location: null, Priority: null, ReminderMinutesBefore: null, Recurrence: null,
+                Clarification: null, Confidence: null));
+        }
+
         return new NormalizedExtraction(title, Clean(raw.Summary, 2000), items);
     }
 

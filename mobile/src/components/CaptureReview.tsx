@@ -1,4 +1,4 @@
-import { draftProblems, toConfirmItem, toDraft, type ItemDraft } from '@shared/captureDraft'
+import { draftProblems, INTENT_OPTIONS, toConfirmItem, toDraft, type ItemDraft } from '@shared/captureDraft'
 import type { Capture, ExtractionIntent, TaskPriority } from '@shared/types'
 import { useState } from 'react'
 import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native'
@@ -9,7 +9,6 @@ import { useColors, type Colors } from '@/theme'
 import { DateTimeField } from './DateTimeField'
 import { Button } from './ui'
 
-const INTENTS: ExtractionIntent[] = ['Task', 'Appointment', 'Reminder', 'Note']
 const PRIORITIES: (TaskPriority | null)[] = [null, 'Low', 'Medium', 'High']
 const REMINDERS: (number | null)[] = [null, 0, 10, 30, 60, 1440]
 
@@ -114,7 +113,8 @@ function ItemEditor({ draft: d, onChange }: { draft: ItemDraft; onChange: (patch
       {d.include && (
         <>
           <View style={styles.chips}>
-            {INTENTS.map((intent) => (
+            {/* Any item can be any type (user's rule) - switching keeps the dates. */}
+            {INTENT_OPTIONS.map(({ intent, label }) => (
               <Pressable
                 key={intent}
                 onPress={() => onChange({ intent })}
@@ -125,7 +125,7 @@ function ItemEditor({ draft: d, onChange }: { draft: ItemDraft; onChange: (patch
                 ]}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: d.intent === intent }}>
-                <Text style={{ color: d.intent === intent ? c.text : c.muted, fontSize: 13 }}>{intent}</Text>
+                <Text style={{ color: d.intent === intent ? c.text : c.muted, fontSize: 13 }}>{label}</Text>
               </Pressable>
             ))}
           </View>
@@ -185,7 +185,15 @@ function ItemEditor({ draft: d, onChange }: { draft: ItemDraft; onChange: (patch
             </View>
           )}
 
-          {d.description && <Text style={{ color: c.muted, fontSize: 13 }}>{d.description}</Text>}
+          <TextInput
+            style={[styles.field, styles.details, { color: c.text, borderColor: c.border }]}
+            placeholder={d.intent === 'Note' ? 'What do you want to keep?' : 'Details (optional)'}
+            placeholderTextColor={c.muted}
+            multiline
+            value={d.description ?? ''}
+            onChangeText={(description) => onChange({ description: description || null })}
+            accessibilityLabel={d.intent === 'Note' ? 'Note text' : 'Details'}
+          />
           {d.clarification && <Text style={{ color: c.warn, fontSize: 14 }}>❓ {d.clarification}</Text>}
         </>
       )}
@@ -205,5 +213,6 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, minHeight: 36, justifyContent: 'center' },
   field: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, minHeight: 42, fontSize: 15 },
+  details: { minHeight: 64, paddingVertical: 10, textAlignVertical: 'top' },
   actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
 })

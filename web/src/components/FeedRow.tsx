@@ -1,5 +1,6 @@
 import { feedWhen, isDone, KIND_LABEL } from '@shared/feed'
 import type { FeedItem } from '@shared/types'
+import { IoMicOutline } from 'react-icons/io5'
 import { Link } from 'react-router'
 import { tasksApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
@@ -41,7 +42,7 @@ export function FeedRow({ item }: { item: FeedItem }) {
           {item.tags.map((t) => (
             <span key={t} className="tag">#{t}</span>
           ))}
-          {item.fromCapture && <span title="Created from a capture">🎤</span>}
+          {item.fromCapture && <IoMicOutline className="muted" title="Created from a capture" aria-label="Created from a capture" />}
         </span>
       </Link>
     </li>

@@ -1,6 +1,7 @@
+import Ionicons from '@expo/vector-icons/Ionicons'
 import * as Haptics from 'expo-haptics'
 import { useRef } from 'react'
-import { Pressable, StyleSheet, Text } from 'react-native'
+import { Pressable, StyleSheet } from 'react-native'
 import type { RecorderState } from '@/lib/useSegmentRecorder'
 import { useColors } from '@/theme'
 
@@ -80,7 +81,7 @@ export function MicButton({
           transform: [{ scale: pressed || recording ? 1.08 : 1 }],
         },
       ]}>
-      <Text style={styles.icon}>{recording ? '❚❚' : '🎤'}</Text>
+      <Ionicons name={recording ? 'pause' : 'mic'} size={32} color="#fff" />
     </Pressable>
   )
 }
@@ -98,5 +99,4 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
   },
-  icon: { fontSize: 28, color: '#fff' },
 })

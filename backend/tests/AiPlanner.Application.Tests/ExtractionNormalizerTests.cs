@@ -242,6 +242,30 @@ public class ExtractionNormalizerTests
         item.Clarification.Should().Contain("Which Sarah?").And.Contain("When");
     }
 
+    [Theory]
+    [InlineData("What's the weather like tomorrow?")]
+    [InlineData("hmm, random thought about the garden")]
+    public void Input_with_nothing_actionable_becomes_a_note_with_the_full_text(string input)
+    {
+        var raw = new RawExtraction(Title: null, Summary: null, [], "{}", "Test", "test-model");
+
+        var result = ExtractionNormalizer.Normalize(raw, input, LocalNow, Moscow);
+
+        var note = result.Items.Should().ContainSingle().Subject;
+        note.Intent.Should().Be(ExtractionIntent.Note);
+        note.Description.Should().Be(input);
+        note.Title.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public void Items_the_ai_returned_are_not_replaced_by_the_note_fallback()
+    {
+        var raw = new RawExtraction("Plan", null, [Item(title: "Call Anna")], "{}", "Test", "test-model");
+
+        ExtractionNormalizer.Normalize(raw, "call Anna", LocalNow, Moscow).Items.Should().ContainSingle()
+            .Which.Title.Should().Be("Call Anna");
+    }
+
     [Fact]
     public void Capture_title_falls_back_to_first_item_and_items_are_capped()
     {

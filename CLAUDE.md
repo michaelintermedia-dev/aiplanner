@@ -245,6 +245,16 @@ Local dev notes:
   has tens of thousands of items. Shared grouping/labels: `shared/feed.ts`.
 - Notes have full CRUD (`/api/notes`) and are created by confirming a Note
   item in a capture, or directly.
+- **A capture never dead-ends; any item can be any type** (user's rule).
+  If the AI finds nothing actionable (a question, a stray thought), it returns
+  a Note with the user's words — the prompt says so, and
+  `ExtractionNormalizer` adds that Note itself if the AI still returns no
+  items. The review always shows all four types (Task / Event / Reminder /
+  Note, `INTENT_OPTIONS` in `shared/captureDraft.ts`) plus editable dates,
+  time, priority, reminder and details, so the user can turn anything into
+  anything and fill in what's missing before saving.
+- Icons are standard Ionicons, never emoji, for UI controls (the mic button
+  is `mic`/`pause`).
 
 ## Conventions to keep consistent
 

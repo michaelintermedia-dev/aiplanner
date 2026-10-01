@@ -151,7 +151,7 @@ export function CaptureBar() {
               ? 'Listening…'
               : recorder.atLimit
                 ? 'That’s the 10-minute maximum — press Send, or Discard.'
-                : 'Paused — press Send to process it, ▶ to listen, or 🎤 to add more.'}
+                : 'Paused — press Send to process it, ▶ to listen, or the mic to add more.'}
           </span>
           {silent && recorder.state === 'recording' && (
             <p className="mic-warning" role="alert">
@@ -182,7 +182,7 @@ export function CaptureBar() {
           </span>
         ) : (
           <span className="muted capture-hint">
-            {hasAudio ? '' : (savedMessage ?? 'Type, or hold 🎤 to talk (tap to start/stop).')}
+            {hasAudio ? '' : (savedMessage ?? 'Type, or hold the mic to talk (tap to start/stop).')}
           </span>
         )}
         {mics.devices.length > 1 && !busy && (

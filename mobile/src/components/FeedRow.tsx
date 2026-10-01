@@ -7,6 +7,7 @@ import { tasksApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
 import { useAction } from '@/lib/useAction'
 import { useColors, type Colors } from '@/theme'
+import { KIND_ICON } from './kindIcons'
 import { Badge } from './ui'
 
 const kindColor = (item: FeedItem, c: Colors) =>
@@ -18,7 +19,10 @@ function openDetail(item: FeedItem) {
   else router.push({ pathname: '/note/[id]', params: { id: item.id } })
 }
 
-/** One feed entry. Tasks keep their tick box; tapping opens the detail view. */
+/**
+ * One feed entry, marked with its type's filter-tab icon. A task's icon is its
+ * tick box (empty square / filled check); tapping the row opens the detail view.
+ */
 export function FeedRow({ item }: { item: FeedItem }) {
   const c = useColors()
   const { zone } = useAuth()
@@ -38,12 +42,12 @@ export function FeedRow({ item }: { item: FeedItem }) {
           disabled={complete.isPending || reopen.isPending || item.status === 'Cancelled'}
           hitSlop={12}
           onPress={() => (done ? reopen.mutate(item.id) : complete.mutate(item.id))}
-          style={[styles.check, { borderColor: item.status === 'Completed' ? c.task : c.border }, item.status === 'Completed' && { backgroundColor: c.task }]}>
-          {item.status === 'Completed' && <Text style={[styles.tick, { color: c.surface }]}>✓</Text>}
+          style={styles.iconBox}>
+          <Ionicons name={item.status === 'Completed' ? 'checkbox' : 'square-outline'} size={24} color={c.task} />
         </Pressable>
       ) : (
-        <View style={styles.dotBox}>
-          <View style={[styles.dot, { backgroundColor: kindColor(item, c) }, item.kind === 'Note' && styles.square]} />
+        <View style={styles.iconBox}>
+          <Ionicons name={KIND_ICON[item.kind]} size={24} color={kindColor(item, c)} />
         </View>
       )}
       <Pressable style={styles.main} onPress={() => openDetail(item)} accessibilityRole="button" accessibilityHint={`Opens the ${KIND_LABEL[item.kind].toLowerCase()}`}>
@@ -80,11 +84,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderRadius: 12,
   },
-  check: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
-  tick: { fontSize: 14, fontWeight: '700', lineHeight: 16 },
-  dotBox: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
-  dot: { width: 9, height: 9, borderRadius: 5 },
-  square: { borderRadius: 2 },
+  iconBox: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
   main: { flex: 1, gap: 3 },
   title: { fontSize: 16 },
   struck: { textDecorationLine: 'line-through' },

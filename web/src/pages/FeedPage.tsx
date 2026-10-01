@@ -2,17 +2,18 @@ import { FEED_FILTERS, FEED_SORTS, feedGroupLabel, groupFeed } from '@shared/fee
 import type { FeedSort } from '@shared/types'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type ComponentType } from 'react'
-import { IoAlbumsOutline, IoCheckboxOutline, IoDocumentTextOutline, IoTimeOutline } from 'react-icons/io5'
+import { IoAlbumsOutline } from 'react-icons/io5'
 import { useSearchParams } from 'react-router'
 import { feedApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { CaptureBar } from '../components/CaptureBar'
 import { FeedRow } from '../components/FeedRow'
+import { KIND_ICON } from '../components/kindIcons'
 
 /** ?show= values for the filters; the URL keeps the filter so Back works. */
 const SHOW = ['all', 'tasks', 'events', 'notes'] as const
 /** Same icons as the mobile tab bar. */
-const ICONS: ComponentType[] = [IoAlbumsOutline, IoCheckboxOutline, IoTimeOutline, IoDocumentTextOutline]
+const ICONS: ComponentType[] = [IoAlbumsOutline, KIND_ICON.Task, KIND_ICON.Appointment, KIND_ICON.Note]
 
 /**
  * Home: one continuous feed of tasks, events and notes, newest first by

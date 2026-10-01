@@ -170,7 +170,8 @@ Local dev notes:
   Today with AI quick capture (text + big mic: hold/tap, segments, level
   meter, silence warning, listen, send; review screen with editable items),
   Tasks (quick add with native date/time pickers, complete; long-press to
-  cancel/delete), Calendar week agenda, pull-to-refresh. Verified on the
+  cancel/delete), Calendar (Day/Week/Month like web: month grid with dots,
+  week strip, selected day listed below), pull-to-refresh. Verified on the
   Android emulator in Expo Go (the emulator mic is the host's default Windows
   input, which was silent on this machine, so real speech wasn't tested
   on-device); iOS not tested (needs a Mac). No appointment creation or edit
@@ -263,7 +264,11 @@ Local dev notes:
   old data: the normalizer and clients turn it into a Task that reminds at its
   time, and the AI schema no longer offers it.
 - Icons are standard Ionicons, never emoji, for UI controls (the mic button
-  is `mic`/`pause`).
+  is `mic`/`pause`). Each item type has ONE icon (`KIND_ICON` in
+  `components/kindIcons.ts` in each app): the filter tab, feed rows and calendar
+  entries all use it; a task's icon doubles as its tick box (square / checkbox).
+- Calendar period math (week start, visible days, stepping, titles) lives in
+  `shared/calendar.ts`; both apps offer Day / Week / Month with ‹ Today ›.
 
 ## Conventions to keep consistent
 

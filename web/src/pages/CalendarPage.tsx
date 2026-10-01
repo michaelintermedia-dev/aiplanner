@@ -5,34 +5,9 @@ import { calendarApi } from '../api/endpoints'
 import type { CalendarItem, CalendarView } from '@shared/types'
 import { useAuth } from '../auth/useAuth'
 import { AppointmentForm } from '../components/AppointmentForm'
-import { addDays, dateKey, formatDateKey, formatTime, todayKey } from '@shared/dates'
-
-/** Monday of the week containing `key` (weeks start on Monday, matching the API). */
-function weekStart(key: string): string {
-  const [y, m, d] = key.split('-').map(Number)
-  const weekday = (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7
-  return addDays(key, -weekday)
-}
-
-function visibleDays(view: CalendarView, anchor: string): string[] {
-  if (view === 'day') return [anchor]
-  if (view === 'week') return Array.from({ length: 7 }, (_, i) => addDays(weekStart(anchor), i))
-  // Month: full Monday-to-Sunday weeks covering the whole month.
-  const first = `${anchor.slice(0, 7)}-01`
-  const last = addDays(step('month', first, 1), -1)
-  const end = addDays(weekStart(last), 6)
-  const days: string[] = []
-  for (let day = weekStart(first); day <= end; day = addDays(day, 1)) days.push(day)
-  return days
-}
-
-function step(view: CalendarView, anchor: string, direction: 1 | -1): string {
-  if (view === 'day') return addDays(anchor, direction)
-  if (view === 'week') return addDays(anchor, 7 * direction)
-  const [y, m] = anchor.split('-').map(Number)
-  const next = new Date(Date.UTC(y, m - 1 + direction, 1))
-  return next.toISOString().slice(0, 10)
-}
+import { KindIcon } from '../components/KindIcon'
+import { CALENDAR_VIEWS, periodTitle, stepPeriod, visibleDays } from '@shared/calendar'
+import { dateKey, formatDateKey, formatTime, todayKey } from '@shared/dates'
 
 export function CalendarPage() {
   const { zone } = useAuth()
@@ -56,12 +31,7 @@ export function CalendarPage() {
     return map
   }, [data, zone.timeZone])
 
-  const title =
-    view === 'month'
-      ? formatDateKey(anchor, zone.locale, { month: 'long', year: 'numeric' })
-      : view === 'week'
-        ? `${formatDateKey(days[0], zone.locale, { month: 'short', day: 'numeric' })} – ${formatDateKey(days[6], zone.locale, { month: 'short', day: 'numeric' })}`
-        : formatDateKey(anchor, zone.locale)
+  const title = periodTitle(view, anchor, zone.locale)
 
   return (
     <div className="page wide">
@@ -69,17 +39,17 @@ export function CalendarPage() {
         <h1>{title}</h1>
         <div className="toolbar">
           <div className="segmented">
-            {(['day', 'week', 'month'] as const).map((v) => (
-              <button key={v} className={view === v ? 'active' : undefined} onClick={() => setView(v)}>
-                {v[0].toUpperCase() + v.slice(1)}
+            {CALENDAR_VIEWS.map((v) => (
+              <button key={v.view} className={view === v.view ? 'active' : undefined} onClick={() => setView(v.view)}>
+                {v.label}
               </button>
             ))}
           </div>
-          <button onClick={() => setAnchor(step(view, anchor, -1))} aria-label="Previous">
+          <button onClick={() => setAnchor(stepPeriod(view, anchor, -1))} aria-label="Previous">
             ‹
           </button>
           <button onClick={() => setAnchor(today)}>Today</button>
-          <button onClick={() => setAnchor(step(view, anchor, 1))} aria-label="Next">
+          <button onClick={() => setAnchor(stepPeriod(view, anchor, 1))} aria-label="Next">
             ›
           </button>
         </div>
@@ -100,6 +70,7 @@ export function CalendarPage() {
             <ul>
               {(itemsByDay.get(day) ?? []).map((item) => (
                 <li key={item.id} className={`cal-item ${item.itemType.toLowerCase()} status-${item.status.toLowerCase()}`}>
+                  <KindIcon kind={item.itemType} className="cal-icon" />
                   {item.hasTime && <span className="cal-time">{formatTime(item.startUtc, zone)}</span>}
                   <Link className="cal-title" to={`/${item.itemType === 'Task' ? 'tasks' : 'appointments'}/${item.id}`}>{item.title}</Link>
                 </li>

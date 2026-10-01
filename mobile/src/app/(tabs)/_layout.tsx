@@ -3,6 +3,7 @@ import { router, Tabs } from 'expo-router'
 import { Alert, Pressable, View } from 'react-native'
 import { useAuth } from '@/auth/useAuth'
 import { useColors } from '@/theme'
+import { KIND_ICON } from '@/components/kindIcons'
 
 /**
  * The bottom bar filters one feed: All / Tasks / Events / Notes. Today and
@@ -51,15 +52,15 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="tasks"
-        options={{ title: 'Tasks', tabBarIcon: ({ color, size }) => <Ionicons name="checkbox-outline" color={color} size={size} /> }}
+        options={{ title: 'Tasks', tabBarIcon: ({ color, size }) => <Ionicons name={KIND_ICON.Task} color={color} size={size} /> }}
       />
       <Tabs.Screen
         name="events"
-        options={{ title: 'Events', tabBarIcon: ({ color, size }) => <Ionicons name="time-outline" color={color} size={size} /> }}
+        options={{ title: 'Events', tabBarIcon: ({ color, size }) => <Ionicons name={KIND_ICON.Appointment} color={color} size={size} /> }}
       />
       <Tabs.Screen
         name="notes"
-        options={{ title: 'Notes', tabBarIcon: ({ color, size }) => <Ionicons name="document-text-outline" color={color} size={size} /> }}
+        options={{ title: 'Notes', tabBarIcon: ({ color, size }) => <Ionicons name={KIND_ICON.Note} color={color} size={size} /> }}
       />
     </Tabs>
   )

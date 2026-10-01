@@ -1,32 +1,40 @@
 import { feedWhen, isDone, KIND_LABEL } from '@shared/feed'
 import type { FeedItem } from '@shared/types'
-import { IoMicOutline } from 'react-icons/io5'
+import { IoCheckbox, IoMicOutline, IoSquareOutline } from 'react-icons/io5'
 import { Link } from 'react-router'
 import { tasksApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { useAction } from '../lib/useAction'
+import { KIND_ICON } from './kindIcons'
 
 const DETAIL_PATH = { Task: 'tasks', Appointment: 'appointments', Note: 'notes' } as const
 
-/** One feed entry. Tasks keep their tick box; everything opens its detail view. */
+/**
+ * One feed entry, marked with its type's filter-tab icon. A task's icon is its
+ * tick box (empty square / filled check); everything opens its detail view.
+ */
 export function FeedRow({ item }: { item: FeedItem }) {
   const { zone } = useAuth()
   const complete = useAction(tasksApi.complete)
   const reopen = useAction(tasksApi.reopen)
   const done = isDone(item)
   const when = feedWhen(item, zone)
+  const KindIcon = KIND_ICON[item.kind]
 
   return (
     <li className={`feed-row kind-${item.kind.toLowerCase()}${done ? ' done' : ''}`}>
       {item.kind === 'Task' ? (
         <button
-          className={`check${item.status === 'Completed' ? ' checked' : ''}`}
+          className="kind-icon"
           aria-label={item.status === 'Completed' ? 'Mark as not done' : 'Mark as done'}
           disabled={complete.isPending || reopen.isPending || item.status === 'Cancelled'}
-          onClick={() => (done ? reopen.mutate(item.id) : complete.mutate(item.id))}
-        />
+          onClick={() => (done ? reopen.mutate(item.id) : complete.mutate(item.id))}>
+          {item.status === 'Completed' ? <IoCheckbox aria-hidden /> : <IoSquareOutline aria-hidden />}
+        </button>
       ) : (
-        <span className="kind-dot" aria-hidden="true" />
+        <span className="kind-icon" aria-hidden="true">
+          <KindIcon />
+        </span>
       )}
       <Link to={`/${DETAIL_PATH[item.kind]}/${item.id}`} className="feed-main">
         <span className="feed-title">{item.title}</span>

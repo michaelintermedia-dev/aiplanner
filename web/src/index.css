@@ -1105,6 +1105,16 @@ label.inline-check {
   color: var(--muted);
 }
 
+.cal-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--task);
+}
+
+.cal-item.appointment .cal-icon {
+  color: var(--appointment);
+}
+
 .cal-time {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
@@ -1365,29 +1375,32 @@ textarea {
   border-left-color: var(--warn);
 }
 
-.feed-row .check {
-  margin-top: 1px;
-}
-
-.kind-dot {
-  width: 22px;
-  height: 22px;
+/* The type's filter-tab icon; for a task it is also the tick box. */
+.kind-icon {
+  width: 24px;
+  height: 24px;
+  min-height: 0;
   flex-shrink: 0;
   display: grid;
   place-items: center;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 22px;
+  color: var(--task);
 }
 
-.kind-dot::after {
-  content: '';
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--appointment);
+button.kind-icon:hover:not(:disabled) {
+  background: none;
+  filter: brightness(1.15);
 }
 
-.kind-note .kind-dot::after {
-  background: var(--warn);
-  border-radius: 2px;
+.kind-appointment .kind-icon {
+  color: var(--appointment);
+}
+
+.kind-note .kind-icon {
+  color: var(--warn);
 }
 
 .feed-main {

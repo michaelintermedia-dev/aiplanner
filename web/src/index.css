@@ -546,6 +546,27 @@ label.inline-check {
   gap: 8px;
 }
 
+/* Round send arrow, left of the mic - for typed text and recordings alike. */
+.send {
+  width: 44px;
+  height: 44px;
+  min-height: 0;
+  padding: 0;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.send:hover:not(:disabled) {
+  background: var(--accent);
+  filter: brightness(1.08);
+}
+
 .capture-hint,
 .capture-status {
   flex: 1;

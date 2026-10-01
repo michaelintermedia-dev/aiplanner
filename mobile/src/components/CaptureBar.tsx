@@ -1,7 +1,8 @@
+import Ionicons from '@expo/vector-icons/Ionicons'
 import type { Capture } from '@shared/types'
 import { File } from 'expo-file-system'
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native'
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { capturesApi } from '@/api/endpoints'
 import { useSegmentRecorder } from '@/lib/useSegmentRecorder'
 import { useColors } from '@/theme'
@@ -101,8 +102,8 @@ export function CaptureBar() {
             {recorder.state === 'recording'
               ? 'Listening…'
               : recorder.atLimit
-                ? 'That’s the 10-minute maximum — press Send, or Discard.'
-                : 'Paused — press Send to process it, Listen to hear it, or the mic to add more.'}
+                ? 'That’s the 10-minute maximum — send it with the arrow, or Discard.'
+                : 'Paused — press the arrow to send it, Listen to hear it, or the mic to add more.'}
           </Text>
           {silent && recorder.state === 'recording' && (
             <Text style={{ color: c.warn }} accessibilityRole="alert">
@@ -139,16 +140,15 @@ export function CaptureBar() {
             <>
               {recorder.state === 'paused' && <SegmentPlayer segments={recorder.segments} />}
               <Button title="Discard" variant="link" onPress={() => void recorder.discard()} disabled={busy !== null} />
-              <Button
-                title="Send"
-                variant="primary"
+              <SendButton
+                label="Send recording"
                 onPress={send}
-                busy={busy !== null}
-                disabled={recorder.seconds < 1 && recorder.segments.length === 0}
+                disabled={busy !== null || (recorder.seconds < 1 && recorder.segments.length === 0)}
               />
             </>
           ) : (
-            <Button title="Understand" variant="primary" onPress={submitText} busy={busy === 'understanding'} disabled={!text.trim()} />
+            // One send arrow for typed text and recordings; it only shows when there's something to send.
+            text.trim() !== '' && <SendButton label="Send" onPress={submitText} disabled={busy !== null} />
           )}
         </View>
         {/* Fixed position on the right, so hold-to-talk always hits it. */}
@@ -169,7 +169,23 @@ export function CaptureBar() {
   )
 }
 
+function SendButton({ label, onPress, disabled }: { label: string; onPress: () => void; disabled: boolean }) {
+  const c = useColors()
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      style={[styles.send, { backgroundColor: c.accent, opacity: disabled ? 0.5 : 1 }]}>
+      <Ionicons name="arrow-up" size={24} color="#fff" />
+    </Pressable>
+  )
+}
+
 const styles = StyleSheet.create({
+  send: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   card: { borderWidth: 1, borderRadius: 16, padding: 14, gap: 12 },
   input: { fontSize: 17, minHeight: 56, textAlignVertical: 'top' },
   recording: { gap: 8, minHeight: 56 },
@@ -178,5 +194,5 @@ const styles = StyleSheet.create({
   time: { fontSize: 18, fontWeight: '600', fontVariant: ['tabular-nums'] },
   busy: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  buttons: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
+  buttons: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'flex-end' },
 })

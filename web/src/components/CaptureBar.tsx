@@ -1,5 +1,6 @@
 import type { Capture } from '@shared/types'
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { IoArrowUp } from 'react-icons/io5'
 import { capturesApi } from '../api/endpoints'
 import { toWav } from '../lib/toWav'
 import { useAudioRecorder, type RecorderState } from '../lib/useAudioRecorder'
@@ -150,8 +151,8 @@ export function CaptureBar() {
             {recorder.state === 'recording'
               ? 'Listening…'
               : recorder.atLimit
-                ? 'That’s the 10-minute maximum — press Send, or Discard.'
-                : 'Paused — press Send to process it, ▶ to listen, or the mic to add more.'}
+                ? 'That’s the 10-minute maximum — send it with the arrow, or Discard.'
+                : 'Paused — press the arrow to send it, ▶ to listen, or the mic to add more.'}
           </span>
           {silent && recorder.state === 'recording' && (
             <p className="mic-warning" role="alert">
@@ -182,7 +183,7 @@ export function CaptureBar() {
           </span>
         ) : (
           <span className="muted capture-hint">
-            {hasAudio ? '' : (savedMessage ?? 'Type, or hold the mic to talk (tap to start/stop).')}
+            {hasAudio ? '' : (savedMessage ?? 'Type and press Enter, or hold the mic to talk (tap to start/stop).')}
           </span>
         )}
         {mics.devices.length > 1 && !busy && (
@@ -206,14 +207,23 @@ export function CaptureBar() {
             Discard
           </button>
         )}
+        {/* One send arrow for typed text and recordings; it only shows when there's something to send. */}
         {hasAudio ? (
-          <button type="button" className="primary" onClick={sendRecording} disabled={busy !== null || recorder.seconds < 1}>
-            Send
+          <button
+            type="button"
+            className="send"
+            onClick={sendRecording}
+            disabled={busy !== null || recorder.seconds < 1}
+            aria-label="Send recording"
+            title="Send recording">
+            <IoArrowUp aria-hidden />
           </button>
         ) : (
-          <button type="submit" className="primary" disabled={!text.trim() || busy !== null}>
-            Understand
-          </button>
+          text.trim() && (
+            <button type="submit" className="send" disabled={busy !== null} aria-label="Send" title="Send (Enter)">
+              <IoArrowUp aria-hidden />
+            </button>
+          )
         )}
         {/* Rightmost, so it never moves between presses - hold-to-talk aims at a fixed spot. */}
         {recorder.state !== 'unsupported' && (

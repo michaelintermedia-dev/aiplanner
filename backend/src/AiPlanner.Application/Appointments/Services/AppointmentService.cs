@@ -2,6 +2,7 @@ using AiPlanner.Application.Appointments.DTOs;
 using AiPlanner.Application.Appointments.Interfaces;
 using AiPlanner.Application.Common.Interfaces;
 using AiPlanner.Application.Common.Models;
+using AiPlanner.Application.Reminders;
 using AiPlanner.Domain.Entities;
 using AiPlanner.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -13,9 +14,11 @@ public class AppointmentService : IAppointmentService
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUserService _currentUser;
     private readonly IDateTime _dateTime;
+    private readonly ReminderPlanner _reminders;
 
-    public AppointmentService(IApplicationDbContext db, ICurrentUserService currentUser, IDateTime dateTime)
+    public AppointmentService(IApplicationDbContext db, ICurrentUserService currentUser, IDateTime dateTime, ReminderPlanner reminders)
     {
+        _reminders = reminders;
         _db = db;
         _currentUser = currentUser;
         _dateTime = dateTime;
@@ -74,7 +77,7 @@ public class AppointmentService : IAppointmentService
         };
 
         ApplyParticipants(appointment, request.ParticipantNames);
-        ApplyReminder(appointment, request.ReminderMinutesBeforeStart);
+        SetReminder(appointment, request.Reminder, await _reminders.ZoneAsync(userId, ct));
 
         _db.Appointments.Add(appointment);
         await _db.SaveChangesAsync(ct);
@@ -99,8 +102,8 @@ public class AppointmentService : IAppointmentService
 
         ApplyParticipants(appointment, request.ParticipantNames);
 
-        CancelPendingReminders(appointment);
-        ApplyReminder(appointment, request.ReminderMinutesBeforeStart);
+        // Re-set even if unchanged: a "before" reminder follows the start time.
+        SetReminder(appointment, request.Reminder, await _reminders.ZoneAsync(appointment.UserId, ct));
 
         await _db.SaveChangesAsync(ct);
         return Result<AppointmentDto>.Success(ToDto(appointment));
@@ -114,12 +117,6 @@ public class AppointmentService : IAppointmentService
             return Result<AppointmentDto>.Failure("Appointment not found.");
         }
 
-        // Preserve the gap between "reminder trigger" and "start" across the move.
-        var reminderOffsets = appointment.Reminders
-            .Where(r => !r.IsCancelled)
-            .Select(r => appointment.StartUtc - r.TriggerAtUtc)
-            .ToList();
-
         appointment.StartUtc = request.NewStartUtc;
         appointment.EndUtc = request.NewEndUtc;
         if (appointment.Status == AppointmentStatus.Cancelled)
@@ -127,16 +124,8 @@ public class AppointmentService : IAppointmentService
             appointment.Status = AppointmentStatus.Scheduled;
         }
 
-        CancelPendingReminders(appointment);
-        foreach (var offset in reminderOffsets)
-        {
-            _db.Reminders.Add(new Reminder
-            {
-                UserId = appointment.UserId,
-                AppointmentId = appointment.Id,
-                TriggerAtUtc = appointment.StartUtc - offset
-            });
-        }
+        // Same reminder, re-timed: a "before" one moves with the start.
+        SetReminder(appointment, ReminderPlanner.ToDto(appointment.Reminders), await _reminders.ZoneAsync(appointment.UserId, ct));
 
         await _db.SaveChangesAsync(ct);
         return Result<AppointmentDto>.Success(ToDto(appointment));
@@ -151,7 +140,7 @@ public class AppointmentService : IAppointmentService
         }
 
         appointment.Status = AppointmentStatus.Completed;
-        CancelPendingReminders(appointment);
+        ReminderPlanner.TurnOff(appointment.Reminders);
 
         await _db.SaveChangesAsync(ct);
         return Result<AppointmentDto>.Success(ToDto(appointment));
@@ -166,7 +155,7 @@ public class AppointmentService : IAppointmentService
         }
 
         appointment.Status = AppointmentStatus.Cancelled;
-        CancelPendingReminders(appointment);
+        ReminderPlanner.TurnOff(appointment.Reminders);
 
         await _db.SaveChangesAsync(ct);
         return Result<AppointmentDto>.Success(ToDto(appointment));
@@ -186,11 +175,7 @@ public class AppointmentService : IAppointmentService
         }
 
         appointment.Status = AppointmentStatus.Scheduled;
-        var last = appointment.Reminders.OrderByDescending(r => r.CreatedAtUtc).FirstOrDefault();
-        if (last is { IsCancelled: true } && last.TriggerAtUtc > _dateTime.UtcNow)
-        {
-            ApplyReminder(appointment, (int)Math.Round((appointment.StartUtc - last.TriggerAtUtc).TotalMinutes));
-        }
+        _reminders.Restore(appointment.Reminders, appointment.StartUtc, await _reminders.ZoneAsync(appointment.UserId, ct), appointment.UserId, r => r.AppointmentId = appointment.Id);
 
         await _db.SaveChangesAsync(ct);
         return Result<AppointmentDto>.Success(ToDto(appointment));
@@ -205,7 +190,7 @@ public class AppointmentService : IAppointmentService
         }
 
         appointment.IsDeleted = true;
-        CancelPendingReminders(appointment);
+        ReminderPlanner.TurnOff(appointment.Reminders);
 
         await _db.SaveChangesAsync(ct);
         return Result.Success();
@@ -257,37 +242,10 @@ public class AppointmentService : IAppointmentService
         }
     }
 
-    private void ApplyReminder(Appointment appointment, int? reminderMinutesBeforeStart)
-    {
-        if (reminderMinutesBeforeStart is null)
-        {
-            return;
-        }
 
-        var reminder = new Reminder
-        {
-            UserId = appointment.UserId,
-            AppointmentId = appointment.Id,
-            TriggerAtUtc = appointment.StartUtc.AddMinutes(-reminderMinutesBeforeStart.Value)
-        };
 
-        _db.Reminders.Add(reminder);
-        appointment.Reminders.Add(reminder);
-    }
-
-    private static int? PendingReminderMinutes(Appointment a)
-    {
-        var pending = a.Reminders.Where(r => !r.IsCancelled).OrderBy(r => r.TriggerAtUtc).FirstOrDefault();
-        return pending is null ? null : (int)Math.Round((a.StartUtc - pending.TriggerAtUtc).TotalMinutes);
-    }
-
-    private static void CancelPendingReminders(Appointment appointment)
-    {
-        foreach (var reminder in appointment.Reminders.Where(r => !r.IsCancelled))
-        {
-            reminder.IsCancelled = true;
-        }
-    }
+    private void SetReminder(Appointment appointment, ReminderDto? reminder, TimeZoneInfo zone) =>
+        _reminders.Set(appointment.Reminders, reminder, appointment.StartUtc, zone, appointment.UserId, r => r.AppointmentId = appointment.Id);
 
     private static AppointmentDto ToDto(Appointment a) => new(
         a.Id,
@@ -302,6 +260,6 @@ public class AppointmentService : IAppointmentService
         a.Participants.Select(p => new AppointmentParticipantDto(p.Name, p.Email)).ToList(),
         a.CreatedAtUtc,
         a.UpdatedAtUtc,
-        PendingReminderMinutes(a),
+        ReminderPlanner.ToDto(a.Reminders),
         a.SourceAiExtractionId);
 }

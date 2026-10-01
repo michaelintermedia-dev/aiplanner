@@ -1538,3 +1538,102 @@ button.kind-icon:hover:not(:disabled) {
   gap: 6px;
   margin: 0;
 }
+
+/* ---- Reminder picker (same control everywhere an item is created/edited) ---- */
+.reminder-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reminder-summary {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.reminder-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  padding: 4px 14px;
+  min-height: 34px;
+}
+
+.reminder-toggle svg {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.reminder-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.reminder-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip-button {
+  border-radius: 999px;
+  min-height: 30px;
+  padding: 2px 12px;
+  font-size: 0.88rem;
+}
+
+.segmented.small button {
+  padding: 4px 10px;
+  font-size: 0.88rem;
+}
+
+.weekday-toggles {
+  display: flex;
+  gap: 4px;
+}
+
+.weekday-toggles button {
+  width: 38px;
+  min-height: 34px;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.weekday-toggles button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.small {
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.field > .reminder-picker {
+  color: var(--text);
+}
+
+.reminder-editor .caption {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: -4px;
+}

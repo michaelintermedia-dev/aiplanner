@@ -1,3 +1,4 @@
+using AiPlanner.Application.Reminders;
 using AiPlanner.Domain.Enums;
 
 namespace AiPlanner.Application.Tasks.DTOs;
@@ -16,9 +17,6 @@ public record CreateTaskRequest(
     /// otherwise it's Planned (if a due date is given) or Inbox.
     /// </summary>
     bool IsOngoing,
-    /// <summary>
-    /// If set (and DueDateUtc is set), a Reminder is created at
-    /// DueDateUtc minus this many minutes (spec section 10/22 - "basic reminders").
-    /// </summary>
-    int? ReminderMinutesBeforeDue,
+    /// <summary>The task's reminder, if any (a "before" one needs DueDateUtc with a time).</summary>
+    ReminderDto? Reminder,
     IReadOnlyList<string>? Tags);

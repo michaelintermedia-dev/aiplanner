@@ -1,5 +1,6 @@
 using System.Globalization;
 using AiPlanner.Application.Ai.Interfaces;
+using AiPlanner.Application.Reminders;
 using AiPlanner.Application.Common.Utils;
 using AiPlanner.Domain.Enums;
 
@@ -13,11 +14,11 @@ public record NormalizedItem(
     string? Description,
     DateTime? StartUtc, // appointment start
     DateTime? EndUtc, // appointment end
-    DateTime? DueUtc, // task due date, or when a reminder fires
+    DateTime? DueUtc, // task due date
     bool HasTime,
     string? Location,
     TaskPriority? Priority,
-    int? ReminderMinutesBefore,
+    ReminderDto? Reminder,
     RecurrenceFrequency? Recurrence,
     string? Clarification,
     double? Confidence);
@@ -53,7 +54,7 @@ public static class ExtractionNormalizer
 
         // Nothing is ever a dead end (user's rule): if the AI found nothing it
         // could use - a question, a stray thought - keep the words as a note the
-        // user can save as-is or turn into a task/event/reminder in the review.
+        // user can save as-is or turn into a task or event in the review.
         if (items.Count == 0 && Clean(inputText, 4000) is { } text)
         {
             items.Add(new NormalizedItem(
@@ -62,7 +63,7 @@ public static class ExtractionNormalizer
                 Summary: null,
                 Description: text,
                 StartUtc: null, EndUtc: null, DueUtc: null, HasTime: false,
-                Location: null, Priority: null, ReminderMinutesBefore: null, Recurrence: null,
+                Location: null, Priority: null, Reminder: null, Recurrence: null,
                 Clarification: null, Confidence: null));
         }
 
@@ -78,18 +79,13 @@ public static class ExtractionNormalizer
         }
 
         var intent = ParseIntent(raw.Intent);
-        var reminder = raw.ReminderMinutesBefore is >= 0 and <= MaxReminderMinutes ? raw.ReminderMinutesBefore : null;
-
-        // A reminder isn't a type of its own (user's rule): it's a task that
-        // reminds you at its time. Any task, event or note can carry one.
+        // A reminder isn't a type of its own (user's rule): the legacy "reminder"
+        // intent is a task that reminds you at its time.
         var remindAtItsTime = intent == ExtractionIntent.Reminder;
         if (remindAtItsTime)
         {
             intent = ExtractionIntent.Task;
-            reminder ??= 0;
         }
-        // A note has no date of its own; it keeps one only as "remind me at".
-        var noteReminder = intent == ExtractionIntent.Note && reminder is not null;
 
         var questions = new List<string>();
         if (Clean(raw.Clarification, 500) is { } fromProvider)
@@ -102,7 +98,7 @@ public static class ExtractionNormalizer
         var endTime = ParseTime(raw.EndTime);
 
         // "At 3pm" with no date means the next 3pm.
-        if (date is null && time is not null && (intent != ExtractionIntent.Note || noteReminder))
+        if (date is null && time is not null && intent != ExtractionIntent.Note)
         {
             var today = DateOnly.FromDateTime(localNow);
             date = today.ToDateTime(time.Value) > localNow ? today : today.AddDays(1);
@@ -145,32 +141,18 @@ public static class ExtractionNormalizer
                         ? UserTimeZoneHelper.LocalDateStartToUtc(date.Value, timeZone)
                         : ToUtc(date.Value, time.Value, timeZone);
                 }
-                if (remindAtItsTime && !hasTime)
-                {
-                    questions.Add("What time should I remind you?");
-                }
-                break;
-
-            case ExtractionIntent.Note when noteReminder:
-                if (date is not null && time is not null)
-                {
-                    hasTime = true;
-                    dueUtc = ToUtc(date.Value, time.Value, timeZone);
-                }
-                else
-                {
-                    questions.Add("When should I remind you?");
-                }
-                reminder = 0; // a note's reminder fires at its own time
                 break;
         }
 
         // "Buy milk this evening" said at 22:00 resolves to a time that has passed;
         // keep it, but make the user look at it rather than save a stale item.
-        if ((intent != ExtractionIntent.Note || noteReminder) && date is not null && IsInPast(date.Value, time, localNow))
+        if (intent != ExtractionIntent.Note && date is not null && IsInPast(date.Value, time, localNow))
         {
             questions.Add("This time has already passed - please check the date.");
         }
+
+        var rawReminder = raw.Reminder ?? (remindAtItsTime ? new RawReminder("before", 0, null, null, null) : null);
+        var reminder = NormalizeReminder(rawReminder, intent, hasTime, localNow, timeZone, questions);
 
         return new NormalizedItem(
             intent,
@@ -187,6 +169,70 @@ public static class ExtractionNormalizer
             ParseRecurrence(raw.Recurrence),
             questions.Count > 0 ? Truncate(string.Join(" ", questions.Distinct()), 500) : null,
             raw.Confidence is { } c && double.IsFinite(c) ? Math.Clamp(c, 0, 1) : null);
+    }
+
+    /// <summary>
+    /// The item's reminder, or null. Anything missing (a time, the days) becomes
+    /// a question and is left empty for the user to fill in on the review.
+    /// </summary>
+    private static ReminderDto? NormalizeReminder(
+        RawReminder? raw, ExtractionIntent intent, bool itemHasTime, DateTime localNow, TimeZoneInfo timeZone, List<string> questions)
+    {
+        if (raw is null || !Enum.TryParse<ReminderKind>(raw.Kind?.Trim(), ignoreCase: true, out var kind) || !Enum.IsDefined(kind))
+        {
+            return null;
+        }
+
+        var time = ParseTime(raw.Time);
+        switch (kind)
+        {
+            case ReminderKind.Before when intent != ExtractionIntent.Note:
+                if (!itemHasTime)
+                {
+                    questions.Add("What time should I remind you?");
+                }
+                var minutes = raw.MinutesBefore is >= 0 and <= MaxReminderMinutes ? raw.MinutesBefore.Value : 0;
+                return new ReminderDto(ReminderKind.Before, MinutesBefore: minutes);
+
+            case ReminderKind.At:
+            case ReminderKind.Before: // on a note there is no time to count back from
+                var date = ParseDate(raw.Date, localNow, questions);
+                if (date is null && time is not null)
+                {
+                    var today = DateOnly.FromDateTime(localNow);
+                    date = today.ToDateTime(time.Value) > localNow ? today : today.AddDays(1);
+                }
+                if (date is null || time is null)
+                {
+                    questions.Add("When should I remind you?");
+                    return new ReminderDto(ReminderKind.At);
+                }
+                if (IsInPast(date.Value, time, localNow))
+                {
+                    questions.Add("This reminder time has already passed - please check it.");
+                }
+                return new ReminderDto(ReminderKind.At, AtUtc: ToUtc(date.Value, time.Value, timeZone));
+
+            default: // daily, weekdays, weekly
+                if (time is null)
+                {
+                    questions.Add("What time should I remind you?");
+                }
+                IReadOnlyList<DayOfWeek>? days = null;
+                if (kind == ReminderKind.Weekly)
+                {
+                    days = (raw.Days ?? [])
+                        .Select(d => Enum.TryParse<DayOfWeek>(d?.Trim(), ignoreCase: true, out var day) && Enum.IsDefined(day) ? (DayOfWeek?)day : null)
+                        .OfType<DayOfWeek>()
+                        .Distinct()
+                        .ToList();
+                    if (days.Count == 0)
+                    {
+                        questions.Add("Which days should I remind you?");
+                    }
+                }
+                return new ReminderDto(kind, Time: time is { } t ? ReminderSchedule.FormatTime(t) : null, Days: days);
+        }
     }
 
     private static bool IsInPast(DateOnly date, TimeOnly? time, DateTime localNow) =>
@@ -240,15 +286,8 @@ public static class ExtractionNormalizer
     /// Wall-clock time in the user's zone to UTC. A time that doesn't exist
     /// (skipped by a DST jump) is moved forward by the size of the jump.
     /// </summary>
-    private static DateTime ToUtc(DateOnly date, TimeOnly time, TimeZoneInfo timeZone)
-    {
-        var local = DateTime.SpecifyKind(date.ToDateTime(time), DateTimeKind.Unspecified);
-        if (timeZone.IsInvalidTime(local))
-        {
-            local = local.AddHours(1);
-        }
-        return TimeZoneInfo.ConvertTimeToUtc(local, timeZone);
-    }
+    private static DateTime ToUtc(DateOnly date, TimeOnly time, TimeZoneInfo timeZone) =>
+        UserTimeZoneHelper.LocalToUtc(date.ToDateTime(time), timeZone);
 
     private static string? Clean(string? value, int maxLength)
     {

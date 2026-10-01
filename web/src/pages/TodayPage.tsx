@@ -70,7 +70,7 @@ export function TodayPage() {
             <Section title="Upcoming reminders">
               {data.upcomingReminders.map((r) => (
                 <li key={r.reminderId} className="row reminder">
-                  <Link className="row-title" to={`/${r.sourceType === 'Task' ? 'tasks' : 'appointments'}/${r.sourceId}`}>
+                  <Link className="row-title" to={`/${r.sourceType === 'Task' ? 'tasks' : r.sourceType === 'Note' ? 'notes' : 'appointments'}/${r.sourceId}`}>
                     {r.title}
                   </Link>
                   <span className="row-meta">{formatDue(r.triggerAtUtc, true, zone)}</span>

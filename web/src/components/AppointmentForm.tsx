@@ -2,15 +2,10 @@ import { useState, type FormEvent } from 'react'
 import { appointmentsApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { todayKey, zonedToUtc } from '@shared/dates'
+import type { Reminder } from '@shared/types'
+import { reminderProblem } from '@shared/reminders'
 import { useAction } from '../lib/useAction'
-
-const REMINDER_OPTIONS = [
-  { label: 'No reminder', value: '' },
-  { label: '10 minutes before', value: '10' },
-  { label: '30 minutes before', value: '30' },
-  { label: '1 hour before', value: '60' },
-  { label: '1 day before', value: '1440' },
-]
+import { ReminderPicker } from './ReminderPicker'
 
 export function AppointmentForm({ initialDate, onDone }: { initialDate?: string; onDone: () => void }) {
   const { zone } = useAuth()
@@ -20,17 +15,20 @@ export function AppointmentForm({ initialDate, onDone }: { initialDate?: string;
   const [start, setStart] = useState('09:00')
   const [end, setEnd] = useState('10:00')
   const [location, setLocation] = useState('')
-  const [reminder, setReminder] = useState('30')
+  // Events default to a reminder 30 minutes before; change or remove it below.
+  const [reminder, setReminder] = useState<Reminder | null>({ kind: 'Before', minutesBefore: 30 })
+  const reminderIssue = reminderProblem(reminder, { itemHasTime: true, isNote: false })
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
+    if (reminderIssue) return
     create.mutate(
       {
         title: title.trim(),
         startUtc: zonedToUtc(date, start, zone.timeZone),
         endUtc: zonedToUtc(date, end, zone.timeZone),
         location: location.trim() || null,
-        reminderMinutesBeforeStart: reminder ? Number(reminder) : null,
+        reminder,
       },
       { onSuccess: onDone },
     )
@@ -62,16 +60,10 @@ export function AppointmentForm({ initialDate, onDone }: { initialDate?: string;
           Location
           <input value={location} onChange={(e) => setLocation(e.target.value)} />
         </label>
-        <label>
-          Reminder
-          <select value={reminder} onChange={(e) => setReminder(e.target.value)}>
-            {REMINDER_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </label>
+      </div>
+      <div className="field">
+        <span>Reminder</span>
+        <ReminderPicker value={reminder} onChange={setReminder} itemHasTime />
       </div>
       {create.error && <p className="error">{create.error.message}</p>}
       <div className="form-actions">

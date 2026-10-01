@@ -39,7 +39,8 @@ export interface Task {
   createdAtUtc: string
   updatedAtUtc: string
   /** Only on single-item reads (tasks.get); null in lists. */
-  reminderMinutesBefore?: number | null
+  /** Filled on single-item reads (detail view). */
+  reminder?: Reminder | null
   /** The capture this task came from (transcript/recording). */
   sourceCaptureId?: string | null
 }
@@ -53,7 +54,7 @@ export interface SaveTaskRequest {
   hasDueTime?: boolean
   priority?: TaskPriority
   isOngoing?: boolean
-  reminderMinutesBeforeDue?: number | null
+  reminder?: Reminder | null
   tags?: string[] | null
 }
 
@@ -71,7 +72,8 @@ export interface Appointment {
   createdAtUtc: string
   updatedAtUtc: string
   /** Only on single-item reads (appointments.get); null in lists. */
-  reminderMinutesBefore?: number | null
+  /** Filled on single-item reads (detail view). */
+  reminder?: Reminder | null
   /** The capture this appointment came from (transcript/recording). */
   sourceCaptureId?: string | null
 }
@@ -85,7 +87,7 @@ export interface CreateAppointmentRequest {
   endUtc: string
   location?: string | null
   participantNames?: string[] | null
-  reminderMinutesBeforeStart?: number | null
+  reminder?: Reminder | null
 }
 
 // ---- Unified feed ------------------------------------------------------------
@@ -129,8 +131,7 @@ export interface Note {
   aiSummary: string | null
   /** The capture this note came from (transcript/recording). */
   sourceCaptureId: string | null
-  /** Pending "remind me about this" time, if any. */
-  reminderAtUtc: string | null
+  reminder: Reminder | null
   createdAtUtc: string
   updatedAtUtc: string
 }
@@ -139,14 +140,14 @@ export interface SaveNoteRequest {
   title?: string | null
   content: string
   /** Omitted or null = no reminder (PUT replaces it). */
-  reminderAtUtc?: string | null
+  reminder?: Reminder | null
 }
 
 export interface UpcomingReminder {
   reminderId: string
   triggerAtUtc: string
   title: string
-  sourceType: 'Task' | 'Appointment'
+  sourceType: 'Task' | 'Appointment' | 'Note'
   sourceId: string
 }
 
@@ -186,7 +187,7 @@ export type ExtractionIntent = 'Task' | 'Appointment' | 'Reminder' | 'Note'
 export type ExtractionStatus = 'PendingReview' | 'Accepted' | 'Edited' | 'Rejected'
 export type RecurrenceFrequency = 'Daily' | 'Weekdays' | 'Weekly' | 'Monthly' | 'Custom'
 
-/** A proposed item. StartUtc/EndUtc for appointments; DueUtc for tasks and reminders. */
+/** A proposed item. StartUtc/EndUtc for appointments; DueUtc for tasks. Any can carry a reminder. */
 export interface CaptureItem {
   id: string
   intent: ExtractionIntent
@@ -200,7 +201,7 @@ export interface CaptureItem {
   hasTime: boolean
   location: string | null
   priority: TaskPriority | null
-  reminderMinutesBefore: number | null
+  reminder: Reminder | null
   recurrence: RecurrenceFrequency | null
   /** A question the user should look at before saving. */
   clarification: string | null
@@ -247,5 +248,24 @@ export interface ConfirmCaptureItem {
   hasTime: boolean
   location: string | null
   priority: TaskPriority | null
-  reminderMinutesBefore: number | null
+  reminder: Reminder | null
+}
+
+export type ReminderKind = 'At' | 'Before' | 'Daily' | 'Weekdays' | 'Weekly'
+export type Weekday = 'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday'
+
+/**
+ * A reminder on any item - the same shape everywhere. Which fields matter
+ * depends on kind: At - atUtc; Before - minutesBefore (moves with the item);
+ * Daily/Weekdays - time; Weekly - time + days. Repeating ones stay on until
+ * turned off. nextAtUtc is output only.
+ */
+export interface Reminder {
+  kind: ReminderKind
+  atUtc?: string | null
+  minutesBefore?: number | null
+  /** "HH:mm" in the user's timezone. */
+  time?: string | null
+  days?: Weekday[] | null
+  nextAtUtc?: string | null
 }

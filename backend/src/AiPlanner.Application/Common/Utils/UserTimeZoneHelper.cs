@@ -47,4 +47,18 @@ public static class UserTimeZoneHelper
     /// <summary>Today's date in the given timezone, based on the current instant.</summary>
     public static DateOnly TodayInTimeZone(TimeZoneInfo timeZone, DateTime utcNow)
         => DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(utcNow, timeZone));
+
+    /// <summary>
+    /// The UTC instant of a local wall-clock time. A time skipped by a DST jump
+    /// (e.g. 02:30 when clocks go 02:00 -> 03:00) moves forward an hour.
+    /// </summary>
+    public static DateTime LocalToUtc(DateTime local, TimeZoneInfo timeZone)
+    {
+        local = DateTime.SpecifyKind(local, DateTimeKind.Unspecified);
+        if (timeZone.IsInvalidTime(local))
+        {
+            local = local.AddHours(1);
+        }
+        return TimeZoneInfo.ConvertTimeToUtc(local, timeZone);
+    }
 }

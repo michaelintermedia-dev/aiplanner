@@ -7,7 +7,7 @@ public record UpcomingReminderDto(
     Guid ReminderId,
     DateTime TriggerAtUtc,
     string Title,
-    string SourceType, // "Task" | "Appointment"
+    string SourceType, // "Task" | "Appointment" | "Note"
     Guid SourceId);
 
 /// <summary>

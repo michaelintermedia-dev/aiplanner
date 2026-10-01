@@ -1,5 +1,6 @@
 using AiPlanner.Application.Common.Interfaces;
 using AiPlanner.Application.Common.Models;
+using AiPlanner.Application.Reminders;
 using AiPlanner.Application.Tasks.DTOs;
 using AiPlanner.Application.Tasks.Interfaces;
 using AiPlanner.Domain.Entities;
@@ -10,21 +11,22 @@ namespace AiPlanner.Application.Tasks.Services;
 
 /// <summary>
 /// CRUD + lifecycle transitions for TaskItem, always scoped to the current user
-/// (spec section 8 - no cross-user access). Reminder creation here is
-/// intentionally simple: it records the trigger time; actual notification
-/// delivery is wired up in Phase 4.
+/// (spec section 8 - no cross-user access). Reminders go through
+/// ReminderPlanner; actual notification delivery is Phase 4.
 /// </summary>
 public class TaskService : ITaskService
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUserService _currentUser;
     private readonly IDateTime _dateTime;
+    private readonly ReminderPlanner _reminders;
 
-    public TaskService(IApplicationDbContext db, ICurrentUserService currentUser, IDateTime dateTime)
+    public TaskService(IApplicationDbContext db, ICurrentUserService currentUser, IDateTime dateTime, ReminderPlanner reminders)
     {
         _db = db;
         _currentUser = currentUser;
         _dateTime = dateTime;
+        _reminders = reminders;
     }
 
     public async Task<IReadOnlyList<TaskItemDto>> GetListAsync(TaskQueryParameters query, CancellationToken ct = default)
@@ -101,7 +103,7 @@ public class TaskService : ITaskService
 
         await ApplyTagsAsync(task, request.Tags, ct);
 
-        ApplyReminder(task, request.ReminderMinutesBeforeDue);
+        SetReminder(task, request.Reminder, await _reminders.ZoneAsync(userId, ct));
 
         _db.TaskItems.Add(task);
         await _db.SaveChangesAsync(ct);
@@ -135,8 +137,8 @@ public class TaskService : ITaskService
 
         await ApplyTagsAsync(task, request.Tags, ct);
 
-        CancelPendingReminders(task);
-        ApplyReminder(task, request.ReminderMinutesBeforeDue);
+        // Re-set even if unchanged: a "before" reminder follows the due date.
+        SetReminder(task, request.Reminder, await _reminders.ZoneAsync(task.UserId, ct));
 
         await _db.SaveChangesAsync(ct);
 
@@ -153,7 +155,7 @@ public class TaskService : ITaskService
 
         task.Status = TaskItemStatus.Completed;
         task.CompletedAtUtc = _dateTime.UtcNow;
-        CancelPendingReminders(task);
+        ReminderPlanner.TurnOff(task.Reminders);
 
         await _db.SaveChangesAsync(ct);
         return Result<TaskItemDto>.Success(ToDto(task));
@@ -168,7 +170,7 @@ public class TaskService : ITaskService
         }
 
         task.Status = TaskItemStatus.Cancelled;
-        CancelPendingReminders(task);
+        ReminderPlanner.TurnOff(task.Reminders);
 
         await _db.SaveChangesAsync(ct);
         return Result<TaskItemDto>.Success(ToDto(task));
@@ -189,7 +191,7 @@ public class TaskService : ITaskService
 
         task.Status = DetermineInitialStatus(isOngoing: false, task.DueDateUtc);
         task.CompletedAtUtc = null;
-        RestoreReminder(task);
+        _reminders.Restore(task.Reminders, ReminderTime(task), await _reminders.ZoneAsync(task.UserId, ct), task.UserId, r => r.TaskItemId = task.Id);
 
         await _db.SaveChangesAsync(ct);
         return Result<TaskItemDto>.Success(ToDto(task));
@@ -204,7 +206,7 @@ public class TaskService : ITaskService
         }
 
         task.IsDeleted = true;
-        CancelPendingReminders(task);
+        ReminderPlanner.TurnOff(task.Reminders);
 
         await _db.SaveChangesAsync(ct);
         return Result.Success();
@@ -281,59 +283,14 @@ public class TaskService : ITaskService
         }
     }
 
-    private void ApplyReminder(TaskItem task, int? reminderMinutesBeforeDue)
-    {
-        if (reminderMinutesBeforeDue is null || task.DueDateUtc is null)
-        {
-            return;
-        }
 
-        var reminder = new Reminder
-        {
-            UserId = task.UserId,
-            TaskItemId = task.Id,
-            TriggerAtUtc = task.DueDateUtc.Value.AddMinutes(-reminderMinutesBeforeDue.Value)
-        };
 
-        // Add explicitly: attached only via the navigation of an already-tracked task,
-        // EF would treat the pre-keyed reminder as an existing row (UPDATE -> 409).
-        _db.Reminders.Add(reminder);
-        task.Reminders.Add(reminder);
-    }
 
-    /// <summary>
-    /// On reopen, bring back the reminder that complete/cancel switched off, with
-    /// the same offset ("30 min before") - if that time is still ahead.
-    /// </summary>
-    private void RestoreReminder(TaskItem task)
-    {
-        var last = task.Reminders.OrderByDescending(r => r.CreatedAtUtc).FirstOrDefault();
-        if (last is null || !last.IsCancelled || task.DueDateUtc is null)
-        {
-            return;
-        }
-        var minutes = (int)Math.Round((task.DueDateUtc.Value - last.TriggerAtUtc).TotalMinutes);
-        if (task.DueDateUtc.Value.AddMinutes(-minutes) > _dateTime.UtcNow)
-        {
-            ApplyReminder(task, minutes);
-        }
-    }
+    private void SetReminder(TaskItem task, ReminderDto? reminder, TimeZoneInfo zone) =>
+        _reminders.Set(task.Reminders, reminder, ReminderTime(task), zone, task.UserId, r => r.TaskItemId = task.Id);
 
-    private static int? PendingReminderMinutes(TaskItem t)
-    {
-        var pending = t.Reminders.Where(r => !r.IsCancelled).OrderBy(r => r.TriggerAtUtc).FirstOrDefault();
-        return pending is null || t.DueDateUtc is null
-            ? null
-            : (int)Math.Round((t.DueDateUtc.Value - pending.TriggerAtUtc).TotalMinutes);
-    }
-
-    private static void CancelPendingReminders(TaskItem task)
-    {
-        foreach (var reminder in task.Reminders.Where(r => !r.IsCancelled))
-        {
-            reminder.IsCancelled = true;
-        }
-    }
+    /// <summary>What a "before" reminder counts back from: the due time (not a date-only due).</summary>
+    private static DateTime? ReminderTime(TaskItem task) => task.HasDueTime ? task.DueDateUtc : null;
 
     private static TaskItemDto ToDto(TaskItem t) => new(
         t.Id,
@@ -350,6 +307,6 @@ public class TaskService : ITaskService
         t.TaskTags.Select(tt => tt.Tag.Name).OrderBy(n => n).ToList(),
         t.CreatedAtUtc,
         t.UpdatedAtUtc,
-        PendingReminderMinutes(t),
+        ReminderPlanner.ToDto(t.Reminders),
         t.SourceAiExtractionId);
 }

@@ -1,3 +1,4 @@
+using AiPlanner.Application.Reminders;
 using AiPlanner.Application.Tasks.DTOs;
 using AiPlanner.Domain.Enums;
 using FluentAssertions;
@@ -19,18 +20,42 @@ public class CreateTaskRequestValidatorTests
             HasDueTime: true,
             Priority: TaskPriority.High,
             IsOngoing: false,
-            ReminderMinutesBeforeDue: 30,
+            Reminder: new ReminderDto(ReminderKind.Before, MinutesBefore: 30),
             Tags: new[] { "work" });
 
         _validator.Validate(request).IsValid.Should().BeTrue();
     }
 
     [Fact]
-    public void Reminder_without_due_date_fails()
+    public void Before_reminder_without_due_time_fails()
     {
         var request = new CreateTaskRequest(
             "Some task", null, null, null, null, false, TaskPriority.None,
-            IsOngoing: false, ReminderMinutesBeforeDue: 15, Tags: null);
+            IsOngoing: false, Reminder: new ReminderDto(ReminderKind.Before, MinutesBefore: 15), Tags: null);
+
+        _validator.Validate(request).IsValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Daily_reminder_without_due_date_passes()
+    {
+        var request = new CreateTaskRequest(
+            "Take vitamins", null, null, null, null, false, TaskPriority.None,
+            IsOngoing: false, Reminder: new ReminderDto(ReminderKind.Daily, Time: "08:00"), Tags: null);
+
+        _validator.Validate(request).IsValid.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(ReminderKind.Daily, null)] // no time
+    [InlineData(ReminderKind.Daily, "8am")] // not HH:mm
+    [InlineData(ReminderKind.Weekly, "08:00")] // no days
+    [InlineData(ReminderKind.At, null)] // no moment
+    public void Incomplete_reminders_fail(ReminderKind kind, string? time)
+    {
+        var request = new CreateTaskRequest(
+            "Something", null, null, null, null, false, TaskPriority.None,
+            IsOngoing: false, Reminder: new ReminderDto(kind, Time: time), Tags: null);
 
         _validator.Validate(request).IsValid.Should().BeFalse();
     }

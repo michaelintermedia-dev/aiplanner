@@ -23,7 +23,12 @@ public class AIExtractionItem : BaseEntity
     public string? Clarification { get; set; }
     public string? Location { get; set; }
     public TaskPriority? Priority { get; set; }
+    // The proposed reminder (see Reminder for what each field means per kind).
+    public ReminderKind? ReminderKind { get; set; }
     public int? ReminderMinutesBefore { get; set; }
+    public DateTime? ReminderAtUtc { get; set; }
+    public TimeOnly? ReminderTime { get; set; }
+    public int ReminderDays { get; set; }
     public RecurrenceFrequency? RecurrenceFrequency { get; set; }
     public double? Confidence { get; set; }
 

@@ -12,6 +12,7 @@ using AiPlanner.Application.Tasks.Interfaces;
 using AiPlanner.Application.Tasks.Services;
 using AiPlanner.Application.Today.Interfaces;
 using AiPlanner.Application.Today.Services;
+using AiPlanner.Application.Reminders;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -23,6 +24,7 @@ public static class DependencyInjection
     {
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
 
+        services.AddScoped<ReminderPlanner>();
         services.AddScoped<ITaskService, TaskService>();
         services.AddScoped<IAppointmentService, AppointmentService>();
         services.AddScoped<ITodayService, TodayService>();

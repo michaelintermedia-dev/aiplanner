@@ -1,31 +1,10 @@
-import { draftProblems, INTENT_OPTIONS, toConfirmItem, toDraft, type ItemDraft } from '@shared/captureDraft'
+import { draftHasTime, draftProblems, INTENT_OPTIONS, toConfirmItem, toDraft, type ItemDraft } from '@shared/captureDraft'
 import type { Capture, TaskPriority } from '@shared/types'
 import { useState } from 'react'
 import { capturesApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { useAction } from '../lib/useAction'
-
-const REMINDERS = [
-  { label: 'No reminder', value: '' },
-  { label: 'At the time', value: '0' },
-  { label: '10 min before', value: '10' },
-  { label: '30 min before', value: '30' },
-  { label: '1 hour before', value: '60' },
-  { label: '1 day before', value: '1440' },
-]
-
-/** A note has no time of its own, so its reminder is just on (at a date/time) or off. */
-const NOTE_REMINDERS = [
-  { label: 'No reminder', value: '' },
-  { label: 'Remind me at…', value: '0' },
-]
-
-/** The standard choices, plus whatever the AI proposed if it isn't one of them. */
-function reminderOptions(current: number | null, intent: ItemDraft['intent']) {
-  if (intent === 'Note') return NOTE_REMINDERS
-  if (current === null || REMINDERS.some((r) => r.value === String(current))) return REMINDERS
-  return [...REMINDERS, { label: `${current} min before`, value: String(current) }]
-}
+import { ReminderPicker } from './ReminderPicker'
 
 /**
  * "I understood:" - the review screen (spec section 18). Every property is
@@ -100,8 +79,6 @@ export function CaptureReview({ capture, onDone }: { capture: Capture; onDone: (
 function ItemEditor({ draft: d, onChange }: { draft: ItemDraft; onChange: (patch: Partial<ItemDraft>) => void }) {
   const problems = draftProblems(d)
   const isNote = d.intent === 'Note'
-  // Notes show date/time only to say when to remind.
-  const dated = !isNote || d.reminderMinutesBefore !== null
 
   return (
     <li className={`review-item intent-${d.intent.toLowerCase()}${d.include ? '' : ' excluded'}`}>
@@ -122,7 +99,7 @@ function ItemEditor({ draft: d, onChange }: { draft: ItemDraft; onChange: (patch
 
       {d.include && (
         // Any item can be any type (user's rule) - switching keeps the dates.
-        // A reminder isn't a type: every type has its own Reminder field.
+        // A reminder isn't a type: every type has its own reminder below.
         <div className="intent-chips" role="radiogroup" aria-label="Save as">
           {INTENT_OPTIONS.map((o) => (
             <button
@@ -140,14 +117,14 @@ function ItemEditor({ draft: d, onChange }: { draft: ItemDraft; onChange: (patch
 
       {d.include && (
         <div className="review-fields">
-          {dated && (
+          {!isNote && (
             <>
               <label>
-                {isNote ? 'Remind me on' : 'Date'}
+                Date
                 <input type="date" value={d.date ?? ''} onChange={(e) => onChange({ date: e.target.value || null })} />
               </label>
               <label>
-                {d.intent === 'Appointment' ? 'Start' : isNote ? 'At' : 'Time'}
+                {d.intent === 'Appointment' ? 'Start' : 'Time'}
                 <input type="time" value={d.time ?? ''} onChange={(e) => onChange({ time: e.target.value || null })} />
               </label>
             </>
@@ -176,20 +153,17 @@ function ItemEditor({ draft: d, onChange }: { draft: ItemDraft; onChange: (patch
               </select>
             </label>
           )}
-          {/* On a note the reminder comes first: it's what reveals the date/time. */}
-          <label style={isNote ? { order: -1 } : undefined}>
-            Reminder
-            <select
-              value={isNote && d.reminderMinutesBefore !== null ? '0' : (d.reminderMinutesBefore?.toString() ?? '')}
-              onChange={(e) => onChange({ reminderMinutesBefore: e.target.value === '' ? null : Number(e.target.value) })}>
-              {reminderOptions(d.reminderMinutesBefore, d.intent).map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
+      )}
+
+      {d.include && (
+        <ReminderPicker
+          value={d.reminder}
+          onChange={(reminder) => onChange({ reminder })}
+          itemHasTime={draftHasTime(d)}
+          isNote={isNote}
+          showProblem={false}
+        />
       )}
 
       {d.include && (

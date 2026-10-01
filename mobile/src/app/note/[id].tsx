@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { dateKey, formatDateKey, formatTime, timeKey, zonedToUtc } from '@shared/dates'
-import type { SaveNoteRequest } from '@shared/types'
+import { dateKey, formatDateKey, formatTime } from '@shared/dates'
+import { describeReminder, reminderProblem, repeats } from '@shared/reminders'
+import type { Reminder, SaveNoteRequest } from '@shared/types'
 import { useQuery } from '@tanstack/react-query'
 import { router, Stack, useLocalSearchParams } from 'expo-router'
 import { useState } from 'react'
@@ -8,9 +9,9 @@ import { Alert, Text, View } from 'react-native'
 import { notesApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
 import { detailStyles as s, Field } from '@/components/detail'
+import { ReminderPicker } from '@/components/ReminderPicker'
 import { Screen } from '@/components/Screen'
 import { SourceCapture } from '@/components/SourceCapture'
-import { DateTimeField } from '@/components/DateTimeField'
 import { Button } from '@/components/ui'
 import { useAction } from '@/lib/useAction'
 import { useColors } from '@/theme'
@@ -27,8 +28,7 @@ export default function NoteDetailScreen() {
   const remove = useAction(notesApi.remove)
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
-  const [remindDate, setRemindDate] = useState<string | null>(null)
-  const [remindTime, setRemindTime] = useState<string | null>(null)
+  const [reminder, setReminder] = useState<Reminder | null>(null)
 
   if (isPending) return <Screen><Text style={{ color: c.muted }}>Loading…</Text></Screen>
   if (error || !note) return <Screen><Text style={{ color: c.danger }}>{error?.message ?? 'Note not found.'}</Text></Screen>
@@ -36,7 +36,7 @@ export default function NoteDetailScreen() {
   const when = (utc: string) =>
     `${formatDateKey(dateKey(utc, zone.timeZone), zone.locale, { month: 'short', day: 'numeric' })}, ${formatTime(utc, zone)}`
 
-  const halfReminder = !!remindDate !== !!remindTime
+  const reminderIssue = reminderProblem(reminder, { itemHasTime: false, isNote: true })
 
   // PUT replaces the note, so the reminder is always sent (null = none).
   const save = () =>
@@ -44,7 +44,7 @@ export default function NoteDetailScreen() {
       {
         title: title.trim() || null,
         content: content.trim(),
-        reminderAtUtc: remindDate && remindTime ? zonedToUtc(remindDate, remindTime, zone.timeZone) : null,
+        reminder,
       },
       { onSuccess: () => setEditing(false) },
     )
@@ -69,12 +69,7 @@ export default function NoteDetailScreen() {
         <View style={s.form}>
           <Field label="Title (optional)" value={title} onChangeText={setTitle} />
           <Field label="Note" value={content} onChangeText={setContent} multiline />
-          <Text style={{ color: c.muted }}>Remind me (optional)</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-            <DateTimeField mode="date" value={remindDate} onChange={setRemindDate} placeholder="Date" />
-            <DateTimeField mode="time" value={remindTime} onChange={setRemindTime} placeholder="Time" date={remindDate} />
-          </View>
-          {halfReminder && <Text style={{ color: c.danger }}>Pick both a date and a time for the reminder, or clear both.</Text>}
+          <ReminderPicker value={reminder} onChange={setReminder} itemHasTime={false} isNote />
           {update.error && <Text style={{ color: c.danger }}>{update.error.message}</Text>}
           <View style={s.actions}>
             <Button title="Cancel" onPress={() => setEditing(false)} />
@@ -82,7 +77,7 @@ export default function NoteDetailScreen() {
               title="Save changes"
               variant="primary"
               busy={update.isPending}
-              disabled={!content.trim() || halfReminder}
+              disabled={!content.trim() || !!reminderIssue}
               onPress={save}
             />
           </View>
@@ -96,10 +91,10 @@ export default function NoteDetailScreen() {
           <Text style={{ color: c.text, fontSize: 17, lineHeight: 25 }} selectable>
             {note.content}
           </Text>
-          {note.reminderAtUtc && (
+          {note.reminder && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="notifications-outline" size={16} color={c.text} />
-              <Text style={{ color: c.text, fontSize: 15 }}>Remind me {when(note.reminderAtUtc)}</Text>
+              <Ionicons name={repeats(note.reminder) ? 'repeat' : 'notifications-outline'} size={16} color={c.text} />
+              <Text style={{ color: c.text, fontSize: 15 }}>Remind me: {describeReminder(note.reminder, zone)}</Text>
             </View>
           )}
           <Text style={{ color: c.muted, fontSize: 13 }}>
@@ -114,8 +109,7 @@ export default function NoteDetailScreen() {
               onPress={() => {
                 setTitle(note.title ?? '')
                 setContent(note.content)
-                setRemindDate(note.reminderAtUtc ? dateKey(note.reminderAtUtc, zone.timeZone) : null)
-                setRemindTime(note.reminderAtUtc ? timeKey(note.reminderAtUtc, zone.timeZone) : null)
+                setReminder(note.reminder)
                 setEditing(true)
               }}
             />

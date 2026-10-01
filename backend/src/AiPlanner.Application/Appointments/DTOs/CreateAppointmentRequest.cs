@@ -1,3 +1,5 @@
+using AiPlanner.Application.Reminders;
+
 namespace AiPlanner.Application.Appointments.DTOs;
 
 public record CreateAppointmentRequest(
@@ -8,5 +10,5 @@ public record CreateAppointmentRequest(
     DateTime EndUtc,
     string? Location,
     IReadOnlyList<string>? ParticipantNames,
-    /// <summary>Minutes before StartUtc to create a Reminder (spec section 22 - "basic reminders").</summary>
-    int? ReminderMinutesBeforeStart);
+    /// <summary>The appointment's reminder, if any.</summary>
+    ReminderDto? Reminder);

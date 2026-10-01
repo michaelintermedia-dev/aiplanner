@@ -257,12 +257,21 @@ Local dev notes:
   time, priority, reminder and details, so the user can turn anything into
   anything and fill in what's missing before saving.
 - **A reminder is not a type; every type can carry one** (user's rule,
-  2026-10-01). Tasks and events: "N minutes before" their time. Notes have no
-  time of their own, so a note's reminder is an absolute "remind me at"
-  (`Reminder.NoteId`; `reminderAtUtc` on the notes API; in a capture, a Note's
-  `dueUtc` means when to remind). `ExtractionIntent.Reminder` stays only for
-  old data: the normalizer and clients turn it into a Task that reminds at its
-  time, and the AI schema no longer offers it.
+  2026-10-01). A reminder is a schedule on an item, on until turned off:
+   (once at a moment - "in 1 hour", "tomorrow 9:00"),  (N minutes
+  before the item's own time; moves with it; not on notes), ,
+  ,  (local HH:mm + days). One pending reminder per item.
+  Wire format  / shared  is the same on tasks,
+  appointments, notes and capture items. All writes go through
+   (Application/Reminders): unchanged = kept, changed = old
+  row cancelled + new row; complete/cancel/delete turn it off, reopen restores
+  it.  = next time it goes off (, pure,
+  unit-tested) - Phase 4 dispatches it and advances repeating ones.
+  Clients: one  (web + mobile) with quick presets and a small
+  editor, used in the capture review and every edit form; labels/presets/
+  validation in . The AI returns a  object
+  (kind/minutesBefore/date/time/days);  is legacy
+  (= task with a Before-0 reminder).
 - Icons are standard Ionicons, never emoji, for UI controls (the mic button
   is `mic`/`pause`). Each item type has ONE icon (`KIND_ICON` in
   `components/kindIcons.ts` in each app): the filter tab, feed rows and calendar

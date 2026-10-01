@@ -1,12 +1,13 @@
 import { addDays, dateKey, formatDateKey, formatTime, timeKey, zonedToUtc } from '@shared/dates'
-import type { Appointment } from '@shared/types'
+import type { Appointment, Reminder } from '@shared/types'
 import { useQuery } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { appointmentsApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
+import { ReminderPicker } from '../components/ReminderPicker'
 import { SourceCapture } from '../components/SourceCapture'
-import { reminderChoicesWith, reminderLabel } from '@shared/reminders'
+import { describeReminder, reminderProblem } from '@shared/reminders'
 import { useAction } from '../lib/useAction'
 
 export function AppointmentDetailPage() {
@@ -64,7 +65,7 @@ export function AppointmentDetailPage() {
               </>
             )}
             <dt>Reminder</dt>
-            <dd>{reminderLabel(appt.reminderMinutesBefore)}</dd>
+            <dd>{appt.reminder ? describeReminder(appt.reminder, zone) : 'None'}</dd>
           </dl>
 
           {appt.description && (
@@ -125,12 +126,14 @@ function AppointmentEditForm({ appt, onDone }: { appt: Appointment; onDone: () =
   const [end, setEnd] = useState(timeKey(appt.endUtc, zone.timeZone))
   const [location, setLocation] = useState(appt.location ?? '')
   const [people, setPeople] = useState(appt.participants.map((p) => p.name).join(', '))
-  const [reminder, setReminder] = useState<number | null>(appt.reminderMinutesBefore ?? null)
+  const [reminder, setReminder] = useState<Reminder | null>(appt.reminder ?? null)
+  const reminderIssue = reminderProblem(reminder, { itemHasTime: true, isNote: false })
   const [description, setDescription] = useState(appt.description ?? '')
   const [notes, setNotes] = useState(appt.notes ?? '')
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
+    if (reminderIssue) return
     const startUtc = zonedToUtc(date, start, zone.timeZone)
     let endUtc = zonedToUtc(date, end, zone.timeZone)
     if (endUtc <= startUtc) endUtc = zonedToUtc(addDays(date, 1), end, zone.timeZone) // ends after midnight
@@ -143,7 +146,7 @@ function AppointmentEditForm({ appt, onDone }: { appt: Appointment; onDone: () =
         endUtc,
         location: location.trim() || null,
         participantNames: people.split(',').map((p) => p.trim()).filter(Boolean),
-        reminderMinutesBeforeStart: reminder,
+        reminder,
       },
       { onSuccess: onDone },
     )
@@ -169,16 +172,10 @@ function AppointmentEditForm({ appt, onDone }: { appt: Appointment; onDone: () =
           End
           <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} required />
         </label>
-        <label>
-          Reminder
-          <select value={reminder ?? ''} onChange={(e) => setReminder(e.target.value === '' ? null : Number(e.target.value))}>
-            {reminderChoicesWith(reminder).map((m) => (
-              <option key={m ?? 'none'} value={m ?? ''}>
-                {reminderLabel(m)}
-              </option>
-            ))}
-          </select>
-        </label>
+      </div>
+      <div className="field">
+        <span>Reminder</span>
+        <ReminderPicker value={reminder} onChange={setReminder} itemHasTime />
       </div>
       <div className="form-row">
         <label>
@@ -203,7 +200,7 @@ function AppointmentEditForm({ appt, onDone }: { appt: Appointment; onDone: () =
         <button type="button" onClick={onDone}>
           Cancel
         </button>
-        <button type="submit" className="primary" disabled={!title.trim() || update.isPending}>
+        <button type="submit" className="primary" disabled={!title.trim() || update.isPending || !!reminderIssue}>
           Save changes
         </button>
       </div>

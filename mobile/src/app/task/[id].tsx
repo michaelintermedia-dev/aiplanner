@@ -1,6 +1,6 @@
 import { dateKey, formatDateKey, formatDue, formatTime, timeKey, zonedToUtc } from '@shared/dates'
-import { reminderLabel } from '@shared/reminders'
-import type { Task, TaskPriority } from '@shared/types'
+import { describeReminder, reminderProblem } from '@shared/reminders'
+import type { Reminder, Task, TaskPriority } from '@shared/types'
 import { useQuery } from '@tanstack/react-query'
 import { router, Stack, useLocalSearchParams } from 'expo-router'
 import { useState } from 'react'
@@ -8,7 +8,8 @@ import { Alert, Text, View } from 'react-native'
 import { tasksApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
 import { DateTimeField } from '@/components/DateTimeField'
-import { CycleChip, detailStyles as s, Facts, Field, ReminderChip, TextBlock } from '@/components/detail'
+import { CycleChip, detailStyles as s, Facts, Field, TextBlock } from '@/components/detail'
+import { ReminderPicker } from '@/components/ReminderPicker'
 import { Screen } from '@/components/Screen'
 import { SourceCapture } from '@/components/SourceCapture'
 import { Badge, Button } from '@/components/ui'
@@ -78,7 +79,7 @@ export default function TaskDetailScreen() {
           <Facts
             rows={[
               ['Due', task.dueDateUtc ? formatDue(task.dueDateUtc, task.hasDueTime, zone) : task.status === 'Ongoing' ? 'Ongoing — no deadline' : 'No due date'],
-              ['Reminder', task.dueDateUtc ? reminderLabel(task.reminderMinutesBefore) : '—'],
+              ['Reminder', task.reminder ? describeReminder(task.reminder, zone) : 'None'],
               ...(task.completedAtUtc ? [['Completed', formatDue(task.completedAtUtc, true, zone)] as [string, string]] : []),
               ['Created', `${formatDateKey(dateKey(task.createdAtUtc, zone.timeZone), zone.locale, { month: 'short', day: 'numeric' })}, ${formatTime(task.createdAtUtc, zone)}`],
             ]}
@@ -120,7 +121,8 @@ function TaskEditForm({ task, onDone }: { task: Task; onDone: () => void }) {
   const [time, setTime] = useState<string | null>(task.dueDateUtc && task.hasDueTime ? timeKey(task.dueDateUtc, zone.timeZone) : null)
   const [priority, setPriority] = useState<TaskPriority>(task.priority)
   const [ongoing, setOngoing] = useState(task.status === 'Ongoing')
-  const [reminder, setReminder] = useState<number | null>(task.reminderMinutesBefore ?? null)
+  const [reminder, setReminder] = useState<Reminder | null>(task.reminder ?? null)
+  const reminderIssue = reminderProblem(reminder, { itemHasTime: !ongoing && !!date && !!time, isNote: false })
   const [tags, setTags] = useState(task.tags.join(', '))
 
   const save = () => {
@@ -134,7 +136,7 @@ function TaskEditForm({ task, onDone }: { task: Task; onDone: () => void }) {
         hasDueTime: !!dueDateUtc && !!time,
         priority,
         isOngoing: ongoing,
-        reminderMinutesBeforeDue: dueDateUtc ? reminder : null,
+        reminder,
         tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
       },
       { onSuccess: onDone },
@@ -157,15 +159,15 @@ function TaskEditForm({ task, onDone }: { task: Task; onDone: () => void }) {
           highlight={(p) => p !== 'None'}
         />
         <CycleChip values={[false, true]} value={ongoing} onChange={setOngoing} label={(o) => (o ? 'Ongoing ✓' : 'Ongoing')} highlight={(o) => o} />
-        {!ongoing && date && <ReminderChip value={reminder} onChange={setReminder} />}
       </View>
+      <ReminderPicker value={reminder} onChange={setReminder} itemHasTime={!ongoing && !!date && !!time} />
       <Field label="Tags (comma-separated)" value={tags} onChangeText={setTags} autoCapitalize="none" />
       <Field label="Description" value={description} onChangeText={setDescription} multiline />
       <Field label="Notes" value={notes} onChangeText={setNotes} multiline />
       {update.error && <Text style={{ color: c.danger }}>{update.error.message}</Text>}
       <View style={s.actions}>
         <Button title="Cancel" onPress={onDone} />
-        <Button title="Save changes" variant="primary" busy={update.isPending} disabled={!title.trim()} onPress={save} />
+        <Button title="Save changes" variant="primary" busy={update.isPending} disabled={!title.trim() || !!reminderIssue} onPress={save} />
       </View>
     </View>
   )

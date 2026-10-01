@@ -1,3 +1,5 @@
+using AiPlanner.Application.Reminders;
+
 namespace AiPlanner.Application.Appointments.DTOs;
 
 public record UpdateAppointmentRequest(
@@ -8,4 +10,4 @@ public record UpdateAppointmentRequest(
     DateTime EndUtc,
     string? Location,
     IReadOnlyList<string>? ParticipantNames,
-    int? ReminderMinutesBeforeStart);
+    ReminderDto? Reminder);

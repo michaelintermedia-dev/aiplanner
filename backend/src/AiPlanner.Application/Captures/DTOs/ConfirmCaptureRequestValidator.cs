@@ -1,5 +1,6 @@
 using AiPlanner.Application.Ai.Services;
 using AiPlanner.Domain.Enums;
+using AiPlanner.Application.Reminders;
 using FluentValidation;
 
 namespace AiPlanner.Application.Captures.DTOs;
@@ -22,7 +23,7 @@ public class ConfirmCaptureRequestValidator : AbstractValidator<ConfirmCaptureRe
                 item.RuleFor(i => i.Title).NotEmpty().MaximumLength(ExtractionNormalizer.MaxTitleLength);
                 item.RuleFor(i => i.Description).MaximumLength(4000);
                 item.RuleFor(i => i.Location).MaximumLength(300);
-                item.RuleFor(i => i.ReminderMinutesBefore).InclusiveBetween(0, ExtractionNormalizer.MaxReminderMinutes);
+                item.RuleFor(i => i.Reminder!).SetValidator(new ReminderDtoValidator()).When(i => i.Reminder is not null);
 
                 item.When(i => i.Intent == ExtractionIntent.Appointment, () =>
                 {
@@ -33,11 +34,9 @@ public class ConfirmCaptureRequestValidator : AbstractValidator<ConfirmCaptureRe
                         .WithMessage("An appointment must end after it starts.");
                 });
 
-                item.When(i => i.Intent == ExtractionIntent.Note && i.ReminderMinutesBefore is not null, () =>
-                {
-                    item.RuleFor(i => i.DueUtc).NotNull().WithMessage("Pick when to be reminded about this note.");
-                    item.RuleFor(i => i.HasTime).Equal(true).WithMessage("Pick a time to be reminded about this note.");
-                });
+                item.RuleFor(i => i.Reminder!.Kind).NotEqual(ReminderKind.Before)
+                    .When(i => i.Intent == ExtractionIntent.Note && i.Reminder is not null)
+                    .WithMessage("A note has no time of its own - pick when to be reminded.");
 
                 // Legacy intent: clients no longer offer it; it is saved as a task.
                 item.When(i => i.Intent == ExtractionIntent.Reminder, () =>

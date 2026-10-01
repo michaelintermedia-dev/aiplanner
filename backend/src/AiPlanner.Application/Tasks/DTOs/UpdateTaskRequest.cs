@@ -1,3 +1,4 @@
+using AiPlanner.Application.Reminders;
 using AiPlanner.Domain.Enums;
 
 namespace AiPlanner.Application.Tasks.DTOs;
@@ -11,5 +12,5 @@ public record UpdateTaskRequest(
     bool HasDueTime,
     TaskPriority Priority,
     bool IsOngoing,
-    int? ReminderMinutesBeforeDue,
+    ReminderDto? Reminder,
     IReadOnlyList<string>? Tags);

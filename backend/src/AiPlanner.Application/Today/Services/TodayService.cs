@@ -84,6 +84,7 @@ public class TodayService : ITodayService
             .AsNoTracking()
             .Include(r => r.TaskItem)
             .Include(r => r.Appointment)
+            .Include(r => r.Note)
             .Where(r => r.UserId == userId
                         && !r.IsCancelled
                         && r.TriggerAtUtc >= utcNow
@@ -99,10 +100,12 @@ public class TodayService : ITodayService
             ongoingTasks.Select(ToTaskDto).ToList(),
             overdueTasks.Select(ToTaskDto).ToList(),
             upcomingReminders
-                .Where(r => r.TaskItem is not null || r.Appointment is not null)
-                .Select(r => r.TaskItemId is not null
-                    ? new UpcomingReminderDto(r.Id, r.TriggerAtUtc, r.TaskItem!.Title, "Task", r.TaskItemId.Value)
-                    : new UpcomingReminderDto(r.Id, r.TriggerAtUtc, r.Appointment!.Title, "Appointment", r.AppointmentId!.Value))
+                .Where(r => r.TaskItem is not null || r.Appointment is not null || r.Note is not null)
+                .Select(r => r.TaskItem is not null
+                    ? new UpcomingReminderDto(r.Id, r.TriggerAtUtc, r.TaskItem.Title, "Task", r.TaskItem.Id)
+                    : r.Appointment is not null
+                        ? new UpcomingReminderDto(r.Id, r.TriggerAtUtc, r.Appointment.Title, "Appointment", r.Appointment.Id)
+                        : new UpcomingReminderDto(r.Id, r.TriggerAtUtc, r.Note!.Title ?? r.Note.Content, "Note", r.Note.Id))
                 .ToList());
     }
 

@@ -1,4 +1,3 @@
-import { reminderChoicesWith, reminderLabel } from '@shared/reminders'
 import type { ReactNode } from 'react'
 import { Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native'
 import { useColors } from '@/theme'
@@ -68,18 +67,6 @@ export function CycleChip<T>({
       accessibilityLabel={`${label(value)}. Tap to change.`}>
       <Text style={{ color: on ? c.text : c.muted }}>{label(value)}</Text>
     </Pressable>
-  )
-}
-
-export function ReminderChip({ value, onChange }: { value: number | null; onChange: (v: number | null) => void }) {
-  return (
-    <CycleChip
-      values={reminderChoicesWith(value)}
-      value={value}
-      onChange={onChange}
-      label={(v) => `🔔 ${reminderLabel(v)}`}
-      highlight={(v) => v !== null}
-    />
   )
 }
 

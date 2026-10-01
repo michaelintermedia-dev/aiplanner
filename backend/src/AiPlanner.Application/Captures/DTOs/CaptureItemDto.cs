@@ -1,10 +1,11 @@
+using AiPlanner.Application.Reminders;
 using AiPlanner.Domain.Enums;
 
 namespace AiPlanner.Application.Captures.DTOs;
 
 /// <summary>
-/// A proposed task/appointment/reminder/note. Dates are UTC: StartUtc/EndUtc
-/// for appointments, DueUtc for tasks and reminders. Once saved, the Resulting*
+/// A proposed task/appointment/note. Dates are UTC: StartUtc/EndUtc for
+/// appointments, DueUtc for tasks. Any of them can carry a Reminder. Once saved, the Resulting*
 /// id points at the real item.
 /// </summary>
 public record CaptureItemDto(
@@ -20,7 +21,7 @@ public record CaptureItemDto(
     bool HasTime,
     string? Location,
     TaskPriority? Priority,
-    int? ReminderMinutesBefore,
+    ReminderDto? Reminder,
     RecurrenceFrequency? Recurrence,
     string? Clarification,
     double? Confidence,

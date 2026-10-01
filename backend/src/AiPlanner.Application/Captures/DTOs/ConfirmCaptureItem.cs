@@ -1,3 +1,4 @@
+using AiPlanner.Application.Reminders;
 using AiPlanner.Domain.Enums;
 
 namespace AiPlanner.Application.Captures.DTOs;
@@ -15,4 +16,4 @@ public record ConfirmCaptureItem(
     bool HasTime,
     string? Location,
     TaskPriority? Priority,
-    int? ReminderMinutesBefore);
+    ReminderDto? Reminder);

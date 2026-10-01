@@ -1,12 +1,13 @@
 import { dateKey, formatDateKey, formatDue, formatTime, timeKey, zonedToUtc } from '@shared/dates'
-import type { Task, TaskPriority } from '@shared/types'
+import type { Reminder, Task, TaskPriority } from '@shared/types'
 import { useQuery } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { tasksApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
+import { ReminderPicker } from '../components/ReminderPicker'
 import { SourceCapture } from '../components/SourceCapture'
-import { reminderChoicesWith, reminderLabel } from '@shared/reminders'
+import { describeReminder, reminderProblem } from '@shared/reminders'
 import { useAction } from '../lib/useAction'
 
 export function TaskDetailPage() {
@@ -53,7 +54,7 @@ export function TaskDetailPage() {
             <dt>Due</dt>
             <dd>{task.dueDateUtc ? formatDue(task.dueDateUtc, task.hasDueTime, zone) : task.status === 'Ongoing' ? 'Ongoing — no deadline' : 'No due date'}</dd>
             <dt>Reminder</dt>
-            <dd>{task.dueDateUtc ? reminderLabel(task.reminderMinutesBefore) : '—'}</dd>
+            <dd>{task.reminder ? describeReminder(task.reminder, zone) : 'None'}</dd>
             {task.completedAtUtc && (
               <>
                 <dt>Completed</dt>
@@ -125,11 +126,14 @@ function TaskEditForm({ task, onDone }: { task: Task; onDone: () => void }) {
   const [time, setTime] = useState(task.dueDateUtc && task.hasDueTime ? timeKey(task.dueDateUtc, zone.timeZone) : '')
   const [priority, setPriority] = useState<TaskPriority>(task.priority)
   const [ongoing, setOngoing] = useState(task.status === 'Ongoing')
-  const [reminder, setReminder] = useState<number | null>(task.reminderMinutesBefore ?? null)
+  const [reminder, setReminder] = useState<Reminder | null>(task.reminder ?? null)
   const [tags, setTags] = useState(task.tags.join(', '))
+
+  const reminderIssue = reminderProblem(reminder, { itemHasTime: !ongoing && !!date && !!time, isNote: false })
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
+    if (reminderIssue) return
     const dueDateUtc = !ongoing && date ? zonedToUtc(date, time || null, zone.timeZone) : null
     update.mutate(
       {
@@ -140,7 +144,7 @@ function TaskEditForm({ task, onDone }: { task: Task; onDone: () => void }) {
         hasDueTime: !!dueDateUtc && !!time,
         priority,
         isOngoing: ongoing,
-        reminderMinutesBeforeDue: dueDateUtc ? reminder : null,
+        reminder,
         tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
       },
       { onSuccess: onDone },
@@ -171,19 +175,10 @@ function TaskEditForm({ task, onDone }: { task: Task; onDone: () => void }) {
             ))}
           </select>
         </label>
-        <label>
-          Reminder
-          <select
-            value={reminder ?? ''}
-            onChange={(e) => setReminder(e.target.value === '' ? null : Number(e.target.value))}
-            disabled={ongoing || !date}>
-            {reminderChoicesWith(reminder).map((m) => (
-              <option key={m ?? 'none'} value={m ?? ''}>
-                {reminderLabel(m)}
-              </option>
-            ))}
-          </select>
-        </label>
+      </div>
+      <div className="field">
+        <span>Reminder</span>
+        <ReminderPicker value={reminder} onChange={setReminder} itemHasTime={!ongoing && !!date && !!time} />
       </div>
       <label className="inline-check">
         <input type="checkbox" checked={ongoing} onChange={(e) => setOngoing(e.target.checked)} />
@@ -206,7 +201,7 @@ function TaskEditForm({ task, onDone }: { task: Task; onDone: () => void }) {
         <button type="button" onClick={onDone}>
           Cancel
         </button>
-        <button type="submit" className="primary" disabled={!title.trim() || update.isPending}>
+        <button type="submit" className="primary" disabled={!title.trim() || !!reminderIssue || update.isPending}>
           Save changes
         </button>
       </div>

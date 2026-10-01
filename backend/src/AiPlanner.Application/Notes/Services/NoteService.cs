@@ -2,6 +2,7 @@ using AiPlanner.Application.Common.Interfaces;
 using AiPlanner.Application.Common.Models;
 using AiPlanner.Application.Notes.DTOs;
 using AiPlanner.Application.Notes.Interfaces;
+using AiPlanner.Application.Reminders;
 using AiPlanner.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,11 +13,13 @@ public class NoteService : INoteService
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUserService _currentUser;
+    private readonly ReminderPlanner _reminders;
 
-    public NoteService(IApplicationDbContext db, ICurrentUserService currentUser)
+    public NoteService(IApplicationDbContext db, ICurrentUserService currentUser, ReminderPlanner reminders)
     {
         _db = db;
         _currentUser = currentUser;
+        _reminders = reminders;
     }
 
     public async Task<IReadOnlyList<NoteDto>> GetListAsync(string? search, CancellationToken ct = default)
@@ -49,7 +52,7 @@ public class NoteService : INoteService
             Content = request.Content.Trim(),
         };
         _db.Notes.Add(note);
-        ApplyReminder(note, request.ReminderAtUtc);
+        await SetReminderAsync(note, request.Reminder, ct);
         await _db.SaveChangesAsync(ct);
         return Result<NoteDto>.Success(ToDto(note));
     }
@@ -64,11 +67,7 @@ public class NoteService : INoteService
 
         note.Title = string.IsNullOrWhiteSpace(request.Title) ? null : request.Title.Trim();
         note.Content = request.Content.Trim();
-        if (PendingReminderAt(note) != request.ReminderAtUtc)
-        {
-            CancelPendingReminders(note);
-            ApplyReminder(note, request.ReminderAtUtc);
-        }
+        await SetReminderAsync(note, request.Reminder, ct);
         await _db.SaveChangesAsync(ct);
         return Result<NoteDto>.Success(ToDto(note));
     }
@@ -82,7 +81,7 @@ public class NoteService : INoteService
         }
 
         note.IsDeleted = true; // soft delete, like everything else (sync needs it)
-        CancelPendingReminders(note);
+        ReminderPlanner.TurnOff(note.Reminders);
         await _db.SaveChangesAsync(ct);
         return Result.Success();
     }
@@ -94,32 +93,12 @@ public class NoteService : INoteService
         return await (track ? q : q.AsNoTracking()).FirstOrDefaultAsync(ct);
     }
 
-    private void ApplyReminder(Note note, DateTime? remindAtUtc)
-    {
-        if (remindAtUtc is null)
-        {
-            return;
-        }
-
-        var reminder = new Reminder { UserId = note.UserId, NoteId = note.Id, TriggerAtUtc = remindAtUtc.Value };
-        _db.Reminders.Add(reminder); // explicit Add - see TaskService.ApplyReminder
-        note.Reminders.Add(reminder);
-    }
-
-    private static DateTime? PendingReminderAt(Note n) =>
-        n.Reminders.Where(r => !r.IsCancelled).OrderBy(r => r.TriggerAtUtc).Select(r => (DateTime?)r.TriggerAtUtc).FirstOrDefault();
-
-    private static void CancelPendingReminders(Note note)
-    {
-        foreach (var reminder in note.Reminders.Where(r => !r.IsCancelled))
-        {
-            reminder.IsCancelled = true;
-        }
-    }
+    private async Task SetReminderAsync(Note note, ReminderDto? reminder, CancellationToken ct) =>
+        _reminders.Set(note.Reminders, reminder, itemTimeUtc: null, await _reminders.ZoneAsync(note.UserId, ct), note.UserId, r => r.NoteId = note.Id);
 
     private Guid RequireUserId() =>
         _currentUser.UserId ?? throw new UnauthorizedAccessException("No authenticated user.");
 
     private static NoteDto ToDto(Note n) =>
-        new(n.Id, n.Title, n.Content, n.AiSummary, n.SourceAiExtractionId, PendingReminderAt(n), n.CreatedAtUtc, n.UpdatedAtUtc);
+        new(n.Id, n.Title, n.Content, n.AiSummary, n.SourceAiExtractionId, ReminderPlanner.ToDto(n.Reminders), n.CreatedAtUtc, n.UpdatedAtUtc);
 }

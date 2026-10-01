@@ -44,7 +44,14 @@ public record RawExtractedItem(
     string? EndTime,
     string? Location,
     string? Priority,
-    int? ReminderMinutesBefore,
+    RawReminder? Reminder,
     string? Recurrence,
     string? Clarification,
     double? Confidence);
+
+/// <summary>
+/// A requested reminder: Kind is at/before/daily/weekdays/weekly. Date/Time are
+/// local wall-clock values ("at"), Time alone for repeating ones, Days are
+/// English weekday names ("weekly").
+/// </summary>
+public record RawReminder(string? Kind, int? MinutesBefore, string? Date, string? Time, IReadOnlyList<string>? Days);

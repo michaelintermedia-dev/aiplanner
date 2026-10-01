@@ -1,3 +1,4 @@
+using AiPlanner.Application.Reminders;
 using AiPlanner.Domain.Enums;
 
 namespace AiPlanner.Application.Appointments.DTOs;
@@ -18,6 +19,6 @@ public record AppointmentDto(
     DateTime CreatedAtUtc,
     DateTime UpdatedAtUtc,
     // Filled on single-item reads (detail view); null in lists.
-    int? ReminderMinutesBefore = null,
+    ReminderDto? Reminder = null,
     // The capture this appointment was created from.
     Guid? SourceCaptureId = null);

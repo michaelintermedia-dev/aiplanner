@@ -90,10 +90,11 @@ public class ExtractionNormalizerTests
     }
 
     [Fact]
-    public void Reminder_defaults_to_firing_at_its_time()
+    public void Reminder_becomes_a_task_that_reminds_at_its_time()
     {
         var item = Normalize(Item(intent: "reminder", title: "Call John", date: "2026-10-01", time: "14:00"));
 
+        item.Intent.Should().Be(ExtractionIntent.Task);
         item.DueUtc.Should().Be(new DateTime(2026, 10, 1, 11, 0, 0, DateTimeKind.Utc));
         item.ReminderMinutesBefore.Should().Be(0);
         item.Clarification.Should().BeNull();
@@ -215,14 +216,36 @@ public class ExtractionNormalizerTests
     }
 
     [Fact]
-    public void Notes_carry_no_dates_locations_or_reminders()
+    public void Notes_without_a_reminder_carry_no_dates_or_locations()
     {
-        var item = Normalize(Item(intent: "note", date: "2026-10-01", time: "10:00", reminder: 15, location: "Office"));
+        var item = Normalize(Item(intent: "note", date: "2026-10-01", time: "10:00", location: "Office"));
 
         item.DueUtc.Should().BeNull();
         item.StartUtc.Should().BeNull();
+        item.HasTime.Should().BeFalse();
         item.Location.Should().BeNull();
         item.ReminderMinutesBefore.Should().BeNull();
+    }
+
+    [Fact]
+    public void Note_with_a_reminder_keeps_when_to_remind()
+    {
+        var item = Normalize(Item(intent: "note", title: "Garden idea", date: "2026-10-01", time: "09:00", reminder: 15));
+
+        item.Intent.Should().Be(ExtractionIntent.Note);
+        item.DueUtc.Should().Be(new DateTime(2026, 10, 1, 6, 0, 0, DateTimeKind.Utc));
+        item.HasTime.Should().BeTrue();
+        item.ReminderMinutesBefore.Should().Be(0); // a note's reminder fires at its own time
+        item.Clarification.Should().BeNull();
+    }
+
+    [Fact]
+    public void Note_reminder_without_a_time_asks_when()
+    {
+        var item = Normalize(Item(intent: "note", date: "2026-10-01", reminder: 0));
+
+        item.DueUtc.Should().BeNull();
+        item.Clarification.Should().Contain("When should I remind you");
     }
 
     [Fact]

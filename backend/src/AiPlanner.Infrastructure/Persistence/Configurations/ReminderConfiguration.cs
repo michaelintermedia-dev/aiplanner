@@ -10,7 +10,7 @@ public class ReminderConfiguration : IEntityTypeConfiguration<Reminder>
     {
         builder.ToTable("Reminders", t => t.HasCheckConstraint(
             "CK_Reminders_ExactlyOneParent",
-            "([TaskItemId] IS NOT NULL AND [AppointmentId] IS NULL) OR ([TaskItemId] IS NULL AND [AppointmentId] IS NOT NULL)"));
+            "(CASE WHEN [TaskItemId] IS NULL THEN 0 ELSE 1 END + CASE WHEN [AppointmentId] IS NULL THEN 0 ELSE 1 END + CASE WHEN [NoteId] IS NULL THEN 0 ELSE 1 END) = 1"));
         builder.HasKey(r => r.Id);
         builder.Property(r => r.RowVersion).IsRowVersion();
         builder.HasIndex(r => new { r.UserId, r.TriggerAtUtc });

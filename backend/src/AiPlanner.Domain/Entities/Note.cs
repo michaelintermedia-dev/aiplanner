@@ -10,4 +10,7 @@ public class Note : BaseEntity
 
     public Guid? SourceAiExtractionId { get; set; }
     public AIExtraction? SourceAiExtraction { get; set; }
+
+    /// <summary>"Remind me about this at …" - a note has no date of its own.</summary>
+    public ICollection<Reminder> Reminders { get; set; } = new List<Reminder>();
 }

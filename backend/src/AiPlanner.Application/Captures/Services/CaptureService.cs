@@ -417,6 +417,11 @@ public class CaptureService : ICaptureService
                     SourceAiExtractionId = extraction.Id,
                 };
                 _db.Notes.Add(note);
+                // A note's reminder fires at its own time (DueUtc = "remind me at").
+                if (decision.ReminderMinutesBefore is not null && decision.DueUtc is { } remindAt)
+                {
+                    _db.Reminders.Add(new Reminder { UserId = extraction.UserId, NoteId = note.Id, TriggerAtUtc = remindAt });
+                }
                 item.ResultingNoteId = note.Id;
                 return null;
             }

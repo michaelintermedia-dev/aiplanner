@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons'
 import { draftProblems, INTENT_OPTIONS, toConfirmItem, toDraft, type ItemDraft } from '@shared/captureDraft'
 import type { Capture, ExtractionIntent, TaskPriority } from '@shared/types'
 import { useState } from 'react'
@@ -12,8 +13,11 @@ import { Button } from './ui'
 const PRIORITIES: (TaskPriority | null)[] = [null, 'Low', 'Medium', 'High']
 const REMINDERS: (number | null)[] = [null, 0, 10, 30, 60, 1440]
 
-const reminderLabel = (m: number | null) =>
-  m === null ? 'No reminder' : m === 0 ? 'Remind at the time' : m >= 1440 ? `${m / 1440} day before` : m >= 60 ? `${m / 60} h before` : `${m} min before`
+/** A note has no time of its own, so its reminder is just on (at a date/time) or off. */
+const NOTE_REMINDERS: (number | null)[] = [null, 0]
+
+const reminderLabel = (m: number | null, isNote: boolean) =>
+  isNote ? (m === null ? 'No reminder' : 'Remind me at…') : m === null ? 'No reminder' : m === 0 ? 'Remind at the time' : m >= 1440 ? `${m / 1440} day before` : m >= 60 ? `${m / 60} h before` : `${m} min before`
 
 const intentColor = (intent: ExtractionIntent, c: Colors) =>
   intent === 'Appointment' ? c.appointment : intent === 'Reminder' ? c.warn : intent === 'Note' ? c.muted : c.task
@@ -90,7 +94,10 @@ export function CaptureReview({ capture, onDone }: { capture: Capture; onDone: (
 function ItemEditor({ draft: d, onChange }: { draft: ItemDraft; onChange: (patch: Partial<ItemDraft>) => void }) {
   const c = useColors()
   const problems = draftProblems(d)
-  const dated = d.intent !== 'Note'
+  const isNote = d.intent === 'Note'
+  // Notes show date/time only to say when to remind.
+  const dated = !isNote || d.reminderMinutesBefore !== null
+  const reminders = isNote ? NOTE_REMINDERS : REMINDERS
   const cycle = <T,>(list: T[], value: T) => list[(list.indexOf(value) + 1) % list.length]
 
   return (
@@ -113,7 +120,8 @@ function ItemEditor({ draft: d, onChange }: { draft: ItemDraft; onChange: (patch
       {d.include && (
         <>
           <View style={styles.chips}>
-            {/* Any item can be any type (user's rule) - switching keeps the dates. */}
+            {/* Any item can be any type (user's rule) - switching keeps the dates.
+                A reminder isn't a type: every type has its own reminder chip. */}
             {INTENT_OPTIONS.map(({ intent, label }) => (
               <Pressable
                 key={intent}
@@ -130,35 +138,36 @@ function ItemEditor({ draft: d, onChange }: { draft: ItemDraft; onChange: (patch
             ))}
           </View>
 
-          {dated && (
-            <View style={styles.chips}>
-              <DateTimeField mode="date" value={d.date} onChange={(date) => onChange({ date })} placeholder="Date" />
-              <DateTimeField
-                mode="time"
-                value={d.time}
-                onChange={(time) => onChange({ time })}
-                placeholder={d.intent === 'Appointment' ? 'Start' : 'Time'}
-                date={d.date}
+          {/* On a note the reminder comes first: it's what reveals the date/time. */}
+          <View style={[styles.stack, isNote && styles.reversed]}>
+            {dated && (
+              <View style={styles.chips}>
+                <DateTimeField mode="date" value={d.date} onChange={(date) => onChange({ date })} placeholder={isNote ? 'Remind me on' : 'Date'} />
+                <DateTimeField
+                  mode="time"
+                  value={d.time}
+                  onChange={(time) => onChange({ time })}
+                  placeholder={d.intent === 'Appointment' ? 'Start' : isNote ? 'At' : 'Time'}
+                  date={d.date}
+                />
+                {d.intent === 'Appointment' && (
+                  <DateTimeField mode="time" value={d.endTime} onChange={(endTime) => onChange({ endTime })} placeholder="End" date={d.date} prefix="until" />
+                )}
+              </View>
+            )}
+
+            {d.intent === 'Appointment' && (
+              <TextInput
+                style={[styles.field, { color: c.text, borderColor: c.border }]}
+                placeholder="Location"
+                placeholderTextColor={c.muted}
+                value={d.location ?? ''}
+                onChangeText={(location) => onChange({ location: location || null })}
               />
-              {d.intent === 'Appointment' && (
-                <DateTimeField mode="time" value={d.endTime} onChange={(endTime) => onChange({ endTime })} placeholder="End" date={d.date} prefix="until" />
-              )}
-            </View>
-          )}
+            )}
 
-          {d.intent === 'Appointment' && (
-            <TextInput
-              style={[styles.field, { color: c.text, borderColor: c.border }]}
-              placeholder="Location"
-              placeholderTextColor={c.muted}
-              value={d.location ?? ''}
-              onChangeText={(location) => onChange({ location: location || null })}
-            />
-          )}
-
-          {dated && (
             <View style={styles.chips}>
-              {(d.intent === 'Task' || d.intent === 'Reminder') && (
+              {d.intent === 'Task' && (
                 <Pressable
                   onPress={() => onChange({ priority: cycle(PRIORITIES, d.priority) })}
                   style={[styles.chip, { borderColor: c.border }]}
@@ -172,18 +181,23 @@ function ItemEditor({ draft: d, onChange }: { draft: ItemDraft; onChange: (patch
               <Pressable
                 onPress={() =>
                   onChange({
-                    reminderMinutesBefore: cycle(REMINDERS, REMINDERS.includes(d.reminderMinutesBefore) ? d.reminderMinutesBefore : null),
+                    reminderMinutesBefore: isNote
+                      ? cycle(reminders, d.reminderMinutesBefore === null ? null : 0)
+                      : cycle(reminders, REMINDERS.includes(d.reminderMinutesBefore) ? d.reminderMinutesBefore : null),
                   })
                 }
                 style={[styles.chip, { borderColor: c.border }]}
                 accessibilityRole="button"
-                accessibilityLabel={`${reminderLabel(d.reminderMinutesBefore)}. Tap to change.`}>
-                <Text style={{ color: d.reminderMinutesBefore === null ? c.muted : c.text }}>
-                  🔔 {reminderLabel(d.reminderMinutesBefore)}
-                </Text>
+                accessibilityLabel={`${reminderLabel(d.reminderMinutesBefore, isNote)}. Tap to change.`}>
+                <View style={styles.row}>
+                  <Ionicons name="notifications-outline" size={15} color={d.reminderMinutesBefore === null ? c.muted : c.text} />
+                  <Text style={{ color: d.reminderMinutesBefore === null ? c.muted : c.text }}>
+                    {reminderLabel(d.reminderMinutesBefore, isNote)}
+                  </Text>
+                </View>
               </Pressable>
             </View>
-          )}
+          </View>
 
           <TextInput
             style={[styles.field, styles.details, { color: c.text, borderColor: c.border }]}
@@ -214,5 +228,7 @@ const styles = StyleSheet.create({
   chip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, minHeight: 36, justifyContent: 'center' },
   field: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, minHeight: 42, fontSize: 15 },
   details: { minHeight: 64, paddingVertical: 10, textAlignVertical: 'top' },
+  stack: { gap: 10 },
+  reversed: { flexDirection: 'column-reverse' },
   actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
 })

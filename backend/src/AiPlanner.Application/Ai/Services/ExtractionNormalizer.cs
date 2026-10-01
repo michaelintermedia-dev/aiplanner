@@ -78,6 +78,19 @@ public static class ExtractionNormalizer
         }
 
         var intent = ParseIntent(raw.Intent);
+        var reminder = raw.ReminderMinutesBefore is >= 0 and <= MaxReminderMinutes ? raw.ReminderMinutesBefore : null;
+
+        // A reminder isn't a type of its own (user's rule): it's a task that
+        // reminds you at its time. Any task, event or note can carry one.
+        var remindAtItsTime = intent == ExtractionIntent.Reminder;
+        if (remindAtItsTime)
+        {
+            intent = ExtractionIntent.Task;
+            reminder ??= 0;
+        }
+        // A note has no date of its own; it keeps one only as "remind me at".
+        var noteReminder = intent == ExtractionIntent.Note && reminder is not null;
+
         var questions = new List<string>();
         if (Clean(raw.Clarification, 500) is { } fromProvider)
         {
@@ -89,7 +102,7 @@ public static class ExtractionNormalizer
         var endTime = ParseTime(raw.EndTime);
 
         // "At 3pm" with no date means the next 3pm.
-        if (date is null && time is not null && intent != ExtractionIntent.Note)
+        if (date is null && time is not null && (intent != ExtractionIntent.Note || noteReminder))
         {
             var today = DateOnly.FromDateTime(localNow);
             date = today.ToDateTime(time.Value) > localNow ? today : today.AddDays(1);
@@ -125,7 +138,6 @@ public static class ExtractionNormalizer
                 break;
 
             case ExtractionIntent.Task:
-            case ExtractionIntent.Reminder:
                 if (date is not null)
                 {
                     hasTime = time is not null;
@@ -133,24 +145,31 @@ public static class ExtractionNormalizer
                         ? UserTimeZoneHelper.LocalDateStartToUtc(date.Value, timeZone)
                         : ToUtc(date.Value, time.Value, timeZone);
                 }
-                if (intent == ExtractionIntent.Reminder && !hasTime)
+                if (remindAtItsTime && !hasTime)
                 {
                     questions.Add("What time should I remind you?");
                 }
+                break;
+
+            case ExtractionIntent.Note when noteReminder:
+                if (date is not null && time is not null)
+                {
+                    hasTime = true;
+                    dueUtc = ToUtc(date.Value, time.Value, timeZone);
+                }
+                else
+                {
+                    questions.Add("When should I remind you?");
+                }
+                reminder = 0; // a note's reminder fires at its own time
                 break;
         }
 
         // "Buy milk this evening" said at 22:00 resolves to a time that has passed;
         // keep it, but make the user look at it rather than save a stale item.
-        if (intent != ExtractionIntent.Note && date is not null && IsInPast(date.Value, time, localNow))
+        if ((intent != ExtractionIntent.Note || noteReminder) && date is not null && IsInPast(date.Value, time, localNow))
         {
             questions.Add("This time has already passed - please check the date.");
-        }
-
-        var reminder = raw.ReminderMinutesBefore is >= 0 and <= MaxReminderMinutes ? raw.ReminderMinutesBefore : null;
-        if (intent == ExtractionIntent.Reminder)
-        {
-            reminder ??= 0; // A reminder fires at the time itself unless told otherwise.
         }
 
         return new NormalizedItem(
@@ -164,7 +183,7 @@ public static class ExtractionNormalizer
             hasTime,
             intent == ExtractionIntent.Note ? null : Clean(raw.Location, 300),
             ParsePriority(raw.Priority),
-            intent == ExtractionIntent.Note ? null : reminder,
+            reminder,
             ParseRecurrence(raw.Recurrence),
             questions.Count > 0 ? Truncate(string.Join(" ", questions.Distinct()), 500) : null,
             raw.Confidence is { } c && double.IsFinite(c) ? Math.Clamp(c, 0, 1) : null);

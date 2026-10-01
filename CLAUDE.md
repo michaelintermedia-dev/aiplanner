@@ -249,10 +249,17 @@ Local dev notes:
   If the AI finds nothing actionable (a question, a stray thought), it returns
   a Note with the user's words — the prompt says so, and
   `ExtractionNormalizer` adds that Note itself if the AI still returns no
-  items. The review always shows all four types (Task / Event / Reminder /
-  Note, `INTENT_OPTIONS` in `shared/captureDraft.ts`) plus editable dates,
+  items. The review always shows all three types (Task / Event / Note,
+  `INTENT_OPTIONS` in `shared/captureDraft.ts`) plus editable dates,
   time, priority, reminder and details, so the user can turn anything into
   anything and fill in what's missing before saving.
+- **A reminder is not a type; every type can carry one** (user's rule,
+  2026-10-01). Tasks and events: "N minutes before" their time. Notes have no
+  time of their own, so a note's reminder is an absolute "remind me at"
+  (`Reminder.NoteId`; `reminderAtUtc` on the notes API; in a capture, a Note's
+  `dueUtc` means when to remind). `ExtractionIntent.Reminder` stays only for
+  old data: the normalizer and clients turn it into a Task that reminds at its
+  time, and the AI schema no longer offers it.
 - Icons are standard Ionicons, never emoji, for UI controls (the mic button
   is `mic`/`pause`).
 

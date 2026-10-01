@@ -33,6 +33,13 @@ public class ConfirmCaptureRequestValidator : AbstractValidator<ConfirmCaptureRe
                         .WithMessage("An appointment must end after it starts.");
                 });
 
+                item.When(i => i.Intent == ExtractionIntent.Note && i.ReminderMinutesBefore is not null, () =>
+                {
+                    item.RuleFor(i => i.DueUtc).NotNull().WithMessage("Pick when to be reminded about this note.");
+                    item.RuleFor(i => i.HasTime).Equal(true).WithMessage("Pick a time to be reminded about this note.");
+                });
+
+                // Legacy intent: clients no longer offer it; it is saved as a task.
                 item.When(i => i.Intent == ExtractionIntent.Reminder, () =>
                 {
                     item.RuleFor(i => i.DueUtc).NotNull().WithMessage("A reminder needs a date and time.");

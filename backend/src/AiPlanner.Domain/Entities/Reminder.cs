@@ -8,6 +8,8 @@ public class Reminder : BaseEntity
     public TaskItem? TaskItem { get; set; }
     public Guid? AppointmentId { get; set; }
     public Appointment? Appointment { get; set; }
+    public Guid? NoteId { get; set; }
+    public Note? Note { get; set; }
     public DateTime TriggerAtUtc { get; set; }
     public bool IsCancelled { get; set; }
 }

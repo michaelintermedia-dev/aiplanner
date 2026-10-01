@@ -103,8 +103,8 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             Item types (intent):
             - "appointment": an event at a specific time, usually with someone or somewhere (meeting, dentist, call scheduled with a person at a time).
             - "task": something the user has to do, optionally with a deadline ("finish the report by Friday").
-            - "reminder": the user explicitly asks to be reminded to do something at a time ("remind me to call John at 2pm").
-            - "note": information to keep, with nothing to do and no time.
+            - "note": information to keep, with nothing to do and no time of its own.
+            There is no separate "reminder" type: a reminder belongs to an item. "Remind me to call John at 2pm" is a task due at 14:00 with reminderMinutesBefore 0. "Remind me about this idea tomorrow at 9" is a note with date/time = when to remind and reminderMinutesBefore 0.
 
             Dates and times:
             - Resolve relative expressions against the current local date/time above. Output "date" as yyyy-MM-dd and "time"/"endTime" as 24-hour HH:mm, in the user's local time. Never convert time zones.
@@ -112,13 +112,13 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             - A weekday name ("on Monday", "next Monday", "this Friday") means the first such day after today; if that is ambiguous, pick it and say so in "clarification".
             - "end of the week" = this week's Friday; "next week" without a day = next Monday; "next month" = the 1st of next month.
             - "in two hours" / "in three days" are relative to now.
-            - For a task, "date"/"time" are the deadline. For an appointment, they are the start; "endTime" only if an end or duration is given, otherwise null. For a reminder, they are when to remind.
+            - For a task, "date"/"time" are the deadline. For an appointment, they are the start; "endTime" only if an end or duration is given, otherwise null. For a note, they are only set when the user asks to be reminded, and mean when to remind.
             - Leave "date"/"time" null when none is given. Do not guess times.
 
             Other fields:
             - "title": short and action-oriented (at most ~6 words), e.g. "Prepare proposal", "Meet Sarah". Write every title, summary and clarification in the same language the user used.
             - "priority": "high", "medium" or "low" only if stated or clearly implied (urgent, ASAP, important); otherwise null.
-            - "reminderMinutesBefore": only when the user asks to be reminded some time before something ("remind me 30 minutes before"); otherwise null.
+            - "reminderMinutesBefore": only when the user asks to be reminded: 0 = at the item's time, or the minutes before it ("remind me 30 minutes before" = 30); otherwise null.
             - "recurrence": "daily", "weekdays", "weekly" or "monthly" only if the user says it repeats; otherwise null.
             - "location": only if a place is mentioned.
             - "clarification": a short question for the user when something important is missing or ambiguous (e.g. an appointment with no time); otherwise null.
@@ -126,7 +126,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             - Top-level "title": 2-5 words naming the whole capture. Top-level "summary": 1-2 sentences if the input is longer than one sentence, otherwise null.
 
             Only extract what the user actually said. Never invent items, people, places or times.
-            Never return nothing: if the input is a question, an idea, or anything that isn't clearly a task, appointment or reminder, return it as a single "note" whose "description" keeps the user's words. The user can change any item's type in the review.
+            Never return nothing: if the input is a question, an idea, or anything that isn't clearly a task or appointment, return it as a single "note" whose "description" keeps the user's words. The user can change any item's type in the review.
             """;
     }
 
@@ -148,7 +148,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
                 "location", "priority", "reminderMinutesBefore", "recurrence", "clarification", "confidence"),
             ["properties"] = new JsonObject
             {
-                ["intent"] = new JsonObject { ["type"] = "string", ["enum"] = new JsonArray("task", "appointment", "reminder", "note") },
+                ["intent"] = new JsonObject { ["type"] = "string", ["enum"] = new JsonArray("task", "appointment", "note") },
                 ["title"] = new JsonObject { ["type"] = "string" },
                 ["summary"] = Nullable("string"),
                 ["description"] = Nullable("string", "Extra detail from the input worth keeping"),

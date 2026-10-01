@@ -1,11 +1,13 @@
 import { addDays, dateKey, timeKey, zonedToUtc } from './dates'
 import type { CaptureItem, ConfirmCaptureItem, ExtractionIntent, TaskPriority } from './types'
 
-/** Every item can become any type in the review (user's rule); "Appointment" is shown as "Event". */
+/**
+ * Every item can become any type in the review (user's rule); "Appointment" is
+ * shown as "Event". A reminder is not a type - any of these can carry one.
+ */
 export const INTENT_OPTIONS: { intent: ExtractionIntent; label: string }[] = [
   { intent: 'Task', label: 'Task' },
   { intent: 'Appointment', label: 'Event' },
-  { intent: 'Reminder', label: 'Reminder' },
   { intent: 'Note', label: 'Note' },
 ]
 
@@ -26,16 +28,19 @@ export interface ItemDraft {
   endTime: string | null
   location: string | null
   priority: TaskPriority | null
+  /** Minutes before the task/event time. On a note, any value means "remind me at date/time". */
   reminderMinutesBefore: number | null
   clarification: string | null
 }
 
 export function toDraft(item: CaptureItem, timeZone: string): ItemDraft {
   const when = item.startUtc ?? item.dueUtc
+  // "Reminder" was a type once; it's now a task that reminds at its time.
+  const legacyReminder = item.intent === 'Reminder'
   return {
     id: item.id,
     include: true,
-    intent: item.intent,
+    intent: legacyReminder ? 'Task' : item.intent,
     title: item.title,
     description: item.description,
     date: when ? dateKey(when, timeZone) : null,
@@ -43,7 +48,7 @@ export function toDraft(item: CaptureItem, timeZone: string): ItemDraft {
     endTime: item.intent === 'Appointment' && item.endUtc ? timeKey(item.endUtc, timeZone) : null,
     location: item.location,
     priority: item.priority,
-    reminderMinutesBefore: item.reminderMinutesBefore,
+    reminderMinutesBefore: legacyReminder ? (item.reminderMinutesBefore ?? 0) : item.reminderMinutesBefore,
     clarification: item.clarification,
   }
 }
@@ -54,8 +59,9 @@ export function draftProblems(d: ItemDraft): string[] {
   const problems: string[] = []
   if (!d.title.trim()) problems.push('Add a title.')
   if (d.intent === 'Appointment' && (!d.date || !d.time)) problems.push('An appointment needs a date and start time.')
-  if (d.intent === 'Reminder' && (!d.date || !d.time)) problems.push('A reminder needs a date and time.')
+  if (d.intent === 'Note' && d.reminderMinutesBefore !== null && (!d.date || !d.time)) problems.push('Pick when to remind you.')
   if (d.intent === 'Task' && d.time && !d.date) problems.push('Pick a date for this time.')
+  if (d.intent === 'Task' && d.reminderMinutesBefore !== null && (!d.date || !d.time)) problems.push('Add a date and time for the reminder.')
   return problems
 }
 
@@ -73,7 +79,7 @@ export function toConfirmItem(d: ItemDraft, timeZone: string): ConfirmCaptureIte
     hasTime: false,
     location: null as string | null,
     priority: d.priority,
-    reminderMinutesBefore: d.intent === 'Note' ? null : d.reminderMinutesBefore,
+    reminderMinutesBefore: d.reminderMinutesBefore,
   }
 
   if (d.intent === 'Appointment' && d.date && d.time) {
@@ -88,5 +94,10 @@ export function toConfirmItem(d: ItemDraft, timeZone: string): ConfirmCaptureIte
     return { ...base, dueUtc: zonedToUtc(d.date, d.time, timeZone), hasTime: !!d.time }
   }
 
-  return base
+  // A note has no date of its own: its date/time only say when to remind.
+  if (d.intent === 'Note' && d.reminderMinutesBefore !== null && d.date && d.time) {
+    return { ...base, dueUtc: zonedToUtc(d.date, d.time, timeZone), hasTime: true, reminderMinutesBefore: 0 }
+  }
+
+  return { ...base, reminderMinutesBefore: d.intent === 'Note' ? null : d.reminderMinutesBefore }
 }

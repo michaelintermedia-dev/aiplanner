@@ -121,7 +121,7 @@ export interface FeedPage {
   nextCursor: string | null
 }
 
-/** Information to keep, with nothing to do and no time. */
+/** Information to keep, with nothing to do - optionally with a reminder. */
 export interface Note {
   id: string
   title: string | null
@@ -129,6 +129,8 @@ export interface Note {
   aiSummary: string | null
   /** The capture this note came from (transcript/recording). */
   sourceCaptureId: string | null
+  /** Pending "remind me about this" time, if any. */
+  reminderAtUtc: string | null
   createdAtUtc: string
   updatedAtUtc: string
 }
@@ -136,6 +138,8 @@ export interface Note {
 export interface SaveNoteRequest {
   title?: string | null
   content: string
+  /** Omitted or null = no reminder (PUT replaces it). */
+  reminderAtUtc?: string | null
 }
 
 export interface UpcomingReminder {

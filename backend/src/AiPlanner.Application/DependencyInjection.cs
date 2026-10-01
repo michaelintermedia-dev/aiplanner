@@ -4,6 +4,10 @@ using AiPlanner.Application.Calendar.Interfaces;
 using AiPlanner.Application.Calendar.Services;
 using AiPlanner.Application.Captures.Interfaces;
 using AiPlanner.Application.Captures.Services;
+using AiPlanner.Application.Feed.Interfaces;
+using AiPlanner.Application.Feed.Services;
+using AiPlanner.Application.Notes.Interfaces;
+using AiPlanner.Application.Notes.Services;
 using AiPlanner.Application.Tasks.Interfaces;
 using AiPlanner.Application.Tasks.Services;
 using AiPlanner.Application.Today.Interfaces;
@@ -24,6 +28,8 @@ public static class DependencyInjection
         services.AddScoped<ITodayService, TodayService>();
         services.AddScoped<ICalendarService, CalendarService>();
         services.AddScoped<ICaptureService, CaptureService>();
+        services.AddScoped<INoteService, NoteService>();
+        services.AddScoped<IFeedService, FeedService>();
 
         return services;
     }

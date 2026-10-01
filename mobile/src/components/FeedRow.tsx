@@ -1,0 +1,93 @@
+import { feedWhen, isDone, KIND_LABEL } from '@shared/feed'
+import type { FeedItem } from '@shared/types'
+import { router } from 'expo-router'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { tasksApi } from '@/api/endpoints'
+import { useAuth } from '@/auth/useAuth'
+import { useAction } from '@/lib/useAction'
+import { useColors, type Colors } from '@/theme'
+import { Badge } from './ui'
+
+const kindColor = (item: FeedItem, c: Colors) =>
+  item.kind === 'Appointment' ? c.appointment : item.kind === 'Note' ? c.warn : c.task
+
+function openDetail(item: FeedItem) {
+  if (item.kind === 'Task') router.push({ pathname: '/task/[id]', params: { id: item.id } })
+  else if (item.kind === 'Appointment') router.push({ pathname: '/appointment/[id]', params: { id: item.id } })
+  else router.push({ pathname: '/note/[id]', params: { id: item.id } })
+}
+
+/** One feed entry. Tasks keep their tick box; tapping opens the detail view. */
+export function FeedRow({ item }: { item: FeedItem }) {
+  const c = useColors()
+  const { zone } = useAuth()
+  const complete = useAction(tasksApi.complete)
+  const reopen = useAction(tasksApi.reopen)
+  const done = isDone(item)
+  const when = feedWhen(item, zone)
+  const showStatus = item.status && !['Scheduled', 'Planned', 'Inbox'].includes(item.status)
+
+  return (
+    <View style={[styles.row, { backgroundColor: c.surface, borderColor: c.border, borderLeftColor: kindColor(item, c) }]}>
+      {item.kind === 'Task' ? (
+        <Pressable
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: item.status === 'Completed' }}
+          accessibilityLabel={item.status === 'Completed' ? 'Mark as not done' : 'Mark as done'}
+          disabled={complete.isPending || reopen.isPending || item.status === 'Cancelled'}
+          hitSlop={12}
+          onPress={() => (done ? reopen.mutate(item.id) : complete.mutate(item.id))}
+          style={[styles.check, { borderColor: item.status === 'Completed' ? c.task : c.border }, item.status === 'Completed' && { backgroundColor: c.task }]}>
+          {item.status === 'Completed' && <Text style={[styles.tick, { color: c.surface }]}>✓</Text>}
+        </Pressable>
+      ) : (
+        <View style={styles.dotBox}>
+          <View style={[styles.dot, { backgroundColor: kindColor(item, c) }, item.kind === 'Note' && styles.square]} />
+        </View>
+      )}
+      <Pressable style={styles.main} onPress={() => openDetail(item)} accessibilityRole="button" accessibilityHint={`Opens the ${KIND_LABEL[item.kind].toLowerCase()}`}>
+        <Text style={[styles.title, { color: done ? c.muted : c.text }, done && styles.struck]} numberOfLines={2}>
+          {item.title}
+        </Text>
+        {item.snippet && (
+          <Text style={{ color: c.muted, fontSize: 14 }} numberOfLines={2}>
+            {item.snippet}
+          </Text>
+        )}
+        <View style={styles.meta}>
+          <Text style={[styles.kind, { color: c.muted }]}>{KIND_LABEL[item.kind].toUpperCase()}</Text>
+          {when && <Text style={[styles.metaText, { color: c.muted }]}>{when}</Text>}
+          {item.location && <Text style={[styles.metaText, { color: c.muted }]}>📍 {item.location}</Text>}
+          {showStatus && <Badge label={item.status!} color={item.status === 'Completed' ? c.task : item.status === 'Cancelled' ? c.danger : undefined} />}
+          {item.priority && <Badge label={item.priority} color={item.priority === 'High' ? c.danger : item.priority === 'Medium' ? c.warn : undefined} />}
+          {item.tags.map((t) => (
+            <Text key={t} style={[styles.metaText, { color: c.muted }]}>#{t}</Text>
+          ))}
+          {item.fromCapture && <Text style={styles.metaText}>🎤</Text>}
+        </View>
+      </Pressable>
+    </View>
+  )
+}
+
+const styles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    gap: 12,
+    padding: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderLeftWidth: 3,
+    borderRadius: 12,
+  },
+  check: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  tick: { fontSize: 14, fontWeight: '700', lineHeight: 16 },
+  dotBox: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
+  dot: { width: 9, height: 9, borderRadius: 5 },
+  square: { borderRadius: 2 },
+  main: { flex: 1, gap: 3 },
+  title: { fontSize: 16 },
+  struck: { textDecorationLine: 'line-through' },
+  meta: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 2 },
+  kind: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6 },
+  metaText: { fontSize: 13 },
+})

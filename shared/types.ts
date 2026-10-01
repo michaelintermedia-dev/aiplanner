@@ -88,6 +88,56 @@ export interface CreateAppointmentRequest {
   reminderMinutesBeforeStart?: number | null
 }
 
+// ---- Unified feed ------------------------------------------------------------
+
+/** "Appointment" is shown to users as "Event". */
+export type FeedKind = 'Task' | 'Appointment' | 'Note'
+export type FeedSort = 'CreatedDesc' | 'CreatedAsc' | 'UpdatedDesc' | 'DateAsc'
+
+export interface FeedItem {
+  id: string
+  kind: FeedKind
+  title: string
+  /** Note text, or a task/appointment description. */
+  snippet: string | null
+  /** Task/appointment status; null for notes. */
+  status: string | null
+  /** Task due date or appointment start. */
+  dateUtc: string | null
+  endUtc: string | null
+  hasTime: boolean
+  priority: TaskPriority | null
+  location: string | null
+  tags: string[]
+  /** Created by the AI from a capture. */
+  fromCapture: boolean
+  createdAtUtc: string
+  updatedAtUtc: string
+}
+
+export interface FeedPage {
+  items: FeedItem[]
+  /** Pass back to get the next page; null at the end. */
+  nextCursor: string | null
+}
+
+/** Information to keep, with nothing to do and no time. */
+export interface Note {
+  id: string
+  title: string | null
+  content: string
+  aiSummary: string | null
+  /** The capture this note came from (transcript/recording). */
+  sourceCaptureId: string | null
+  createdAtUtc: string
+  updatedAtUtc: string
+}
+
+export interface SaveNoteRequest {
+  title?: string | null
+  content: string
+}
+
 export interface UpcomingReminder {
   reminderId: string
   triggerAtUtc: string

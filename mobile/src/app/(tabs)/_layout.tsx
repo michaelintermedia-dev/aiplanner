@@ -1,12 +1,28 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { Tabs } from 'expo-router'
-import { Pressable, Text } from 'react-native'
+import { router, Tabs } from 'expo-router'
+import { Alert, Pressable, View } from 'react-native'
 import { useAuth } from '@/auth/useAuth'
 import { useColors } from '@/theme'
 
+/**
+ * The bottom bar filters one feed: All / Tasks / Events / Notes. Today and
+ * Calendar (date-based views) open from the header icons.
+ */
 export default function TabLayout() {
-  const { logout } = useAuth()
+  const { user, logout } = useAuth()
   const c = useColors()
+
+  const HeaderButton = ({ icon, label, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void }) => (
+    <Pressable onPress={onPress} hitSlop={8} style={{ paddingHorizontal: 10 }} accessibilityRole="button" accessibilityLabel={label}>
+      <Ionicons name={icon} size={23} color={c.text} />
+    </Pressable>
+  )
+
+  const account = () =>
+    Alert.alert(user?.displayName ?? 'Account', user?.email, [
+      { text: 'Sign out', style: 'destructive', onPress: () => void logout() },
+      { text: 'Close', style: 'cancel' },
+    ])
 
   return (
     <Tabs
@@ -18,31 +34,32 @@ export default function TabLayout() {
         headerTintColor: c.text,
         headerShadowVisible: false,
         headerRight: () => (
-          <Pressable onPress={logout} hitSlop={8} style={{ paddingHorizontal: 16 }} accessibilityRole="button">
-            <Text style={{ color: c.muted }}>Sign out</Text>
-          </Pressable>
+          <View style={{ flexDirection: 'row', paddingRight: 6 }}>
+            <HeaderButton icon="sunny-outline" label="Today" onPress={() => router.push('/today')} />
+            <HeaderButton icon="calendar-outline" label="Calendar" onPress={() => router.push('/calendar')} />
+            <HeaderButton icon="person-circle-outline" label="Account" onPress={account} />
+          </View>
         ),
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Today',
-          tabBarIcon: ({ color, size }) => <Ionicons name="sunny-outline" color={color} size={size} />,
+          title: 'All',
+          headerTitle: 'AI Planner',
+          tabBarIcon: ({ color, size }) => <Ionicons name="albums-outline" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="tasks"
-        options={{
-          title: 'Tasks',
-          tabBarIcon: ({ color, size }) => <Ionicons name="checkbox-outline" color={color} size={size} />,
-        }}
+        options={{ title: 'Tasks', tabBarIcon: ({ color, size }) => <Ionicons name="checkbox-outline" color={color} size={size} /> }}
       />
       <Tabs.Screen
-        name="calendar"
-        options={{
-          title: 'Calendar',
-          tabBarIcon: ({ color, size }) => <Ionicons name="calendar-outline" color={color} size={size} />,
-        }}
+        name="events"
+        options={{ title: 'Events', tabBarIcon: ({ color, size }) => <Ionicons name="time-outline" color={color} size={size} /> }}
+      />
+      <Tabs.Screen
+        name="notes"
+        options={{ title: 'Notes', tabBarIcon: ({ color, size }) => <Ionicons name="document-text-outline" color={color} size={size} /> }}
       />
     </Tabs>
   )

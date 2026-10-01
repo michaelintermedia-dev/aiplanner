@@ -221,6 +221,25 @@ Local dev notes:
   is pure backend code — ignore any generic file-creation skill guidance
   that doesn't apply to a .NET solution.
 
+## Navigation model (decided with the user, 2026-10-01)
+
+- **The home screen is one unified feed** of tasks, events (= appointments;
+  "Event" in the UI) and notes, newest first, infinite scroll, day headers.
+  Sorts: Newest / Oldest / Recently updated / By date (undated last).
+- **Filters, not sections**: mobile bottom tabs are All · Tasks · Events ·
+  Notes, each the same `FeedScreen` with a kind filter; on web the same as
+  tabs on `/feed?show=…`. Every row opens its detail view
+  (`task/[id]`, `appointment/[id]`, `note/[id]`; web `/tasks/:id` …).
+- Today and Calendar stay as date-based views: header icons on mobile,
+  sidebar on web. The capture bar sits on top of the feed.
+- API: `GET /api/feed?kinds=&sort=&cursor=&take=`. `FeedService` loads small
+  key rows for all the user's items, `FeedPager` (pure, unit-tested) orders
+  and pages them with a keyset cursor, then details load for one page only.
+  Fine for personal-scale data; revisit (SQL UNION + keyset) if a user ever
+  has tens of thousands of items. Shared grouping/labels: `shared/feed.ts`.
+- Notes have full CRUD (`/api/notes`) and are created by confirming a Note
+  item in a capture, or directly.
+
 ## Conventions to keep consistent
 
 - DTOs are `record` types, one file per DTO, under

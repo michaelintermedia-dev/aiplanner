@@ -2,9 +2,10 @@ import { BrowserRouter, Navigate, NavLink, Outlet, Route, Routes } from 'react-r
 import { useAuth } from './auth/useAuth'
 import { AppointmentDetailPage } from './pages/AppointmentDetailPage'
 import { AuthPage } from './pages/AuthPage'
-import { TaskDetailPage } from './pages/TaskDetailPage'
 import { CalendarPage } from './pages/CalendarPage'
-import { TasksPage } from './pages/TasksPage'
+import { FeedPage } from './pages/FeedPage'
+import { NoteDetailPage } from './pages/NoteDetailPage'
+import { TaskDetailPage } from './pages/TaskDetailPage'
 import { TodayPage } from './pages/TodayPage'
 
 function Layout() {
@@ -13,8 +14,8 @@ function Layout() {
     <div className="shell">
       <nav className="sidebar">
         <span className="brand">AI Planner</span>
+        <NavLink to="/feed">Feed</NavLink>
         <NavLink to="/today">Today</NavLink>
-        <NavLink to="/tasks">Tasks</NavLink>
         <NavLink to="/calendar">Calendar</NavLink>
         <div className="sidebar-footer">
           <span className="muted" title={user?.email}>
@@ -42,12 +43,16 @@ export function App() {
     <BrowserRouter>
       <Routes>
         <Route element={<Layout />}>
+          <Route path="/feed" element={<FeedPage />} />
           <Route path="/today" element={<TodayPage />} />
-          <Route path="/tasks" element={<TasksPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/tasks/:id" element={<TaskDetailPage />} />
           <Route path="/appointments/:id" element={<AppointmentDetailPage />} />
-          <Route path="*" element={<Navigate to="/today" replace />} />
+          <Route path="/notes/:id" element={<NoteDetailPage />} />
+          {/* The old list pages are now filters of the feed. */}
+          <Route path="/tasks" element={<Navigate to="/feed?show=tasks" replace />} />
+          <Route path="/notes" element={<Navigate to="/feed?show=notes" replace />} />
+          <Route path="*" element={<Navigate to="/feed" replace />} />
         </Route>
       </Routes>
     </BrowserRouter>

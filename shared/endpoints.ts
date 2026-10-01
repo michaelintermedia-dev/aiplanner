@@ -7,6 +7,11 @@ import type {
   CaptureSummary,
   ConfirmCaptureItem,
   CreateAppointmentRequest,
+  FeedKind,
+  FeedPage,
+  FeedSort,
+  Note,
+  SaveNoteRequest,
   SaveTaskRequest,
   Task,
   Today,
@@ -63,6 +68,23 @@ export function createApi(request: RequestFn) {
       cancel: (id: string) => request<Appointment>('PATCH', `/appointments/${id}/cancel`),
       reopen: (id: string) => request<Appointment>('PATCH', `/appointments/${id}/reopen`),
       remove: (id: string) => request<void>('DELETE', `/appointments/${id}`),
+    },
+    feed: {
+      /** One page of the unified feed. `kinds` empty/omitted = everything. */
+      page: ({ kinds, sort = 'CreatedDesc', cursor, take = 30 }: { kinds?: FeedKind[]; sort?: FeedSort; cursor?: string | null; take?: number }) => {
+        const params = new URLSearchParams({ sort, take: String(take) })
+        if (kinds?.length) params.set('kinds', kinds.join(','))
+        if (cursor) params.set('cursor', cursor)
+        return request<FeedPage>('GET', `/feed?${params}`)
+      },
+    },
+    notes: {
+      list: (search?: string) =>
+        request<Note[]>('GET', `/notes${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+      get: (id: string) => request<Note>('GET', `/notes/${id}`),
+      create: (note: SaveNoteRequest) => request<Note>('POST', '/notes', note),
+      update: (id: string, note: SaveNoteRequest) => request<Note>('PUT', `/notes/${id}`, note),
+      remove: (id: string) => request<void>('DELETE', `/notes/${id}`),
     },
     today: {
       get: () => request<Today>('GET', '/today'),

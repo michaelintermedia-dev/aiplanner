@@ -60,8 +60,11 @@ function Gate() {
         contentStyle: { backgroundColor: c.bg },
       }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="today" options={{ title: 'Today' }} />
+      <Stack.Screen name="calendar" options={{ title: 'Calendar' }} />
       <Stack.Screen name="task/[id]" options={{ title: 'Task' }} />
       <Stack.Screen name="appointment/[id]" options={{ title: 'Appointment' }} />
+      <Stack.Screen name="note/[id]" options={{ title: 'Note' }} />
     </Stack>
   )
 }

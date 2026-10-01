@@ -258,19 +258,19 @@ Local dev notes:
   anything and fill in what's missing before saving.
 - **A reminder is not a type; every type can carry one** (user's rule,
   2026-10-01). A reminder is a schedule on an item, on until turned off:
-   (once at a moment - "in 1 hour", "tomorrow 9:00"),  (N minutes
-  before the item's own time; moves with it; not on notes), ,
-  ,  (local HH:mm + days). One pending reminder per item.
-  Wire format  / shared  is the same on tasks,
+  `At` (once at a moment - "in 1 hour", "tomorrow 9:00"), `Before` (N minutes
+  before the item's own time; moves with it; not on notes), `Daily`,
+  `Weekdays`, `Weekly` (local HH:mm + days). One pending reminder per item.
+  Wire format `ReminderDto` / shared `Reminder` is the same on tasks,
   appointments, notes and capture items. All writes go through
-   (Application/Reminders): unchanged = kept, changed = old
+  `ReminderPlanner` (Application/Reminders): unchanged = kept, changed = old
   row cancelled + new row; complete/cancel/delete turn it off, reopen restores
-  it.  = next time it goes off (, pure,
+  it. `TriggerAtUtc` = next time it goes off (`ReminderSchedule`, pure,
   unit-tested) - Phase 4 dispatches it and advances repeating ones.
-  Clients: one  (web + mobile) with quick presets and a small
+  Clients: one `ReminderPicker` (web + mobile) with quick presets and a small
   editor, used in the capture review and every edit form; labels/presets/
-  validation in . The AI returns a  object
-  (kind/minutesBefore/date/time/days);  is legacy
+  validation in `shared/reminders.ts`. The AI returns a `reminder` object
+  (kind/minutesBefore/date/time/days); `ExtractionIntent.Reminder` is legacy
   (= task with a Before-0 reminder).
 - Icons are standard Ionicons, never emoji, for UI controls (the mic button
   is `mic`/`pause`). Each item type has ONE icon (`KIND_ICON` in

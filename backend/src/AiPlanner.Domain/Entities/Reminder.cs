@@ -4,8 +4,8 @@ using AiPlanner.Domain.Enums;
 namespace AiPlanner.Domain.Entities;
 
 /// <summary>
-/// A reminder on exactly one item (task, appointment or note). One pending
-/// reminder per item; replaced reminders are kept as cancelled rows (sync).
+/// A reminder on exactly one item (task, appointment or note). An item can
+/// have several; removed ones are kept as cancelled rows (sync).
 /// </summary>
 public class Reminder : BaseEntity
 {
@@ -31,4 +31,6 @@ public class Reminder : BaseEntity
     public DateTime TriggerAtUtc { get; set; }
     /// <summary>Turned off (by the user, a replacement, or completing the item).</summary>
     public bool IsCancelled { get; set; }
+    /// <summary>Turned off because the item was completed/cancelled; reopening brings it back.</summary>
+    public bool PausedWithItem { get; set; }
 }

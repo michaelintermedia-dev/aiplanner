@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { capturesApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { useAction } from '../lib/useAction'
-import { ReminderPicker } from './ReminderPicker'
+import { ReminderList } from './ReminderList'
 
 /**
  * "I understood:" - the review screen (spec section 18). Every property is
@@ -157,9 +157,9 @@ function ItemEditor({ draft: d, onChange }: { draft: ItemDraft; onChange: (patch
       )}
 
       {d.include && (
-        <ReminderPicker
-          value={d.reminder}
-          onChange={(reminder) => onChange({ reminder })}
+        <ReminderList
+          value={d.reminders}
+          onChange={(reminders) => onChange({ reminders })}
           itemHasTime={draftHasTime(d)}
           isNote={isNote}
           showProblem={false}

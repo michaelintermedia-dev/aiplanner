@@ -12,5 +12,5 @@ public record UpdateTaskRequest(
     bool HasDueTime,
     TaskPriority Priority,
     bool IsOngoing,
-    ReminderDto? Reminder,
+    IReadOnlyList<ReminderDto>? Reminders,
     IReadOnlyList<string>? Tags);

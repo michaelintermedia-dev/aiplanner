@@ -1,5 +1,5 @@
 import { addDays, dateKey, timeKey, zonedToUtc } from './dates'
-import { reminderProblem } from './reminders'
+import { remindersProblem } from './reminders'
 import type { CaptureItem, ConfirmCaptureItem, ExtractionIntent, Reminder, TaskPriority } from './types'
 
 /**
@@ -29,8 +29,8 @@ export interface ItemDraft {
   endTime: string | null
   location: string | null
   priority: TaskPriority | null
-  /** Any item can carry one (see Reminder); null = none. */
-  reminder: Reminder | null
+  /** Any item can carry several (see Reminder). */
+  reminders: Reminder[]
   clarification: string | null
 }
 
@@ -49,7 +49,7 @@ export function toDraft(item: CaptureItem, timeZone: string): ItemDraft {
     endTime: item.intent === 'Appointment' && item.endUtc ? timeKey(item.endUtc, timeZone) : null,
     location: item.location,
     priority: item.priority,
-    reminder: item.reminder ?? (legacyReminder ? { kind: 'Before', minutesBefore: 0 } : null),
+    reminders: item.reminders.length || !legacyReminder ? item.reminders : [{ kind: 'Before', minutesBefore: 0 }],
     clarification: item.clarification,
   }
 }
@@ -64,7 +64,7 @@ export function draftProblems(d: ItemDraft): string[] {
   if (!d.title.trim()) problems.push('Add a title.')
   if (d.intent === 'Appointment' && (!d.date || !d.time)) problems.push('An appointment needs a date and start time.')
   if (d.intent === 'Task' && d.time && !d.date) problems.push('Pick a date for this time.')
-  const reminder = reminderProblem(d.reminder, { itemHasTime: draftHasTime(d), isNote: d.intent === 'Note' })
+  const reminder = remindersProblem(d.reminders, { itemHasTime: draftHasTime(d), isNote: d.intent === 'Note' })
   if (reminder) problems.push(reminder)
   return problems
 }
@@ -83,7 +83,7 @@ export function toConfirmItem(d: ItemDraft, timeZone: string): ConfirmCaptureIte
     hasTime: false,
     location: null as string | null,
     priority: d.priority,
-    reminder: d.reminder,
+    reminders: d.reminders,
   }
 
   if (d.intent === 'Appointment' && d.date && d.time) {

@@ -18,7 +18,7 @@ public record NormalizedItem(
     bool HasTime,
     string? Location,
     TaskPriority? Priority,
-    ReminderDto? Reminder,
+    IReadOnlyList<ReminderDto> Reminders,
     RecurrenceFrequency? Recurrence,
     string? Clarification,
     double? Confidence);
@@ -63,7 +63,7 @@ public static class ExtractionNormalizer
                 Summary: null,
                 Description: text,
                 StartUtc: null, EndUtc: null, DueUtc: null, HasTime: false,
-                Location: null, Priority: null, Reminder: null, Recurrence: null,
+                Location: null, Priority: null, Reminders: [], Recurrence: null,
                 Clarification: null, Confidence: null));
         }
 
@@ -151,8 +151,14 @@ public static class ExtractionNormalizer
             questions.Add("This time has already passed - please check the date.");
         }
 
-        var rawReminder = raw.Reminder ?? (remindAtItsTime ? new RawReminder("before", 0, null, null, null) : null);
-        var reminder = NormalizeReminder(rawReminder, intent, hasTime, localNow, timeZone, questions);
+        IReadOnlyList<RawReminder> rawReminders = raw.Reminders is { Count: > 0 } given
+            ? given
+            : remindAtItsTime ? [new RawReminder("before", 0, null, null, null)] : [];
+        var reminders = rawReminders
+            .Take(ReminderPlanner.MaxPerItem)
+            .Select(r => NormalizeReminder(r, intent, hasTime, localNow, timeZone, questions))
+            .OfType<ReminderDto>()
+            .ToList();
 
         return new NormalizedItem(
             intent,
@@ -165,7 +171,7 @@ public static class ExtractionNormalizer
             hasTime,
             intent == ExtractionIntent.Note ? null : Clean(raw.Location, 300),
             ParsePriority(raw.Priority),
-            reminder,
+            reminders,
             ParseRecurrence(raw.Recurrence),
             questions.Count > 0 ? Truncate(string.Join(" ", questions.Distinct()), 500) : null,
             raw.Confidence is { } c && double.IsFinite(c) ? Math.Clamp(c, 0, 1) : null);

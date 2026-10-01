@@ -1,6 +1,7 @@
 using AiPlanner.Application.Appointments.DTOs;
 using AiPlanner.Application.Common.Interfaces;
 using AiPlanner.Application.Common.Utils;
+using AiPlanner.Application.Notifications.Interfaces;
 using AiPlanner.Application.Tasks.DTOs;
 using AiPlanner.Application.Today.DTOs;
 using AiPlanner.Application.Today.Interfaces;
@@ -15,12 +16,14 @@ public class TodayService : ITodayService
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUserService _currentUser;
     private readonly IDateTime _dateTime;
+    private readonly INotificationService _notifications;
 
-    public TodayService(IApplicationDbContext db, ICurrentUserService currentUser, IDateTime dateTime)
+    public TodayService(IApplicationDbContext db, ICurrentUserService currentUser, IDateTime dateTime, INotificationService notifications)
     {
         _db = db;
         _currentUser = currentUser;
         _dateTime = dateTime;
+        _notifications = notifications;
     }
 
     public async Task<TodayDto> GetTodayAsync(DateOnly? date, CancellationToken ct = default)
@@ -77,21 +80,14 @@ public class TodayService : ITodayService
             .OrderBy(t => t.DueDateUtc)
             .ToListAsync(ct);
 
-        // "Upcoming" - the next 7 days of not-yet-fired reminders, for the
-        // "Tomorrow / Dentist - 10:00" style preview in spec section 13.
-        var horizonEndUtc = dayEndUtc.AddDays(7);
-        var upcomingReminders = await _db.Reminders
-            .AsNoTracking()
-            .Include(r => r.TaskItem)
-            .Include(r => r.Appointment)
-            .Include(r => r.Note)
-            .Where(r => r.UserId == userId
-                        && !r.IsCancelled
-                        && r.TriggerAtUtc >= utcNow
-                        && r.TriggerAtUtc < horizonEndUtc)
-            .OrderBy(r => r.TriggerAtUtc)
+        // "Upcoming" - the next 7 days of reminders (spec section 13), from the
+        // same schedule notifications use, so repeating ones show too.
+        var hours = (int)Math.Ceiling((dayEndUtc.AddDays(7) - utcNow).TotalHours);
+        var upcoming = hours <= 0 ? [] : (await _notifications.GetUpcomingAsync(hours, ct))
+            .Where(n => n.ItemType is not null && n.ItemId is not null)
             .Take(20)
-            .ToListAsync(ct);
+            .Select(n => new UpcomingReminderDto(n.Key, n.AtUtc, n.Title, n.ItemType!, n.ItemId!.Value))
+            .ToList();
 
         return new TodayDto(
             targetDate,
@@ -99,14 +95,7 @@ public class TodayService : ITodayService
             tasksDueToday.Select(ToTaskDto).ToList(),
             ongoingTasks.Select(ToTaskDto).ToList(),
             overdueTasks.Select(ToTaskDto).ToList(),
-            upcomingReminders
-                .Where(r => r.TaskItem is not null || r.Appointment is not null || r.Note is not null)
-                .Select(r => r.TaskItem is not null
-                    ? new UpcomingReminderDto(r.Id, r.TriggerAtUtc, r.TaskItem.Title, "Task", r.TaskItem.Id)
-                    : r.Appointment is not null
-                        ? new UpcomingReminderDto(r.Id, r.TriggerAtUtc, r.Appointment.Title, "Appointment", r.Appointment.Id)
-                        : new UpcomingReminderDto(r.Id, r.TriggerAtUtc, r.Note!.Title ?? r.Note.Content, "Note", r.Note.Id))
-                .ToList());
+            upcoming);
     }
 
     private static TaskItemDto ToTaskDto(TaskItem t) => new(

@@ -12,6 +12,8 @@ using AiPlanner.Application.Tasks.Interfaces;
 using AiPlanner.Application.Tasks.Services;
 using AiPlanner.Application.Today.Interfaces;
 using AiPlanner.Application.Today.Services;
+using AiPlanner.Application.Notifications.Interfaces;
+using AiPlanner.Application.Notifications.Services;
 using AiPlanner.Application.Reminders;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,6 +30,7 @@ public static class DependencyInjection
         services.AddScoped<ITaskService, TaskService>();
         services.AddScoped<IAppointmentService, AppointmentService>();
         services.AddScoped<ITodayService, TodayService>();
+        services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<ICalendarService, CalendarService>();
         services.AddScoped<ICaptureService, CaptureService>();
         services.AddScoped<INoteService, NoteService>();

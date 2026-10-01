@@ -40,7 +40,7 @@ export interface Task {
   updatedAtUtc: string
   /** Only on single-item reads (tasks.get); null in lists. */
   /** Filled on single-item reads (detail view). */
-  reminder?: Reminder | null
+  reminders?: Reminder[]
   /** The capture this task came from (transcript/recording). */
   sourceCaptureId?: string | null
 }
@@ -54,7 +54,7 @@ export interface SaveTaskRequest {
   hasDueTime?: boolean
   priority?: TaskPriority
   isOngoing?: boolean
-  reminder?: Reminder | null
+  reminders?: Reminder[]
   tags?: string[] | null
 }
 
@@ -73,7 +73,7 @@ export interface Appointment {
   updatedAtUtc: string
   /** Only on single-item reads (appointments.get); null in lists. */
   /** Filled on single-item reads (detail view). */
-  reminder?: Reminder | null
+  reminders?: Reminder[]
   /** The capture this appointment came from (transcript/recording). */
   sourceCaptureId?: string | null
 }
@@ -87,7 +87,7 @@ export interface CreateAppointmentRequest {
   endUtc: string
   location?: string | null
   participantNames?: string[] | null
-  reminder?: Reminder | null
+  reminders?: Reminder[]
 }
 
 // ---- Unified feed ------------------------------------------------------------
@@ -131,7 +131,7 @@ export interface Note {
   aiSummary: string | null
   /** The capture this note came from (transcript/recording). */
   sourceCaptureId: string | null
-  reminder: Reminder | null
+  reminders: Reminder[]
   createdAtUtc: string
   updatedAtUtc: string
 }
@@ -139,15 +139,16 @@ export interface Note {
 export interface SaveNoteRequest {
   title?: string | null
   content: string
-  /** Omitted or null = no reminder (PUT replaces it). */
-  reminder?: Reminder | null
+  /** Omitted or empty = no reminders (PUT replaces them). */
+  reminders?: Reminder[]
 }
 
 export interface UpcomingReminder {
-  reminderId: string
+  /** Same key as the matching notification. */
+  key: string
   triggerAtUtc: string
   title: string
-  sourceType: 'Task' | 'Appointment' | 'Note'
+  sourceType: ItemType
   sourceId: string
 }
 
@@ -187,7 +188,7 @@ export type ExtractionIntent = 'Task' | 'Appointment' | 'Reminder' | 'Note'
 export type ExtractionStatus = 'PendingReview' | 'Accepted' | 'Edited' | 'Rejected'
 export type RecurrenceFrequency = 'Daily' | 'Weekdays' | 'Weekly' | 'Monthly' | 'Custom'
 
-/** A proposed item. StartUtc/EndUtc for appointments; DueUtc for tasks. Any can carry a reminder. */
+/** A proposed item. StartUtc/EndUtc for appointments; DueUtc for tasks. Any can carry reminders. */
 export interface CaptureItem {
   id: string
   intent: ExtractionIntent
@@ -201,7 +202,7 @@ export interface CaptureItem {
   hasTime: boolean
   location: string | null
   priority: TaskPriority | null
-  reminder: Reminder | null
+  reminders: Reminder[]
   recurrence: RecurrenceFrequency | null
   /** A question the user should look at before saving. */
   clarification: string | null
@@ -248,7 +249,7 @@ export interface ConfirmCaptureItem {
   hasTime: boolean
   location: string | null
   priority: TaskPriority | null
-  reminder: Reminder | null
+  reminders: Reminder[]
 }
 
 export type ReminderKind = 'At' | 'Before' | 'Daily' | 'Weekdays' | 'Weekly'
@@ -268,4 +269,40 @@ export interface Reminder {
   time?: string | null
   days?: Weekday[] | null
   nextAtUtc?: string | null
+}
+
+export type ItemType = 'Task' | 'Appointment' | 'Note'
+
+/**
+ * One notification to show at atUtc (Phase 4). The backend decides what goes
+ * off when; clients schedule these locally. The key is stable per occurrence.
+ */
+export interface UpcomingNotification {
+  key: string
+  kind: 'Reminder' | 'Snoozed' | 'DailySummary'
+  atUtc: string
+  title: string
+  body: string | null
+  /** Null for the daily summary. */
+  itemType: ItemType | null
+  itemId: string | null
+  /** An open task: offer a "Done" action. */
+  canComplete: boolean
+}
+
+export interface SnoozeRequest {
+  itemType: ItemType
+  itemId: string
+  title: string
+  body: string | null
+  minutes: number
+}
+
+export interface NotificationSettings {
+  enabled: boolean
+  taskReminders: boolean
+  appointmentReminders: boolean
+  dailySummary: boolean
+  /** "HH:mm", the user's local time. */
+  dailySummaryTime: string
 }

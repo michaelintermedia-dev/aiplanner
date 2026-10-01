@@ -10,8 +10,10 @@ public class SaveNoteRequestValidator : AbstractValidator<SaveNoteRequest>
     {
         RuleFor(x => x.Title).MaximumLength(300);
         RuleFor(x => x.Content).NotEmpty().MaximumLength(20_000);
-        RuleFor(x => x.Reminder!).SetValidator(new ReminderDtoValidator()).When(x => x.Reminder is not null);
-        RuleFor(x => x.Reminder!.Kind).NotEqual(ReminderKind.Before).When(x => x.Reminder is not null)
+        RuleFor(x => x.Reminders).Must(r => r is null || r.Count <= ReminderPlanner.MaxPerItem)
+            .WithMessage($"At most {ReminderPlanner.MaxPerItem} reminders.");
+        RuleForEach(x => x.Reminders).SetValidator(new ReminderDtoValidator());
+        RuleForEach(x => x.Reminders).Must(r => r.Kind != ReminderKind.Before)
             .WithMessage("A note has no time of its own - pick when to be reminded.");
     }
 }

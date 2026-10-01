@@ -52,7 +52,7 @@ public class NoteService : INoteService
             Content = request.Content.Trim(),
         };
         _db.Notes.Add(note);
-        await SetReminderAsync(note, request.Reminder, ct);
+        await SetRemindersAsync(note, request.Reminders, ct);
         await _db.SaveChangesAsync(ct);
         return Result<NoteDto>.Success(ToDto(note));
     }
@@ -67,7 +67,7 @@ public class NoteService : INoteService
 
         note.Title = string.IsNullOrWhiteSpace(request.Title) ? null : request.Title.Trim();
         note.Content = request.Content.Trim();
-        await SetReminderAsync(note, request.Reminder, ct);
+        await SetRemindersAsync(note, request.Reminders, ct);
         await _db.SaveChangesAsync(ct);
         return Result<NoteDto>.Success(ToDto(note));
     }
@@ -93,12 +93,12 @@ public class NoteService : INoteService
         return await (track ? q : q.AsNoTracking()).FirstOrDefaultAsync(ct);
     }
 
-    private async Task SetReminderAsync(Note note, ReminderDto? reminder, CancellationToken ct) =>
-        _reminders.Set(note.Reminders, reminder, itemTimeUtc: null, await _reminders.ZoneAsync(note.UserId, ct), note.UserId, r => r.NoteId = note.Id);
+    private async Task SetRemindersAsync(Note note, IReadOnlyList<ReminderDto>? reminders, CancellationToken ct) =>
+        _reminders.Set(note.Reminders, reminders, itemTimeUtc: null, await _reminders.ZoneAsync(note.UserId, ct), note.UserId, r => r.NoteId = note.Id);
 
     private Guid RequireUserId() =>
         _currentUser.UserId ?? throw new UnauthorizedAccessException("No authenticated user.");
 
     private static NoteDto ToDto(Note n) =>
-        new(n.Id, n.Title, n.Content, n.AiSummary, n.SourceAiExtractionId, ReminderPlanner.ToDto(n.Reminders), n.CreatedAtUtc, n.UpdatedAtUtc);
+        new(n.Id, n.Title, n.Content, n.AiSummary, n.SourceAiExtractionId, ReminderPlanner.ToDtos(n.Reminders), n.CreatedAtUtc, n.UpdatedAtUtc);
 }

@@ -19,6 +19,6 @@ public record AppointmentDto(
     DateTime CreatedAtUtc,
     DateTime UpdatedAtUtc,
     // Filled on single-item reads (detail view); null in lists.
-    ReminderDto? Reminder = null,
+    IReadOnlyList<ReminderDto>? Reminders = null,
     // The capture this appointment was created from.
     Guid? SourceCaptureId = null);

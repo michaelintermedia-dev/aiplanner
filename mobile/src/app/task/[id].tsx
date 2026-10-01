@@ -1,5 +1,5 @@
 import { dateKey, formatDateKey, formatDue, formatTime, timeKey, zonedToUtc } from '@shared/dates'
-import { describeReminder, reminderProblem } from '@shared/reminders'
+import { describeReminder, remindersProblem } from '@shared/reminders'
 import type { Reminder, Task, TaskPriority } from '@shared/types'
 import { useQuery } from '@tanstack/react-query'
 import { router, Stack, useLocalSearchParams } from 'expo-router'
@@ -9,7 +9,7 @@ import { tasksApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
 import { DateTimeField } from '@/components/DateTimeField'
 import { CycleChip, detailStyles as s, Facts, Field, TextBlock } from '@/components/detail'
-import { ReminderPicker } from '@/components/ReminderPicker'
+import { ReminderList } from '@/components/ReminderList'
 import { Screen } from '@/components/Screen'
 import { SourceCapture } from '@/components/SourceCapture'
 import { Badge, Button } from '@/components/ui'
@@ -79,7 +79,7 @@ export default function TaskDetailScreen() {
           <Facts
             rows={[
               ['Due', task.dueDateUtc ? formatDue(task.dueDateUtc, task.hasDueTime, zone) : task.status === 'Ongoing' ? 'Ongoing — no deadline' : 'No due date'],
-              ['Reminder', task.reminder ? describeReminder(task.reminder, zone) : 'None'],
+              ['Reminders', task.reminders?.length ? task.reminders.map((r) => describeReminder(r, zone)).join(' · ') : 'None'],
               ...(task.completedAtUtc ? [['Completed', formatDue(task.completedAtUtc, true, zone)] as [string, string]] : []),
               ['Created', `${formatDateKey(dateKey(task.createdAtUtc, zone.timeZone), zone.locale, { month: 'short', day: 'numeric' })}, ${formatTime(task.createdAtUtc, zone)}`],
             ]}
@@ -121,8 +121,8 @@ function TaskEditForm({ task, onDone }: { task: Task; onDone: () => void }) {
   const [time, setTime] = useState<string | null>(task.dueDateUtc && task.hasDueTime ? timeKey(task.dueDateUtc, zone.timeZone) : null)
   const [priority, setPriority] = useState<TaskPriority>(task.priority)
   const [ongoing, setOngoing] = useState(task.status === 'Ongoing')
-  const [reminder, setReminder] = useState<Reminder | null>(task.reminder ?? null)
-  const reminderIssue = reminderProblem(reminder, { itemHasTime: !ongoing && !!date && !!time, isNote: false })
+  const [reminders, setReminders] = useState<Reminder[]>(task.reminders ?? [])
+  const reminderIssue = remindersProblem(reminders, { itemHasTime: !ongoing && !!date && !!time, isNote: false })
   const [tags, setTags] = useState(task.tags.join(', '))
 
   const save = () => {
@@ -136,7 +136,7 @@ function TaskEditForm({ task, onDone }: { task: Task; onDone: () => void }) {
         hasDueTime: !!dueDateUtc && !!time,
         priority,
         isOngoing: ongoing,
-        reminder,
+        reminders,
         tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
       },
       { onSuccess: onDone },
@@ -160,7 +160,7 @@ function TaskEditForm({ task, onDone }: { task: Task; onDone: () => void }) {
         />
         <CycleChip values={[false, true]} value={ongoing} onChange={setOngoing} label={(o) => (o ? 'Ongoing ✓' : 'Ongoing')} highlight={(o) => o} />
       </View>
-      <ReminderPicker value={reminder} onChange={setReminder} itemHasTime={!ongoing && !!date && !!time} />
+      <ReminderList value={reminders} onChange={setReminders} itemHasTime={!ongoing && !!date && !!time} />
       <Field label="Tags (comma-separated)" value={tags} onChangeText={setTags} autoCapitalize="none" />
       <Field label="Description" value={description} onChangeText={setDescription} multiline />
       <Field label="Notes" value={notes} onChangeText={setNotes} multiline />

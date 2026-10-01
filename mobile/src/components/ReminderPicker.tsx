@@ -29,6 +29,9 @@ export function ReminderPicker({
   itemHasTime,
   isNote = false,
   showProblem = true,
+  open: openProp,
+  onOpenChange,
+  emptyLabel = 'Add a reminder',
 }: {
   value: Reminder | null
   onChange: (reminder: Reminder | null) => void
@@ -37,10 +40,16 @@ export function ReminderPicker({
   isNote?: boolean
   /** Off where the caller already lists problems (the capture review). */
   showProblem?: boolean
+  /** Controlled open state (ReminderList opens the reminder just added). */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  emptyLabel?: string
 }) {
   const c = useColors()
   const { zone } = useAuth()
-  const [open, setOpen] = useState(false)
+  const [ownOpen, setOwnOpen] = useState(false)
+  const open = openProp ?? ownOpen
+  const setOpen = (next: boolean) => (onOpenChange ? onOpenChange(next) : setOwnOpen(next))
   const problem = reminderProblem(value, { itemHasTime, isNote })
   const kinds = REMINDER_KINDS.filter((k) => k.kind !== 'Before' || (!isNote && (itemHasTime || value?.kind === 'Before')))
   const chip = (active: boolean) => [styles.chip, { borderColor: active ? c.accent : c.border, backgroundColor: active ? c.accent : 'transparent' }]
@@ -50,13 +59,13 @@ export function ReminderPicker({
     <View style={{ gap: 8 }}>
       <View style={styles.row}>
         <Pressable
-          onPress={() => setOpen((o) => !o)}
+          onPress={() => setOpen(!open)}
           style={[styles.summary, { borderColor: c.border }]}
           accessibilityRole="button"
           accessibilityState={{ expanded: open }}
-          accessibilityLabel={value ? `Reminder: ${describeReminder(value, zone)}. Tap to change.` : 'Add a reminder'}>
+          accessibilityLabel={value ? `Reminder: ${describeReminder(value, zone)}. Tap to change.` : emptyLabel}>
           <Ionicons name={repeats(value) ? 'repeat' : 'notifications-outline'} size={16} color={value ? c.text : c.muted} />
-          <Text style={{ color: value ? c.text : c.muted, fontSize: 14 }}>{value ? describeReminder(value, zone) : 'Add a reminder'}</Text>
+          <Text style={{ color: value ? c.text : c.muted, fontSize: 14 }}>{value ? describeReminder(value, zone) : emptyLabel}</Text>
         </Pressable>
         {value && (
           <Pressable onPress={() => onChange(null)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Remove reminder">

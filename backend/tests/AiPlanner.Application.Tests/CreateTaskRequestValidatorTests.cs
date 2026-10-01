@@ -20,7 +20,7 @@ public class CreateTaskRequestValidatorTests
             HasDueTime: true,
             Priority: TaskPriority.High,
             IsOngoing: false,
-            Reminder: new ReminderDto(ReminderKind.Before, MinutesBefore: 30),
+            Reminders: [new ReminderDto(ReminderKind.Before, MinutesBefore: 30)],
             Tags: new[] { "work" });
 
         _validator.Validate(request).IsValid.Should().BeTrue();
@@ -31,7 +31,7 @@ public class CreateTaskRequestValidatorTests
     {
         var request = new CreateTaskRequest(
             "Some task", null, null, null, null, false, TaskPriority.None,
-            IsOngoing: false, Reminder: new ReminderDto(ReminderKind.Before, MinutesBefore: 15), Tags: null);
+            IsOngoing: false, Reminders: [new ReminderDto(ReminderKind.Before, MinutesBefore: 15)], Tags: null);
 
         _validator.Validate(request).IsValid.Should().BeFalse();
     }
@@ -41,7 +41,7 @@ public class CreateTaskRequestValidatorTests
     {
         var request = new CreateTaskRequest(
             "Take vitamins", null, null, null, null, false, TaskPriority.None,
-            IsOngoing: false, Reminder: new ReminderDto(ReminderKind.Daily, Time: "08:00"), Tags: null);
+            IsOngoing: false, Reminders: [new ReminderDto(ReminderKind.Daily, Time: "08:00")], Tags: null);
 
         _validator.Validate(request).IsValid.Should().BeTrue();
     }
@@ -55,7 +55,7 @@ public class CreateTaskRequestValidatorTests
     {
         var request = new CreateTaskRequest(
             "Something", null, null, null, null, false, TaskPriority.None,
-            IsOngoing: false, Reminder: new ReminderDto(kind, Time: time), Tags: null);
+            IsOngoing: false, Reminders: [new ReminderDto(kind, Time: time)], Tags: null);
 
         _validator.Validate(request).IsValid.Should().BeFalse();
     }

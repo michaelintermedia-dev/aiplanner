@@ -15,7 +15,7 @@ public class CreateAppointmentRequestValidatorTests
     {
         var start = DateTime.UtcNow.AddDays(1);
         var request = new CreateAppointmentRequest(
-            "Client meeting", null, null, start, start.AddHours(1), "Office", new[] { "Sarah" }, new ReminderDto(ReminderKind.Before, MinutesBefore: 15));
+            "Client meeting", null, null, start, start.AddHours(1), "Office", new[] { "Sarah" }, [new ReminderDto(ReminderKind.Before, MinutesBefore: 15)]);
 
         _validator.Validate(request).IsValid.Should().BeTrue();
     }

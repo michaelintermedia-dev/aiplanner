@@ -5,7 +5,45 @@ React Native app for iOS and Android (spec section 4), built with Expo.
 **Stack:** Expo SDK 57, React Native 0.86, Expo Router (file-based tabs),
 TanStack Query, expo-secure-store, @react-native-community/datetimepicker.
 
-## Run it on the Android emulator
+## Development build (needed for notifications)
+
+Since Phase 4 the app runs as a **development build** - its own app
+"AI Planner" (`com.aiplanner.app`) with the native modules built in - instead
+of Expo Go. Expo Go SDK 57 can't post notifications on Android (reminders
+would never appear). The app still opens in Expo Go, just without them.
+
+Build the APK (first build ~30 min, then 1-2 min; needs Android Studio's JDK):
+
+```powershell
+cd mobile
+npx expo prebuild --platform android      # generates android/ (gitignored)
+$env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
+cd android
+.\gradlew.bat assembleDebug '-PreactNativeArchitectures=arm64-v8a'   # phone
+# emulator: '-PreactNativeArchitectures=x86_64'
+```
+
+The APK is `android/app/build/outputs/apk/debug/app-debug.apk`. Install it
+over USB (`adb install -r app-debug.apk`) or copy it to the phone and open it
+(allow "install unknown apps" once). Rebuild only when native things change
+(new native package, app.json permissions/plugins); JS changes come from
+Metro as before.
+
+Then start Metro (`npx expo start`), open **AI Planner** on the phone, and
+connect to `http://<PC's Wi-Fi IP>:8081` from the dev launcher (or scan the
+QR code with the phone's camera). On the emulator:
+
+```bash
+adb reverse tcp:8081 tcp:8081 && adb reverse tcp:58443 tcp:58443
+adb shell am start -a android.intent.action.VIEW -d "aiplanner://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081"
+```
+
+Notes: allow notifications when asked. `USE_EXACT_ALARM` (app.json) makes
+reminders go off on the minute - without it Android delays them by up to an
+hour. The emulator's small data partition may refuse big APKs; build it for
+`x86_64` only.
+
+## Run it on the Android emulator (Expo Go)
 
 1. Start the backend (SQL Server + API) from the repo root:
    ```bash

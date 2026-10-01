@@ -23,7 +23,9 @@ public class ConfirmCaptureRequestValidator : AbstractValidator<ConfirmCaptureRe
                 item.RuleFor(i => i.Title).NotEmpty().MaximumLength(ExtractionNormalizer.MaxTitleLength);
                 item.RuleFor(i => i.Description).MaximumLength(4000);
                 item.RuleFor(i => i.Location).MaximumLength(300);
-                item.RuleFor(i => i.Reminder!).SetValidator(new ReminderDtoValidator()).When(i => i.Reminder is not null);
+                item.RuleFor(i => i.Reminders).Must(r => r is null || r.Count <= ReminderPlanner.MaxPerItem)
+                    .WithMessage($"At most {ReminderPlanner.MaxPerItem} reminders.");
+                item.RuleForEach(i => i.Reminders).SetValidator(new ReminderDtoValidator());
 
                 item.When(i => i.Intent == ExtractionIntent.Appointment, () =>
                 {
@@ -34,8 +36,8 @@ public class ConfirmCaptureRequestValidator : AbstractValidator<ConfirmCaptureRe
                         .WithMessage("An appointment must end after it starts.");
                 });
 
-                item.RuleFor(i => i.Reminder!.Kind).NotEqual(ReminderKind.Before)
-                    .When(i => i.Intent == ExtractionIntent.Note && i.Reminder is not null)
+                item.RuleForEach(i => i.Reminders).Must(r => r.Kind != ReminderKind.Before)
+                    .When(i => i.Intent == ExtractionIntent.Note)
                     .WithMessage("A note has no time of its own - pick when to be reminded.");
 
                 // Legacy intent: clients no longer offer it; it is saved as a task.

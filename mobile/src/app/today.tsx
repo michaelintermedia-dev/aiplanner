@@ -67,7 +67,7 @@ export default function TodayScreen() {
           {data.upcomingReminders.length > 0 && (
             <Section title="Upcoming reminders">
               {data.upcomingReminders.map((r, i, all) => (
-                <Row key={r.reminderId} last={i === all.length - 1}>
+                <Row key={r.key} last={i === all.length - 1}>
                   <Text style={{ color: c.text, flex: 1, fontSize: 16 }}>{r.title}</Text>
                   <Text style={{ color: c.muted, fontSize: 13 }}>{formatDue(r.triggerAtUtc, true, zone)}</Text>
                 </Row>

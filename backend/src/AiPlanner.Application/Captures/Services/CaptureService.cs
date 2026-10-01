@@ -371,7 +371,7 @@ public class CaptureService : ICaptureService
         };
         foreach (var (item, proposed) in extraction.Items.Zip(normalized.Items))
         {
-            SetProposedReminder(item, proposed.Reminder);
+            item.ProposedReminders = ReminderPlanner.ToProposed(proposed.Reminders);
         }
 
         _db.AIExtractions.Add(extraction);
@@ -424,7 +424,7 @@ public class CaptureService : ICaptureService
                     SourceAiExtractionId = extraction.Id,
                 };
                 _db.Notes.Add(note);
-                _reminders.Set(note.Reminders, decision.Reminder, itemTimeUtc: null,
+                _reminders.Set(note.Reminders, decision.Reminders, itemTimeUtc: null,
                     await _reminders.ZoneAsync(extraction.UserId, ct), extraction.UserId, r => r.NoteId = note.Id);
                 item.ResultingNoteId = note.Id;
                 return null;
@@ -451,7 +451,9 @@ public class CaptureService : ICaptureService
         Priority: i.Priority ?? TaskPriority.None,
         IsOngoing: false,
         // Legacy "reminder" items are tasks that remind at their time.
-        Reminder: i.Reminder ?? (i.Intent == ExtractionIntent.Reminder ? new ReminderDto(ReminderKind.Before, MinutesBefore: 0) : null),
+        Reminders: i.Reminders is { Count: > 0 } given
+            ? given
+            : i.Intent == ExtractionIntent.Reminder ? [new ReminderDto(ReminderKind.Before, MinutesBefore: 0)] : null,
         Tags: null);
 
     private static CreateAppointmentRequest ToAppointmentRequest(ConfirmCaptureItem i) => new(
@@ -462,7 +464,7 @@ public class CaptureService : ICaptureService
         EndUtc: i.EndUtc ?? default,
         Location: i.Location,
         ParticipantNames: null,
-        Reminder: i.Reminder);
+        Reminders: i.Reminders);
 
     private static bool IsEdited(AIExtractionItem item, ConfirmCaptureItem d) =>
         item.Intent != d.Intent
@@ -474,7 +476,7 @@ public class CaptureService : ICaptureService
         || item.HasTime != d.HasTime
         || item.Location != d.Location
         || item.Priority != d.Priority
-        || !SameReminder(ProposedReminder(item), d.Reminder);
+        || !ReminderPlanner.SameList(ReminderPlanner.FromProposed(item.ProposedReminders), d.Reminders);
 
     /// <summary>Keeps the stored item in sync with what was actually saved.</summary>
     private static void ApplyDecision(AIExtractionItem item, ConfirmCaptureItem d)
@@ -488,32 +490,8 @@ public class CaptureService : ICaptureService
         item.HasTime = d.HasTime;
         item.Location = d.Location;
         item.Priority = d.Priority;
-        SetProposedReminder(item, d.Reminder);
+        item.ProposedReminders = ReminderPlanner.ToProposed(d.Reminders);
     }
-
-    private static ReminderDto? ProposedReminder(AIExtractionItem i) => i.ReminderKind is { } kind
-        ? new ReminderDto(
-            kind,
-            AtUtc: i.ReminderAtUtc,
-            MinutesBefore: i.ReminderMinutesBefore,
-            Time: i.ReminderTime is { } t ? ReminderSchedule.FormatTime(t) : null,
-            Days: kind == ReminderKind.Weekly ? ReminderSchedule.DaysFromMask(i.ReminderDays) : null)
-        : null;
-
-    private static void SetProposedReminder(AIExtractionItem item, ReminderDto? r)
-    {
-        item.ReminderKind = r?.Kind;
-        item.ReminderAtUtc = r?.AtUtc;
-        item.ReminderMinutesBefore = r?.MinutesBefore;
-        item.ReminderTime = ReminderSchedule.ParseTime(r?.Time);
-        item.ReminderDays = ReminderSchedule.DaysMask(r?.Days);
-    }
-
-    private static bool SameReminder(ReminderDto? a, ReminderDto? b) =>
-        a is null || b is null
-            ? a is null && b is null
-            : a.Kind == b.Kind && a.AtUtc == b.AtUtc && a.MinutesBefore == b.MinutesBefore && a.Time == b.Time
-              && ReminderSchedule.DaysMask(a.Days) == ReminderSchedule.DaysMask(b.Days);
 
     // ---- Helpers -----------------------------------------------------------
 
@@ -551,7 +529,7 @@ public class CaptureService : ICaptureService
             .Select(i => new CaptureItemDto(
                 i.Id, i.Intent, i.Status, i.Title, i.Summary, i.Description,
                 i.StartDateUtc, i.EndDateUtc, i.DueDateUtc, i.HasTime, i.Location,
-                i.Priority, ProposedReminder(i), i.RecurrenceFrequency,
+                i.Priority, ReminderPlanner.FromProposed(i.ProposedReminders), i.RecurrenceFrequency,
                 i.Clarification, i.Confidence,
                 i.ResultingTaskItemId, i.ResultingAppointmentId, i.ResultingNoteId))
             .ToList());

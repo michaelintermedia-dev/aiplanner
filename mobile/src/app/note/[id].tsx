@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { dateKey, formatDateKey, formatTime } from '@shared/dates'
-import { describeReminder, reminderProblem, repeats } from '@shared/reminders'
+import { describeReminder, remindersProblem, repeats } from '@shared/reminders'
 import type { Reminder, SaveNoteRequest } from '@shared/types'
 import { useQuery } from '@tanstack/react-query'
 import { router, Stack, useLocalSearchParams } from 'expo-router'
@@ -9,7 +9,7 @@ import { Alert, Text, View } from 'react-native'
 import { notesApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
 import { detailStyles as s, Field } from '@/components/detail'
-import { ReminderPicker } from '@/components/ReminderPicker'
+import { ReminderList } from '@/components/ReminderList'
 import { Screen } from '@/components/Screen'
 import { SourceCapture } from '@/components/SourceCapture'
 import { Button } from '@/components/ui'
@@ -28,7 +28,7 @@ export default function NoteDetailScreen() {
   const remove = useAction(notesApi.remove)
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
-  const [reminder, setReminder] = useState<Reminder | null>(null)
+  const [reminders, setReminders] = useState<Reminder[]>([])
 
   if (isPending) return <Screen><Text style={{ color: c.muted }}>Loading…</Text></Screen>
   if (error || !note) return <Screen><Text style={{ color: c.danger }}>{error?.message ?? 'Note not found.'}</Text></Screen>
@@ -36,7 +36,7 @@ export default function NoteDetailScreen() {
   const when = (utc: string) =>
     `${formatDateKey(dateKey(utc, zone.timeZone), zone.locale, { month: 'short', day: 'numeric' })}, ${formatTime(utc, zone)}`
 
-  const reminderIssue = reminderProblem(reminder, { itemHasTime: false, isNote: true })
+  const reminderIssue = remindersProblem(reminders, { itemHasTime: false, isNote: true })
 
   // PUT replaces the note, so the reminder is always sent (null = none).
   const save = () =>
@@ -44,7 +44,7 @@ export default function NoteDetailScreen() {
       {
         title: title.trim() || null,
         content: content.trim(),
-        reminder,
+        reminders,
       },
       { onSuccess: () => setEditing(false) },
     )
@@ -69,7 +69,7 @@ export default function NoteDetailScreen() {
         <View style={s.form}>
           <Field label="Title (optional)" value={title} onChangeText={setTitle} />
           <Field label="Note" value={content} onChangeText={setContent} multiline />
-          <ReminderPicker value={reminder} onChange={setReminder} itemHasTime={false} isNote />
+          <ReminderList value={reminders} onChange={setReminders} itemHasTime={false} isNote />
           {update.error && <Text style={{ color: c.danger }}>{update.error.message}</Text>}
           <View style={s.actions}>
             <Button title="Cancel" onPress={() => setEditing(false)} />
@@ -91,12 +91,12 @@ export default function NoteDetailScreen() {
           <Text style={{ color: c.text, fontSize: 17, lineHeight: 25 }} selectable>
             {note.content}
           </Text>
-          {note.reminder && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name={repeats(note.reminder) ? 'repeat' : 'notifications-outline'} size={16} color={c.text} />
-              <Text style={{ color: c.text, fontSize: 15 }}>Remind me: {describeReminder(note.reminder, zone)}</Text>
+          {note.reminders.map((r, i) => (
+            <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name={repeats(r) ? 'repeat' : 'notifications-outline'} size={16} color={c.text} />
+              <Text style={{ color: c.text, fontSize: 15 }}>Remind me: {describeReminder(r, zone)}</Text>
             </View>
-          )}
+          ))}
           <Text style={{ color: c.muted, fontSize: 13 }}>
             Created {when(note.createdAtUtc)}
             {note.updatedAtUtc !== note.createdAtUtc ? ` · edited ${when(note.updatedAtUtc)}` : ''}
@@ -109,7 +109,7 @@ export default function NoteDetailScreen() {
               onPress={() => {
                 setTitle(note.title ?? '')
                 setContent(note.content)
-                setReminder(note.reminder)
+                setReminders(note.reminders)
                 setEditing(true)
               }}
             />

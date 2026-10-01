@@ -6,7 +6,9 @@ import { AppointmentDetailPage } from './pages/AppointmentDetailPage'
 import { AuthPage } from './pages/AuthPage'
 import { CalendarPage } from './pages/CalendarPage'
 import { FeedPage } from './pages/FeedPage'
+import { useNotificationDelivery } from './lib/useNotificationDelivery'
 import { NoteDetailPage } from './pages/NoteDetailPage'
+import { SettingsPage } from './pages/SettingsPage'
 import { TaskDetailPage } from './pages/TaskDetailPage'
 import { TodayPage } from './pages/TodayPage'
 
@@ -17,6 +19,7 @@ function titleFor(path: string): string {
   if (path.startsWith('/tasks/')) return 'Task'
   if (path.startsWith('/appointments/')) return 'Appointment'
   if (path.startsWith('/notes/')) return 'Note'
+  if (path.startsWith('/settings')) return 'Settings'
   return 'AI Planner'
 }
 
@@ -29,6 +32,7 @@ function Layout() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const isHome = pathname === '/feed'
+  useNotificationDelivery()
 
   // Back within the app if there's history, otherwise home.
   const back = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate('/feed'))
@@ -61,9 +65,10 @@ function Layout() {
   )
 }
 
-/** 👤 → name, email, Sign out (the mobile app shows the same in a dialog). */
+/** Account → name, email, Settings, Sign out (the mobile app shows the same in a dialog). */
 function AccountMenu() {
   const { user, logout } = useAuth()
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -89,6 +94,15 @@ function AccountMenu() {
         <div className="menu" role="menu">
           <strong>{user?.displayName}</strong>
           <span className="muted">{user?.email}</span>
+          <button
+            className="menu-item"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false)
+              navigate('/settings')
+            }}>
+            Settings
+          </button>
           <button className="menu-item danger" role="menuitem" onClick={() => void logout()}>
             Sign out
           </button>
@@ -114,6 +128,7 @@ export function App() {
           <Route path="/tasks/:id" element={<TaskDetailPage />} />
           <Route path="/appointments/:id" element={<AppointmentDetailPage />} />
           <Route path="/notes/:id" element={<NoteDetailPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
           {/* The old list pages are now filters of the feed. */}
           <Route path="/tasks" element={<Navigate to="/feed?show=tasks" replace />} />
           <Route path="/notes" element={<Navigate to="/feed?show=notes" replace />} />

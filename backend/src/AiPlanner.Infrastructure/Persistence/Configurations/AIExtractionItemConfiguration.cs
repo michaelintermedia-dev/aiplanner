@@ -9,6 +9,7 @@ public class AIExtractionItemConfiguration : IEntityTypeConfiguration<AIExtracti
     public void Configure(EntityTypeBuilder<AIExtractionItem> builder)
     {
         builder.ToTable("AIExtractionItems");
+        builder.OwnsMany(i => i.ProposedReminders, r => r.ToJson());
         builder.HasKey(i => i.Id);
         builder.Property(i => i.Title).IsRequired().HasMaxLength(300);
         builder.Property(i => i.Summary).HasMaxLength(2000);

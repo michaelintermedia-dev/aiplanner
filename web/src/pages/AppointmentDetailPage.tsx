@@ -5,9 +5,9 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { appointmentsApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
-import { ReminderPicker } from '../components/ReminderPicker'
+import { ReminderList } from '../components/ReminderList'
 import { SourceCapture } from '../components/SourceCapture'
-import { describeReminder, reminderProblem } from '@shared/reminders'
+import { describeReminder, remindersProblem } from '@shared/reminders'
 import { useAction } from '../lib/useAction'
 
 export function AppointmentDetailPage() {
@@ -65,7 +65,7 @@ export function AppointmentDetailPage() {
               </>
             )}
             <dt>Reminder</dt>
-            <dd>{appt.reminder ? describeReminder(appt.reminder, zone) : 'None'}</dd>
+            <dd>{appt.reminders?.length ? appt.reminders.map((r) => describeReminder(r, zone)).join(' · ') : 'None'}</dd>
           </dl>
 
           {appt.description && (
@@ -126,8 +126,8 @@ function AppointmentEditForm({ appt, onDone }: { appt: Appointment; onDone: () =
   const [end, setEnd] = useState(timeKey(appt.endUtc, zone.timeZone))
   const [location, setLocation] = useState(appt.location ?? '')
   const [people, setPeople] = useState(appt.participants.map((p) => p.name).join(', '))
-  const [reminder, setReminder] = useState<Reminder | null>(appt.reminder ?? null)
-  const reminderIssue = reminderProblem(reminder, { itemHasTime: true, isNote: false })
+  const [reminders, setReminders] = useState<Reminder[]>(appt.reminders ?? [])
+  const reminderIssue = remindersProblem(reminders, { itemHasTime: true, isNote: false })
   const [description, setDescription] = useState(appt.description ?? '')
   const [notes, setNotes] = useState(appt.notes ?? '')
 
@@ -146,7 +146,7 @@ function AppointmentEditForm({ appt, onDone }: { appt: Appointment; onDone: () =
         endUtc,
         location: location.trim() || null,
         participantNames: people.split(',').map((p) => p.trim()).filter(Boolean),
-        reminder,
+        reminders,
       },
       { onSuccess: onDone },
     )
@@ -175,7 +175,7 @@ function AppointmentEditForm({ appt, onDone }: { appt: Appointment; onDone: () =
       </div>
       <div className="field">
         <span>Reminder</span>
-        <ReminderPicker value={reminder} onChange={setReminder} itemHasTime />
+        <ReminderList value={reminders} onChange={setReminders} itemHasTime />
       </div>
       <div className="form-row">
         <label>

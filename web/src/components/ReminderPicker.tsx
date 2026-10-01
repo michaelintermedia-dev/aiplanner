@@ -27,6 +27,9 @@ export function ReminderPicker({
   itemHasTime,
   isNote = false,
   showProblem = true,
+  open: openProp,
+  onOpenChange,
+  emptyLabel = 'Add a reminder',
 }: {
   value: Reminder | null
   onChange: (reminder: Reminder | null) => void
@@ -35,18 +38,24 @@ export function ReminderPicker({
   isNote?: boolean
   /** Off where the caller already lists problems (the capture review). */
   showProblem?: boolean
+  /** Controlled open state (ReminderList opens the reminder just added). */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  emptyLabel?: string
 }) {
   const { zone } = useAuth()
-  const [open, setOpen] = useState(false)
+  const [ownOpen, setOwnOpen] = useState(false)
+  const open = openProp ?? ownOpen
+  const setOpen = (next: boolean) => (onOpenChange ? onOpenChange(next) : setOwnOpen(next))
   const problem = reminderProblem(value, { itemHasTime, isNote })
   const kinds = REMINDER_KINDS.filter((k) => k.kind !== 'Before' || (!isNote && (itemHasTime || value?.kind === 'Before')))
 
   return (
     <div className={`reminder-picker${open ? ' open' : ''}`}>
       <div className="reminder-summary">
-        <button type="button" className="reminder-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <button type="button" className="reminder-toggle" onClick={() => setOpen(!open)} aria-expanded={open}>
           {repeats(value) ? <IoRepeat aria-hidden /> : <IoNotificationsOutline aria-hidden />}
-          <span className={value ? undefined : 'muted'}>{value ? describeReminder(value, zone) : 'Add a reminder'}</span>
+          <span className={value ? undefined : 'muted'}>{value ? describeReminder(value, zone) : emptyLabel}</span>
         </button>
         {value && (
           <button type="button" className="icon-button" onClick={() => onChange(null)} aria-label="Remove reminder" title="Remove reminder">

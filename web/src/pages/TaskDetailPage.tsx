@@ -5,9 +5,9 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { tasksApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
-import { ReminderPicker } from '../components/ReminderPicker'
+import { ReminderList } from '../components/ReminderList'
 import { SourceCapture } from '../components/SourceCapture'
-import { describeReminder, reminderProblem } from '@shared/reminders'
+import { describeReminder, remindersProblem } from '@shared/reminders'
 import { useAction } from '../lib/useAction'
 
 export function TaskDetailPage() {
@@ -54,7 +54,7 @@ export function TaskDetailPage() {
             <dt>Due</dt>
             <dd>{task.dueDateUtc ? formatDue(task.dueDateUtc, task.hasDueTime, zone) : task.status === 'Ongoing' ? 'Ongoing — no deadline' : 'No due date'}</dd>
             <dt>Reminder</dt>
-            <dd>{task.reminder ? describeReminder(task.reminder, zone) : 'None'}</dd>
+            <dd>{task.reminders?.length ? task.reminders.map((r) => describeReminder(r, zone)).join(' · ') : 'None'}</dd>
             {task.completedAtUtc && (
               <>
                 <dt>Completed</dt>
@@ -126,10 +126,10 @@ function TaskEditForm({ task, onDone }: { task: Task; onDone: () => void }) {
   const [time, setTime] = useState(task.dueDateUtc && task.hasDueTime ? timeKey(task.dueDateUtc, zone.timeZone) : '')
   const [priority, setPriority] = useState<TaskPriority>(task.priority)
   const [ongoing, setOngoing] = useState(task.status === 'Ongoing')
-  const [reminder, setReminder] = useState<Reminder | null>(task.reminder ?? null)
+  const [reminders, setReminders] = useState<Reminder[]>(task.reminders ?? [])
   const [tags, setTags] = useState(task.tags.join(', '))
 
-  const reminderIssue = reminderProblem(reminder, { itemHasTime: !ongoing && !!date && !!time, isNote: false })
+  const reminderIssue = remindersProblem(reminders, { itemHasTime: !ongoing && !!date && !!time, isNote: false })
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
@@ -144,7 +144,7 @@ function TaskEditForm({ task, onDone }: { task: Task; onDone: () => void }) {
         hasDueTime: !!dueDateUtc && !!time,
         priority,
         isOngoing: ongoing,
-        reminder,
+        reminders,
         tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
       },
       { onSuccess: onDone },
@@ -178,7 +178,7 @@ function TaskEditForm({ task, onDone }: { task: Task; onDone: () => void }) {
       </div>
       <div className="field">
         <span>Reminder</span>
-        <ReminderPicker value={reminder} onChange={setReminder} itemHasTime={!ongoing && !!date && !!time} />
+        <ReminderList value={reminders} onChange={setReminders} itemHasTime={!ongoing && !!date && !!time} />
       </div>
       <label className="inline-check">
         <input type="checkbox" checked={ongoing} onChange={(e) => setOngoing(e.target.checked)} />

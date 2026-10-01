@@ -21,6 +21,7 @@ export default function TabLayout() {
 
   const account = () =>
     Alert.alert(user?.displayName ?? 'Account', user?.email, [
+      { text: 'Settings', onPress: () => router.push('/settings') },
       { text: 'Sign out', style: 'destructive', onPress: () => void logout() },
       { text: 'Close', style: 'cancel' },
     ])

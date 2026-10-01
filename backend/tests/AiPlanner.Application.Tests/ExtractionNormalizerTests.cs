@@ -28,7 +28,7 @@ public class ExtractionNormalizerTests
         string? clarification = null,
         double? confidence = 0.9,
         string? location = null) =>
-        new(intent, title, null, null, date, time, endTime, location, priority, reminder, recurrence, clarification, confidence);
+        new(intent, title, null, null, date, time, endTime, location, priority, reminder is null ? null : [reminder], recurrence, clarification, confidence);
 
     private static NormalizedItem Normalize(RawExtractedItem raw, TimeZoneInfo? zone = null) =>
         ExtractionNormalizer.NormalizeItem(raw, LocalNow, zone ?? Moscow)!;
@@ -97,7 +97,7 @@ public class ExtractionNormalizerTests
 
         item.Intent.Should().Be(ExtractionIntent.Task);
         item.DueUtc.Should().Be(new DateTime(2026, 10, 1, 11, 0, 0, DateTimeKind.Utc));
-        item.Reminder.Should().Be(new ReminderDto(ReminderKind.Before, MinutesBefore: 0));
+        item.Reminders.Should().Equal(new ReminderDto(ReminderKind.Before, MinutesBefore: 0));
         item.Clarification.Should().BeNull();
     }
 
@@ -206,7 +206,7 @@ public class ExtractionNormalizerTests
     {
         var item = Normalize(Item(date: "2026-10-01", time: "10:00", reminder: new RawReminder("before", raw, null, null, null)));
 
-        item.Reminder!.MinutesBefore.Should().Be(expected);
+        item.Reminders.Single().MinutesBefore.Should().Be(expected);
     }
 
     [Fact]
@@ -214,7 +214,7 @@ public class ExtractionNormalizerTests
     {
         var item = Normalize(Item(date: "2026-10-01", reminder: new RawReminder("before", 10, null, null, null)));
 
-        item.Reminder!.Kind.Should().Be(ReminderKind.Before);
+        item.Reminders.Single().Kind.Should().Be(ReminderKind.Before);
         item.Clarification.Should().Contain("What time");
     }
 
@@ -223,7 +223,7 @@ public class ExtractionNormalizerTests
     {
         var item = Normalize(Item(title: "Take vitamins", reminder: new RawReminder("daily", null, null, "8:00", null)));
 
-        item.Reminder.Should().Be(new ReminderDto(ReminderKind.Daily, Time: "08:00"));
+        item.Reminders.Should().Equal(new ReminderDto(ReminderKind.Daily, Time: "08:00"));
         item.Clarification.Should().BeNull();
     }
 
@@ -232,9 +232,9 @@ public class ExtractionNormalizerTests
     {
         var item = Normalize(Item(reminder: new RawReminder("weekly", null, null, "19:30", ["monday", "Thursday", "Funday"])));
 
-        item.Reminder!.Kind.Should().Be(ReminderKind.Weekly);
-        item.Reminder.Time.Should().Be("19:30");
-        item.Reminder.Days.Should().Equal(DayOfWeek.Monday, DayOfWeek.Thursday);
+        item.Reminders.Single().Kind.Should().Be(ReminderKind.Weekly);
+        item.Reminders.Single().Time.Should().Be("19:30");
+        item.Reminders.Single().Days.Should().Equal(DayOfWeek.Monday, DayOfWeek.Thursday);
     }
 
     [Theory]
@@ -244,7 +244,7 @@ public class ExtractionNormalizerTests
     {
         var item = Normalize(Item(reminder: new RawReminder(kind, null, null, time, days)));
 
-        item.Reminder!.Kind.Should().NotBe(ReminderKind.At);
+        item.Reminders.Single().Kind.Should().NotBe(ReminderKind.At);
         item.Clarification.Should().Contain(question);
     }
 
@@ -254,13 +254,24 @@ public class ExtractionNormalizerTests
         // Now is 15:00; "remind me at 16:00" is later today.
         var item = Normalize(Item(intent: "note", reminder: new RawReminder("at", null, null, "16:00", null)));
 
-        item.Reminder.Should().Be(new ReminderDto(ReminderKind.At, AtUtc: new DateTime(2026, 9, 30, 13, 0, 0, DateTimeKind.Utc)));
+        item.Reminders.Should().Equal(new ReminderDto(ReminderKind.At, AtUtc: new DateTime(2026, 9, 30, 13, 0, 0, DateTimeKind.Utc)));
+    }
+
+    [Fact]
+    public void Several_reminders_are_kept()
+    {
+        var raw = new RawExtractedItem("appointment", "Trip to Netanya", null, null, "2026-10-02", "17:00", null, null, null,
+            [new RawReminder("at", null, "2026-10-02", "15:00", null), new RawReminder("at", null, "2026-10-02", "16:00", null)],
+            null, null, 0.9);
+
+        Normalize(raw).Reminders.Select(r => r.AtUtc).Should().Equal(
+            new DateTime(2026, 10, 2, 12, 0, 0, DateTimeKind.Utc), new DateTime(2026, 10, 2, 13, 0, 0, DateTimeKind.Utc));
     }
 
     [Fact]
     public void Unknown_reminder_kind_is_ignored()
     {
-        Normalize(Item(reminder: new RawReminder("hourly", null, null, "10:00", null))).Reminder.Should().BeNull();
+        Normalize(Item(reminder: new RawReminder("hourly", null, null, "10:00", null))).Reminders.Should().BeEmpty();
     }
 
     [Theory]
@@ -281,7 +292,7 @@ public class ExtractionNormalizerTests
         item.StartUtc.Should().BeNull();
         item.HasTime.Should().BeFalse();
         item.Location.Should().BeNull();
-        item.Reminder.Should().BeNull();
+        item.Reminders.Should().BeEmpty();
     }
 
     [Fact]
@@ -291,7 +302,7 @@ public class ExtractionNormalizerTests
 
         item.Intent.Should().Be(ExtractionIntent.Note);
         item.DueUtc.Should().BeNull(); // the note itself stays undated
-        item.Reminder.Should().Be(new ReminderDto(ReminderKind.At, AtUtc: new DateTime(2026, 10, 1, 6, 0, 0, DateTimeKind.Utc)));
+        item.Reminders.Should().Equal(new ReminderDto(ReminderKind.At, AtUtc: new DateTime(2026, 10, 1, 6, 0, 0, DateTimeKind.Utc)));
         item.Clarification.Should().BeNull();
     }
 
@@ -301,7 +312,7 @@ public class ExtractionNormalizerTests
         // "before" means nothing on a note (no time of its own): ask when instead.
         var item = Normalize(Item(intent: "note", reminder: new RawReminder("before", 0, null, null, null)));
 
-        item.Reminder.Should().Be(new ReminderDto(ReminderKind.At));
+        item.Reminders.Should().Equal(new ReminderDto(ReminderKind.At));
         item.Clarification.Should().Contain("When should I remind you");
     }
 

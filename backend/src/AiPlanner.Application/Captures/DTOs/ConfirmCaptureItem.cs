@@ -16,4 +16,4 @@ public record ConfirmCaptureItem(
     bool HasTime,
     string? Location,
     TaskPriority? Priority,
-    ReminderDto? Reminder);
+    IReadOnlyList<ReminderDto>? Reminders);

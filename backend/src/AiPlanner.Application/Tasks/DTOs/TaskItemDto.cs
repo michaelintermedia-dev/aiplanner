@@ -19,6 +19,6 @@ public record TaskItemDto(
     DateTime CreatedAtUtc,
     DateTime UpdatedAtUtc,
     // Filled on single-item reads (detail view); null in lists.
-    ReminderDto? Reminder = null,
+    IReadOnlyList<ReminderDto>? Reminders = null,
     // The capture this task was created from (open it to see the transcript/recording).
     Guid? SourceCaptureId = null);

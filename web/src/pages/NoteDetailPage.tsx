@@ -1,5 +1,5 @@
 import { dateKey, formatDateKey, formatTime } from '@shared/dates'
-import { describeReminder, reminderProblem, repeats } from '@shared/reminders'
+import { describeReminder, remindersProblem, repeats } from '@shared/reminders'
 import type { Reminder, SaveNoteRequest } from '@shared/types'
 import { useQuery } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
@@ -7,7 +7,7 @@ import { IoNotificationsOutline, IoRepeat } from 'react-icons/io5'
 import { Link, useNavigate, useParams } from 'react-router'
 import { notesApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
-import { ReminderPicker } from '../components/ReminderPicker'
+import { ReminderList } from '../components/ReminderList'
 import { SourceCapture } from '../components/SourceCapture'
 import { useAction } from '../lib/useAction'
 
@@ -23,7 +23,7 @@ export function NoteDetailPage() {
   const remove = useAction(notesApi.remove, { forget: (noteId) => ['note', noteId] })
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
-  const [reminder, setReminder] = useState<Reminder | null>(null)
+  const [reminders, setReminders] = useState<Reminder[]>([])
 
   if (isPending) return <div className="page"><p className="muted">Loading…</p></div>
   if (error || !note) return <div className="page"><p className="error">{error?.message ?? 'Note not found.'}</p><Link to="/notes">Back to notes</Link></div>
@@ -31,17 +31,17 @@ export function NoteDetailPage() {
   const startEdit = () => {
     setTitle(note.title ?? '')
     setContent(note.content)
-    setReminder(note.reminder)
+    setReminders(note.reminders)
     setEditing(true)
   }
 
   const save = (e: FormEvent) => {
     e.preventDefault()
     // PUT replaces the note, so the reminder is always sent (null = none).
-    update.mutate({ title: title.trim() || null, content: content.trim(), reminder }, { onSuccess: () => setEditing(false) })
+    update.mutate({ title: title.trim() || null, content: content.trim(), reminders }, { onSuccess: () => setEditing(false) })
   }
 
-  const reminderIssue = reminderProblem(reminder, { itemHasTime: false, isNote: true })
+  const reminderIssue = remindersProblem(reminders, { itemHasTime: false, isNote: true })
 
   const when = (utc: string) =>
     `${formatDateKey(dateKey(utc, zone.timeZone), zone.locale, { month: 'short', day: 'numeric', year: 'numeric' })}, ${formatTime(utc, zone)}`
@@ -62,7 +62,7 @@ export function NoteDetailPage() {
           </label>
           <div className="field">
             <span>Reminder</span>
-            <ReminderPicker value={reminder} onChange={setReminder} itemHasTime={false} isNote />
+            <ReminderList value={reminders} onChange={setReminders} itemHasTime={false} isNote />
           </div>
           {update.error && <p className="error">{update.error.message}</p>}
           <div className="form-actions">
@@ -77,12 +77,11 @@ export function NoteDetailPage() {
             {note.title && note.title !== note.content && <h1>{note.title}</h1>}
           </header>
           <p className="note-body">{note.content}</p>
-          {note.reminder && (
-            <p className="note-reminder">
-              {repeats(note.reminder) ? <IoRepeat aria-hidden /> : <IoNotificationsOutline aria-hidden />} Remind me:{' '}
-              {describeReminder(note.reminder, zone)}
+          {note.reminders.map((r, i) => (
+            <p key={i} className="note-reminder">
+              {repeats(r) ? <IoRepeat aria-hidden /> : <IoNotificationsOutline aria-hidden />} Remind me: {describeReminder(r, zone)}
             </p>
-          )}
+          ))}
           <p className="muted">
             Created {when(note.createdAtUtc)}
             {note.updatedAtUtc !== note.createdAtUtc && ` · edited ${when(note.updatedAtUtc)}`}

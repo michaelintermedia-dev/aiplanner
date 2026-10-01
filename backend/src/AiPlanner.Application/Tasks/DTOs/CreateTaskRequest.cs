@@ -17,6 +17,6 @@ public record CreateTaskRequest(
     /// otherwise it's Planned (if a due date is given) or Inbox.
     /// </summary>
     bool IsOngoing,
-    /// <summary>The task's reminder, if any (a "before" one needs DueDateUtc with a time).</summary>
-    ReminderDto? Reminder,
+    /// <summary>The task's reminders (a "before" one needs DueDateUtc with a time).</summary>
+    IReadOnlyList<ReminderDto>? Reminders,
     IReadOnlyList<string>? Tags);

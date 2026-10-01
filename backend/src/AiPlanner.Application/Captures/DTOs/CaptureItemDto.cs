@@ -5,7 +5,7 @@ namespace AiPlanner.Application.Captures.DTOs;
 
 /// <summary>
 /// A proposed task/appointment/note. Dates are UTC: StartUtc/EndUtc for
-/// appointments, DueUtc for tasks. Any of them can carry a Reminder. Once saved, the Resulting*
+/// appointments, DueUtc for tasks. Any of them can carry reminders. Once saved, the Resulting*
 /// id points at the real item.
 /// </summary>
 public record CaptureItemDto(
@@ -21,7 +21,7 @@ public record CaptureItemDto(
     bool HasTime,
     string? Location,
     TaskPriority? Priority,
-    ReminderDto? Reminder,
+    IReadOnlyList<ReminderDto> Reminders,
     RecurrenceFrequency? Recurrence,
     string? Clarification,
     double? Confidence,

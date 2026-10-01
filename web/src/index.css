@@ -1637,3 +1637,9 @@ button.kind-icon:hover:not(:disabled) {
   color: var(--muted);
   margin-bottom: -4px;
 }
+
+.reminder-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

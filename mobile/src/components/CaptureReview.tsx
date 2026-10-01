@@ -7,7 +7,7 @@ import { useAuth } from '@/auth/useAuth'
 import { useAction } from '@/lib/useAction'
 import { useColors, type Colors } from '@/theme'
 import { DateTimeField } from './DateTimeField'
-import { ReminderPicker } from './ReminderPicker'
+import { ReminderList } from './ReminderList'
 import { Button } from './ui'
 
 const PRIORITIES: (TaskPriority | null)[] = [null, 'Low', 'Medium', 'High']
@@ -167,9 +167,9 @@ function ItemEditor({ draft: d, onChange }: { draft: ItemDraft; onChange: (patch
                 </Pressable>
               </View>
             )}
-            <ReminderPicker
-              value={d.reminder}
-              onChange={(reminder) => onChange({ reminder })}
+            <ReminderList
+              value={d.reminders}
+              onChange={(reminders) => onChange({ reminders })}
               itemHasTime={draftHasTime(d)}
               isNote={isNote}
               showProblem={false}

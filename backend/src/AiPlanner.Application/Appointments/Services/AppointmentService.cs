@@ -77,7 +77,7 @@ public class AppointmentService : IAppointmentService
         };
 
         ApplyParticipants(appointment, request.ParticipantNames);
-        SetReminder(appointment, request.Reminder, await _reminders.ZoneAsync(userId, ct));
+        SetReminders(appointment, request.Reminders, await _reminders.ZoneAsync(userId, ct));
 
         _db.Appointments.Add(appointment);
         await _db.SaveChangesAsync(ct);
@@ -103,7 +103,7 @@ public class AppointmentService : IAppointmentService
         ApplyParticipants(appointment, request.ParticipantNames);
 
         // Re-set even if unchanged: a "before" reminder follows the start time.
-        SetReminder(appointment, request.Reminder, await _reminders.ZoneAsync(appointment.UserId, ct));
+        SetReminders(appointment, request.Reminders, await _reminders.ZoneAsync(appointment.UserId, ct));
 
         await _db.SaveChangesAsync(ct);
         return Result<AppointmentDto>.Success(ToDto(appointment));
@@ -125,7 +125,7 @@ public class AppointmentService : IAppointmentService
         }
 
         // Same reminder, re-timed: a "before" one moves with the start.
-        SetReminder(appointment, ReminderPlanner.ToDto(appointment.Reminders), await _reminders.ZoneAsync(appointment.UserId, ct));
+        SetReminders(appointment, ReminderPlanner.ToDtos(appointment.Reminders), await _reminders.ZoneAsync(appointment.UserId, ct));
 
         await _db.SaveChangesAsync(ct);
         return Result<AppointmentDto>.Success(ToDto(appointment));
@@ -140,7 +140,7 @@ public class AppointmentService : IAppointmentService
         }
 
         appointment.Status = AppointmentStatus.Completed;
-        ReminderPlanner.TurnOff(appointment.Reminders);
+        ReminderPlanner.TurnOff(appointment.Reminders, pausedWithItem: true);
 
         await _db.SaveChangesAsync(ct);
         return Result<AppointmentDto>.Success(ToDto(appointment));
@@ -155,7 +155,7 @@ public class AppointmentService : IAppointmentService
         }
 
         appointment.Status = AppointmentStatus.Cancelled;
-        ReminderPlanner.TurnOff(appointment.Reminders);
+        ReminderPlanner.TurnOff(appointment.Reminders, pausedWithItem: true);
 
         await _db.SaveChangesAsync(ct);
         return Result<AppointmentDto>.Success(ToDto(appointment));
@@ -244,8 +244,8 @@ public class AppointmentService : IAppointmentService
 
 
 
-    private void SetReminder(Appointment appointment, ReminderDto? reminder, TimeZoneInfo zone) =>
-        _reminders.Set(appointment.Reminders, reminder, appointment.StartUtc, zone, appointment.UserId, r => r.AppointmentId = appointment.Id);
+    private void SetReminders(Appointment appointment, IReadOnlyList<ReminderDto>? reminders, TimeZoneInfo zone) =>
+        _reminders.Set(appointment.Reminders, reminders, appointment.StartUtc, zone, appointment.UserId, r => r.AppointmentId = appointment.Id);
 
     private static AppointmentDto ToDto(Appointment a) => new(
         a.Id,
@@ -260,6 +260,6 @@ public class AppointmentService : IAppointmentService
         a.Participants.Select(p => new AppointmentParticipantDto(p.Name, p.Email)).ToList(),
         a.CreatedAtUtc,
         a.UpdatedAtUtc,
-        ReminderPlanner.ToDto(a.Reminders),
+        ReminderPlanner.ToDtos(a.Reminders),
         a.SourceAiExtractionId);
 }

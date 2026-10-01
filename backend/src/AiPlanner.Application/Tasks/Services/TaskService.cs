@@ -103,7 +103,7 @@ public class TaskService : ITaskService
 
         await ApplyTagsAsync(task, request.Tags, ct);
 
-        SetReminder(task, request.Reminder, await _reminders.ZoneAsync(userId, ct));
+        SetReminders(task, request.Reminders, await _reminders.ZoneAsync(userId, ct));
 
         _db.TaskItems.Add(task);
         await _db.SaveChangesAsync(ct);
@@ -138,7 +138,7 @@ public class TaskService : ITaskService
         await ApplyTagsAsync(task, request.Tags, ct);
 
         // Re-set even if unchanged: a "before" reminder follows the due date.
-        SetReminder(task, request.Reminder, await _reminders.ZoneAsync(task.UserId, ct));
+        SetReminders(task, request.Reminders, await _reminders.ZoneAsync(task.UserId, ct));
 
         await _db.SaveChangesAsync(ct);
 
@@ -155,7 +155,7 @@ public class TaskService : ITaskService
 
         task.Status = TaskItemStatus.Completed;
         task.CompletedAtUtc = _dateTime.UtcNow;
-        ReminderPlanner.TurnOff(task.Reminders);
+        ReminderPlanner.TurnOff(task.Reminders, pausedWithItem: true);
 
         await _db.SaveChangesAsync(ct);
         return Result<TaskItemDto>.Success(ToDto(task));
@@ -170,7 +170,7 @@ public class TaskService : ITaskService
         }
 
         task.Status = TaskItemStatus.Cancelled;
-        ReminderPlanner.TurnOff(task.Reminders);
+        ReminderPlanner.TurnOff(task.Reminders, pausedWithItem: true);
 
         await _db.SaveChangesAsync(ct);
         return Result<TaskItemDto>.Success(ToDto(task));
@@ -286,8 +286,8 @@ public class TaskService : ITaskService
 
 
 
-    private void SetReminder(TaskItem task, ReminderDto? reminder, TimeZoneInfo zone) =>
-        _reminders.Set(task.Reminders, reminder, ReminderTime(task), zone, task.UserId, r => r.TaskItemId = task.Id);
+    private void SetReminders(TaskItem task, IReadOnlyList<ReminderDto>? reminders, TimeZoneInfo zone) =>
+        _reminders.Set(task.Reminders, reminders, ReminderTime(task), zone, task.UserId, r => r.TaskItemId = task.Id);
 
     /// <summary>What a "before" reminder counts back from: the due time (not a date-only due).</summary>
     private static DateTime? ReminderTime(TaskItem task) => task.HasDueTime ? task.DueDateUtc : null;
@@ -307,6 +307,6 @@ public class TaskService : ITaskService
         t.TaskTags.Select(tt => tt.Tag.Name).OrderBy(n => n).ToList(),
         t.CreatedAtUtc,
         t.UpdatedAtUtc,
-        ReminderPlanner.ToDto(t.Reminders),
+        ReminderPlanner.ToDtos(t.Reminders),
         t.SourceAiExtractionId);
 }

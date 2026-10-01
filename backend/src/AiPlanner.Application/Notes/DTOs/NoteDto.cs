@@ -9,6 +9,6 @@ public record NoteDto(
     string Content,
     string? AiSummary,
     Guid? SourceCaptureId, // the capture it was created from, if any
-    ReminderDto? Reminder, // "remind me about this", if any
+    IReadOnlyList<ReminderDto> Reminders, // "remind me about this"
     DateTime CreatedAtUtc,
     DateTime UpdatedAtUtc);

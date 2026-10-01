@@ -8,6 +8,7 @@ import { ApiError } from '@/api/client'
 import { AuthProvider } from '@/auth/AuthProvider'
 import { useAuth } from '@/auth/useAuth'
 import { AuthScreen } from '@/components/AuthScreen'
+import { useNotifications } from '@/lib/useNotifications'
 import { useColors } from '@/theme'
 
 SplashScreen.preventAutoHideAsync()
@@ -42,7 +43,6 @@ export default function RootLayout() {
  */
 function Gate() {
   const { user } = useAuth()
-  const c = useColors()
 
   useEffect(() => {
     if (user !== undefined) SplashScreen.hideAsync()
@@ -50,6 +50,14 @@ function Gate() {
 
   if (user === undefined) return null
   if (user === null) return <AuthScreen />
+
+  return <SignedIn />
+}
+
+/** The signed-in app; also keeps the phone's notifications in sync (Phase 4). */
+function SignedIn() {
+  const c = useColors()
+  useNotifications()
 
   return (
     <Stack
@@ -65,6 +73,7 @@ function Gate() {
       <Stack.Screen name="task/[id]" options={{ title: 'Task' }} />
       <Stack.Screen name="appointment/[id]" options={{ title: 'Appointment' }} />
       <Stack.Screen name="note/[id]" options={{ title: 'Note' }} />
+      <Stack.Screen name="settings" options={{ title: 'Settings' }} />
     </Stack>
   )
 }

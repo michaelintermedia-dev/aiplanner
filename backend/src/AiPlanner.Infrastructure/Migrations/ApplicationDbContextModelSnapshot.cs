@@ -134,21 +134,6 @@ namespace AiPlanner.Infrastructure.Migrations
                     b.Property<int?>("RecurrenceFrequency")
                         .HasColumnType("int");
 
-                    b.Property<DateTime?>("ReminderAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("ReminderDays")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("ReminderKind")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("ReminderMinutesBefore")
-                        .HasColumnType("int");
-
-                    b.Property<TimeOnly?>("ReminderTime")
-                        .HasColumnType("time");
-
                     b.Property<Guid?>("ResultingAppointmentId")
                         .HasColumnType("uniqueidentifier");
 
@@ -346,6 +331,9 @@ namespace AiPlanner.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<Guid?>("NoteId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid?>("ReminderId")
                         .HasColumnType("uniqueidentifier");
 
@@ -386,6 +374,8 @@ namespace AiPlanner.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("AppointmentId");
+
+                    b.HasIndex("NoteId");
 
                     b.HasIndex("ReminderId");
 
@@ -516,6 +506,9 @@ namespace AiPlanner.Infrastructure.Migrations
 
                     b.Property<Guid?>("NoteId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("PausedWithItem")
+                        .HasColumnType("bit");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -924,7 +917,38 @@ namespace AiPlanner.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.OwnsMany("AiPlanner.Domain.Entities.ProposedReminder", "ProposedReminders", b1 =>
+                        {
+                            b1.Property<Guid>("AIExtractionItemId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAddOrUpdate();
+
+                            b1.Property<DateTime?>("AtUtc");
+
+                            b1.Property<int>("DaysOfWeek");
+
+                            b1.Property<int>("Kind");
+
+                            b1.Property<int?>("MinutesBefore");
+
+                            b1.Property<TimeOnly?>("TimeOfDay");
+
+                            b1.HasKey("AIExtractionItemId", "__synthesizedOrdinal");
+
+                            b1.ToTable("AIExtractionItems");
+
+                            b1
+                                .ToJson("ProposedReminders")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.WithOwner()
+                                .HasForeignKey("AIExtractionItemId");
+                        });
+
                     b.Navigation("AiExtraction");
+
+                    b.Navigation("ProposedReminders");
                 });
 
             modelBuilder.Entity("AiPlanner.Domain.Entities.Appointment", b =>
@@ -971,6 +995,10 @@ namespace AiPlanner.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("AppointmentId");
 
+                    b.HasOne("AiPlanner.Domain.Entities.Note", "Note")
+                        .WithMany()
+                        .HasForeignKey("NoteId");
+
                     b.HasOne("AiPlanner.Domain.Entities.Reminder", "Reminder")
                         .WithMany()
                         .HasForeignKey("ReminderId");
@@ -980,6 +1008,8 @@ namespace AiPlanner.Infrastructure.Migrations
                         .HasForeignKey("TaskItemId");
 
                     b.Navigation("Appointment");
+
+                    b.Navigation("Note");
 
                     b.Navigation("Reminder");
 

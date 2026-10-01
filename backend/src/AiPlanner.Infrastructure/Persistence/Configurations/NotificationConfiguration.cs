@@ -18,5 +18,6 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
         builder.HasOne(n => n.Reminder).WithMany().HasForeignKey(n => n.ReminderId).OnDelete(DeleteBehavior.ClientSetNull);
         builder.HasOne(n => n.TaskItem).WithMany().HasForeignKey(n => n.TaskItemId).OnDelete(DeleteBehavior.ClientSetNull);
         builder.HasOne(n => n.Appointment).WithMany().HasForeignKey(n => n.AppointmentId).OnDelete(DeleteBehavior.ClientSetNull);
+        builder.HasOne(n => n.Note).WithMany().HasForeignKey(n => n.NoteId).OnDelete(DeleteBehavior.ClientSetNull);
     }
 }

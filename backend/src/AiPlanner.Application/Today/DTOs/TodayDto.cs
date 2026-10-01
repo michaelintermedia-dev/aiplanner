@@ -3,8 +3,9 @@ using AiPlanner.Application.Tasks.DTOs;
 
 namespace AiPlanner.Application.Today.DTOs;
 
+/// <summary>One upcoming reminder occurrence; Key matches the notification's key.</summary>
 public record UpcomingReminderDto(
-    Guid ReminderId,
+    string Key,
     DateTime TriggerAtUtc,
     string Title,
     string SourceType, // "Task" | "Appointment" | "Note"

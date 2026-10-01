@@ -11,10 +11,13 @@ import type {
   FeedPage,
   FeedSort,
   Note,
+  NotificationSettings,
   SaveNoteRequest,
+  SnoozeRequest,
   SaveTaskRequest,
   Task,
   Today,
+  UpcomingNotification,
   User,
 } from './types'
 
@@ -88,6 +91,15 @@ export function createApi(request: RequestFn) {
     },
     today: {
       get: () => request<Today>('GET', '/today'),
+    },
+    notifications: {
+      /** Everything that should go off in the next `hours` hours (Phase 4). */
+      upcoming: (hours = 168) => request<UpcomingNotification[]>('GET', `/notifications/upcoming?hours=${hours}`),
+      snooze: (body: SnoozeRequest) => request<UpcomingNotification>('POST', '/notifications/snooze', body),
+    },
+    settings: {
+      notifications: () => request<NotificationSettings>('GET', '/settings/notifications'),
+      updateNotifications: (body: NotificationSettings) => request<NotificationSettings>('PUT', '/settings/notifications', body),
     },
     calendar: {
       get: (view: CalendarView, date: string) =>

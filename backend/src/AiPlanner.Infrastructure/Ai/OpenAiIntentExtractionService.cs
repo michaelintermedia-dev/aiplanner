@@ -87,7 +87,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
         var items = (parsed.Items ?? []).Select(i => new RawExtractedItem(
             i.Intent, i.Title, i.Summary, i.Description, i.Date, i.Time, i.EndTime, i.Location,
             i.Priority,
-            i.Reminder is { } r ? new RawReminder(r.Kind, r.MinutesBefore, r.Date, r.Time, r.Days) : null,
+            i.Reminders?.Select(r => new RawReminder(r.Kind, r.MinutesBefore, r.Date, r.Time, r.Days)).ToList(),
             i.Recurrence, i.Clarification, i.Confidence)).ToList();
 
         return new RawExtraction(parsed.Title, parsed.Summary, items, content, "OpenAI", completion.Model ?? _options.Model);
@@ -106,7 +106,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             - "appointment": an event at a specific time, usually with someone or somewhere (meeting, dentist, call scheduled with a person at a time).
             - "task": something the user has to do, optionally with a deadline ("finish the report by Friday").
             - "note": information to keep, with nothing to do and no time of its own.
-            There is no separate "reminder" type: a reminder belongs to an item (see "reminder" below). "Remind me to call John at 2pm" is a task due at 14:00 with a reminder of kind "before", minutesBefore 0.
+            There is no separate "reminder" type: a reminder belongs to an item (see "reminders" below). "Remind me to call John at 2pm" is a task due at 14:00 with a reminder of kind "before", minutesBefore 0.
 
             Dates and times:
             - Resolve relative expressions against the current local date/time above. Output "date" as yyyy-MM-dd and "time"/"endTime" as 24-hour HH:mm, in the user's local time. Never convert time zones.
@@ -120,7 +120,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             Other fields:
             - "title": short and action-oriented (at most ~6 words), e.g. "Prepare proposal", "Meet Sarah". Write every title, summary and clarification in the same language the user used.
             - "priority": "high", "medium" or "low" only if stated or clearly implied (urgent, ASAP, important); otherwise null.
-            - "reminder": null unless the user asks to be reminded. Otherwise an object with "kind":
+            - "reminders": [] unless the user asks to be reminded. One object per reminder ("remind me at 3 and at 4" = two), each with "kind":
               - "before": relative to the item's own time; "minutesBefore" = 0 for "at the time", 30 for "30 minutes before".
               - "at": once, at a moment not tied to the item ("remind me in an hour", "remind me about this tomorrow morning"); put it in the reminder's "date"/"time".
               - "daily" / "weekdays": repeats every day / Monday-Friday at the reminder's "time" ("every day at 8" = daily, 08:00).
@@ -175,7 +175,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             ["type"] = "object",
             ["additionalProperties"] = false,
             ["required"] = new JsonArray("intent", "title", "summary", "description", "date", "time", "endTime",
-                "location", "priority", "reminder", "recurrence", "clarification", "confidence"),
+                "location", "priority", "reminders", "recurrence", "clarification", "confidence"),
             ["properties"] = new JsonObject
             {
                 ["intent"] = new JsonObject { ["type"] = "string", ["enum"] = new JsonArray("task", "appointment", "note") },
@@ -187,10 +187,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
                 ["endTime"] = Nullable("string", "HH:mm 24h, local"),
                 ["location"] = Nullable("string"),
                 ["priority"] = Nullable("string", values: new JsonArray("low", "medium", "high", null)),
-                ["reminder"] = new JsonObject
-                {
-                    ["anyOf"] = new JsonArray(ReminderSchema(), new JsonObject { ["type"] = "null" }),
-                },
+                ["reminders"] = new JsonObject { ["type"] = "array", ["items"] = ReminderSchema() },
                 ["recurrence"] = Nullable("string", values: new JsonArray("daily", "weekdays", "weekly", "monthly", null)),
                 ["clarification"] = Nullable("string"),
                 ["confidence"] = new JsonObject { ["type"] = "number" },
@@ -224,7 +221,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
     private sealed record ItemJson(
         string? Intent, string? Title, string? Summary, string? Description,
         string? Date, string? Time, string? EndTime, string? Location, string? Priority,
-        ReminderJson? Reminder, string? Recurrence, string? Clarification, double? Confidence);
+        List<ReminderJson>? Reminders, string? Recurrence, string? Clarification, double? Confidence);
 
     private sealed record ReminderJson(string? Kind, int? MinutesBefore, string? Date, string? Time, List<string>? Days);
 }

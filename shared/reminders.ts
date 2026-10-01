@@ -108,5 +108,14 @@ export function reminderProblem(r: Reminder | null, opts: { itemHasTime: boolean
   }
 }
 
+/** The first problem among an item's reminders (null = all fine). */
+export function remindersProblem(list: Reminder[], opts: { itemHasTime: boolean; isNote: boolean }): string | null {
+  for (const r of list) {
+    const problem = reminderProblem(r, opts)
+    if (problem) return problem
+  }
+  return null
+}
+
 /** True for kinds that keep going off until turned off. */
 export const repeats = (r: Reminder | null | undefined) => !!r && (r.kind === 'Daily' || r.kind === 'Weekdays' || r.kind === 'Weekly')

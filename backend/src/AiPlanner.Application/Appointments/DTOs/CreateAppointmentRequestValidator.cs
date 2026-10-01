@@ -10,7 +10,9 @@ public class CreateAppointmentRequestValidator : AbstractValidator<CreateAppoint
         RuleFor(x => x.Title).NotEmpty().MaximumLength(300);
         RuleFor(x => x.Location).MaximumLength(300);
         RuleFor(x => x.EndUtc).GreaterThan(x => x.StartUtc).WithMessage("EndUtc must be after StartUtc.");
-        RuleFor(x => x.Reminder!).SetValidator(new ReminderDtoValidator()).When(x => x.Reminder is not null);
+        RuleFor(x => x.Reminders).Must(r => r is null || r.Count <= ReminderPlanner.MaxPerItem)
+            .WithMessage($"At most {ReminderPlanner.MaxPerItem} reminders.");
+        RuleForEach(x => x.Reminders).SetValidator(new ReminderDtoValidator());
         RuleForEach(x => x.ParticipantNames).NotEmpty().MaximumLength(200).When(x => x.ParticipantNames is not null);
     }
 }

@@ -44,7 +44,7 @@ public record RawExtractedItem(
     string? EndTime,
     string? Location,
     string? Priority,
-    RawReminder? Reminder,
+    IReadOnlyList<RawReminder>? Reminders,
     string? Recurrence,
     string? Clarification,
     double? Confidence);

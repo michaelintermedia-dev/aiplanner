@@ -10,4 +10,4 @@ public record UpdateAppointmentRequest(
     DateTime EndUtc,
     string? Location,
     IReadOnlyList<string>? ParticipantNames,
-    ReminderDto? Reminder);
+    IReadOnlyList<ReminderDto>? Reminders);

@@ -8,7 +8,8 @@
     "scheme": "aiplanner",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.aiplanner.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +18,11 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.aiplanner.app",
+      "permissions": [
+        "android.permission.USE_EXACT_ALARM"
+      ]
     },
     "web": {
       "output": "static",
@@ -37,8 +42,11 @@
       "@react-native-community/datetimepicker",
       [
         "expo-audio",
-        { "microphonePermission": "AI Planner uses the microphone so you can capture tasks and appointments by voice." }
-      ]
+        {
+          "microphonePermission": "AI Planner uses the microphone so you can capture tasks and appointments by voice."
+        }
+      ],
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -10,5 +10,5 @@ public record CreateAppointmentRequest(
     DateTime EndUtc,
     string? Location,
     IReadOnlyList<string>? ParticipantNames,
-    /// <summary>The appointment's reminder, if any.</summary>
-    ReminderDto? Reminder);
+    /// <summary>The appointment's reminders.</summary>
+    IReadOnlyList<ReminderDto>? Reminders);

@@ -3,9 +3,9 @@ import { appointmentsApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { todayKey, zonedToUtc } from '@shared/dates'
 import type { Reminder } from '@shared/types'
-import { reminderProblem } from '@shared/reminders'
+import { remindersProblem } from '@shared/reminders'
 import { useAction } from '../lib/useAction'
-import { ReminderPicker } from './ReminderPicker'
+import { ReminderList } from './ReminderList'
 
 export function AppointmentForm({ initialDate, onDone }: { initialDate?: string; onDone: () => void }) {
   const { zone } = useAuth()
@@ -16,8 +16,8 @@ export function AppointmentForm({ initialDate, onDone }: { initialDate?: string;
   const [end, setEnd] = useState('10:00')
   const [location, setLocation] = useState('')
   // Events default to a reminder 30 minutes before; change or remove it below.
-  const [reminder, setReminder] = useState<Reminder | null>({ kind: 'Before', minutesBefore: 30 })
-  const reminderIssue = reminderProblem(reminder, { itemHasTime: true, isNote: false })
+  const [reminders, setReminders] = useState<Reminder[]>([{ kind: 'Before', minutesBefore: 30 }])
+  const reminderIssue = remindersProblem(reminders, { itemHasTime: true, isNote: false })
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
@@ -28,7 +28,7 @@ export function AppointmentForm({ initialDate, onDone }: { initialDate?: string;
         startUtc: zonedToUtc(date, start, zone.timeZone),
         endUtc: zonedToUtc(date, end, zone.timeZone),
         location: location.trim() || null,
-        reminder,
+        reminders,
       },
       { onSuccess: onDone },
     )
@@ -63,7 +63,7 @@ export function AppointmentForm({ initialDate, onDone }: { initialDate?: string;
       </div>
       <div className="field">
         <span>Reminder</span>
-        <ReminderPicker value={reminder} onChange={setReminder} itemHasTime />
+        <ReminderList value={reminders} onChange={setReminders} itemHasTime />
       </div>
       {create.error && <p className="error">{create.error.message}</p>}
       <div className="form-actions">

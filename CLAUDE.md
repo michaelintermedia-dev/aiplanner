@@ -111,6 +111,8 @@ unit tests.
 
 Local dev notes:
 - The AppHost `http` launch profile sets `ASPIRE_ALLOW_UNSECURED_TRANSPORT`.
+- The web app is always http://localhost:5173 (pinned in the AppHost, not
+  proxied; Vite has strictPort, so a busy port fails instead of moving).
 - The API listens on https://localhost:58442 and http://localhost:58443. In
   Development, plain HTTP is served without redirecting so the Android
   emulator (http://10.0.2.2:58443) can reach it; elsewhere it redirects.

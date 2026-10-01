@@ -24,7 +24,7 @@ To run it on its own against an already-running API:
 ```bash
 cd web
 npm install
-npm run dev        # http://localhost:3000, proxies /api to https://localhost:58442
+npm run dev        # http://localhost:5173, proxies /api to https://localhost:58442
 ```
 
 ## Layout

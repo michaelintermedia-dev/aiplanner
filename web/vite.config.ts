@@ -21,7 +21,9 @@ export default defineConfig({
   },
   server: {
     fs: { allow: [searchForWorkspaceRoot(process.cwd()), sharedDir] },
-    port: Number(process.env.PORT ?? 3000),
+    port: Number(process.env.PORT ?? 5173),
+    // Fail rather than drift to another port: the AppHost pins this one.
+    strictPort: true,
     proxy: {
       '/api': { target: apiUrl, changeOrigin: true, secure: false },
     },

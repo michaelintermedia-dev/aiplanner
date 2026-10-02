@@ -67,7 +67,7 @@ export function SortChips({ chips, onChange }: { chips: SortChip[]; onChange: (c
           </Text>
         </Pressable>
       </View>
-      {chips.every((chip) => !chip.on) && <Text style={{ color: c.muted, fontSize: 13 }}>{t('sort.allOff')}</Text>}
+      {chips.every((chip) => !chip.on) && <Text style={{ color: c.muted, fontSize: 13, textAlign: 'right' }}>{t('sort.allOff')}</Text>}
       {editing && (
         <SortEditor
           chips={chips}
@@ -127,7 +127,8 @@ function SortEditor({ chips, onSave, onCancel }: { chips: SortChip[]; onSave: (c
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  // Under the Select button, on the end side (right; left in Hebrew).
+  row: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 6 },
   chip: { width: 64, alignItems: 'center', gap: 4 },
   ring: { borderWidth: 2, borderRadius: 999, padding: 2 },
   circle: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },

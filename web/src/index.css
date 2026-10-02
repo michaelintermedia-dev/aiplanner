@@ -1972,10 +1972,16 @@ button.kind-icon:hover:not(:disabled) {
   gap: 8px;
 }
 
+/* Under the Select button, on the end side (right; left in Hebrew). */
 .sort-chips {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 10px;
+}
+
+.sort-chips-area > p {
+  text-align: end;
 }
 
 .sort-chip {

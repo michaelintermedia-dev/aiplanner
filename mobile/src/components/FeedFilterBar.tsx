@@ -91,7 +91,6 @@ function FilterPanel({ filters: f, onChange, onClose }: { filters: FeedFilters; 
           onChangeText={(text) => set({ text })}
           placeholder={t('filter.searchPlaceholder')}
           placeholderTextColor={c.muted}
-          autoFocus
           returnKeyType="search"
           accessibilityLabel={t('filter.search')}
         />

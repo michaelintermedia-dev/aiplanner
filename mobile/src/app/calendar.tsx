@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { CALENDAR_VIEWS, periodTitle, stepPeriod, visibleDays } from '@shared/calendar'
 import { dateKey, formatDateKey, formatTime, todayKey } from '@shared/dates'
+import { eventPassed } from '@shared/feed'
 import type { CalendarItem, CalendarView } from '@shared/types'
 import { useQuery } from '@tanstack/react-query'
 import { router } from 'expo-router'
@@ -14,6 +15,8 @@ import { Row } from '@/components/ui'
 import { useColors, type Colors } from '@/theme'
 
 const isClosed = (item: CalendarItem) => item.status === 'Completed' || item.status === 'Cancelled'
+/** Ended events are muted like closed items (but not struck through). */
+const isPassed = (item: CalendarItem) => item.itemType === 'Appointment' && eventPassed(item)
 
 /**
  * Same controls as the web calendar (Day / Week / Month, ‹ Today ›, same
@@ -133,7 +136,7 @@ export default function CalendarScreen() {
                   />
                   <Text style={[styles.time, { color: c.muted }]}>{item.hasTime ? formatTime(item.startUtc, zone) : 'All day'}</Text>
                   <Text
-                    style={[styles.itemTitle, { color: isClosed(item) ? c.muted : c.text }, isClosed(item) && styles.struck]}
+                    style={[styles.itemTitle, { color: isClosed(item) || isPassed(item) ? c.muted : c.text }, isClosed(item) && styles.struck]}
                     numberOfLines={1}>
                     {item.title}
                   </Text>
@@ -213,7 +216,7 @@ function DayCell({
             style={[
               styles.dot,
               { backgroundColor: item.itemType === 'Appointment' ? c.appointment : c.task },
-              isClosed(item) && { opacity: 0.35 },
+              (isClosed(item) || isPassed(item)) && { opacity: 0.35 },
             ]}
           />
         ))}

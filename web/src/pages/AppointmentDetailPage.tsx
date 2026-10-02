@@ -1,4 +1,5 @@
 import { addDays, dateKey, formatDateKey, formatTime, timeKey, zonedToUtc } from '@shared/dates'
+import { eventPassed } from '@shared/feed'
 import type { Appointment, Reminder } from '@shared/types'
 import { useQuery } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
@@ -30,6 +31,7 @@ export function AppointmentDetailPage() {
   if (error || !appt) return <div className="page"><p className="error">{error?.message ?? 'Appointment not found.'}</p><Link to="/calendar">Back to calendar</Link></div>
 
   const closed = appt.status !== 'Scheduled'
+  const passed = eventPassed(appt)
   const day = dateKey(appt.startUtc, zone.timeZone)
 
   return (
@@ -43,7 +45,11 @@ export function AppointmentDetailPage() {
             <span className="kind appointment">Appointment</span>
             <h1 className={closed ? 'struck' : undefined}>{appt.title}</h1>
             <div className="row-meta">
-              <span className={`badge status-${appt.status.toLowerCase()}`}>{appt.status}</span>
+              {passed ? (
+                <span className="badge status-passed">Passed</span>
+              ) : (
+                <span className={`badge status-${appt.status.toLowerCase()}`}>{appt.status}</span>
+              )}
             </div>
           </header>
 

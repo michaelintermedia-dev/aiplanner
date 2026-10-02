@@ -1,4 +1,4 @@
-import { feedWhen, isDone, KIND_LABEL } from '@shared/feed'
+import { feedItemPassed, feedWhen, isDone, KIND_LABEL } from '@shared/feed'
 import type { FeedItem } from '@shared/types'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { router } from 'expo-router'
@@ -29,6 +29,7 @@ export function FeedRow({ item }: { item: FeedItem }) {
   const complete = useAction(tasksApi.complete)
   const reopen = useAction(tasksApi.reopen)
   const done = isDone(item)
+  const passed = feedItemPassed(item)
   const when = feedWhen(item, zone)
   const showStatus = item.status && !['Scheduled', 'Planned', 'Inbox'].includes(item.status)
 
@@ -51,7 +52,7 @@ export function FeedRow({ item }: { item: FeedItem }) {
         </View>
       )}
       <Pressable style={styles.main} onPress={() => openDetail(item)} accessibilityRole="button" accessibilityHint={`Opens the ${KIND_LABEL[item.kind].toLowerCase()}`}>
-        <Text style={[styles.title, { color: done ? c.muted : c.text }, done && styles.struck]} numberOfLines={2}>
+        <Text style={[styles.title, { color: done || passed ? c.muted : c.text }, done && styles.struck]} numberOfLines={2}>
           {item.title}
         </Text>
         {item.snippet && (
@@ -63,6 +64,7 @@ export function FeedRow({ item }: { item: FeedItem }) {
           <Text style={[styles.kind, { color: c.muted }]}>{KIND_LABEL[item.kind].toUpperCase()}</Text>
           {when && <Text style={[styles.metaText, { color: c.muted }]}>{when}</Text>}
           {item.location && <Text style={[styles.metaText, { color: c.muted }]}>📍 {item.location}</Text>}
+          {passed && <Badge label="Passed" />}
           {showStatus && <Badge label={item.status!} color={item.status === 'Completed' ? c.task : item.status === 'Cancelled' ? c.danger : undefined} />}
           {item.priority && <Badge label={item.priority} color={item.priority === 'High' ? c.danger : item.priority === 'Medium' ? c.warn : undefined} />}
           {item.tags.map((t) => (

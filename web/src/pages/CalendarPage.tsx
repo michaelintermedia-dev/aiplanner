@@ -7,6 +7,7 @@ import { useAuth } from '../auth/useAuth'
 import { AppointmentForm } from '../components/AppointmentForm'
 import { KindIcon } from '../components/KindIcon'
 import { CALENDAR_VIEWS, periodTitle, stepPeriod, visibleDays } from '@shared/calendar'
+import { eventPassed } from '@shared/feed'
 import { dateKey, formatDateKey, formatTime, todayKey } from '@shared/dates'
 
 export function CalendarPage() {
@@ -69,7 +70,7 @@ export function CalendarPage() {
             </button>
             <ul>
               {(itemsByDay.get(day) ?? []).map((item) => (
-                <li key={item.id} className={`cal-item ${item.itemType.toLowerCase()} status-${item.status.toLowerCase()}`}>
+                <li key={item.id} className={`cal-item ${item.itemType.toLowerCase()} status-${item.status.toLowerCase()}${item.itemType === 'Appointment' && eventPassed(item) ? ' passed' : ''}`}>
                   <KindIcon kind={item.itemType} className="cal-icon" />
                   {item.hasTime && <span className="cal-time">{formatTime(item.startUtc, zone)}</span>}
                   <Link className="cal-title" to={`/${item.itemType === 'Task' ? 'tasks' : 'appointments'}/${item.id}`}>{item.title}</Link>

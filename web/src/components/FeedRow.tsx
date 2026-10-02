@@ -1,4 +1,4 @@
-import { feedWhen, isDone, KIND_LABEL } from '@shared/feed'
+import { feedItemPassed, feedWhen, isDone, KIND_LABEL } from '@shared/feed'
 import type { FeedItem } from '@shared/types'
 import { IoCheckbox, IoMicOutline, IoSquareOutline } from 'react-icons/io5'
 import { Link } from 'react-router'
@@ -18,11 +18,12 @@ export function FeedRow({ item }: { item: FeedItem }) {
   const complete = useAction(tasksApi.complete)
   const reopen = useAction(tasksApi.reopen)
   const done = isDone(item)
+  const passed = feedItemPassed(item)
   const when = feedWhen(item, zone)
   const KindIcon = KIND_ICON[item.kind]
 
   return (
-    <li className={`feed-row kind-${item.kind.toLowerCase()}${done ? ' done' : ''}`}>
+    <li className={`feed-row kind-${item.kind.toLowerCase()}${done ? ' done' : ''}${passed ? ' passed' : ''}`}>
       {item.kind === 'Task' ? (
         <button
           className="kind-icon"
@@ -43,6 +44,7 @@ export function FeedRow({ item }: { item: FeedItem }) {
           <span className="kind-label">{KIND_LABEL[item.kind]}</span>
           {when && <span>{when}</span>}
           {item.location && <span>📍 {item.location}</span>}
+          {passed && <span className="badge status-passed">Passed</span>}
           {item.status && item.status !== 'Scheduled' && item.status !== 'Planned' && item.status !== 'Inbox' && (
             <span className={`badge status-${item.status.toLowerCase()}`}>{item.status}</span>
           )}

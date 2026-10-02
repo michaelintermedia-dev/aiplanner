@@ -1,4 +1,5 @@
 import { addDays, dateKey, formatDateKey, formatTime, timeKey, zonedToUtc } from '@shared/dates'
+import { eventPassed } from '@shared/feed'
 import { describeReminder, remindersProblem } from '@shared/reminders'
 import type { Appointment, Reminder } from '@shared/types'
 import { useQuery } from '@tanstack/react-query'
@@ -36,6 +37,7 @@ export default function AppointmentDetailScreen() {
   if (error || !appt) return <Screen><Text style={{ color: c.danger }}>{error?.message ?? 'Appointment not found.'}</Text></Screen>
 
   const closed = appt.status !== 'Scheduled'
+  const passed = eventPassed(appt)
 
   const confirmDelete = () =>
     Alert.alert('Delete appointment?', appt.title, [
@@ -61,7 +63,11 @@ export default function AppointmentDetailScreen() {
             <Text style={[s.kind, { color: c.muted, borderLeftColor: c.appointment }]}>APPOINTMENT</Text>
             <Text style={[s.title, { color: closed ? c.muted : c.text }, closed && s.struck]}>{appt.title}</Text>
             <View style={s.badges}>
-              <Badge label={appt.status} color={appt.status === 'Completed' ? c.task : appt.status === 'Cancelled' ? c.danger : undefined} />
+              {passed ? (
+                <Badge label="Passed" />
+              ) : (
+                <Badge label={appt.status} color={appt.status === 'Completed' ? c.task : appt.status === 'Cancelled' ? c.danger : undefined} />
+              )}
             </View>
           </View>
 

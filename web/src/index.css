@@ -1656,3 +1656,20 @@ button.kind-icon:hover:not(:disabled) {
 .intent-chip.append.selected {
   border-color: var(--accent);
 }
+
+/* A scheduled event that has ended: muted, not struck (struck = done/cancelled). */
+.badge.status-passed {
+  color: var(--muted);
+  background: var(--surface-2);
+}
+
+.feed-row.passed .feed-title,
+.row.passed .row-title,
+.cal-item.passed .cal-title,
+.cal-item.passed .cal-time {
+  color: var(--muted);
+}
+
+.cal-item.passed {
+  opacity: 0.7;
+}

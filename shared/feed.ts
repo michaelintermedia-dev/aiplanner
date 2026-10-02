@@ -61,5 +61,19 @@ export function feedWhen(item: FeedItem, zone: ZoneContext): string | null {
   return item.kind === 'Appointment' && item.endUtc ? `${start} – ${formatTime(item.endUtc, zone)}` : start
 }
 
+/**
+ * A scheduled event whose end (or start, without an end) is behind us. Worked
+ * out from the clock, never stored, so it can't go stale. Shown as "Passed"
+ * and muted (not struck through - that means done or cancelled).
+ */
+export function eventPassed(e: { status: string | null; startUtc: string | null; endUtc: string | null }, now = Date.now()): boolean {
+  const end = e.endUtc ?? e.startUtc
+  return e.status === 'Scheduled' && !!end && new Date(end).getTime() < now
+}
+
+/** Feed rows use dateUtc for the start. */
+export const feedItemPassed = (item: FeedItem) =>
+  item.kind === 'Appointment' && eventPassed({ status: item.status, startUtc: item.dateUtc, endUtc: item.endUtc })
+
 /** Done = completed or cancelled (shown struck through). */
 export const isDone = (item: FeedItem) => item.status === 'Completed' || item.status === 'Cancelled'

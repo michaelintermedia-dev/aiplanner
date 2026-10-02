@@ -1,4 +1,5 @@
 import { formatTime } from '@shared/dates'
+import { eventPassed } from '@shared/feed'
 import type { Appointment } from '@shared/types'
 import { router } from 'expo-router'
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native'
@@ -14,6 +15,7 @@ export function AppointmentRow({ appointment: a, last }: { appointment: Appointm
   const complete = useAction(appointmentsApi.complete)
   const cancel = useAction(appointmentsApi.cancel)
   const done = a.status !== 'Scheduled'
+  const passed = eventPassed(a)
 
   const showActions = () =>
     Alert.alert(a.title, undefined, [
@@ -35,10 +37,11 @@ export function AppointmentRow({ appointment: a, last }: { appointment: Appointm
         delayLongPress={350}
         accessibilityRole="button"
         accessibilityHint="Opens the appointment. Long-press for quick actions.">
-        <Text style={[styles.title, { color: done ? c.muted : c.text }, done && styles.struck]}>{a.title}</Text>
+        <Text style={[styles.title, { color: done || passed ? c.muted : c.text }, done && styles.struck]}>{a.title}</Text>
         <View style={styles.meta}>
           {a.location && <Text style={[styles.metaText, { color: c.muted }]}>{a.location}</Text>}
           {done && <Badge label={a.status} />}
+          {passed && <Badge label="Passed" />}
         </View>
       </Pressable>
     </Row>

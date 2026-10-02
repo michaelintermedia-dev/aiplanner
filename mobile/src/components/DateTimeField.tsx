@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useAuth } from '@/auth/useAuth'
 import { useColors } from '@/theme'
+import { t } from '@shared/i18n'
 
 /**
  * A tappable chip that picks a date ("yyyy-MM-dd") or time ("HH:mm") as a
@@ -63,7 +64,7 @@ export function DateTimeField({
           <Text style={[styles.text, { color: value ? c.text : c.muted }]}>{label}</Text>
         </Pressable>
         {value && !disabled && (
-          <Pressable onPress={() => onChange(null)} hitSlop={8} accessibilityLabel={`Clear ${placeholder.toLowerCase()}`}>
+          <Pressable onPress={() => onChange(null)} hitSlop={8} accessibilityLabel={t('common.clearField', { field: placeholder })}>
             <Text style={[styles.clear, { color: c.muted }]}>×</Text>
           </Pressable>
         )}

@@ -9,6 +9,7 @@ import {
   reminderPresets,
   reminderProblem,
   repeats,
+  shortDay,
   WEEKDAYS,
 } from '@shared/reminders'
 import type { Reminder } from '@shared/types'
@@ -17,6 +18,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useAuth } from '@/auth/useAuth'
 import { useColors } from '@/theme'
 import { DateTimeField } from './DateTimeField'
+import { t } from '@shared/i18n'
 
 /**
  * The one reminder control (same as web's ReminderPicker). Collapsed it reads
@@ -31,7 +33,7 @@ export function ReminderPicker({
   showProblem = true,
   open: openProp,
   onOpenChange,
-  emptyLabel = 'Add a reminder',
+  emptyLabel = t('reminder.add'),
 }: {
   value: Reminder | null
   onChange: (reminder: Reminder | null) => void
@@ -63,12 +65,12 @@ export function ReminderPicker({
           style={[styles.summary, { borderColor: c.border }]}
           accessibilityRole="button"
           accessibilityState={{ expanded: open }}
-          accessibilityLabel={value ? `Reminder: ${describeReminder(value, zone)}. Tap to change.` : emptyLabel}>
+          accessibilityLabel={value ? t('reminder.aria', { reminder: describeReminder(value, zone) }) : emptyLabel}>
           <Ionicons name={repeats(value) ? 'repeat' : 'notifications-outline'} size={16} color={value ? c.text : c.muted} />
           <Text style={{ color: value ? c.text : c.muted, fontSize: 14 }}>{value ? describeReminder(value, zone) : emptyLabel}</Text>
         </Pressable>
         {value && (
-          <Pressable onPress={() => onChange(null)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Remove reminder">
+          <Pressable onPress={() => onChange(null)} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('reminder.remove')}>
             <Ionicons name="close" size={20} color={c.muted} />
           </Pressable>
         )}
@@ -76,7 +78,7 @@ export function ReminderPicker({
 
       {open && (
         <View style={[styles.editor, { borderColor: c.border, backgroundColor: c.surface2 }]}>
-          <Text style={[styles.caption, { color: c.muted }]}>QUICK</Text>
+          <Text style={[styles.caption, { color: c.muted }]}>{t('reminder.quick').toUpperCase()}</Text>
           <View style={styles.wrap}>
             {reminderPresets(zone, itemHasTime && !isNote).map((p) => (
               <Pressable
@@ -92,7 +94,7 @@ export function ReminderPicker({
             ))}
           </View>
 
-          <Text style={[styles.caption, { color: c.muted }]}>OR SET UP</Text>
+          <Text style={[styles.caption, { color: c.muted }]}>{t('reminder.orSetUp').toUpperCase()}</Text>
           <View style={styles.wrap} accessibilityRole="radiogroup">
             {kinds.map((k) => (
               <Pressable
@@ -112,14 +114,14 @@ export function ReminderPicker({
                 mode="date"
                 value={value.atUtc ? dateKey(value.atUtc, zone.timeZone) : null}
                 onChange={(d) => d && onChange({ ...value, atUtc: zonedToUtc(d, value.atUtc ? timeKey(value.atUtc, zone.timeZone) : '09:00', zone.timeZone) })}
-                placeholder="Date"
+                placeholder={t('item.date')}
               />
               <DateTimeField
                 mode="time"
                 value={value.atUtc ? timeKey(value.atUtc, zone.timeZone) : null}
                 date={value.atUtc ? dateKey(value.atUtc, zone.timeZone) : null}
-                onChange={(t) => t && value.atUtc && onChange({ ...value, atUtc: zonedToUtc(dateKey(value.atUtc, zone.timeZone), t, zone.timeZone) })}
-                placeholder="Time"
+                onChange={(time) => time && value.atUtc && onChange({ ...value, atUtc: zonedToUtc(dateKey(value.atUtc, zone.timeZone), time, zone.timeZone) })}
+                placeholder={t('item.time')}
               />
             </View>
           )}
@@ -145,8 +147,8 @@ export function ReminderPicker({
                     style={[styles.day, { borderColor: on ? c.accent : c.border, backgroundColor: on ? c.accent : 'transparent' }]}
                     accessibilityRole="checkbox"
                     accessibilityState={{ checked: on }}
-                    accessibilityLabel={day}>
-                    <Text style={{ color: on ? '#fff' : c.text, fontSize: 13 }}>{day.slice(0, 2)}</Text>
+                    accessibilityLabel={shortDay(day, zone.locale)}>
+                    <Text style={{ color: on ? '#fff' : c.text, fontSize: 13 }}>{shortDay(day, zone.locale)}</Text>
                   </Pressable>
                 )
               })}
@@ -155,13 +157,13 @@ export function ReminderPicker({
 
           {(value?.kind === 'Daily' || value?.kind === 'Weekdays' || value?.kind === 'Weekly') && (
             <View style={styles.wrap}>
-              <DateTimeField mode="time" value={value.time ?? null} onChange={(t) => onChange({ ...value, time: t })} placeholder="Time" prefix="at" />
+              <DateTimeField mode="time" value={value.time ?? null} onChange={(time) => onChange({ ...value, time })} placeholder={t('item.time')} prefix={t('reminder.at')} />
             </View>
           )}
 
-          {repeats(value) && <Text style={{ color: c.muted, fontSize: 13 }}>Repeats until you turn it off.</Text>}
+          {repeats(value) && <Text style={{ color: c.muted, fontSize: 13 }}>{t('reminder.repeatsUntilOff')}</Text>}
           <Pressable onPress={() => setOpen(false)} style={[styles.done, { borderColor: c.border }]} accessibilityRole="button">
-            <Text style={{ color: c.text }}>Done</Text>
+            <Text style={{ color: c.text }}>{t('common.done')}</Text>
           </Pressable>
         </View>
       )}

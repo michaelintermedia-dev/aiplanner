@@ -8,6 +8,7 @@ import { AppointmentRow } from '../components/AppointmentRow'
 import { CaptureBar } from '../components/CaptureBar'
 import { TaskRow } from '../components/TaskRow'
 import { formatDateKey, formatDue, formatTime } from '@shared/dates'
+import { t } from '@shared/i18n'
 
 function useNow(intervalMs = 30_000) {
   const [now, setNow] = useState(() => new Date())
@@ -28,46 +29,46 @@ export function TodayPage() {
     <div className="page">
       <header className="page-header">
         <div>
-          <p className="muted">Hello, {user?.displayName}</p>
+          <p className="muted">{t('today.hello', { name: user?.displayName ?? '' })}</p>
           <h1>
-            {data ? formatDateKey(data.date, zone.locale) : 'Today'}
+            {data ? formatDateKey(data.date, zone.locale) : t('date.today')}
             <span className="clock">{formatTime(now.toISOString(), zone)}</span>
           </h1>
         </div>
-        <button onClick={() => setAddingAppointment(true)}>+ Appointment</button>
+        <button onClick={() => setAddingAppointment(true)}>{t('today.addEvent')}</button>
       </header>
 
       {addingAppointment && <AppointmentForm initialDate={data?.date} onDone={() => setAddingAppointment(false)} />}
       <CaptureBar />
 
-      {isPending && <p className="muted">Loading…</p>}
+      {isPending && <p className="muted">{t('common.loading')}</p>}
       {error && <p className="error">{error.message}</p>}
       {data && (
         <div className="sections">
-          <Section title="Schedule" empty="No appointments today.">
+          <Section title={t('today.schedule')} empty={t('today.scheduleEmpty')}>
             {data.appointmentsToday.map((a) => (
               <AppointmentRow key={a.id} appointment={a} />
             ))}
           </Section>
           {data.overdueTasks.length > 0 && (
-            <Section title="Overdue" tone="warn">
+            <Section title={t('filter.when.overdue')} tone="warn">
               {data.overdueTasks.map((t) => (
                 <TaskRow key={t.id} task={t} />
               ))}
             </Section>
           )}
-          <Section title="Due today" empty="Nothing due today.">
+          <Section title={t('today.dueToday')} empty={t('today.dueTodayEmpty')}>
             {data.tasksDueToday.map((t) => (
               <TaskRow key={t.id} task={t} />
             ))}
           </Section>
-          <Section title="Ongoing" empty="No ongoing tasks.">
+          <Section title={t('today.ongoing')} empty={t('today.ongoingEmpty')}>
             {data.ongoingTasks.map((t) => (
               <TaskRow key={t.id} task={t} />
             ))}
           </Section>
           {data.upcomingReminders.length > 0 && (
-            <Section title="Upcoming reminders">
+            <Section title={t('today.upcomingReminders')}>
               {data.upcomingReminders.map((r) => (
                 <li key={r.key} className="row reminder">
                   <Link className="row-title" to={`/${r.sourceType === 'Task' ? 'tasks' : r.sourceType === 'Note' ? 'notes' : 'appointments'}/${r.sourceId}`}>

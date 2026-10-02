@@ -8,12 +8,14 @@ import {
   reminderPresets,
   reminderProblem,
   repeats,
+  shortDay,
   WEEKDAYS,
 } from '@shared/reminders'
 import type { Reminder } from '@shared/types'
 import { useState } from 'react'
 import { IoClose, IoNotificationsOutline, IoRepeat } from 'react-icons/io5'
 import { useAuth } from '../auth/useAuth'
+import { t } from '@shared/i18n'
 
 /**
  * The one reminder control, used wherever an item is created or edited.
@@ -29,7 +31,7 @@ export function ReminderPicker({
   showProblem = true,
   open: openProp,
   onOpenChange,
-  emptyLabel = 'Add a reminder',
+  emptyLabel = t('reminder.add'),
 }: {
   value: Reminder | null
   onChange: (reminder: Reminder | null) => void
@@ -58,7 +60,7 @@ export function ReminderPicker({
           <span className={value ? undefined : 'muted'}>{value ? describeReminder(value, zone) : emptyLabel}</span>
         </button>
         {value && (
-          <button type="button" className="icon-button" onClick={() => onChange(null)} aria-label="Remove reminder" title="Remove reminder">
+          <button type="button" className="icon-button" onClick={() => onChange(null)} aria-label={t('reminder.remove')} title={t('reminder.remove')}>
             <IoClose aria-hidden />
           </button>
         )}
@@ -66,7 +68,7 @@ export function ReminderPicker({
 
       {open && (
         <div className="reminder-editor">
-          <span className="caption">Quick</span>
+          <span className="caption">{t('reminder.quick')}</span>
           <div className="reminder-presets">
             {reminderPresets(zone, itemHasTime && !isNote).map((p) => (
               <button
@@ -82,8 +84,8 @@ export function ReminderPicker({
             ))}
           </div>
 
-          <span className="caption">Or set up</span>
-          <div className="segmented small" role="radiogroup" aria-label="Repeat">
+          <span className="caption">{t('reminder.orSetUp')}</span>
+          <div className="segmented small" role="radiogroup" aria-label={t('reminder.repeat')}>
             {kinds.map((k) => (
               <button
                 key={k.kind}
@@ -100,7 +102,7 @@ export function ReminderPicker({
           {value?.kind === 'At' && (
             <div className="form-row">
               <label>
-                Date
+                {t('item.date')}
                 <input
                   type="date"
                   value={value.atUtc ? dateKey(value.atUtc, zone.timeZone) : ''}
@@ -111,7 +113,7 @@ export function ReminderPicker({
                 />
               </label>
               <label>
-                Time
+                {t('item.time')}
                 <input
                   type="time"
                   value={value.atUtc ? timeKey(value.atUtc, zone.timeZone) : ''}
@@ -127,7 +129,7 @@ export function ReminderPicker({
 
           {value?.kind === 'Before' && (
             <label>
-              When
+              {t('event.when')}
               <select value={value.minutesBefore ?? 0} onChange={(e) => onChange({ ...value, minutesBefore: Number(e.target.value) })}>
                 {[...new Set([...BEFORE_CHOICES, value.minutesBefore ?? 0])].sort((a, b) => a - b).map((m) => (
                   <option key={m} value={m}>
@@ -139,7 +141,7 @@ export function ReminderPicker({
           )}
 
           {value?.kind === 'Weekly' && (
-            <div className="weekday-toggles" role="group" aria-label="Days">
+            <div className="weekday-toggles" role="group" aria-label={t('reminder.days')}>
               {WEEKDAYS.map((day) => {
                 const on = !!value.days?.includes(day)
                 return (
@@ -149,7 +151,7 @@ export function ReminderPicker({
                     aria-pressed={on}
                     className={on ? 'active' : undefined}
                     onClick={() => onChange({ ...value, days: on ? value.days!.filter((d) => d !== day) : [...(value.days ?? []), day] })}>
-                    {day.slice(0, 2)}
+                    {shortDay(day, zone.locale)}
                   </button>
                 )
               })}
@@ -158,15 +160,15 @@ export function ReminderPicker({
 
           {(value?.kind === 'Daily' || value?.kind === 'Weekdays' || value?.kind === 'Weekly') && (
             <label>
-              Time
+              {t('item.time')}
               <input type="time" value={value.time ?? ''} onChange={(e) => onChange({ ...value, time: e.target.value || null })} />
             </label>
           )}
 
-          {value && repeats(value) && <p className="muted small">Repeats until you turn it off.</p>}
+          {value && repeats(value) && <p className="muted small">{t('reminder.repeatsUntilOff')}</p>}
           <div className="form-actions">
             <button type="button" onClick={() => setOpen(false)}>
-              Done
+              {t('common.done')}
             </button>
           </div>
         </div>

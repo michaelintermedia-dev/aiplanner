@@ -16,6 +16,7 @@ import { SourceCapture } from '@/components/SourceCapture'
 import { Button } from '@/components/ui'
 import { useAction } from '@/lib/useAction'
 import { useColors } from '@/theme'
+import { t } from '@shared/i18n'
 
 export default function NoteDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -31,8 +32,8 @@ export default function NoteDetailScreen() {
   const [content, setContent] = useState('')
   const [reminders, setReminders] = useState<Reminder[]>([])
 
-  if (isPending) return <Screen><Text style={{ color: c.muted }}>Loading…</Text></Screen>
-  if (error || !note) return <Screen><Text style={{ color: c.danger }}>{error?.message ?? 'Note not found.'}</Text></Screen>
+  if (isPending) return <Screen><Text style={{ color: c.muted }}>{t('common.loading')}</Text></Screen>
+  if (error || !note) return <Screen><Text style={{ color: c.danger }}>{error?.message ?? t('note.notFound')}</Text></Screen>
 
   const when = (utc: string) =>
     `${formatDateKey(dateKey(utc, zone.timeZone), zone.locale, { month: 'short', day: 'numeric' })}, ${formatTime(utc, zone)}`
@@ -51,10 +52,10 @@ export default function NoteDetailScreen() {
     )
 
   const confirmDelete = () =>
-    Alert.alert('Delete note?', undefined, [
-      { text: 'Keep', style: 'cancel' },
+    Alert.alert(t('note.confirmDelete'), undefined, [
+      { text: t('changeType.keep'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: () => {
           setDeleting(true)
@@ -65,17 +66,17 @@ export default function NoteDetailScreen() {
 
   return (
     <Screen>
-      <Stack.Screen options={{ title: editing ? 'Edit note' : 'Note' }} />
+      <Stack.Screen options={{ title: editing ? t('note.edit') : t('kind.note') }} />
       {editing ? (
         <View style={s.form}>
-          <Field label="Title (optional)" value={title} onChangeText={setTitle} />
-          <Field label="Note" value={content} onChangeText={setContent} multiline />
+          <Field label={`${t('item.title')} ${t('item.optional')}`} value={title} onChangeText={setTitle} />
+          <Field label={t('kind.note')} value={content} onChangeText={setContent} multiline />
           <ReminderList value={reminders} onChange={setReminders} itemHasTime={false} isNote />
           {update.error && <Text style={{ color: c.danger }}>{update.error.message}</Text>}
           <View style={s.actions}>
-            <Button title="Cancel" onPress={() => setEditing(false)} />
+            <Button title={t('common.cancel')} onPress={() => setEditing(false)} />
             <Button
-              title="Save changes"
+              title={t('item.saveChanges')}
               variant="primary"
               busy={update.isPending}
               disabled={!content.trim() || !!reminderIssue}
@@ -86,7 +87,7 @@ export default function NoteDetailScreen() {
       ) : (
         <>
           <View style={{ gap: 8 }}>
-            <Text style={[s.kind, { color: c.muted, borderLeftColor: c.warn }]}>NOTE</Text>
+            <Text style={[s.kind, { color: c.muted, borderLeftColor: c.warn }]}>{t('kind.note').toUpperCase()}</Text>
             {note.title && note.title !== note.content && <Text style={[s.title, { color: c.text }]}>{note.title}</Text>}
           </View>
           <ChangeType itemType="Note" id={note.id} />
@@ -96,17 +97,17 @@ export default function NoteDetailScreen() {
           {note.reminders.map((r, i) => (
             <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Ionicons name={repeats(r) ? 'repeat' : 'notifications-outline'} size={16} color={c.text} />
-              <Text style={{ color: c.text, fontSize: 15 }}>Remind me: {describeReminder(r, zone)}</Text>
+              <Text style={{ color: c.text, fontSize: 15 }}>{t('note.remindMe', { reminder: describeReminder(r, zone) })}</Text>
             </View>
           ))}
           <Text style={{ color: c.muted, fontSize: 13 }}>
-            Created {when(note.createdAtUtc)}
-            {note.updatedAtUtc !== note.createdAtUtc ? ` · edited ${when(note.updatedAtUtc)}` : ''}
+            {t('note.created', { when: when(note.createdAtUtc) })}
+            {note.updatedAtUtc !== note.createdAtUtc ? ` · ${t('note.edited', { when: when(note.updatedAtUtc) })}` : ''}
           </Text>
           {remove.error && <Text style={{ color: c.danger }}>{remove.error.message}</Text>}
           <View style={s.actions}>
             <Button
-              title="Edit"
+              title={t('common.edit')}
               variant="primary"
               onPress={() => {
                 setTitle(note.title ?? '')
@@ -115,7 +116,7 @@ export default function NoteDetailScreen() {
                 setEditing(true)
               }}
             />
-            <Button title="Delete" variant="danger" disabled={remove.isPending} onPress={confirmDelete} />
+            <Button title={t('common.delete')} variant="danger" disabled={remove.isPending} onPress={confirmDelete} />
           </View>
         </>
       )}

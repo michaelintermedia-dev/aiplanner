@@ -4,7 +4,7 @@ import type { AppendTarget } from '@shared/types'
 import { useQuery } from '@tanstack/react-query'
 import { useAudioPlayer } from 'expo-audio'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Alert, Pressable, StyleSheet, Text, View, I18nManager } from 'react-native'
 import { API_URL, getAccessToken } from '@/api/client'
 import { capturesApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
@@ -12,6 +12,7 @@ import { useAction } from '@/lib/useAction'
 import { useColors } from '@/theme'
 import { CaptureBar } from './CaptureBar'
 import { Button } from './ui'
+import { t } from '@shared/i18n'
 
 /**
  * "Where this came from": the capture an item was created from, with the
@@ -26,14 +27,14 @@ export function SourceCapture({ captureId, item }: { captureId: string; item?: A
   const [showText, setShowText] = useState(true)
 
   if (error) return null
-  if (!capture) return <Text style={{ color: c.muted }}>Loading source…</Text>
+  if (!capture) return <Text style={{ color: c.muted }}>{t('source.loading')}</Text>
 
   const when = `${formatDateKey(dateKey(capture.createdAtUtc, zone.timeZone), zone.locale, { month: 'short', day: 'numeric' })}, ${formatTime(capture.createdAtUtc, zone)}`
 
   return (
     <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.border }]}>
       <Text style={[styles.heading, { color: c.muted }]}>
-        {capture.source === 'Voice' ? '🎤 FROM A VOICE CAPTURE' : '⌨ FROM A TYPED CAPTURE'}
+        {capture.source === 'Voice' ? `🎤 ${t('source.fromVoice').toUpperCase()}` : `⌨ ${t('source.fromTyped').toUpperCase()}`}
       </Text>
       <Text style={{ color: c.muted }}>
         “{capture.title}” · {when}
@@ -41,7 +42,7 @@ export function SourceCapture({ captureId, item }: { captureId: string; item?: A
       {capture.summary && <Text style={{ color: c.text }}>{capture.summary}</Text>}
       <Pressable onPress={() => setShowText((s) => !s)} accessibilityRole="button">
         <Text style={{ color: c.muted }}>
-          {showText ? '▾' : '▸'} {capture.source === 'Voice' ? 'Full transcription' : 'What you typed'}
+          {showText ? '▾' : I18nManager.isRTL ? '◂' : '▸'} {capture.source === 'Voice' ? t('capture.fullTranscription') : t('capture.whatYouTyped')}
         </Text>
       </Pressable>
       {showText && <Text style={[styles.text, { color: c.text, backgroundColor: c.surface2 }]}>{capture.inputText}</Text>}
@@ -56,7 +57,7 @@ export function SourceCapture({ captureId, item }: { captureId: string; item?: A
             style={[styles.continue, { borderColor: c.border }]}
             accessibilityRole="button">
             <Ionicons name="mic-outline" size={18} color={c.text} />
-            <Text style={{ color: c.text }}>Add more - keep talking</Text>
+            <Text style={{ color: c.text }}>{t('source.addMore')}</Text>
           </Pressable>
         ))}
 
@@ -65,19 +66,19 @@ export function SourceCapture({ captureId, item }: { captureId: string; item?: A
           <View style={styles.audio}>
             <RecordingPlayer captureId={captureId} parts={capture.audioParts} />
             <Button
-              title="Delete recording"
+              title={t('source.deleteAudio')}
               variant="danger"
               disabled={deleteAudio.isPending}
               onPress={() =>
-                Alert.alert('Delete the recording?', 'The transcription is kept.', [
-                  { text: 'Keep', style: 'cancel' },
-                  { text: 'Delete', style: 'destructive', onPress: () => deleteAudio.mutate(undefined) },
+                Alert.alert(t('source.confirmDeleteAudioTitle'), t('source.transcriptionKept'), [
+                  { text: t('changeType.keep'), style: 'cancel' },
+                  { text: t('common.delete'), style: 'destructive', onPress: () => deleteAudio.mutate(undefined) },
                 ])
               }
             />
           </View>
         ) : (
-          <Text style={{ color: c.muted }}>The recording was deleted; the transcription is kept.</Text>
+          <Text style={{ color: c.muted }}>{t('source.audioDeleted')}</Text>
         ))}
     </View>
   )
@@ -122,7 +123,7 @@ function RecordingPlayer({ captureId, parts }: { captureId: string; parts: numbe
   const playing = part !== null
   return (
     <Button
-      title={playing ? `■ Stop${parts > 1 ? ` (part ${part + 1}/${parts})` : ''}` : `▶ Play recording${parts > 1 ? ` (${parts} parts)` : ''}`}
+      title={playing ? `■ ${t('player.stop')}${parts > 1 ? ` (${t('player.part', { part: part + 1, parts })})` : ''}` : `▶ ${t('player.play')}${parts > 1 ? ` (${t('player.parts', { count: parts })})` : ''}`}
       onPress={() => {
         if (playing) {
           player.pause()

@@ -9,6 +9,7 @@ import { KindIcon } from '../components/KindIcon'
 import { CALENDAR_VIEWS, periodTitle, stepPeriod, visibleDays } from '@shared/calendar'
 import { eventPassed } from '@shared/feed'
 import { dateKey, formatDateKey, formatTime, todayKey } from '@shared/dates'
+import { t } from '@shared/i18n'
 
 export function CalendarPage() {
   const { zone } = useAuth()
@@ -46,12 +47,12 @@ export function CalendarPage() {
               </button>
             ))}
           </div>
-          <button onClick={() => setAnchor(stepPeriod(view, anchor, -1))} aria-label="Previous">
-            ‹
+          <button onClick={() => setAnchor(stepPeriod(view, anchor, -1))} aria-label={t('calendar.previous')}>
+            <span className="flip-rtl">‹</span>
           </button>
-          <button onClick={() => setAnchor(today)}>Today</button>
-          <button onClick={() => setAnchor(stepPeriod(view, anchor, 1))} aria-label="Next">
-            ›
+          <button onClick={() => setAnchor(today)}>{t('date.today')}</button>
+          <button onClick={() => setAnchor(stepPeriod(view, anchor, 1))} aria-label={t('calendar.next')}>
+            <span className="flip-rtl">›</span>
           </button>
         </div>
       </header>
@@ -65,7 +66,7 @@ export function CalendarPage() {
             key={day}
             className={`day${day === today ? ' today' : ''}${view === 'month' && day.slice(0, 7) !== anchor.slice(0, 7) ? ' outside' : ''}`}
           >
-            <button className="day-header" onClick={() => setAddingOn(day)} title="Add appointment">
+            <button className="day-header" onClick={() => setAddingOn(day)} title={t('calendar.addEvent')}>
               {formatDateKey(day, zone.locale, view === 'month' ? { day: 'numeric' } : { weekday: 'short', day: 'numeric' })}
             </button>
             <ul>
@@ -83,7 +84,7 @@ export function CalendarPage() {
 
       {data && data.ongoingTasks.length > 0 && (
         <section className="section">
-          <h2>Ongoing</h2>
+          <h2>{t('today.ongoing')}</h2>
           <ul className="chips">
             {data.ongoingTasks.map((t) => (
               <li key={t.id}>{t.title}</li>

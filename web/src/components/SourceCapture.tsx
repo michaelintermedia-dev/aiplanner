@@ -8,6 +8,7 @@ import { useAuth } from '../auth/useAuth'
 import { CaptureBar } from './CaptureBar'
 import { toWav } from '../lib/toWav'
 import { useAction } from '../lib/useAction'
+import { t } from '@shared/i18n'
 
 /**
  * "Where this came from": the capture an item was created from, with the
@@ -20,19 +21,19 @@ export function SourceCapture({ captureId, item }: { captureId: string; item?: A
   const deleteAudio = useAction(() => capturesApi.deleteAudio(captureId))
 
   if (error) return null // The capture may have been removed; the item still stands on its own.
-  if (!capture) return <p className="muted">Loading source…</p>
+  if (!capture) return <p className="muted">{t('source.loading')}</p>
 
   const when = `${formatDateKey(dateKey(capture.createdAtUtc, zone.timeZone), zone.locale, { month: 'short', day: 'numeric' })}, ${formatTime(capture.createdAtUtc, zone)}`
 
   return (
     <section className="card source">
-      <h2>{capture.source === 'Voice' ? '🎤 From a voice capture' : '⌨ From a typed capture'}</h2>
+      <h2>{capture.source === 'Voice' ? `🎤 ${t('source.fromVoice')}` : `⌨ ${t('source.fromTyped')}`}</h2>
       <p className="muted">
         “{capture.title}” · {when}
       </p>
       {capture.summary && <p>{capture.summary}</p>}
       <details open>
-        <summary>{capture.source === 'Voice' ? 'Full transcription' : 'What you typed'}</summary>
+        <summary>{capture.source === 'Voice' ? t('capture.fullTranscription') : t('capture.whatYouTyped')}</summary>
         <p className="source-text">{capture.inputText}</p>
       </details>
       {item &&
@@ -41,7 +42,7 @@ export function SourceCapture({ captureId, item }: { captureId: string; item?: A
         ) : (
           // Complete an unfinished thought or add an insight, even after saving.
           <button type="button" className="continue-button" onClick={() => setContinuing(true)}>
-            <IoMicOutline aria-hidden /> Add more - keep talking
+            <IoMicOutline aria-hidden /> {t('source.addMore')}
           </button>
         ))}
 
@@ -52,12 +53,12 @@ export function SourceCapture({ captureId, item }: { captureId: string; item?: A
             <button
               className="link danger"
               disabled={deleteAudio.isPending}
-              onClick={() => window.confirm('Delete the recording? The transcription is kept.') && deleteAudio.mutate(undefined)}>
-              Delete recording
+              onClick={() => window.confirm(t('source.confirmDeleteAudio')) && deleteAudio.mutate(undefined)}>
+              {t('source.deleteAudio')}
             </button>
           </div>
         ) : (
-          <p className="muted">The recording was deleted; the transcription is kept.</p>
+          <p className="muted">{t('source.audioDeleted')}</p>
         ))}
     </section>
   )
@@ -89,10 +90,10 @@ function RecordingPlayer({ captureId, parts }: { captureId: string; parts: numbe
     }
   }, [captureId, parts])
 
-  if (failed) return <p className="muted">Couldn’t load the recording.</p>
+  if (failed) return <p className="muted">{t('source.audioFailed')}</p>
   return (
     <div className="audio-part">
-      {url ? <audio controls src={url} aria-label="Recording" /> : <span className="muted">Loading recording…</span>}
+      {url ? <audio controls src={url} aria-label={t('source.recording')} /> : <span className="muted">{t('source.loadingAudio')}</span>}
     </div>
   )
 }

@@ -44,15 +44,17 @@ export function createApi(request: RequestFn) {
     auth: {
       login: (email: string, password: string) =>
         request<AuthResponse>('POST', '/auth/login', { email, password }, { anonymous: true }),
-      register: (email: string, password: string, displayName: string, timeZoneId: string) =>
+      register: (email: string, password: string, displayName: string, timeZoneId: string, locale: string) =>
         request<AuthResponse>(
           'POST',
           '/auth/register',
-          { email, password, displayName, timeZoneId },
+          { email, password, displayName, timeZoneId, locale },
           { anonymous: true },
         ),
       logout: (refreshToken: string) => request<void>('POST', '/auth/logout', { refreshToken }),
       me: () => request<User>('GET', '/users/me'),
+      /** Change the language/locale (BCP 47). */
+      updateProfile: (body: { locale?: string }) => request<User>('PATCH', '/users/me', body),
     },
     tasks: {
       list: (includeCompleted = false) => request<Task[]>('GET', `/tasks?includeCompleted=${includeCompleted}`),

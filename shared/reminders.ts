@@ -1,4 +1,5 @@
 import { addDays, dateKey, formatDateKey, formatTime, timeKey, todayKey, zonedToUtc, type ZoneContext } from './dates'
+import { t } from './i18n'
 import type { Reminder, ReminderKind, Weekday } from './types'
 
 /**
@@ -14,18 +15,18 @@ export const BEFORE_CHOICES = [0, 5, 10, 15, 30, 60, 120, 1440]
 
 /** The kinds the picker offers, in order; "Before" only where the item has a time. */
 export const REMINDER_KINDS: { kind: ReminderKind; label: string }[] = [
-  { kind: 'At', label: 'Once' },
-  { kind: 'Before', label: 'Before it' },
-  { kind: 'Daily', label: 'Every day' },
-  { kind: 'Weekdays', label: 'Weekdays' },
-  { kind: 'Weekly', label: 'Weekly' },
+  { kind: 'At', get label() { return t('reminder.kind.at') } },
+  { kind: 'Before', get label() { return t('reminder.kind.before') } },
+  { kind: 'Daily', get label() { return t('reminder.kind.daily') } },
+  { kind: 'Weekdays', get label() { return t('reminder.kind.weekdays') } },
+  { kind: 'Weekly', get label() { return t('reminder.kind.weekly') } },
 ]
 
 export function minutesBeforeLabel(minutes: number): string {
-  if (minutes === 0) return 'At the time'
-  if (minutes % 1440 === 0) return `${minutes / 1440} day${minutes === 1440 ? '' : 's'} before`
-  if (minutes % 60 === 0) return `${minutes / 60} hour${minutes === 60 ? '' : 's'} before`
-  return `${minutes} min before`
+  if (minutes === 0) return t('reminder.atTheTime')
+  if (minutes % 1440 === 0) return t('reminder.daysBefore', { count: minutes / 1440 })
+  if (minutes % 60 === 0) return t('reminder.hoursBefore', { count: minutes / 60 })
+  return t('reminder.minutesBefore', { count: minutes })
 }
 
 /** "08:00" -> "8:00 AM" (or "08:00" in 24-hour locales). */
@@ -34,7 +35,8 @@ export function formatClock(time: string, locale: string): string {
   return new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit', timeZone: 'UTC' }).format(new Date(Date.UTC(2000, 0, 1, h, m)))
 }
 
-const shortDay = (day: Weekday, locale: string) =>
+/** "Mon" / "Пн" / "יום ב׳" - a weekday's short name in the user's language. */
+export const shortDay = (day: Weekday, locale: string) =>
   // 2024-01-07 was a Sunday; WEEKDAYS-independent lookup by name.
   formatDateKey(addDays('2024-01-07', ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(day)), locale, { weekday: 'short' })
 
@@ -43,17 +45,17 @@ export function describeReminder(r: Reminder, zone: ZoneContext): string {
   const at = r.time ? formatClock(r.time, zone.locale) : '…'
   switch (r.kind) {
     case 'At':
-      if (!r.atUtc) return 'Once - pick a time'
+      if (!r.atUtc) return t('reminder.oncePickTime')
       return `${formatDateKey(dateKey(r.atUtc, zone.timeZone), zone.locale, { weekday: 'short', month: 'short', day: 'numeric' })}, ${formatTime(r.atUtc, zone)}`
     case 'Before':
       return minutesBeforeLabel(r.minutesBefore ?? 0)
     case 'Daily':
-      return `Every day at ${at}`
+      return t('reminder.dailyAt', { time: at })
     case 'Weekdays':
-      return `Weekdays at ${at}`
+      return t('reminder.weekdaysAt', { time: at })
     case 'Weekly': {
       const days = WEEKDAYS.filter((d) => r.days?.includes(d)).map((d) => shortDay(d, zone.locale))
-      return `${days.length ? days.join(', ') : 'Weekly'} at ${at}`
+      return t('reminder.daysAt', { days: days.length ? days.join(', ') : t('reminder.kind.weekly'), time: at })
     }
   }
 }
@@ -65,14 +67,14 @@ export function reminderPresets(zone: ZoneContext, itemHasTime: boolean, now = n
   return [
     ...(itemHasTime
       ? [
-          { label: 'At the time', reminder: { kind: 'Before', minutesBefore: 0 } as Reminder },
-          { label: '10 min before', reminder: { kind: 'Before', minutesBefore: 10 } as Reminder },
-          { label: '1 hour before', reminder: { kind: 'Before', minutesBefore: 60 } as Reminder },
+          { label: t('reminder.atTheTime'), reminder: { kind: 'Before', minutesBefore: 0 } as Reminder },
+          { label: t('reminder.minutesBefore', { count: 10 }), reminder: { kind: 'Before', minutesBefore: 10 } as Reminder },
+          { label: t('reminder.hoursBefore', { count: 1 }), reminder: { kind: 'Before', minutesBefore: 60 } as Reminder },
         ]
       : []),
-    { label: 'In 1 hour', reminder: { kind: 'At', atUtc: inAnHour } },
-    { label: 'Tomorrow 9:00', reminder: { kind: 'At', atUtc: tomorrow9 } },
-    { label: 'Every day 9:00', reminder: { kind: 'Daily', time: '09:00' } },
+    { label: t('reminder.preset.inAnHour'), reminder: { kind: 'At', atUtc: inAnHour } },
+    { label: t('reminder.preset.tomorrow9', { time: formatClock('09:00', zone.locale) }), reminder: { kind: 'At', atUtc: tomorrow9 } },
+    { label: t('reminder.preset.daily9', { time: formatClock('09:00', zone.locale) }), reminder: { kind: 'Daily', time: '09:00' } },
   ]
 }
 
@@ -96,15 +98,15 @@ export function reminderProblem(r: Reminder | null, opts: { itemHasTime: boolean
   if (!r) return null
   switch (r.kind) {
     case 'At':
-      return r.atUtc ? null : 'Pick when to remind you.'
+      return r.atUtc ? null : t('reminder.problem.pickWhen')
     case 'Before':
-      if (opts.isNote) return 'A note has no time of its own - pick a time for the reminder.'
-      return opts.itemHasTime ? null : 'Add a time, or pick a different reminder.'
+      if (opts.isNote) return t('reminder.problem.noteHasNoTime')
+      return opts.itemHasTime ? null : t('reminder.problem.addTime')
     case 'Weekly':
-      if (!r.days?.length) return 'Pick at least one day for the reminder.'
-      return r.time ? null : 'Pick a time for the reminder.'
+      if (!r.days?.length) return t('reminder.problem.pickDay')
+      return r.time ? null : t('reminder.problem.pickTime')
     default:
-      return r.time ? null : 'Pick a time for the reminder.'
+      return r.time ? null : t('reminder.problem.pickTime')
   }
 }
 

@@ -11,6 +11,7 @@ import { ReminderList } from '../components/ReminderList'
 import { ChangeType } from '../components/ChangeType'
 import { SourceCapture } from '../components/SourceCapture'
 import { useAction } from '../lib/useAction'
+import { t } from '@shared/i18n'
 
 export function NoteDetailPage() {
   const { id = '' } = useParams()
@@ -26,8 +27,8 @@ export function NoteDetailPage() {
   const [content, setContent] = useState('')
   const [reminders, setReminders] = useState<Reminder[]>([])
 
-  if (isPending) return <div className="page"><p className="muted">Loading…</p></div>
-  if (error || !note) return <div className="page"><p className="error">{error?.message ?? 'Note not found.'}</p><Link to="/notes">Back to notes</Link></div>
+  if (isPending) return <div className="page"><p className="muted">{t('common.loading')}</p></div>
+  if (error || !note) return <div className="page"><p className="error">{error?.message ?? t('note.notFound')}</p><Link to="/notes">{t('note.backToList')}</Link></div>
 
   const startEdit = () => {
     setTitle(note.title ?? '')
@@ -52,53 +53,53 @@ export function NoteDetailPage() {
 
       {editing ? (
         <form className="card form" onSubmit={save}>
-          <h3>Edit note</h3>
+          <h3>{t('note.edit')}</h3>
           <label>
-            Title <span className="muted">(optional)</span>
+            {t('item.title')} <span className="muted">{t('item.optional')}</span>
             <input value={title} onChange={(e) => setTitle(e.target.value)} />
           </label>
           <label>
-            Note
+            {t('kind.note')}
             <textarea rows={8} value={content} onChange={(e) => setContent(e.target.value)} required autoFocus />
           </label>
           <div className="field">
-            <span>Reminder</span>
+            <span>{t('item.reminder')}</span>
             <ReminderList value={reminders} onChange={setReminders} itemHasTime={false} isNote />
           </div>
           {update.error && <p className="error">{update.error.message}</p>}
           <div className="form-actions">
-            <button type="button" onClick={() => setEditing(false)}>Cancel</button>
-            <button type="submit" className="primary" disabled={!content.trim() || !!reminderIssue || update.isPending}>Save changes</button>
+            <button type="button" onClick={() => setEditing(false)}>{t('common.cancel')}</button>
+            <button type="submit" className="primary" disabled={!content.trim() || !!reminderIssue || update.isPending}>{t('item.saveChanges')}</button>
           </div>
         </form>
       ) : (
         <>
           <header className="detail-header">
-            <span className="kind note">Note</span>
+            <span className="kind note">{t('kind.note')}</span>
             {note.title && note.title !== note.content && <h1>{note.title}</h1>}
           </header>
           <ChangeType itemType="Note" id={note.id} />
           <p className="note-body">{note.content}</p>
           {note.reminders.map((r, i) => (
             <p key={i} className="note-reminder">
-              {repeats(r) ? <IoRepeat aria-hidden /> : <IoNotificationsOutline aria-hidden />} Remind me: {describeReminder(r, zone)}
+              {repeats(r) ? <IoRepeat aria-hidden /> : <IoNotificationsOutline aria-hidden />} {t('note.remindMe', { reminder: describeReminder(r, zone) })}
             </p>
           ))}
           <p className="muted">
-            Created {when(note.createdAtUtc)}
-            {note.updatedAtUtc !== note.createdAtUtc && ` · edited ${when(note.updatedAtUtc)}`}
+            {t('note.created', { when: when(note.createdAtUtc) })}
+            {note.updatedAtUtc !== note.createdAtUtc && ` · ${t('note.edited', { when: when(note.updatedAtUtc) })}`}
           </p>
           {remove.error && <p className="error">{remove.error.message}</p>}
           <div className="detail-actions">
-            <button className="primary" onClick={startEdit}>Edit</button>
+            <button className="primary" onClick={startEdit}>{t('common.edit')}</button>
             <button
               className="link danger"
               disabled={remove.isPending}
               onClick={() =>
-                window.confirm('Delete this note?') &&
+                window.confirm(t('note.confirmDelete')) &&
                 (setDeleting(true), remove.mutate(note.id, { onSuccess: () => navigate('/notes'), onError: () => setDeleting(false) }))
               }>
-              Delete
+              {t('common.delete')}
             </button>
           </div>
         </>

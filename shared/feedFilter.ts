@@ -1,5 +1,6 @@
 import { weekStart } from './calendar'
 import { addDays, formatDateKey, todayKey, zonedToUtc } from './dates'
+import { t } from './i18n'
 
 /**
  * Feed filters, shared by web and mobile. One set of filters applies to
@@ -41,32 +42,32 @@ export const NO_FILTERS: FeedFilters = {
 }
 
 export const CREATED_OPTIONS: { value: CreatedRange; label: string }[] = [
-  { value: 'any', label: 'Any time' },
-  { value: 'today', label: 'Today' },
-  { value: '7d', label: 'Last 7 days' },
-  { value: '30d', label: 'Last 30 days' },
-  { value: 'custom', label: 'Dates…' },
+  { value: 'any', get label() { return t('filter.created.any') } },
+  { value: 'today', get label() { return t('date.today') } },
+  { value: '7d', get label() { return t('filter.created.7d') } },
+  { value: '30d', get label() { return t('filter.created.30d') } },
+  { value: 'custom', get label() { return t('filter.created.custom') } },
 ]
 
 export const WHEN_OPTIONS: { value: WhenRange; label: string }[] = [
-  { value: 'any', label: 'Any' },
-  { value: 'today', label: 'Today' },
-  { value: 'week', label: 'This week' },
-  { value: 'overdue', label: 'Overdue' },
-  { value: 'nodate', label: 'No date' },
+  { value: 'any', get label() { return t('filter.any') } },
+  { value: 'today', get label() { return t('date.today') } },
+  { value: 'week', get label() { return t('filter.when.week') } },
+  { value: 'overdue', get label() { return t('filter.when.overdue') } },
+  { value: 'nodate', get label() { return t('date.none') } },
 ]
 
 export const REMINDER_OPTIONS: { value: ReminderFilter; label: string }[] = [
-  { value: 'Any', label: 'Any' },
-  { value: 'With', label: 'Has reminder' },
-  { value: 'Repeating', label: 'Repeating' },
-  { value: 'Without', label: 'No reminder' },
+  { value: 'Any', get label() { return t('filter.any') } },
+  { value: 'With', get label() { return t('filter.reminders.with') } },
+  { value: 'Repeating', get label() { return t('filter.reminders.repeating') } },
+  { value: 'Without', get label() { return t('filter.reminders.without') } },
 ]
 
 export const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
-  { value: 'Any', label: 'Any' },
-  { value: 'Open', label: 'Open' },
-  { value: 'Done', label: 'Done' },
+  { value: 'Any', get label() { return t('filter.any') } },
+  { value: 'Open', get label() { return t('filter.status.open') } },
+  { value: 'Done', get label() { return t('filter.status.done') } },
 ]
 
 const labelOf = <T extends string>(options: { value: T; label: string }[], value: T) => options.find((o) => o.value === value)?.label ?? value
@@ -78,12 +79,12 @@ export function filterChips(f: FeedFilters, locale: string): { key: string; labe
   if (f.created !== 'any') {
     const short = (key: string | null) => (key ? formatDateKey(key, locale, { month: 'short', day: 'numeric' }) : '…')
     const label = f.created === 'custom' ? `${short(f.createdFrom)} – ${short(f.createdTo)}` : labelOf(CREATED_OPTIONS, f.created)
-    chips.push({ key: 'created', label: `Created: ${label}`, clear: (x) => ({ ...x, created: 'any', createdFrom: null, createdTo: null }) })
+    chips.push({ key: 'created', label: t('filter.chip.created', { value: label }), clear: (x) => ({ ...x, created: 'any', createdFrom: null, createdTo: null }) })
   }
-  if (f.when !== 'any') chips.push({ key: 'when', label: `When: ${labelOf(WHEN_OPTIONS, f.when)}`, clear: (x) => ({ ...x, when: 'any' }) })
+  if (f.when !== 'any') chips.push({ key: 'when', label: t('filter.chip.when', { value: labelOf(WHEN_OPTIONS, f.when) }), clear: (x) => ({ ...x, when: 'any' }) })
   if (f.status !== 'Any') chips.push({ key: 'status', label: labelOf(STATUS_OPTIONS, f.status), clear: (x) => ({ ...x, status: 'Any' }) })
   if (f.reminders !== 'Any') chips.push({ key: 'reminders', label: labelOf(REMINDER_OPTIONS, f.reminders), clear: (x) => ({ ...x, reminders: 'Any' }) })
-  if (f.fromVoice) chips.push({ key: 'voice', label: 'From voice', clear: (x) => ({ ...x, fromVoice: false }) })
+  if (f.fromVoice) chips.push({ key: 'voice', label: t('filter.fromVoice'), clear: (x) => ({ ...x, fromVoice: false }) })
   for (const tag of f.tags) chips.push({ key: `tag:${tag}`, label: `#${tag}`, clear: (x) => ({ ...x, tags: x.tags.filter((t) => t !== tag) }) })
   return chips
 }

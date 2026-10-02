@@ -11,6 +11,8 @@ import { ChangeType } from '../components/ChangeType'
 import { SourceCapture } from '../components/SourceCapture'
 import { describeReminder, remindersProblem } from '@shared/reminders'
 import { useAction } from '../lib/useAction'
+import { t } from '@shared/i18n'
+import { statusLabel } from '@shared/labels'
 
 export function AppointmentDetailPage() {
   const { id = '' } = useParams()
@@ -29,8 +31,8 @@ export function AppointmentDetailPage() {
   const busy = complete.isPending || cancel.isPending || reopen.isPending || remove.isPending
   const actionError = complete.error ?? cancel.error ?? reopen.error ?? remove.error
 
-  if (isPending) return <div className="page"><p className="muted">Loading…</p></div>
-  if (error || !appt) return <div className="page"><p className="error">{error?.message ?? 'Appointment not found.'}</p><Link to="/calendar">Back to calendar</Link></div>
+  if (isPending) return <div className="page"><p className="muted">{t('common.loading')}</p></div>
+  if (error || !appt) return <div className="page"><p className="error">{error?.message ?? t('event.notFound')}</p><Link to="/calendar">{t('event.backToCalendar')}</Link></div>
 
   const closed = appt.status !== 'Scheduled'
   const passed = eventPassed(appt)
@@ -44,48 +46,48 @@ export function AppointmentDetailPage() {
       ) : (
         <>
           <header className="detail-header">
-            <span className="kind appointment">Appointment</span>
+            <span className="kind appointment">{t('kind.event')}</span>
             <h1 className={closed || passed ? 'struck' : undefined}>{appt.title}</h1>
             <div className="row-meta">
               {passed ? (
-                <span className="badge status-passed">Passed</span>
+                <span className="badge status-passed">{t('status.passed')}</span>
               ) : (
-                <span className={`badge status-${appt.status.toLowerCase()}`}>{appt.status}</span>
+                <span className={`badge status-${appt.status.toLowerCase()}`}>{statusLabel(appt.status)}</span>
               )}
             </div>
           </header>
           <ChangeType itemType="Appointment" id={appt.id} />
 
           <dl className="facts">
-            <dt>When</dt>
+            <dt>{t('event.when')}</dt>
             <dd>
               {formatDateKey(day, zone.locale)}, {formatTime(appt.startUtc, zone)} – {formatTime(appt.endUtc, zone)}
             </dd>
             {appt.location && (
               <>
-                <dt>Where</dt>
+                <dt>{t('event.where')}</dt>
                 <dd>{appt.location}</dd>
               </>
             )}
             {appt.participants.length > 0 && (
               <>
-                <dt>With</dt>
+                <dt>{t('event.with')}</dt>
                 <dd>{appt.participants.map((p) => p.name).join(', ')}</dd>
               </>
             )}
-            <dt>Reminder</dt>
-            <dd>{appt.reminders?.length ? appt.reminders.map((r) => describeReminder(r, zone)).join(' · ') : 'None'}</dd>
+            <dt>{t('item.reminder')}</dt>
+            <dd>{appt.reminders?.length ? appt.reminders.map((r) => describeReminder(r, zone)).join(' · ') : t('item.none')}</dd>
           </dl>
 
           {appt.description && (
             <section className="text-block">
-              <h2>Description</h2>
+              <h2>{t('item.description')}</h2>
               <p>{appt.description}</p>
             </section>
           )}
           {appt.notes && (
             <section className="text-block">
-              <h2>Notes</h2>
+              <h2>{t('item.notes')}</h2>
               <p>{appt.notes}</p>
             </section>
           )}
@@ -94,28 +96,28 @@ export function AppointmentDetailPage() {
           <div className="detail-actions">
             {closed ? (
               <button className="primary" disabled={busy} onClick={() => reopen.mutate(appt.id)}>
-                ↺ Reopen
+                ↺ {t('item.reopen')}
               </button>
             ) : (
               <>
                 <button className="primary" disabled={busy} onClick={() => complete.mutate(appt.id)}>
-                  ✓ Done
+                  ✓ {t('common.done')}
                 </button>
                 <button disabled={busy} onClick={() => cancel.mutate(appt.id)}>
-                  Cancel appointment
+                  {t('event.cancel')}
                 </button>
               </>
             )}
             <button disabled={busy} onClick={() => setEditing(true)}>
-              Edit / reschedule
+              {t('event.editReschedule')}
             </button>
             <button
               className="link danger"
               disabled={busy}
               onClick={() =>
-                window.confirm(`Delete “${appt.title}”?`) && (setDeleting(true), remove.mutate(appt.id, { onSuccess: () => navigate('/calendar'), onError: () => setDeleting(false) }))
+                window.confirm(t('item.confirmDelete', { title: appt.title })) && (setDeleting(true), remove.mutate(appt.id, { onSuccess: () => navigate('/calendar'), onError: () => setDeleting(false) }))
               }>
-              Delete
+              {t('common.delete')}
             </button>
           </div>
         </>
@@ -163,54 +165,54 @@ function AppointmentEditForm({ appt, onDone }: { appt: Appointment; onDone: () =
 
   return (
     <form className="card form" onSubmit={submit}>
-      <h3>Edit appointment</h3>
+      <h3>{t('event.edit')}</h3>
       <label>
-        Title
+        {t('item.title')}
         <input value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus />
       </label>
       <div className="form-row">
         <label>
-          Date
+          {t('item.date')}
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
         </label>
         <label>
-          Start
+          {t('event.start')}
           <input type="time" value={start} onChange={(e) => setStart(e.target.value)} required />
         </label>
         <label>
-          End
+          {t('event.end')}
           <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} required />
         </label>
       </div>
       <div className="field">
-        <span>Reminder</span>
+        <span>{t('item.reminder')}</span>
         <ReminderList value={reminders} onChange={setReminders} itemHasTime />
       </div>
       <div className="form-row">
         <label>
-          Location
+          {t('event.location')}
           <input value={location} onChange={(e) => setLocation(e.target.value)} />
         </label>
         <label>
-          With <span className="muted">(comma-separated)</span>
+          {t('event.with')} <span className="muted">{t('item.commaSeparated')}</span>
           <input value={people} onChange={(e) => setPeople(e.target.value)} />
         </label>
       </div>
       <label>
-        Description
+        {t('item.description')}
         <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
       </label>
       <label>
-        Notes
+        {t('item.notes')}
         <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
       </label>
       {update.error && <p className="error">{update.error.message}</p>}
       <div className="form-actions">
         <button type="button" onClick={onDone}>
-          Cancel
+          {t('common.cancel')}
         </button>
         <button type="submit" className="primary" disabled={!title.trim() || update.isPending || !!reminderIssue}>
-          Save changes
+          {t('item.saveChanges')}
         </button>
       </div>
     </form>

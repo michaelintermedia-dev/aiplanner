@@ -41,7 +41,9 @@ public class NotificationService : INotificationService
             return [];
         }
 
-        var zone = UserTimeZoneHelper.ResolveTimeZone(await _db.Users.Where(u => u.Id == userId).Select(u => u.TimeZoneId).FirstAsync(ct));
+        var user = await _db.Users.Where(u => u.Id == userId).Select(u => new { u.TimeZoneId, u.Locale }).FirstAsync(ct);
+        var zone = UserTimeZoneHelper.ResolveTimeZone(user.TimeZoneId);
+        var texts = NotificationTexts.For(user.Locale);
         var from = _clock.UtcNow;
         var to = from.AddHours(Math.Clamp(hours, 1, MaxHours));
         var result = new List<UpcomingNotificationDto>();
@@ -78,7 +80,7 @@ public class NotificationService : INotificationService
             {
                 var body = itemType == "Note" && r.Note is { } note && note.Title is not null
                     ? NotificationSchedule.Snippet(note.Content)
-                    : NotificationSchedule.ReminderBody(r, itemType, itemTime, at, zone);
+                    : NotificationSchedule.ReminderBody(r, itemType, itemTime, at, zone, texts);
                 result.Add(new UpcomingNotificationDto(
                     $"r:{r.Id:N}:{at.Ticks}", "Reminder", at, title, body, itemType, itemId, CanComplete: itemType == "Task"));
             }
@@ -102,7 +104,7 @@ public class NotificationService : INotificationService
         // ---- daily summary ----
         if (settings.DailySummaryEnabled)
         {
-            result.AddRange(await DailySummariesAsync(userId, TimeOnly.FromTimeSpan(settings.DailySummaryTime), from, to, zone, ct));
+            result.AddRange(await DailySummariesAsync(userId, TimeOnly.FromTimeSpan(settings.DailySummaryTime), from, to, zone, texts, ct));
         }
 
         return result.OrderBy(n => n.AtUtc).ThenBy(n => n.Key, StringComparer.Ordinal).Take(MaxItems).ToList();
@@ -168,7 +170,7 @@ public class NotificationService : INotificationService
     // ---- helpers ----
 
     private async Task<IEnumerable<UpcomingNotificationDto>> DailySummariesAsync(
-        Guid userId, TimeOnly time, DateTime from, DateTime to, TimeZoneInfo zone, CancellationToken ct)
+        Guid userId, TimeOnly time, DateTime from, DateTime to, TimeZoneInfo zone, NotificationTexts texts, CancellationToken ct)
     {
         var tasks = await _db.TaskItems
             .AsNoTracking()
@@ -202,10 +204,11 @@ public class NotificationService : INotificationService
                 dueToday.Count,
                 dueToday.Count(t => t.Priority == TaskPriority.High),
                 tasks.Count(t => t.DueDateUtc < start),
-                events.Count(s => s >= start && s < end));
+                events.Count(s => s >= start && s < end),
+                texts);
             if (body is not null)
             {
-                summaries.Add(new UpcomingNotificationDto($"d:{day:yyyy-MM-dd}", "DailySummary", at, "Your day", body, null, null, false));
+                summaries.Add(new UpcomingNotificationDto($"d:{day:yyyy-MM-dd}", "DailySummary", at, texts.YourDay, body, null, null, false));
             }
         }
         return summaries;

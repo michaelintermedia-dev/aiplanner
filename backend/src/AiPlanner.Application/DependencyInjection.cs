@@ -17,6 +17,8 @@ using AiPlanner.Application.Items.Services;
 using AiPlanner.Application.Notifications.Interfaces;
 using AiPlanner.Application.Notifications.Services;
 using AiPlanner.Application.Reminders;
+using AiPlanner.Application.Users.Interfaces;
+using AiPlanner.Application.Users.Services;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -35,6 +37,7 @@ public static class DependencyInjection
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IItemConversionService, ItemConversionService>();
         services.AddScoped<IItemDeletionService, ItemDeletionService>();
+        services.AddScoped<IUserProfileService, UserProfileService>();
         services.AddScoped<ICalendarService, CalendarService>();
         services.AddScoped<ICaptureService, CaptureService>();
         services.AddScoped<INoteService, NoteService>();

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { t } from '@shared/i18n'
 
 /**
  * idle: nothing recorded. recording: mic is live. paused: there is audio that
@@ -91,7 +92,7 @@ export function useAudioRecorder({ maxSeconds = 10 * 60 }: { maxSeconds?: number
     if (r) return // already recording
 
     const format = pickFormat()
-    if (!format) throw new Error('This browser cannot record audio.')
+    if (!format) throw new Error(t('mic.error.unsupported'))
     // Throws NotAllowedError if the user blocks the microphone.
     const media = await navigator.mediaDevices.getUserMedia({
       audio: deviceId ? { deviceId: { exact: deviceId } } : true,
@@ -145,7 +146,7 @@ export function useAudioRecorder({ maxSeconds = 10 * 60 }: { maxSeconds?: number
       new Promise<Recording>((resolve, reject) => {
         const r = recorder.current
         const format = pickFormat()
-        if (!r || !format) return reject(new Error('Nothing recorded.'))
+        if (!r || !format) return reject(new Error(t('mic.error.nothing')))
         r.onstop = () => {
           const blob = new Blob(chunks.current, { type: r.mimeType || format.mimeType })
           release()

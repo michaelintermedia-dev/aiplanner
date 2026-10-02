@@ -2,6 +2,7 @@ import type { Reminder } from '@shared/types'
 import { useState } from 'react'
 import { View } from 'react-native'
 import { ReminderPicker } from './ReminderPicker'
+import { t } from '@shared/i18n'
 
 /**
  * All of an item's reminders ("remind me at 3 and at 4"): one ReminderPicker
@@ -53,7 +54,7 @@ export function ReminderList({
         showProblem={false}
         open={openAt === 'new'}
         onOpenChange={(open) => setOpenAt(open ? 'new' : null)}
-        emptyLabel={value.length ? 'Add another reminder' : 'Add a reminder'}
+        emptyLabel={value.length ? t('reminder.addAnother') : t('reminder.add')}
       />
     </View>
   )

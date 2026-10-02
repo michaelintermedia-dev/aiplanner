@@ -1,18 +1,22 @@
+import { LANGUAGES, languageOf, t, type Language } from '@shared/i18n'
 import type { NotificationSettings } from '@shared/types'
 import { useQuery } from '@tanstack/react-query'
 import * as Notifications from '@/lib/expoNotifications'
 import { useEffect, useState } from 'react'
-import { Linking, StyleSheet, Switch, Text, View } from 'react-native'
+import { Linking, Pressable, StyleSheet, Switch, Text, View } from 'react-native'
 import { settingsApi } from '@/api/endpoints'
+import { useAuth } from '@/auth/useAuth'
 import { DateTimeField } from '@/components/DateTimeField'
 import { Screen } from '@/components/Screen'
 import { Button } from '@/components/ui'
 import { useAction } from '@/lib/useAction'
 import { useColors } from '@/theme'
 
-/** Settings - Notifications (same as web's Settings page). Changes save immediately. */
+/** Settings - Language, Notifications (same as web's Settings page). Changes save immediately. */
 export default function SettingsScreen() {
   const c = useColors()
+  const { zone, changeLanguage } = useAuth()
+  const [languageError, setLanguageError] = useState<string | null>(null)
   const { data: settings, error } = useQuery({ queryKey: ['settings', 'notifications'], queryFn: settingsApi.notifications })
   const save = useAction(settingsApi.updateNotifications)
   const [osAllowed, setOsAllowed] = useState<boolean | null>(null)
@@ -22,39 +26,61 @@ export default function SettingsScreen() {
   }, [])
 
   if (error) return <Screen><Text style={{ color: c.danger }}>{error.message}</Text></Screen>
-  if (!settings) return <Screen><Text style={{ color: c.muted }}>Loading…</Text></Screen>
+  if (!settings) return <Screen><Text style={{ color: c.muted }}>{t('common.loading')}</Text></Screen>
 
   const change = (patch: Partial<NotificationSettings>) => save.mutate({ ...settings, ...patch })
 
   return (
     <Screen>
-      <Text style={[styles.heading, { color: c.muted }]}>NOTIFICATIONS</Text>
+      <Text style={[styles.heading, { color: c.muted }]}>{t('settings.language').toUpperCase()}</Text>
+      <View style={styles.languages} accessibilityRole="radiogroup" accessibilityLabel={t('settings.language')}>
+        {LANGUAGES.map((l) => {
+          const on = languageOf(zone.locale) === l.code
+          return (
+            <Pressable
+              key={l.code}
+              onPress={() => {
+                setLanguageError(null)
+                changeLanguage(l.code as Language).catch((e: Error) => setLanguageError(e.message))
+              }}
+              style={[styles.language, { borderColor: on ? c.accent : c.border, backgroundColor: on ? c.accentSoft : c.surface }]}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: on }}>
+              <Text style={{ color: on ? c.accent : c.text, fontSize: 16 }}>{l.name}</Text>
+            </Pressable>
+          )
+        })}
+      </View>
+      <Text style={{ color: c.muted, fontSize: 13 }}>{t('settings.languageHint')}</Text>
+      {languageError && <Text style={{ color: c.danger }}>{languageError}</Text>}
+
+      <Text style={[styles.heading, { color: c.muted }]}>{t('settings.notifications').toUpperCase()}</Text>
       {osAllowed === false && (
         <View style={[styles.warning, { borderColor: c.warn }]}>
-          <Text style={{ color: c.text }}>Notifications are blocked for this app on this phone.</Text>
-          <Button title="Open phone settings" onPress={() => void Linking.openSettings()} />
+          <Text style={{ color: c.text }}>{t('settings.phoneBlocked')}</Text>
+          <Button title={t('settings.openPhoneSettings')} onPress={() => void Linking.openSettings()} />
         </View>
       )}
       <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.border }]}>
-        <Row label="Notifications" hint="Master switch for all devices" value={settings.enabled} onChange={(enabled) => change({ enabled })} />
-        <Row label="Task reminders" value={settings.taskReminders} onChange={(taskReminders) => change({ taskReminders })} disabled={!settings.enabled} />
+        <Row label={t('settings.notifications')} hint={t('settings.notificationsHint')} value={settings.enabled} onChange={(enabled) => change({ enabled })} />
+        <Row label={t('settings.taskReminders')} value={settings.taskReminders} onChange={(taskReminders) => change({ taskReminders })} disabled={!settings.enabled} />
         <Row
-          label="Event reminders"
+          label={t('settings.eventReminders')}
           value={settings.appointmentReminders}
           onChange={(appointmentReminders) => change({ appointmentReminders })}
           disabled={!settings.enabled}
         />
         <Row
-          label="Daily summary"
-          hint="What's due today, what's overdue, and today's events"
+          label={t('settings.dailySummary')}
+          hint={t('settings.dailySummaryHint')}
           value={settings.dailySummary}
           onChange={(dailySummary) => change({ dailySummary })}
           disabled={!settings.enabled}
         />
         {settings.enabled && settings.dailySummary && (
           <View style={[styles.row, { borderColor: c.border }]}>
-            <Text style={{ color: c.text, fontSize: 16, flex: 1 }}>Daily summary at</Text>
-            <DateTimeField mode="time" value={settings.dailySummaryTime} onChange={(t) => t && change({ dailySummaryTime: t })} placeholder="Time" />
+            <Text style={{ color: c.text, fontSize: 16, flex: 1 }}>{t('settings.dailySummaryAt')}</Text>
+            <DateTimeField mode="time" value={settings.dailySummaryTime} onChange={(time) => time && change({ dailySummaryTime: time })} placeholder={t('item.time')} />
           </View>
         )}
       </View>
@@ -81,4 +107,6 @@ const styles = StyleSheet.create({
   card: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 12, paddingHorizontal: 14 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
   warning: { borderWidth: 1, borderRadius: 12, padding: 12, gap: 8 },
+  languages: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  language: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 16, minHeight: 40, justifyContent: 'center' },
 })

@@ -1,26 +1,33 @@
 import { addDays, dateKey, formatDateKey, formatDue, formatTime, todayKey, type ZoneContext } from './dates'
+import { t } from './i18n'
 import type { FeedItem, FeedKind, FeedSort } from './types'
+
+// Labels are getters, so they always read in the current language.
 
 /** Filters offered by both apps, in display order. */
 export const FEED_FILTERS: { label: string; kinds: FeedKind[] }[] = [
-  { label: 'All', kinds: [] },
-  { label: 'Tasks', kinds: ['Task'] },
-  { label: 'Events', kinds: ['Appointment'] },
-  { label: 'Notes', kinds: ['Note'] },
+  { get label() { return t('feed.tab.all') }, kinds: [] },
+  { get label() { return t('feed.tab.tasks') }, kinds: ['Task'] },
+  { get label() { return t('feed.tab.events') }, kinds: ['Appointment'] },
+  { get label() { return t('feed.tab.notes') }, kinds: ['Note'] },
 ]
 
 export const FEED_SORTS: { label: string; sort: FeedSort }[] = [
-  { label: 'Newest', sort: 'CreatedDesc' },
-  { label: 'Oldest', sort: 'CreatedAsc' },
-  { label: 'Recently updated', sort: 'UpdatedDesc' },
-  { label: 'By date', sort: 'DateAsc' },
+  { get label() { return t('feed.sort.newest') }, sort: 'CreatedDesc' },
+  { get label() { return t('feed.sort.oldest') }, sort: 'CreatedAsc' },
+  { get label() { return t('feed.sort.updated') }, sort: 'UpdatedDesc' },
+  { get label() { return t('feed.sort.date') }, sort: 'DateAsc' },
 ]
 
 /** The types an item can be changed to, in display order (same labels as KIND_LABEL). */
 export const ITEM_TYPES: FeedKind[] = ['Task', 'Appointment', 'Note']
 
 /** What users see for each kind ("Appointment" is called "Event"). */
-export const KIND_LABEL: Record<FeedKind, string> = { Task: 'Task', Appointment: 'Event', Note: 'Note' }
+export const KIND_LABEL: Record<FeedKind, string> = {
+  get Task() { return t('kind.task') },
+  get Appointment() { return t('kind.event') },
+  get Note() { return t('kind.note') },
+}
 
 /** The timestamp a feed item is grouped under for the current sort. */
 function groupInstant(item: FeedItem, sort: FeedSort): string | null {
@@ -36,11 +43,11 @@ export function feedGroupKey(item: FeedItem, sort: FeedSort, timeZone: string): 
 
 /** "Today", "Yesterday", "Tomorrow", "Mon, Sep 28" (+ year if not this year), or "No date". */
 export function feedGroupLabel(key: string, zone: ZoneContext): string {
-  if (key === 'none') return 'No date'
+  if (key === 'none') return t('date.none')
   const today = todayKey(zone.timeZone)
-  if (key === today) return 'Today'
-  if (key === addDays(today, -1)) return 'Yesterday'
-  if (key === addDays(today, 1)) return 'Tomorrow'
+  if (key === today) return t('date.today')
+  if (key === addDays(today, -1)) return t('date.yesterday')
+  if (key === addDays(today, 1)) return t('date.tomorrow')
   const sameYear = key.slice(0, 4) === today.slice(0, 4)
   return formatDateKey(key, zone.locale, { weekday: 'short', month: 'short', day: 'numeric', ...(sameYear ? {} : { year: 'numeric' }) })
 }
@@ -86,7 +93,9 @@ export const feedItemKey = (item: { kind: FeedKind; id: string }) => `${item.kin
 
 /** "Note deleted" / "3 items deleted" - the undo toast's text. */
 export const deletedLabel = (items: { kind: FeedKind }[]) =>
-  items.length === 1 ? `${KIND_LABEL[items[0].kind]} deleted` : `${items.length} items deleted`
+  items.length === 1 ? t(DELETED_KEY[items[0].kind]) : t('feed.deletedMany', { count: items.length })
+
+const DELETED_KEY = { Task: 'feed.deleted.task', Appointment: 'feed.deleted.event', Note: 'feed.deleted.note' } as const
 
 /** How long the undo toast stays after a delete. */
 export const UNDO_MS = 8000

@@ -17,6 +17,7 @@ import { FeedFilterBar } from './FeedFilterBar'
 import { FeedRow } from './FeedRow'
 import { Button } from './ui'
 import { UndoToast } from './UndoToast'
+import { t } from '@shared/i18n'
 
 type ListEntry = { type: 'header'; key: string; label: string } | { type: 'item'; key: string; item: FeedItem }
 
@@ -90,29 +91,29 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
   }
 
   const chooseSort = () =>
-    Alert.alert('Sort by', undefined, [
+    Alert.alert(t('feed.sortBy'), undefined, [
       ...FEED_SORTS.map((s) => ({ text: s.sort === sort ? `✓ ${s.label}` : s.label, onPress: () => setSort(s.sort) })),
-      { text: 'Close', style: 'cancel' as const },
+      { text: t('common.close'), style: 'cancel' as const },
     ])
 
-  const sortLabel = FEED_SORTS.find((s) => s.sort === sort)?.label ?? 'Newest'
+  const sortLabel = FEED_SORTS.find((s) => s.sort === sort)?.label ?? t('feed.sort.newest')
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       {/* Above the list, not a sticky list header: toggling stickyHeaderIndices breaks FlatList rendering. */}
       {selected && (
-        <View style={[styles.selectionBar, { backgroundColor: c.surface, borderColor: c.accent }]} accessibilityLabel="Selected items">
-          <Pressable onPress={() => setSelected(null)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Stop selecting">
+        <View style={[styles.selectionBar, { backgroundColor: c.surface, borderColor: c.accent }]} accessibilityLabel={t('select.bar')}>
+          <Pressable onPress={() => setSelected(null)} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('select.stop')}>
             <Ionicons name="close" size={22} color={c.text} />
           </Pressable>
-          <Text style={{ flex: 1, color: c.text, fontSize: 16, fontWeight: '600' }}>{selected.size} selected</Text>
+          <Text style={{ flex: 1, color: c.text, fontSize: 16, fontWeight: '600' }}>{t('select.count', { count: selected.size })}</Text>
           <Button
-            title={allSelected ? 'Select none' : 'Select all'}
+            title={allSelected ? t('select.none') : t('select.all')}
             variant="link"
             onPress={() => setSelected(allSelected ? new Map() : new Map(items.map((i) => [feedItemKey(i), i])))}
           />
           <Button
-            title="Delete"
+            title={t('common.delete')}
             variant="danger"
             busy={deletion.busy}
             disabled={selected.size === 0}
@@ -146,7 +147,7 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
                 filters={filters}
                 onChange={setFilters}
                 sortChip={
-                  <Pressable onPress={chooseSort} style={[styles.sort, { borderColor: c.border, backgroundColor: c.surface }]} accessibilityRole="button" accessibilityLabel={`Sort: ${sortLabel}. Tap to change.`}>
+                  <Pressable onPress={chooseSort} style={[styles.sort, { borderColor: c.border, backgroundColor: c.surface }]} accessibilityRole="button" accessibilityLabel={t('feed.sortLabel', { sort: sortLabel })}>
                     <Text style={{ color: c.text }}>⇅ {sortLabel}</Text>
                   </Pressable>
                 }
@@ -156,24 +157,24 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
                     disabled={items.length === 0}
                     style={[styles.sort, styles.select, { borderColor: c.border, backgroundColor: c.surface }]}
                     accessibilityRole="button"
-                    accessibilityLabel="Select items">
+                    accessibilityLabel={t('select.start')}>
                     <Ionicons name="checkmark-circle-outline" size={16} color={c.text} />
-                    <Text style={{ color: c.text }}>Select</Text>
+                    <Text style={{ color: c.text }}>{t('select.start')}</Text>
                   </Pressable>
                 }
               />
             )}
             {deletion.error && <Text style={{ color: c.danger }}>{deletion.error.message}</Text>}
-            {feed.isPending && <Text style={{ color: c.muted }}>Loading…</Text>}
+            {feed.isPending && <Text style={{ color: c.muted }}>{t('common.loading')}</Text>}
             {feed.error && <Text style={{ color: c.danger }}>{feed.error.message}</Text>}
-            {feed.data && entries.length === 0 && <Text style={{ color: c.muted }}>{filtering ? 'Nothing matches these filters.' : emptyText}</Text>}
+            {feed.data && entries.length === 0 && <Text style={{ color: c.muted }}>{filtering ? t('feed.noMatches') : emptyText}</Text>}
           </View>
         }
         ListFooterComponent={
           feed.isFetchingNextPage ? (
             <ActivityIndicator color={c.muted} style={{ margin: 16 }} />
           ) : feed.data && !feed.hasNextPage && entries.length > 0 ? (
-            <Text style={[styles.end, { color: c.muted }]}>That’s everything.</Text>
+            <Text style={[styles.end, { color: c.muted }]}>{t('feed.end')}</Text>
           ) : null
         }
         onEndReached={() => feed.hasNextPage && !feed.isFetchingNextPage && void feed.fetchNextPage()}

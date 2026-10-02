@@ -1,3 +1,4 @@
+import { languageOf, setLocale, t } from '@shared/i18n'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
@@ -9,6 +10,7 @@ import { AuthProvider } from '@/auth/AuthProvider'
 import { useAuth } from '@/auth/useAuth'
 import { AuthScreen } from '@/components/AuthScreen'
 import { CaptureDock } from '@/components/CaptureDock'
+import { applyLayoutDirection } from '@/lib/layoutDirection'
 import { useNotifications } from '@/lib/useNotifications'
 import { useColors } from '@/theme'
 
@@ -43,16 +45,25 @@ export default function RootLayout() {
  * at the bottom, with item detail screens pushed on top.
  */
 function Gate() {
-  const { user } = useAuth()
+  const { user, zone } = useAuth()
+  // The UI language follows the user's locale (the phone's before signing in).
+  const language = languageOf(zone.locale)
+  setLocale(zone.locale)
 
   useEffect(() => {
     if (user !== undefined) SplashScreen.hideAsync()
   }, [user])
 
-  if (user === undefined) return null
-  if (user === null) return <AuthScreen />
+  // Hebrew lays out right-to-left; switching direction reloads the app.
+  useEffect(() => {
+    if (user !== undefined) applyLayoutDirection(zone.locale)
+  }, [user, zone.locale])
 
-  return <SignedIn />
+  if (user === undefined) return null
+  // Keyed by language: a language change re-renders every screen.
+  if (user === null) return <AuthScreen key={language} />
+
+  return <SignedIn key={language} />
 }
 
 /**
@@ -73,12 +84,12 @@ function SignedIn() {
           contentStyle: { backgroundColor: c.bg },
         }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="today" options={{ title: 'Today' }} />
-        <Stack.Screen name="calendar" options={{ title: 'Calendar' }} />
-        <Stack.Screen name="task/[id]" options={{ title: 'Task' }} />
-        <Stack.Screen name="appointment/[id]" options={{ title: 'Appointment' }} />
-        <Stack.Screen name="note/[id]" options={{ title: 'Note' }} />
-        <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+        <Stack.Screen name="today" options={{ title: t('nav.today') }} />
+        <Stack.Screen name="calendar" options={{ title: t('nav.calendar') }} />
+        <Stack.Screen name="task/[id]" options={{ title: t('kind.task') }} />
+        <Stack.Screen name="appointment/[id]" options={{ title: t('kind.event') }} />
+        <Stack.Screen name="note/[id]" options={{ title: t('kind.note') }} />
+        <Stack.Screen name="settings" options={{ title: t('nav.settings') }} />
       </Stack>
     </CaptureDock>
   )

@@ -4,6 +4,7 @@ import { getStoredRefreshToken, hasStoredSession, refreshSession, setOnSessionEx
 import { authApi } from '../api/endpoints'
 import type { AuthResponse, User } from '@shared/types'
 import type { ZoneContext } from '@shared/dates'
+import { localeFor } from '@shared/i18n'
 import { AuthContext, type AuthState } from './useAuth'
 
 const browserZone: ZoneContext = {
@@ -45,12 +46,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       zone: user ? { timeZone: user.timeZoneId, locale: user.locale } : browserZone,
       login: async (email, password) => startSession(await authApi.login(email, password)),
       register: async (email, password, displayName) =>
-        startSession(await authApi.register(email, password, displayName, browserZone.timeZone)),
+        startSession(await authApi.register(email, password, displayName, browserZone.timeZone, browserZone.locale)),
       logout: async () => {
         const refreshToken = getStoredRefreshToken()
         if (refreshToken) await authApi.logout(refreshToken).catch(() => {})
         signOutLocally()
       },
+      changeLanguage: async (language) => setUser(await authApi.updateProfile({ locale: localeFor(language, browserZone.locale) })),
     }),
     [user, startSession, signOutLocally],
   )

@@ -38,14 +38,15 @@ public static class NotificationSchedule
         }
     }
 
-    /// <summary>The line under the title, e.g. "Starts in 30 minutes" or "Due now".</summary>
-    public static string ReminderBody(Reminder r, string itemType, DateTime? itemTimeUtc, DateTime atUtc, TimeZoneInfo zone)
+    /// <summary>The line under the title, e.g. "Starts in 30 minutes" or "Due now" (in <paramref name="t"/>'s language; English by default).</summary>
+    public static string ReminderBody(Reminder r, string itemType, DateTime? itemTimeUtc, DateTime atUtc, TimeZoneInfo zone, NotificationTexts? t = null)
     {
+        t ??= NotificationTexts.English;
         if (r.Kind == ReminderKind.Before && r.MinutesBefore is { } m)
         {
             return itemType == "Appointment"
-                ? m == 0 ? "Starting now" : $"Starts in {Humanize(m)}"
-                : m == 0 ? "Due now" : $"Due in {Humanize(m)}";
+                ? m == 0 ? t.StartingNow : t.StartsIn(Humanize(m, t))
+                : m == 0 ? t.DueNow : t.DueIn(Humanize(m, t));
         }
         if (itemTimeUtc is { } item)
         {
@@ -53,43 +54,48 @@ public static class NotificationSchedule
             var sameDay = local.Date == TimeZoneInfo.ConvertTimeFromUtc(atUtc, zone).Date;
             var when = sameDay
                 ? local.ToString("HH:mm", CultureInfo.InvariantCulture)
-                : local.ToString("ddd d MMM, HH:mm", CultureInfo.InvariantCulture);
-            return itemType == "Appointment" ? $"Starts at {when}" : $"Due {when}";
+                : local.ToString("ddd d MMM, HH:mm", t.Culture);
+            return itemType == "Appointment" ? t.StartsAt(when) : t.DueAt(when);
         }
         return itemType switch
         {
-            "Appointment" => "Event reminder",
-            "Note" => "Note reminder",
-            _ => "Task reminder",
+            "Appointment" => t.EventReminder,
+            "Note" => t.NoteReminder,
+            _ => t.TaskReminder,
         };
     }
 
     /// <summary>"3 tasks due today · 1 overdue · 2 events", or null when there's nothing to say.</summary>
-    public static string? DailySummary(int tasksDue, int important, int overdue, int events)
+    public static string? DailySummary(int tasksDue, int important, int overdue, int events, NotificationTexts? t = null)
     {
+        t ??= NotificationTexts.English;
         var parts = new List<string>();
         if (tasksDue > 0)
         {
-            parts.Add($"{tasksDue} {(tasksDue == 1 ? "task" : "tasks")} due today" + (important > 0 ? $" ({important} important)" : ""));
+            parts.Add(t.TasksDueToday(tasksDue) + (important > 0 ? t.Important(important) : ""));
         }
         if (overdue > 0)
         {
-            parts.Add($"{overdue} overdue");
+            parts.Add(t.Overdue(overdue));
         }
         if (events > 0)
         {
-            parts.Add($"{events} {(events == 1 ? "event" : "events")}");
+            parts.Add(t.Events(events));
         }
         return parts.Count == 0 ? null : string.Join(" · ", parts);
     }
 
-    public static string Humanize(int minutes) => minutes switch
+    public static string Humanize(int minutes, NotificationTexts? t = null)
     {
-        < 60 => $"{minutes} {(minutes == 1 ? "minute" : "minutes")}",
-        _ when minutes % 1440 == 0 => minutes == 1440 ? "1 day" : $"{minutes / 1440} days",
-        _ when minutes % 60 == 0 => minutes == 60 ? "1 hour" : $"{minutes / 60} hours",
-        _ => $"{minutes / 60} h {minutes % 60} min",
-    };
+        t ??= NotificationTexts.English;
+        return minutes switch
+        {
+            < 60 => t.Minutes(minutes),
+            _ when minutes % 1440 == 0 => t.Days(minutes / 1440),
+            _ when minutes % 60 == 0 => t.Hours(minutes / 60),
+            _ => t.HoursMinutes(minutes / 60, minutes % 60),
+        };
+    }
 
     public static string Snippet(string text, int max = 140)
     {

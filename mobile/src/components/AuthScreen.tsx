@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/auth/useAuth'
 import { useColors } from '@/theme'
 import { Button } from './ui'
+import { t } from '@shared/i18n'
 
 export function AuthScreen() {
   const c = useColors()
@@ -22,7 +23,7 @@ export function AuthScreen() {
       if (mode === 'login') await login(email.trim(), password)
       else await register(email.trim(), password, displayName.trim())
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.')
+      setError(err instanceof Error ? err.message : t('common.error'))
     } finally {
       setBusy(false)
     }
@@ -34,14 +35,14 @@ export function AuthScreen() {
     <SafeAreaView style={[styles.screen, { backgroundColor: c.bg }]}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.center}>
         <View style={styles.form}>
-          <Text style={[styles.brand, { color: c.text }]}>AI Planner</Text>
+          <Text style={[styles.brand, { color: c.text }]}>{t('app.name')}</Text>
           <Text style={{ color: c.muted, marginBottom: 12 }}>
-            {mode === 'login' ? 'Sign in to your planner' : 'Create your account'}
+            {mode === 'login' ? t('auth.signInPrompt') : t('auth.registerPrompt')}
           </Text>
           {mode === 'register' && (
             <TextInput
               style={input}
-              placeholder="Name"
+              placeholder={t('auth.name')}
               placeholderTextColor={c.muted}
               value={displayName}
               onChangeText={setDisplayName}
@@ -50,7 +51,7 @@ export function AuthScreen() {
           )}
           <TextInput
             style={input}
-            placeholder="Email"
+            placeholder={t('auth.email')}
             placeholderTextColor={c.muted}
             value={email}
             onChangeText={setEmail}
@@ -60,7 +61,7 @@ export function AuthScreen() {
           />
           <TextInput
             style={input}
-            placeholder="Password"
+            placeholder={t('auth.password')}
             placeholderTextColor={c.muted}
             value={password}
             onChangeText={setPassword}
@@ -70,7 +71,7 @@ export function AuthScreen() {
           />
           {error && <Text style={{ color: c.danger }}>{error}</Text>}
           <Button
-            title={mode === 'login' ? 'Sign in' : 'Create account'}
+            title={mode === 'login' ? t('auth.signIn') : t('auth.createAccount')}
             variant="primary"
             onPress={submit}
             busy={busy}
@@ -83,7 +84,7 @@ export function AuthScreen() {
             }}
             style={styles.switch}>
             <Text style={{ color: c.muted }}>
-              {mode === 'login' ? 'New here? Create an account' : 'Already have an account? Sign in'}
+              {mode === 'login' ? t('auth.toRegister') : t('auth.toSignIn')}
             </Text>
           </Pressable>
         </View>

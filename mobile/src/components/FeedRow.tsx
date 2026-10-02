@@ -9,6 +9,8 @@ import { useAction } from '@/lib/useAction'
 import { useColors, type Colors } from '@/theme'
 import { KIND_ICON } from './kindIcons'
 import { Badge } from './ui'
+import { t } from '@shared/i18n'
+import { priorityLabel, statusLabel } from '@shared/labels'
 
 const kindColor = (item: FeedItem, c: Colors) =>
   item.kind === 'Appointment' ? c.appointment : item.kind === 'Note' ? c.warn : c.task
@@ -56,7 +58,7 @@ export function FeedRow({
         <Pressable
           accessibilityRole="checkbox"
           accessibilityState={{ checked: selected }}
-          accessibilityLabel={`Select ${item.title}`}
+          accessibilityLabel={t('select.item', { title: item.title })}
           hitSlop={12}
           onPress={selection.onToggle}
           style={styles.iconBox}>
@@ -66,7 +68,7 @@ export function FeedRow({
         <Pressable
           accessibilityRole="checkbox"
           accessibilityState={{ checked: item.status === 'Completed' }}
-          accessibilityLabel={item.status === 'Completed' ? 'Mark as not done' : 'Mark as done'}
+          accessibilityLabel={item.status === 'Completed' ? t('task.markNotDone') : t('task.markDone')}
           disabled={complete.isPending || reopen.isPending || item.status === 'Cancelled'}
           hitSlop={12}
           onPress={() => (done ? reopen.mutate(item.id) : complete.mutate(item.id))}
@@ -83,7 +85,7 @@ export function FeedRow({
         onPress={() => (selection ? selection.onToggle() : openDetail(item))}
         onLongPress={selection ? undefined : onLongPress}
         accessibilityRole="button"
-        accessibilityHint={selection ? (selected ? 'Unselects it' : 'Selects it') : `Opens the ${KIND_LABEL[item.kind].toLowerCase()}. Long-press to select.`}>
+        accessibilityHint={selection ? (selected ? t('select.hintUnselect') : t('select.hintSelect')) : t('feed.rowHint')}>
         <Text style={[styles.title, { color: done || passed ? c.muted : c.text }, (done || passed) && styles.struck]} numberOfLines={2}>
           {item.title}
         </Text>
@@ -96,13 +98,13 @@ export function FeedRow({
           <Text style={[styles.kind, { color: c.muted }]}>{KIND_LABEL[item.kind].toUpperCase()}</Text>
           {when && <Text style={[styles.metaText, { color: c.muted }]}>{when}</Text>}
           {item.location && <Text style={[styles.metaText, { color: c.muted }]}>📍 {item.location}</Text>}
-          {passed && <Badge label="Passed" />}
-          {showStatus && <Badge label={item.status!} color={item.status === 'Completed' ? c.task : item.status === 'Cancelled' ? c.danger : undefined} />}
-          {item.priority && <Badge label={item.priority} color={item.priority === 'High' ? c.danger : item.priority === 'Medium' ? c.warn : undefined} />}
+          {passed && <Badge label={t('status.passed')} />}
+          {showStatus && <Badge label={statusLabel(item.status!)} color={item.status === 'Completed' ? c.task : item.status === 'Cancelled' ? c.danger : undefined} />}
+          {item.priority && <Badge label={priorityLabel(item.priority)} color={item.priority === 'High' ? c.danger : item.priority === 'Medium' ? c.warn : undefined} />}
           {item.tags.map((t) => (
             <Text key={t} style={[styles.metaText, { color: c.muted }]}>#{t}</Text>
           ))}
-          {item.fromCapture && <Ionicons name="mic-outline" size={14} color={c.muted} accessibilityLabel="Created from a capture" />}
+          {item.fromCapture && <Ionicons name="mic-outline" size={14} color={c.muted} accessibilityLabel={t('feed.fromCapture')} />}
         </View>
       </Pressable>
     </View>

@@ -6,6 +6,8 @@ import { tasksApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { useAction } from '../lib/useAction'
 import { KIND_ICON } from './kindIcons'
+import { t } from '@shared/i18n'
+import { priorityLabel, statusLabel } from '@shared/labels'
 
 const DETAIL_PATH = { Task: 'tasks', Appointment: 'appointments', Note: 'notes' } as const
 
@@ -41,15 +43,15 @@ export function FeedRow({
         <span className="kind-label">{KIND_LABEL[item.kind]}</span>
         {when && <span>{when}</span>}
         {item.location && <span>📍 {item.location}</span>}
-        {passed && <span className="badge status-passed">Passed</span>}
+        {passed && <span className="badge status-passed">{t('status.passed')}</span>}
         {item.status && item.status !== 'Scheduled' && item.status !== 'Planned' && item.status !== 'Inbox' && (
-          <span className={`badge status-${item.status.toLowerCase()}`}>{item.status}</span>
+          <span className={`badge status-${item.status.toLowerCase()}`}>{statusLabel(item.status)}</span>
         )}
-        {item.priority && <span className={`badge prio-${item.priority.toLowerCase()}`}>{item.priority}</span>}
+        {item.priority && <span className={`badge prio-${item.priority.toLowerCase()}`}>{priorityLabel(item.priority)}</span>}
         {item.tags.map((t) => (
           <span key={t} className="tag">#{t}</span>
         ))}
-        {item.fromCapture && <IoMicOutline className="muted" title="Created from a capture" aria-label="Created from a capture" />}
+        {item.fromCapture && <IoMicOutline className="muted" title={t('feed.fromCapture')} aria-label={t('feed.fromCapture')} />}
       </span>
     </>
   )
@@ -63,7 +65,7 @@ export function FeedRow({
           className="kind-icon select-box"
           role="checkbox"
           aria-checked={selection.selected}
-          aria-label={`Select ${item.title}`}
+          aria-label={t('select.item', { title: item.title })}
           onClick={(e) => {
             e.stopPropagation()
             selection.onToggle()
@@ -80,7 +82,7 @@ export function FeedRow({
       {item.kind === 'Task' ? (
         <button
           className="kind-icon"
-          aria-label={item.status === 'Completed' ? 'Mark as not done' : 'Mark as done'}
+          aria-label={item.status === 'Completed' ? t('task.markNotDone') : t('task.markDone')}
           disabled={complete.isPending || reopen.isPending || item.status === 'Cancelled'}
           onClick={() => (done ? reopen.mutate(item.id) : complete.mutate(item.id))}>
           {item.status === 'Completed' ? <IoCheckbox aria-hidden /> : <IoSquareOutline aria-hidden />}
@@ -94,7 +96,7 @@ export function FeedRow({
         {content}
       </Link>
       {onDelete && (
-        <button type="button" className="icon-button row-delete" onClick={onDelete} aria-label={`Delete ${item.title}`} title="Delete">
+        <button type="button" className="icon-button row-delete" onClick={onDelete} aria-label={t('common.deleteItem', { title: item.title })} title={t('common.delete')}>
           <IoTrashOutline aria-hidden />
         </button>
       )}

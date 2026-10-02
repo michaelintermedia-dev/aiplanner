@@ -1,4 +1,5 @@
 import type { ZoneContext } from '@shared/dates'
+import { localeFor } from '@shared/i18n'
 import type { AuthResponse, User } from '@shared/types'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
@@ -45,12 +46,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       zone: user ? { timeZone: user.timeZoneId, locale: user.locale } : deviceZone,
       login: async (email, password) => startSession(await authApi.login(email, password)),
       register: async (email, password, displayName) =>
-        startSession(await authApi.register(email, password, displayName, deviceZone.timeZone)),
+        startSession(await authApi.register(email, password, displayName, deviceZone.timeZone, deviceZone.locale)),
       logout: async () => {
         const refreshToken = await getStoredRefreshToken()
         if (refreshToken) await authApi.logout(refreshToken).catch(() => {})
         await signOutLocally()
       },
+      changeLanguage: async (language) => setUser(await authApi.updateProfile({ locale: localeFor(language, deviceZone.locale) })),
     }),
     [user, startSession, signOutLocally],
   )

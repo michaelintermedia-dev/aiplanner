@@ -5,6 +5,8 @@ import { capturesApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { useAction } from '../lib/useAction'
 import { ReminderList } from './ReminderList'
+import { t } from '@shared/i18n'
+import { priorityLabel } from '@shared/labels'
 
 /**
  * "I understood:" - the review screen (spec section 18). Every property is
@@ -35,7 +37,7 @@ export function CaptureReview({
   const save = () =>
     confirm.mutate(
       drafts.map((d) => toConfirmItem(d, zone.timeZone, appendTarget)),
-      { onSuccess: () => onDone(included.length ? `Saved ${included.length} item${included.length > 1 ? 's' : ''}.` : null) },
+      { onSuccess: () => onDone(included.length ? t('review.saved', { count: included.length }) : null) },
     )
 
   // Cancel rejects everything, so the capture doesn't linger as pending.
@@ -48,29 +50,29 @@ export function CaptureReview({
         )
 
   return (
-    <section className="card review" aria-label="Review what the AI understood">
+    <section className="card review" aria-label={t('review.aria')}>
       {appendTarget ? (
         // Continuing: the capture and its transcription are already shown around this.
-        <p className="muted">I understood your addition:</p>
+        <p className="muted">{t('review.understoodAddition')}</p>
       ) : (
         <>
           <header className="review-header">
             <div>
-              <p className="muted">I understood:</p>
+              <p className="muted">{t('review.understood')}</p>
               <h3>{capture.title}</h3>
             </div>
-            <span className="badge">{capture.source === 'Voice' ? '🎤 Voice' : 'Text'}</span>
+            <span className="badge">{capture.source === 'Voice' ? `🎤 ${t('capture.voice')}` : t('capture.typed')}</span>
           </header>
           {capture.summary && <p className="review-summary">{capture.summary}</p>}
           <details className="transcript">
-            <summary>{capture.source === 'Voice' ? 'Full transcription' : 'What you typed'}</summary>
+            <summary>{capture.source === 'Voice' ? t('capture.fullTranscription') : t('capture.whatYouTyped')}</summary>
             <p>{capture.inputText}</p>
           </details>
         </>
       )}
 
       {drafts.length === 0 ? (
-        <p className="empty">I didn’t find anything to plan in that.</p>
+        <p className="empty">{t('review.nothing')}</p>
       ) : (
         <ul className="review-items">
           {drafts.map((d) => (
@@ -82,17 +84,17 @@ export function CaptureReview({
       {confirm.error && <p className="error">{confirm.error.message}</p>}
       <div className="form-actions">
         <button type="button" onClick={discard} disabled={confirm.isPending}>
-          Cancel
+          {t('common.cancel')}
         </button>
         <button type="button" className="primary" onClick={save} disabled={confirm.isPending || blocked || drafts.length === 0}>
-          {included.length === drafts.length ? 'Save all' : `Save ${included.length}`}
+          {included.length === drafts.length ? t('review.saveAll') : t('review.saveSome', { count: included.length })}
         </button>
       </div>
     </section>
   )
 }
 
-const KIND_NAME = { Task: 'task', Appointment: 'event', Note: 'note' }
+const ADD_TO = { Task: 'review.addToTask', Appointment: 'review.addToEvent', Note: 'review.addToNote' } as const
 
 function ItemEditor({
   draft: d,
@@ -113,20 +115,20 @@ function ItemEditor({
           type="checkbox"
           checked={d.include}
           onChange={(e) => onChange({ include: e.target.checked })}
-          aria-label={d.include ? 'Include this item' : 'Excluded'}
+          aria-label={d.include ? t('review.include') : t('review.excluded')}
         />
         <input
           className="review-title"
           value={d.title}
           onChange={(e) => onChange({ title: e.target.value })}
-          aria-label="Title"
+          aria-label={t('item.title')}
         />
       </div>
 
       {d.include && (
         // Any item can be any type (user's rule) - switching keeps the dates.
         // A reminder isn't a type: every type has its own reminder below.
-        <div className="intent-chips" role="radiogroup" aria-label="Save as">
+        <div className="intent-chips" role="radiogroup" aria-label={t('review.saveAs')}>
           {appendTarget && (
             // Continuing from an item: this can complete it instead of becoming a new one.
             <button
@@ -135,8 +137,8 @@ function ItemEditor({
               aria-checked={d.appendTo}
               className={`intent-chip append${d.appendTo ? ' selected' : ''}`}
               onClick={() => onChange({ appendTo: true })}
-              title={`Add to “${appendTarget.title}”`}>
-              Add to this {KIND_NAME[appendTarget.itemType]}
+              title={t('review.addToTitle', { title: appendTarget.title })}>
+              {t(ADD_TO[appendTarget.itemType])}
             </button>
           )}
           {INTENT_OPTIONS.map((o) => (
@@ -158,11 +160,11 @@ function ItemEditor({
           {!isNote && (
             <>
               <label>
-                Date
+                {t('item.date')}
                 <input type="date" value={d.date ?? ''} onChange={(e) => onChange({ date: e.target.value || null })} />
               </label>
               <label>
-                {d.intent === 'Appointment' ? 'Start' : 'Time'}
+                {d.intent === 'Appointment' ? t('event.start') : t('item.time')}
                 <input type="time" value={d.time ?? ''} onChange={(e) => onChange({ time: e.target.value || null })} />
               </label>
             </>
@@ -170,23 +172,25 @@ function ItemEditor({
           {d.intent === 'Appointment' && (
             <>
               <label>
-                End
+                {t('event.end')}
                 <input type="time" value={d.endTime ?? ''} onChange={(e) => onChange({ endTime: e.target.value || null })} />
               </label>
               <label>
-                Location
+                {t('event.location')}
                 <input value={d.location ?? ''} onChange={(e) => onChange({ location: e.target.value || null })} />
               </label>
             </>
           )}
           {d.intent === 'Task' && (
             <label>
-              Priority
+              {t('task.priority')}
               <select
                 value={d.priority ?? 'None'}
                 onChange={(e) => onChange({ priority: e.target.value === 'None' ? null : (e.target.value as TaskPriority) })}>
                 {['None', 'Low', 'Medium', 'High'].map((p) => (
-                  <option key={p}>{p}</option>
+                  <option key={p} value={p}>
+                    {priorityLabel(p)}
+                  </option>
                 ))}
               </select>
             </label>
@@ -206,11 +210,11 @@ function ItemEditor({
 
       {d.include && (
         <label className="review-details">
-          {d.appendTo && appendTarget ? `Added to “${appendTarget.title}”` : d.intent === 'Note' ? 'Note text' : 'Details'}
+          {d.appendTo && appendTarget ? t('review.addedTo', { title: appendTarget.title }) : d.intent === 'Note' ? t('review.noteText') : t('review.details')}
           <textarea
             rows={d.intent === 'Note' || d.appendTo ? 4 : 2}
             value={d.description ?? ''}
-            placeholder={d.appendTo ? 'What to add' : d.intent === 'Note' ? 'What do you want to keep?' : 'Optional'}
+            placeholder={d.appendTo ? t('review.whatToAdd') : d.intent === 'Note' ? t('review.noteKeep') : t('review.optional')}
             onChange={(e) => onChange({ description: e.target.value || null })}
           />
         </label>

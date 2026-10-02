@@ -6,13 +6,14 @@ import type { CalendarItem, CalendarView } from '@shared/types'
 import { useQuery } from '@tanstack/react-query'
 import { router } from 'expo-router'
 import { useMemo, useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View, I18nManager } from 'react-native'
 import { calendarApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
 import { KIND_ICON } from '@/components/kindIcons'
 import { Screen } from '@/components/Screen'
 import { Row } from '@/components/ui'
 import { useColors, type Colors } from '@/theme'
+import { t } from '@shared/i18n'
 
 const isClosed = (item: CalendarItem) => item.status === 'Completed' || item.status === 'Cancelled'
 /** Ended events look like completed items. */
@@ -24,6 +25,9 @@ const isPassed = (item: CalendarItem) => item.itemType === 'Appointment' && even
  * days with dots, Week a strip of days, and the selected day's items are
  * listed underneath in every view.
  */
+/** Chevrons point the other way in right-to-left layouts. */
+const flip = I18nManager.isRTL ? { transform: [{ scaleX: -1 }] } : undefined
+
 export default function CalendarScreen() {
   const c = useColors()
   const { zone } = useAuth()
@@ -74,17 +78,17 @@ export default function CalendarScreen() {
         <Text style={[styles.title, { color: c.text }]} numberOfLines={1}>
           {periodTitle(view, selected, zone.locale)}
         </Text>
-        <Pressable onPress={() => move(-1)} hitSlop={8} accessibilityRole="button" accessibilityLabel="Previous">
-          <Ionicons name="chevron-back" size={24} color={c.text} />
+        <Pressable onPress={() => move(-1)} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('calendar.previous')}>
+          <Ionicons name="chevron-back" size={24} color={c.text} style={flip} />
         </Pressable>
         <Pressable
           onPress={() => setSelected(today)}
           style={[styles.todayButton, { borderColor: c.border }]}
           accessibilityRole="button">
-          <Text style={{ color: c.text }}>Today</Text>
+          <Text style={{ color: c.text }}>{t('date.today')}</Text>
         </Pressable>
-        <Pressable onPress={() => move(1)} hitSlop={8} accessibilityRole="button" accessibilityLabel="Next">
-          <Ionicons name="chevron-forward" size={24} color={c.text} />
+        <Pressable onPress={() => move(1)} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('calendar.next')}>
+          <Ionicons name="chevron-forward" size={24} color={c.text} style={flip} />
         </Pressable>
       </View>
       {error && <Text style={{ color: c.danger }}>{error.message}</Text>}
@@ -119,7 +123,7 @@ export default function CalendarScreen() {
       <View style={{ gap: 6 }}>
         <Text style={[styles.dayTitle, { color: selected === today ? c.accent : c.muted }]}>
           {formatDateKey(selected, zone.locale, { weekday: 'long', day: 'numeric', month: 'long' })}
-          {selected === today ? ' · Today' : ''}
+          {selected === today ? ` · ${t('date.today')}` : ''}
         </Text>
         {selectedItems.length > 0 ? (
           <View style={[styles.list, { backgroundColor: c.surface, borderColor: c.border }]}>
@@ -134,7 +138,7 @@ export default function CalendarScreen() {
                     size={20}
                     color={item.itemType === 'Appointment' ? c.appointment : c.task}
                   />
-                  <Text style={[styles.time, { color: c.muted }]}>{item.hasTime ? formatTime(item.startUtc, zone) : 'All day'}</Text>
+                  <Text style={[styles.time, { color: c.muted }]}>{item.hasTime ? formatTime(item.startUtc, zone) : t('calendar.allDay')}</Text>
                   <Text
                     style={[styles.itemTitle, { color: isClosed(item) || isPassed(item) ? c.muted : c.text }, (isClosed(item) || isPassed(item)) && styles.struck]}
                     numberOfLines={1}>
@@ -145,13 +149,13 @@ export default function CalendarScreen() {
             ))}
           </View>
         ) : (
-          <Text style={{ color: c.muted, fontSize: 14 }}>Nothing planned</Text>
+          <Text style={{ color: c.muted, fontSize: 14 }}>{t('calendar.nothingPlanned')}</Text>
         )}
       </View>
 
       {data && data.ongoingTasks.length > 0 && (
         <View style={{ gap: 6 }}>
-          <Text style={[styles.dayTitle, { color: c.muted }]}>ONGOING</Text>
+          <Text style={[styles.dayTitle, { color: c.muted }]}>{t('today.ongoing').toUpperCase()}</Text>
           <View style={styles.chips}>
             {data.ongoingTasks.map((t) => (
               <Pressable
@@ -193,7 +197,7 @@ function DayCell({
       style={[styles.cell, tall && styles.tallCell]}
       accessibilityRole="button"
       accessibilityState={{ selected: isSelected }}
-      accessibilityLabel={`${day}${items.length ? `, ${items.length} item${items.length > 1 ? 's' : ''}` : ''}`}>
+      accessibilityLabel={`${day}${items.length ? `, ${t('calendar.items', { count: items.length })}` : ''}`}>
       <View
         // Border always present (only its colour changes): toggling it on Android can drop the rounding.
         style={[

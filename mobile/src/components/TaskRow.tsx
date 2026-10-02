@@ -7,6 +7,8 @@ import { useAuth } from '@/auth/useAuth'
 import { useAction } from '@/lib/useAction'
 import { useColors } from '@/theme'
 import { Badge, Row } from './ui'
+import { t } from '@shared/i18n'
+import { priorityLabel, statusLabel } from '@shared/labels'
 
 export function TaskRow({ task, last }: { task: Task; last?: boolean }) {
   const c = useColors()
@@ -23,9 +25,9 @@ export function TaskRow({ task, last }: { task: Task; last?: boolean }) {
   // Long press opens the less common actions, keeping the row itself clean.
   const showActions = () =>
     Alert.alert(task.title, undefined, [
-      ...(!done ? [{ text: 'Cancel task', onPress: () => cancel.mutate(task.id) }] : []),
-      { text: 'Delete', style: 'destructive' as const, onPress: () => remove.mutate(task.id) },
-      { text: 'Close', style: 'cancel' as const },
+      ...(!done ? [{ text: t('task.cancel'), onPress: () => cancel.mutate(task.id) }] : []),
+      { text: t('common.delete'), style: 'destructive' as const, onPress: () => remove.mutate(task.id) },
+      { text: t('common.close'), style: 'cancel' as const },
     ])
 
   return (
@@ -33,7 +35,7 @@ export function TaskRow({ task, last }: { task: Task; last?: boolean }) {
       <Pressable
         accessibilityRole="checkbox"
         accessibilityState={{ checked: task.status === 'Completed', disabled: busy || task.status === 'Cancelled' }}
-        accessibilityLabel={task.status === 'Completed' ? 'Mark as not done' : 'Mark as done'}
+        accessibilityLabel={task.status === 'Completed' ? t('task.markNotDone') : t('task.markDone')}
         disabled={busy || task.status === 'Cancelled'}
         hitSlop={12}
         onPress={() => (done ? reopen.mutate(task.id) : complete.mutate(task.id))}
@@ -50,11 +52,11 @@ export function TaskRow({ task, last }: { task: Task; last?: boolean }) {
         onLongPress={showActions}
         delayLongPress={350}
         accessibilityRole="button"
-        accessibilityHint="Opens the task. Long-press for quick actions.">
+        accessibilityHint={t('task.rowHint')}>
         <Text style={[styles.title, { color: done ? c.muted : c.text }, done && styles.struck]}>{task.title}</Text>
         <View style={styles.meta}>
-          {task.status === 'Cancelled' && <Badge label="Cancelled" />}
-          {task.status === 'Ongoing' && <Badge label="Ongoing" color={c.accent} background={c.accentSoft} />}
+          {task.status === 'Cancelled' && <Badge label={statusLabel('Cancelled')} />}
+          {task.status === 'Ongoing' && <Badge label={statusLabel('Ongoing')} color={c.accent} background={c.accentSoft} />}
           {task.dueDateUtc && (
             <Text style={[styles.metaText, { color: overdue ? c.danger : c.muted }]}>
               {formatDue(task.dueDateUtc, task.hasDueTime, zone)}
@@ -62,7 +64,7 @@ export function TaskRow({ task, last }: { task: Task; last?: boolean }) {
           )}
           {task.priority !== 'None' && (
             <Badge
-              label={task.priority}
+              label={priorityLabel(task.priority)}
               color={task.priority === 'High' ? c.danger : task.priority === 'Medium' ? c.warn : c.muted}
             />
           )}

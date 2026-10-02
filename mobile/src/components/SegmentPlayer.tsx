@@ -2,6 +2,7 @@ import { useAudioPlayer } from 'expo-audio'
 import { useEffect, useRef, useState } from 'react'
 import type { Segment } from '@/lib/useSegmentRecorder'
 import { Button } from './ui'
+import { t } from '@shared/i18n'
 
 /** "Listen" for a multi-segment recording: plays the segments back to back. */
 export function SegmentPlayer({ segments }: { segments: Segment[] }) {
@@ -57,8 +58,8 @@ export function SegmentPlayer({ segments }: { segments: Segment[] }) {
   const total = Math.round(segments.reduce((s, x) => s + x.ms, 0) / 1000)
   const label =
     index === null
-      ? `▶ Listen (${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')})`
-      : `■ Stop${segments.length > 1 ? ` (part ${index + 1}/${segments.length})` : ''}`
+      ? `▶ ${t('player.listen')} (${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')})`
+      : `■ ${t('player.stop')}${segments.length > 1 ? ` (${t('player.part', { part: index + 1, parts: segments.length })})` : ''}`
 
-  return <Button title={label} onPress={toggle} disabled={segments.length === 0} accessibilityLabel="Listen to the recording" />
+  return <Button title={label} onPress={toggle} disabled={segments.length === 0} accessibilityLabel={t('player.listenAria')} />
 }

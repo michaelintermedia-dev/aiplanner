@@ -1,6 +1,7 @@
 import { useRef, type KeyboardEvent, type PointerEvent } from 'react'
 import { IoMic, IoPause } from 'react-icons/io5'
 import type { RecorderState } from '../lib/useAudioRecorder'
+import { t } from '@shared/i18n'
 
 /** Presses held at least this long are push-to-talk; shorter ones are taps. */
 const HOLD_MS = 350
@@ -68,10 +69,10 @@ export function MicButton({
 
   const label =
     state === 'paused'
-      ? 'Continue recording (hold, or tap)'
+      ? t('mic.continue')
       : recording
-        ? 'Pause recording'
-        : 'Record voice (hold to talk, or tap to start and stop)'
+        ? t('mic.pause')
+        : t('mic.record')
 
   return (
     <button

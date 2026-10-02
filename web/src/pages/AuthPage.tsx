@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { t } from '@shared/i18n'
 import { useAuth } from '../auth/useAuth'
 
 export function AuthPage() {
@@ -18,7 +19,7 @@ export function AuthPage() {
       if (mode === 'login') await login(email, password)
       else await register(email, password, displayName)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.')
+      setError(err instanceof Error ? err.message : t('common.error'))
     } finally {
       setBusy(false)
     }
@@ -27,20 +28,20 @@ export function AuthPage() {
   return (
     <main className="auth">
       <form className="card form auth-card" onSubmit={submit}>
-        <h1 className="brand">AI Planner</h1>
-        <p className="muted">{mode === 'login' ? 'Sign in to your planner' : 'Create your account'}</p>
+        <h1 className="brand">{t('app.name')}</h1>
+        <p className="muted">{mode === 'login' ? t('auth.signInPrompt') : t('auth.registerPrompt')}</p>
         {mode === 'register' && (
           <label>
-            Name
+            {t('auth.name')}
             <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} required autoComplete="name" />
           </label>
         )}
         <label>
-          Email
+          {t('auth.email')}
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
         </label>
         <label>
-          Password
+          {t('auth.password')}
           <input
             type="password"
             value={password}
@@ -52,7 +53,7 @@ export function AuthPage() {
         </label>
         {error && <p className="error">{error}</p>}
         <button type="submit" className="primary wide" disabled={busy}>
-          {mode === 'login' ? 'Sign in' : 'Create account'}
+          {mode === 'login' ? t('auth.signIn') : t('auth.createAccount')}
         </button>
         <button
           type="button"
@@ -62,7 +63,7 @@ export function AuthPage() {
             setError(null)
           }}
         >
-          {mode === 'login' ? 'New here? Create an account' : 'Already have an account? Sign in'}
+          {mode === 'login' ? t('auth.toRegister') : t('auth.toSignIn')}
         </button>
       </form>
     </main>

@@ -95,4 +95,16 @@ public class NotificationScheduleTests
     [InlineData(2880, "2 days")]
     public void Durations_are_humanized(int minutes, string expected) =>
         NotificationSchedule.Humanize(minutes).Should().Be(expected);
+
+    [Fact]
+    public void Texts_follow_the_users_language()
+    {
+        var ru = NotificationTexts.For("ru-RU");
+        NotificationSchedule.DailySummary(3, 0, 2, 1, ru).Should().Be("3 задачи на сегодня · просрочено: 2 · 1 событие");
+        NotificationSchedule.Humanize(5, ru).Should().Be("5 минут");
+        NotificationSchedule.Humanize(21, ru).Should().Be("21 минуту");
+        NotificationSchedule.Humanize(120, NotificationTexts.For("he")).Should().Be("שעתיים");
+        NotificationTexts.For("fr-FR").Should().BeSameAs(NotificationTexts.English);
+        NotificationTexts.For(null).Should().BeSameAs(NotificationTexts.English);
+    }
 }

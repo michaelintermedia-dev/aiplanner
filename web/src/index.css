@@ -318,7 +318,7 @@ label.inline-check {
 
 .menu {
   position: absolute;
-  right: 0;
+  inset-inline-end: 0;
   top: calc(100% + 6px);
   z-index: 20;
   min-width: 220px;
@@ -344,7 +344,7 @@ label.inline-check {
 .menu-item {
   border: none;
   background: none;
-  text-align: left;
+  text-align: start;
   padding: 8px;
   min-height: 0;
   border-radius: 8px;
@@ -395,7 +395,7 @@ label.inline-check {
 .clock {
   color: var(--muted);
   font-weight: 400;
-  margin-left: 12px;
+  margin-inline-start: 12px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -481,7 +481,7 @@ label.inline-check {
 }
 
 .quick-add-options button.primary {
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 /* ---- Quick capture & review -------------------------------------------- */
@@ -743,7 +743,7 @@ label.inline-check {
 
 .review-item {
   border: 1px solid var(--border);
-  border-left: 4px solid var(--task);
+  border-inline-start: 4px solid var(--task);
   border-radius: 10px;
   padding: 10px 12px;
   display: flex;
@@ -752,15 +752,15 @@ label.inline-check {
 }
 
 .review-item.intent-appointment {
-  border-left-color: var(--appointment);
+  border-inline-start-color: var(--appointment);
 }
 
 .review-item.intent-reminder {
-  border-left-color: var(--warn);
+  border-inline-start-color: var(--warn);
 }
 
 .review-item.intent-note {
-  border-left-color: var(--muted);
+  border-inline-start-color: var(--muted);
 }
 
 .review-item.excluded {
@@ -970,7 +970,7 @@ label.inline-check {
 .check.checked::after {
   content: '';
   position: absolute;
-  left: 6px;
+  inset-inline-start: 6px;
   top: 2px;
   width: 5px;
   height: 10px;
@@ -987,8 +987,8 @@ label.inline-check {
   min-width: 52px;
   white-space: nowrap;
   flex-shrink: 0;
-  padding-left: 8px;
-  border-left: 3px solid var(--appointment);
+  padding-inline-start: 8px;
+  border-inline-start: 3px solid var(--appointment);
 }
 
 .time-range small {
@@ -1059,7 +1059,7 @@ label.inline-check {
   border: none;
   min-height: 0;
   padding: 2px 6px;
-  text-align: left;
+  text-align: start;
   font-size: 0.82rem;
   font-weight: 500;
   border-radius: 6px;
@@ -1084,7 +1084,7 @@ label.inline-check {
   font-size: 0.8rem;
   padding: 3px 6px;
   border-radius: 5px;
-  border-left: 3px solid;
+  border-inline-start: 3px solid;
   background: var(--surface-2);
   display: flex;
   gap: 5px;
@@ -1146,7 +1146,7 @@ a.cal-title:hover {
 
 .back {
   align-self: flex-start;
-  padding-left: 0;
+  padding-inline-start: 0;
 }
 
 .detail-header {
@@ -1170,13 +1170,13 @@ a.cal-title:hover {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  padding-left: 8px;
-  border-left: 3px solid var(--task);
+  padding-inline-start: 8px;
+  border-inline-start: 3px solid var(--task);
   color: var(--muted);
 }
 
 .kind.appointment {
-  border-left-color: var(--appointment);
+  border-inline-start-color: var(--appointment);
 }
 
 .badge.status-completed {
@@ -1219,7 +1219,7 @@ a.cal-title:hover {
 }
 
 .detail-actions .danger {
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 textarea {
@@ -1360,7 +1360,7 @@ textarea {
   align-items: flex-start;
   gap: 12px;
   padding: 12px 14px;
-  border-left: 3px solid var(--task);
+  border-inline-start: 3px solid var(--task);
 }
 
 .feed-row + .feed-row {
@@ -1368,11 +1368,11 @@ textarea {
 }
 
 .feed-row.kind-appointment {
-  border-left-color: var(--appointment);
+  border-inline-start-color: var(--appointment);
 }
 
 .feed-row.kind-note {
-  border-left-color: var(--warn);
+  border-inline-start-color: var(--warn);
 }
 
 /* The type's filter-tab icon; for a task it is also the tick box. */
@@ -1474,7 +1474,7 @@ button.kind-icon:hover:not(:disabled) {
   padding: 14px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-left: 3px solid var(--warn);
+  border-inline-start: 3px solid var(--warn);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   color: var(--text);
@@ -1499,7 +1499,7 @@ button.kind-icon:hover:not(:disabled) {
 }
 
 .kind.note {
-  border-left-color: var(--warn);
+  border-inline-start-color: var(--warn);
 }
 
 .note-body {
@@ -1879,4 +1879,87 @@ button.kind-icon:hover:not(:disabled) {
 
 .toast .icon-button {
   color: inherit;
+}
+
+/* Right-to-left (Hebrew): the layout mirrors via logical properties above;
+   direction-bearing icons (back arrow, ‹ ›) are flipped here. */
+.flip-rtl {
+  display: inline-block;
+}
+
+[dir='rtl'] .flip-rtl {
+  transform: scaleX(-1);
+}
+
+/* ---- Settings: label on one side, control on the other ---- */
+
+.settings-row,
+.form .settings-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-weight: normal;
+}
+
+.settings-row strong {
+  font-weight: 500;
+}
+
+.settings-row p {
+  margin: 2px 0 0;
+}
+
+.settings-group {
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.settings-group:disabled {
+  opacity: 0.5;
+}
+
+/* A checkbox drawn as a switch. */
+.switch {
+  appearance: none;
+  flex-shrink: 0;
+  position: relative;
+  width: 44px;
+  height: 26px;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--border);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  inset-inline-start: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+  transition: inset-inline-start 0.15s;
+}
+
+.switch:checked {
+  background: var(--accent);
+}
+
+.switch:checked::after {
+  inset-inline-start: 21px;
+}
+
+.switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }

@@ -343,6 +343,25 @@ Local dev notes:
   `addsToCurrent`; the review offers "Add to this task/event/note" (preselected
   for those), which on confirm (`appendToType/appendToId`) appends the text to
   the item's details instead of creating a new item.
+- **UI languages: English, Russian, Hebrew; Hebrew is right-to-left**
+  (2026-10-02, web + mobile). All UI text goes through `t('key', vars)` from
+  `shared/i18n` - never write user-visible English in a component. `en.ts`
+  is the reference; `ru.ts`/`he.ts` are typed `Messages`, so a missing key
+  is a compile error. Plurals are `{ one, few, many, two, other }` objects
+  picked by `count` (rules in `i18n/index.ts` - Hermes has no
+  Intl.PluralRules). Shared label lists use getters (`get label()`) so they
+  read in the current language. Adding a language = a dictionary file + a
+  `LANGUAGES` entry. The language is `User.Locale` (`PATCH /api/users/me`,
+  Settings → Language; registration sends the device locale), so all
+  devices follow it; dates/numbers use Intl with that locale. The apps call
+  `setLocale()` in the root and key the tree by language. RTL: web sets
+  `<html dir>` and the CSS uses logical properties (`margin-inline-start`,
+  `border-inline-start`, `inset-inline-*`) - never left/right; arrows get
+  `.flip-rtl`. Mobile uses `I18nManager.forceRTL` + reload
+  (`lib/layoutDirection.ts`; RN swaps left/right styles itself), chevron
+  icons flip by hand. Server-made notification texts are translated in
+  `NotificationTexts` (per language, unit-tested). Not translated yet: server
+  validation/error messages (English), and weeks always start on Monday.
 - Icons are standard Ionicons, never emoji, for UI controls (the mic button
   is `mic`/`pause`). Each item type has ONE icon (`KIND_ICON` in
   `components/kindIcons.ts` in each app): the filter tab, feed rows and calendar

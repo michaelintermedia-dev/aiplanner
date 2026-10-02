@@ -10,6 +10,7 @@ import { Screen } from '@/components/Screen'
 import { TaskRow } from '@/components/TaskRow'
 import { Row, Section } from '@/components/ui'
 import { useColors } from '@/theme'
+import { t } from '@shared/i18n'
 
 function useNow(intervalMs = 30_000) {
   const [now, setNow] = useState(() => new Date())
@@ -29,41 +30,41 @@ export default function TodayScreen() {
   return (
     <Screen bottomSpace={DOCK_SPACE}>
       <View>
-        <Text style={{ color: c.muted }}>Hello, {user?.displayName}</Text>
+        <Text style={{ color: c.muted }}>{t('today.hello', { name: user?.displayName ?? '' })}</Text>
         <Text style={[styles.date, { color: c.text }]}>
-          {data ? formatDateKey(data.date, zone.locale) : 'Today'}
+          {data ? formatDateKey(data.date, zone.locale) : t('date.today')}
         </Text>
         <Text style={[styles.clock, { color: c.muted }]}>{formatTime(now.toISOString(), zone)}</Text>
       </View>
 
-      {isPending && <Text style={{ color: c.muted }}>Loading…</Text>}
+      {isPending && <Text style={{ color: c.muted }}>{t('common.loading')}</Text>}
       {error && <Text style={{ color: c.danger }}>{error.message}</Text>}
       {data && (
         <>
-          <Section title="Schedule" empty="No appointments today.">
+          <Section title={t('today.schedule')} empty={t('today.scheduleEmpty')}>
             {data.appointmentsToday.map((a, i, all) => (
               <AppointmentRow key={a.id} appointment={a} last={i === all.length - 1} />
             ))}
           </Section>
           {data.overdueTasks.length > 0 && (
-            <Section title="Overdue" tone="warn">
+            <Section title={t('filter.when.overdue')} tone="warn">
               {data.overdueTasks.map((t, i, all) => (
                 <TaskRow key={t.id} task={t} last={i === all.length - 1} />
               ))}
             </Section>
           )}
-          <Section title="Due today" empty="Nothing due today.">
+          <Section title={t('today.dueToday')} empty={t('today.dueTodayEmpty')}>
             {data.tasksDueToday.map((t, i, all) => (
               <TaskRow key={t.id} task={t} last={i === all.length - 1} />
             ))}
           </Section>
-          <Section title="Ongoing" empty="No ongoing tasks.">
+          <Section title={t('today.ongoing')} empty={t('today.ongoingEmpty')}>
             {data.ongoingTasks.map((t, i, all) => (
               <TaskRow key={t.id} task={t} last={i === all.length - 1} />
             ))}
           </Section>
           {data.upcomingReminders.length > 0 && (
-            <Section title="Upcoming reminders">
+            <Section title={t('today.upcomingReminders')}>
               {data.upcomingReminders.map((r, i, all) => (
                 <Row key={r.key} last={i === all.length - 1}>
                   <Text style={{ color: c.text, flex: 1, fontSize: 16 }}>{r.title}</Text>

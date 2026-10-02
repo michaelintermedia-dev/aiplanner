@@ -4,6 +4,7 @@ import { Alert, Pressable, View } from 'react-native'
 import { useAuth } from '@/auth/useAuth'
 import { useColors } from '@/theme'
 import { KIND_ICON } from '@/components/kindIcons'
+import { t } from '@shared/i18n'
 
 /**
  * The bottom bar filters one feed: All / Tasks / Events / Notes. Today and
@@ -20,10 +21,10 @@ export default function TabLayout() {
   )
 
   const account = () =>
-    Alert.alert(user?.displayName ?? 'Account', user?.email, [
-      { text: 'Settings', onPress: () => router.push('/settings') },
-      { text: 'Sign out', style: 'destructive', onPress: () => void logout() },
-      { text: 'Close', style: 'cancel' },
+    Alert.alert(user?.displayName ?? t('nav.account'), user?.email, [
+      { text: t('nav.settings'), onPress: () => router.push('/settings') },
+      { text: t('auth.signOut'), style: 'destructive', onPress: () => void logout() },
+      { text: t('common.close'), style: 'cancel' },
     ])
 
   return (
@@ -36,32 +37,32 @@ export default function TabLayout() {
         headerTintColor: c.text,
         headerShadowVisible: false,
         headerRight: () => (
-          <View style={{ flexDirection: 'row', paddingRight: 6 }}>
-            <HeaderButton icon="sunny-outline" label="Today" onPress={() => router.push('/today')} />
-            <HeaderButton icon="calendar-outline" label="Calendar" onPress={() => router.push('/calendar')} />
-            <HeaderButton icon="person-circle-outline" label="Account" onPress={account} />
+          <View style={{ flexDirection: 'row', paddingEnd: 6 }}>
+            <HeaderButton icon="sunny-outline" label={t('nav.today')} onPress={() => router.push('/today')} />
+            <HeaderButton icon="calendar-outline" label={t('nav.calendar')} onPress={() => router.push('/calendar')} />
+            <HeaderButton icon="person-circle-outline" label={t('nav.account')} onPress={account} />
           </View>
         ),
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'All',
-          headerTitle: 'AI Planner',
+          title: t('feed.tab.all'),
+          headerTitle: t('app.name'),
           tabBarIcon: ({ color, size }) => <Ionicons name="albums-outline" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="tasks"
-        options={{ title: 'Tasks', tabBarIcon: ({ color, size }) => <Ionicons name={KIND_ICON.Task} color={color} size={size} /> }}
+        options={{ title: t('feed.tab.tasks'), tabBarIcon: ({ color, size }) => <Ionicons name={KIND_ICON.Task} color={color} size={size} /> }}
       />
       <Tabs.Screen
         name="events"
-        options={{ title: 'Events', tabBarIcon: ({ color, size }) => <Ionicons name={KIND_ICON.Appointment} color={color} size={size} /> }}
+        options={{ title: t('feed.tab.events'), tabBarIcon: ({ color, size }) => <Ionicons name={KIND_ICON.Appointment} color={color} size={size} /> }}
       />
       <Tabs.Screen
         name="notes"
-        options={{ title: 'Notes', tabBarIcon: ({ color, size }) => <Ionicons name={KIND_ICON.Note} color={color} size={size} /> }}
+        options={{ title: t('feed.tab.notes'), tabBarIcon: ({ color, size }) => <Ionicons name={KIND_ICON.Note} color={color} size={size} /> }}
       />
     </Tabs>
   )

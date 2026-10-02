@@ -10,6 +10,8 @@ import { ChangeType } from '../components/ChangeType'
 import { SourceCapture } from '../components/SourceCapture'
 import { describeReminder, remindersProblem } from '@shared/reminders'
 import { useAction } from '../lib/useAction'
+import { t } from '@shared/i18n'
+import { priorityLabel, statusLabel } from '@shared/labels'
 
 export function TaskDetailPage() {
   const { id = '' } = useParams()
@@ -28,8 +30,8 @@ export function TaskDetailPage() {
   const busy = complete.isPending || cancel.isPending || reopen.isPending || remove.isPending
   const actionError = complete.error ?? cancel.error ?? reopen.error ?? remove.error
 
-  if (isPending) return <div className="page"><p className="muted">Loading…</p></div>
-  if (error || !task) return <div className="page"><p className="error">{error?.message ?? 'Task not found.'}</p><Link to="/tasks">Back to tasks</Link></div>
+  if (isPending) return <div className="page"><p className="muted">{t('common.loading')}</p></div>
+  if (error || !task) return <div className="page"><p className="error">{error?.message ?? t('task.notFound')}</p><Link to="/tasks">{t('task.backToList')}</Link></div>
 
   const closed = task.status === 'Completed' || task.status === 'Cancelled'
 
@@ -41,65 +43,65 @@ export function TaskDetailPage() {
       ) : (
         <>
           <header className="detail-header">
-            <span className="kind task">Task</span>
+            <span className="kind task">{t('kind.task')}</span>
             <h1 className={closed ? 'struck' : undefined}>{task.title}</h1>
             <div className="row-meta">
-              <span className={`badge status-${task.status.toLowerCase()}`}>{task.status}</span>
-              {task.priority !== 'None' && <span className={`badge prio-${task.priority.toLowerCase()}`}>{task.priority} priority</span>}
-              {task.tags.map((t) => (
-                <span key={t} className="tag">#{t}</span>
+              <span className={`badge status-${task.status.toLowerCase()}`}>{statusLabel(task.status)}</span>
+              {task.priority !== 'None' && <span className={`badge prio-${task.priority.toLowerCase()}`}>{t('task.priorityBadge', { priority: priorityLabel(task.priority) })}</span>}
+              {task.tags.map((tag) => (
+                <span key={tag} className="tag">#{tag}</span>
               ))}
             </div>
           </header>
           <ChangeType itemType="Task" id={task.id} />
 
           <dl className="facts">
-            <dt>Due</dt>
-            <dd>{task.dueDateUtc ? formatDue(task.dueDateUtc, task.hasDueTime, zone) : task.status === 'Ongoing' ? 'Ongoing — no deadline' : 'No due date'}</dd>
-            <dt>Reminder</dt>
-            <dd>{task.reminders?.length ? task.reminders.map((r) => describeReminder(r, zone)).join(' · ') : 'None'}</dd>
+            <dt>{t('task.due')}</dt>
+            <dd>{task.dueDateUtc ? formatDue(task.dueDateUtc, task.hasDueTime, zone) : task.status === 'Ongoing' ? t('task.ongoingNoDeadline') : t('task.noDueDate')}</dd>
+            <dt>{t('item.reminder')}</dt>
+            <dd>{task.reminders?.length ? task.reminders.map((r) => describeReminder(r, zone)).join(' · ') : t('item.none')}</dd>
             {task.completedAtUtc && (
               <>
-                <dt>Completed</dt>
+                <dt>{t('status.Completed')}</dt>
                 <dd>{formatDue(task.completedAtUtc, true, zone)}</dd>
               </>
             )}
-            <dt>Created</dt>
+            <dt>{t('filter.created')}</dt>
             <dd>
               {formatDateKey(dateKey(task.createdAtUtc, zone.timeZone), zone.locale, { month: 'short', day: 'numeric', year: 'numeric' })}, {formatTime(task.createdAtUtc, zone)}
             </dd>
           </dl>
 
-          {task.description && <TextBlock title="Description" text={task.description} />}
-          {task.notes && <TextBlock title="Notes" text={task.notes} />}
-          {task.aiSummary && <TextBlock title="AI summary" text={task.aiSummary} />}
+          {task.description && <TextBlock title={t('item.description')} text={task.description} />}
+          {task.notes && <TextBlock title={t('item.notes')} text={task.notes} />}
+          {task.aiSummary && <TextBlock title={t('item.aiSummary')} text={task.aiSummary} />}
 
           {actionError && <p className="error">{actionError.message}</p>}
           <div className="detail-actions">
             {closed ? (
               <button className="primary" disabled={busy} onClick={() => reopen.mutate(task.id)}>
-                ↺ Reopen
+                ↺ {t('item.reopen')}
               </button>
             ) : (
               <>
                 <button className="primary" disabled={busy} onClick={() => complete.mutate(task.id)}>
-                  ✓ Complete
+                  ✓ {t('task.complete')}
                 </button>
                 <button disabled={busy} onClick={() => cancel.mutate(task.id)}>
-                  Cancel task
+                  {t('task.cancel')}
                 </button>
               </>
             )}
             <button disabled={busy} onClick={() => setEditing(true)}>
-              Edit
+              {t('common.edit')}
             </button>
             <button
               className="link danger"
               disabled={busy}
               onClick={() =>
-                window.confirm(`Delete “${task.title}”?`) && (setDeleting(true), remove.mutate(task.id, { onSuccess: () => navigate('/tasks'), onError: () => setDeleting(false) }))
+                window.confirm(t('item.confirmDelete', { title: task.title })) && (setDeleting(true), remove.mutate(task.id, { onSuccess: () => navigate('/tasks'), onError: () => setDeleting(false) }))
               }>
-              Delete
+              {t('common.delete')}
             </button>
           </div>
         </>
@@ -148,7 +150,7 @@ function TaskEditForm({ task, onDone }: { task: Task; onDone: () => void }) {
         priority,
         isOngoing: ongoing,
         reminders,
-        tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
+        tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
       },
       { onSuccess: onDone },
     )
@@ -156,56 +158,58 @@ function TaskEditForm({ task, onDone }: { task: Task; onDone: () => void }) {
 
   return (
     <form className="card form" onSubmit={submit}>
-      <h3>Edit task</h3>
+      <h3>{t('task.edit')}</h3>
       <label>
-        Title
+        {t('item.title')}
         <input value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus />
       </label>
       <div className="form-row">
         <label>
-          Due date
+          {t('task.dueDate')}
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} disabled={ongoing} />
         </label>
         <label>
-          Time
+          {t('item.time')}
           <input type="time" value={time} onChange={(e) => setTime(e.target.value)} disabled={ongoing || !date} />
         </label>
         <label>
-          Priority
+          {t('task.priority')}
           <select value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)}>
             {['None', 'Low', 'Medium', 'High'].map((p) => (
-              <option key={p}>{p}</option>
+              <option key={p} value={p}>
+                {priorityLabel(p)}
+              </option>
             ))}
           </select>
         </label>
       </div>
       <div className="field">
-        <span>Reminder</span>
+        <span>{t('item.reminder')}</span>
         <ReminderList value={reminders} onChange={setReminders} itemHasTime={!ongoing && !!date && !!time} />
       </div>
       <label className="inline-check">
         <input type="checkbox" checked={ongoing} onChange={(e) => setOngoing(e.target.checked)} />
-        Ongoing (no deadline)
+        {t('task.ongoingCheck')}
       </label>
       <label>
-        Tags <span className="muted">(comma-separated)</span>
+        {t('task.tags')} <span className="muted">{t('item.commaSeparated')}</span>
         <input value={tags} onChange={(e) => setTags(e.target.value)} />
       </label>
       <label>
-        Description
+        {t('item.description')}
         <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
       </label>
       <label>
-        Notes
+        {t('item.notes')}
         <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
       </label>
       {update.error && <p className="error">{update.error.message}</p>}
       <div className="form-actions">
         <button type="button" onClick={onDone}>
-          Cancel
+          {t('common.cancel')}
         </button>
         <button type="submit" className="primary" disabled={!title.trim() || !!reminderIssue || update.isPending}>
-          Save changes
+          {t('item.saveChanges')}
         </button>
       </div>
     </form>

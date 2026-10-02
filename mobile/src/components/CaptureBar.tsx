@@ -11,6 +11,7 @@ import { LevelMeter } from './LevelMeter'
 import { MicButton } from './MicButton'
 import { SegmentPlayer } from './SegmentPlayer'
 import { Button } from './ui'
+import { t } from '@shared/i18n'
 
 type Busy = null | 'transcribing' | 'understanding'
 
@@ -71,7 +72,7 @@ export function CaptureBar({
       setText('')
       return true
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.')
+      setError(err instanceof Error ? err.message : t('common.error'))
       return false
     } finally {
       setBusy(null)
@@ -91,7 +92,7 @@ export function CaptureBar({
   const send = async () => {
     const segments = await recorder.finish()
     if (segments.length === 0) {
-      setError('Nothing was recorded.')
+      setError(t('mic.error.nothing'))
       return
     }
     const sent = await run('transcribing', () => {
@@ -105,7 +106,7 @@ export function CaptureBar({
     if (sent) recorder.clear()
   }
 
-  const onMicError = (err: unknown) => setError(err instanceof Error ? err.message : 'Could not use the microphone.')
+  const onMicError = (err: unknown) => setError(err instanceof Error ? err.message : t('mic.error.couldNotUse'))
 
   if (capture) {
     return (
@@ -134,34 +135,34 @@ export function CaptureBar({
           </View>
           <Text style={{ color: c.muted }} accessibilityLiveRegion="polite">
             {recorder.state === 'recording'
-              ? 'Listening…'
+              ? t('capture.listening')
               : recorder.atLimit
-                ? 'That’s the 10-minute maximum — send it with the arrow, or Discard.'
-                : 'Paused — press the arrow to send it, Listen to hear it, or the mic to add more.'}
+                ? t('capture.atLimit')
+                : t('capture.pausedMobile')}
           </Text>
           {silent && recorder.state === 'recording' && (
             <Text style={{ color: c.warn }} accessibilityRole="alert">
-              I can’t hear anything. Check the microphone isn’t muted or blocked.
+              {t('mic.silentMobile')}
             </Text>
           )}
         </View>
       ) : (
         <TextInput
           style={[styles.input, { color: c.text }]}
-          placeholder={continueFrom ? 'Add to it: hold the mic and keep talking, or type' : "What's on your mind? Or hold the mic and talk."}
+          placeholder={continueFrom ? t('capture.continuePlaceholder') : t('capture.placeholderMobile')}
           placeholderTextColor={c.muted}
           value={text}
           onChangeText={setText}
           multiline
           editable={busy === null}
-          accessibilityLabel={continueFrom ? 'Text to add' : 'Capture text'}
+          accessibilityLabel={continueFrom ? t('capture.textToAdd') : t('capture.text')}
         />
       )}
 
       {busy ? (
         <View style={styles.busy} accessibilityLiveRegion="polite">
           <ActivityIndicator color={c.accent} />
-          <Text style={{ color: c.muted }}>{busy === 'transcribing' ? 'Transcribing and understanding…' : 'Understanding…'}</Text>
+          <Text style={{ color: c.muted }}>{busy === 'transcribing' ? t('capture.transcribing') : t('capture.understanding')}</Text>
         </View>
       ) : (
         !hasAudio && savedMessage && <Text style={{ color: c.muted }}>{savedMessage}</Text>
@@ -173,18 +174,18 @@ export function CaptureBar({
           {hasAudio ? (
             <>
               {recorder.state === 'paused' && <SegmentPlayer segments={recorder.segments} />}
-              <Button title="Discard" variant="link" onPress={() => void recorder.discard()} disabled={busy !== null} />
+              <Button title={t('capture.discard')} variant="link" onPress={() => void recorder.discard()} disabled={busy !== null} />
               <SendButton
-                label="Send recording"
+                label={t('capture.sendRecording')}
                 onPress={send}
                 disabled={busy !== null || (recorder.seconds < 1 && recorder.segments.length === 0)}
               />
             </>
           ) : (
             <>
-              {continueFrom && busy === null && <Button title="Cancel" variant="link" onPress={continueFrom.onClose} />}
+              {continueFrom && busy === null && <Button title={t('common.cancel')} variant="link" onPress={continueFrom.onClose} />}
               {/* One send arrow for typed text and recordings; it only shows when there's something to send. */}
-              {text.trim() !== '' && <SendButton label="Send" onPress={submitText} disabled={busy !== null} />}
+              {text.trim() !== '' && <SendButton label={t('capture.send')} onPress={submitText} disabled={busy !== null} />}
             </>
           )}
         </View>

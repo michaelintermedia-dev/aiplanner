@@ -8,6 +8,7 @@ import { useMicrophones } from '../lib/useMicrophones'
 import { CaptureReview } from './CaptureReview'
 import { LevelMeter } from './LevelMeter'
 import { MicButton } from './MicButton'
+import { t } from '@shared/i18n'
 
 type Busy = null | 'transcribing' | 'understanding'
 
@@ -81,7 +82,7 @@ export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {
       setCapture(await work())
       setText('')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.')
+      setError(err instanceof Error ? err.message : t('common.error'))
     } finally {
       setBusy(null)
     }
@@ -117,14 +118,14 @@ export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {
     const name = err instanceof DOMException ? err.name : ''
     setError(
       name === 'NotAllowedError'
-        ? 'Microphone access is blocked. Click the lock icon in the address bar and allow the microphone.'
+        ? t('mic.error.blocked')
         : name === 'NotFoundError' || name === 'OverconstrainedError'
-          ? 'No microphone found. Plug one in, or pick another input from the Mic list.'
+          ? t('mic.error.notFound')
           : name === 'NotReadableError'
-            ? 'The microphone is busy or unavailable (another app may be using it).'
+            ? t('mic.error.busy')
             : err instanceof Error
               ? err.message
-              : 'Could not start recording.',
+              : t('mic.error.couldNotStart'),
     )
   }
 
@@ -172,57 +173,50 @@ export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {
             <LevelMeter stream={recorder.stream} active={recorder.state === 'recording'} onSilenceChange={setSilent} />
           )}
           <span className="muted" aria-live="polite">
-            {recorder.state === 'recording'
-              ? 'Listening…'
-              : recorder.atLimit
-                ? 'That’s the 10-minute maximum — send it with the arrow, or Discard.'
-                : 'Paused — press the arrow to send it, ▶ to listen, or the mic to add more.'}
+            {recorder.state === 'recording' ? t('capture.listening') : recorder.atLimit ? t('capture.atLimit') : t('capture.paused')}
           </span>
           {silent && recorder.state === 'recording' && (
             <p className="mic-warning" role="alert">
-              I can’t hear anything. Check the microphone isn’t muted
-              {mics.devices.length > 1 ? ', or pick another input in the Mic list below' : ''}.
+              {mics.devices.length > 1 ? t('mic.silentPickAnother') : t('mic.silent')}
             </p>
           )}
           {recorder.state === 'paused' && preview && (
-            <audio className="rec-preview" controls src={preview} aria-label="Listen to the recording so far" />
+            <audio className="rec-preview" controls src={preview} aria-label={t('capture.listenSoFar')} />
           )}
         </div>
       ) : (
         <textarea
           className="capture-input"
           placeholder={
-            continueFrom
-              ? 'Add to it: hold the mic and keep talking, or type'
-              : 'What\'s on your mind? e.g. “Dentist next Thursday at 9:30 and finish the slides by Friday”'
+            continueFrom ? t('capture.continuePlaceholder') : t('capture.placeholder')
           }
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={onKeyDown}
           rows={2}
           disabled={busy !== null}
-          aria-label={continueFrom ? 'Text to add' : 'Capture text'}
+          aria-label={continueFrom ? t('capture.textToAdd') : t('capture.text')}
           autoFocus={!!continueFrom}
         />
       )}
       <div className="capture-actions">
         {busy ? (
           <span className="muted capture-status" aria-live="polite">
-            <span className="spinner" /> {busy === 'transcribing' ? 'Transcribing and understanding…' : 'Understanding…'}
+            <span className="spinner" /> {busy === 'transcribing' ? t('capture.transcribing') : t('capture.understanding')}
           </span>
         ) : (
           <span className="muted capture-hint">
-            {hasAudio ? '' : (savedMessage ?? 'Type and press Enter, or hold the mic to talk (tap to start/stop).')}
+            {hasAudio ? '' : (savedMessage ?? t('capture.hint'))}
           </span>
         )}
         {mics.devices.length > 1 && !busy && (
           <label className="mic-select">
-            Mic
+            {t('mic.label')}
             <select
               value={mics.selected ?? ''}
               onChange={(e) => void switchMic(e.target.value || null)}
-              aria-label="Microphone">
-              <option value="">System default</option>
+              aria-label={t('mic.microphone')}>
+              <option value="">{t('mic.systemDefault')}</option>
               {mics.devices.map((d) => (
                 <option key={d.deviceId} value={d.deviceId}>
                   {d.label}
@@ -233,12 +227,12 @@ export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {
         )}
         {hasAudio && (
           <button type="button" className="link" onClick={recorder.discard}>
-            Discard
+            {t('capture.discard')}
           </button>
         )}
         {continueFrom && !hasAudio && !busy && (
           <button type="button" className="link" onClick={continueFrom.onClose}>
-            Cancel
+            {t('common.cancel')}
           </button>
         )}
         {/* One send arrow for typed text and recordings; it only shows when there's something to send. */}
@@ -248,13 +242,13 @@ export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {
             className="send"
             onClick={sendRecording}
             disabled={busy !== null || recorder.seconds < 1}
-            aria-label="Send recording"
-            title="Send recording">
+            aria-label={t('capture.sendRecording')}
+            title={t('capture.sendRecording')}>
             <IoArrowUp aria-hidden />
           </button>
         ) : (
           text.trim() && (
-            <button type="submit" className="send" disabled={busy !== null} aria-label="Send" title="Send (Enter)">
+            <button type="submit" className="send" disabled={busy !== null} aria-label={t('capture.send')} title={t('capture.sendEnter')}>
               <IoArrowUp aria-hidden />
             </button>
           )

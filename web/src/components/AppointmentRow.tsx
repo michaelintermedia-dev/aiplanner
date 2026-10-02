@@ -5,6 +5,8 @@ import { useAuth } from '../auth/useAuth'
 import { formatTime } from '@shared/dates'
 import { eventPassed } from '@shared/feed'
 import { useAction } from '../lib/useAction'
+import { t } from '@shared/i18n'
+import { statusLabel } from '@shared/labels'
 
 export function AppointmentRow({ appointment: a }: { appointment: Appointment }) {
   const { zone } = useAuth()
@@ -24,17 +26,17 @@ export function AppointmentRow({ appointment: a }: { appointment: Appointment })
         <Link className="row-title" to={`/appointments/${a.id}`}>{a.title}</Link>
         <span className="row-meta">
           {a.location && <span>{a.location}</span>}
-          {done && <span className="badge">{a.status}</span>}
-          {passed && <span className="badge status-passed">Passed</span>}
+          {done && <span className="badge">{statusLabel(a.status)}</span>}
+          {passed && <span className="badge status-passed">{t('status.passed')}</span>}
         </span>
       </div>
       {!done && (
         <div className="row-actions">
           <button className="link" disabled={busy} onClick={() => complete.mutate(a.id)}>
-            Done
+            {t('common.done')}
           </button>
           <button className="link danger" disabled={busy} onClick={() => cancel.mutate(a.id)}>
-            Cancel
+            {t('common.cancel')}
           </button>
         </div>
       )}

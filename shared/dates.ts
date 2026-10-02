@@ -2,6 +2,8 @@
 // browser's. The API stores and returns UTC; everything shown or entered in the
 // UI is a wall-clock time in the user's IANA timezone (spec section 25).
 
+import { t } from './i18n'
+
 export interface ZoneContext {
   timeZone: string
   locale: string
@@ -85,11 +87,11 @@ export function formatDue(utc: string, hasTime: boolean, zone: ZoneContext): str
   const today = todayKey(zone.timeZone)
   const day =
     key === today
-      ? 'Today'
+      ? t('date.today')
       : key === addDays(today, 1)
-        ? 'Tomorrow'
+        ? t('date.tomorrow')
         : key === addDays(today, -1)
-          ? 'Yesterday'
+          ? t('date.yesterday')
           : formatDateKey(key, zone.locale, { weekday: 'short', month: 'short', day: 'numeric' })
   return hasTime ? `${day} ${formatTime(utc, zone)}` : day
 }

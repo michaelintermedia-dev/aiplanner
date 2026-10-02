@@ -8,6 +8,8 @@ import { useAuth } from '@/auth/useAuth'
 import { useAction } from '@/lib/useAction'
 import { useColors } from '@/theme'
 import { Badge, Row } from './ui'
+import { t } from '@shared/i18n'
+import { statusLabel } from '@shared/labels'
 
 export function AppointmentRow({ appointment: a, last }: { appointment: Appointment; last?: boolean }) {
   const c = useColors()
@@ -19,9 +21,9 @@ export function AppointmentRow({ appointment: a, last }: { appointment: Appointm
 
   const showActions = () =>
     Alert.alert(a.title, undefined, [
-      { text: 'Mark as done', onPress: () => complete.mutate(a.id) },
-      { text: 'Cancel appointment', style: 'destructive', onPress: () => cancel.mutate(a.id) },
-      { text: 'Close', style: 'cancel' },
+      { text: t('task.markDone'), onPress: () => complete.mutate(a.id) },
+      { text: t('event.cancel'), style: 'destructive', onPress: () => cancel.mutate(a.id) },
+      { text: t('common.close'), style: 'cancel' },
     ])
 
   return (
@@ -36,12 +38,12 @@ export function AppointmentRow({ appointment: a, last }: { appointment: Appointm
         onLongPress={done ? undefined : showActions}
         delayLongPress={350}
         accessibilityRole="button"
-        accessibilityHint="Opens the appointment. Long-press for quick actions.">
+        accessibilityHint={t('event.rowHint')}>
         <Text style={[styles.title, { color: done || passed ? c.muted : c.text }, (done || passed) && styles.struck]}>{a.title}</Text>
         <View style={styles.meta}>
           {a.location && <Text style={[styles.metaText, { color: c.muted }]}>{a.location}</Text>}
-          {done && <Badge label={a.status} />}
-          {passed && <Badge label="Passed" />}
+          {done && <Badge label={statusLabel(a.status)} />}
+          {passed && <Badge label={t('status.passed')} />}
         </View>
       </Pressable>
     </Row>

@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useColors } from '@/theme'
 import { CaptureBar } from './CaptureBar'
+import { t } from '@shared/i18n'
 
 /**
  * The new-entry controls as a floating toolbar over the whole app (mobile
@@ -66,7 +67,7 @@ export function CaptureDock({ children }: { children: ReactNode }) {
               hitSlop={10}
               style={[styles.close, { backgroundColor: c.surface2, borderColor: c.border }]}
               accessibilityRole="button"
-              accessibilityLabel="Hide new entry">
+              accessibilityLabel={t('dock.hide')}>
               <Ionicons name="close" size={16} color={c.muted} />
             </Pressable>
           )}
@@ -148,8 +149,8 @@ function DraggableMic({ visible, onOpen }: { visible: boolean; onOpen: (open: tr
       style={[styles.fab, !visible && styles.hidden, { backgroundColor: c.accent, transform: position.getTranslateTransform() }]}
       accessible
       accessibilityRole="button"
-      accessibilityLabel="New entry"
-      accessibilityHint="Drag to move it."
+      accessibilityLabel={t('dock.newEntry')}
+      accessibilityHint={t('dock.dragHint')}
       onAccessibilityTap={() => onOpen(true)}>
       <Ionicons name="mic" size={26} color="#fff" />
     </Animated.View>

@@ -2,6 +2,7 @@ using AiPlanner.Application.Auth.DTOs;
 using AiPlanner.Application.Auth.Interfaces;
 using AiPlanner.Application.Common.Interfaces;
 using AiPlanner.Application.Common.Models;
+using AiPlanner.Application.Common.Utils;
 using AiPlanner.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -46,6 +47,7 @@ public class AuthService : IAuthService
             DisplayName = request.DisplayName.Trim(),
             PasswordHash = _passwordHasher.Hash(request.Password),
             TimeZoneId = string.IsNullOrWhiteSpace(request.TimeZoneId) ? "UTC" : request.TimeZoneId!,
+            Locale = LocaleHelper.IsValid(request.Locale) ? request.Locale! : "en-US",
             CreatedAtUtc = _dateTime.UtcNow,
             UpdatedAtUtc = _dateTime.UtcNow
         };

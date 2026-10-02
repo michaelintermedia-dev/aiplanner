@@ -6,6 +6,7 @@ import type { Reminder } from '@shared/types'
 import { remindersProblem } from '@shared/reminders'
 import { useAction } from '../lib/useAction'
 import { ReminderList } from './ReminderList'
+import { t } from '@shared/i18n'
 
 export function AppointmentForm({ initialDate, onDone }: { initialDate?: string; onDone: () => void }) {
   const { zone } = useAuth()
@@ -36,42 +37,42 @@ export function AppointmentForm({ initialDate, onDone }: { initialDate?: string;
 
   return (
     <form className="card form" onSubmit={submit}>
-      <h3>New appointment</h3>
+      <h3>{t('event.new')}</h3>
       <label>
-        Title
+        {t('item.title')}
         <input value={title} onChange={(e) => setTitle(e.target.value)} autoFocus required />
       </label>
       <div className="form-row">
         <label>
-          Date
+          {t('item.date')}
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
         </label>
         <label>
-          Start
+          {t('event.start')}
           <input type="time" value={start} onChange={(e) => setStart(e.target.value)} required />
         </label>
         <label>
-          End
+          {t('event.end')}
           <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} required />
         </label>
       </div>
       <div className="form-row">
         <label>
-          Location
+          {t('event.location')}
           <input value={location} onChange={(e) => setLocation(e.target.value)} />
         </label>
       </div>
       <div className="field">
-        <span>Reminder</span>
+        <span>{t('item.reminder')}</span>
         <ReminderList value={reminders} onChange={setReminders} itemHasTime />
       </div>
       {create.error && <p className="error">{create.error.message}</p>}
       <div className="form-actions">
         <button type="button" onClick={onDone}>
-          Cancel
+          {t('common.cancel')}
         </button>
         <button type="submit" className="primary" disabled={!title.trim() || create.isPending}>
-          Save
+          {t('common.save')}
         </button>
       </div>
     </form>

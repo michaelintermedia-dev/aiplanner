@@ -5,6 +5,7 @@ import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { Alert, AppState, Platform } from 'react-native'
 import { notificationsApi, tasksApi } from '@/api/endpoints'
+import { currentLanguage, t } from '@shared/i18n'
 
 /**
  * Phase 4 delivery on the phone. The backend decides what goes off when
@@ -38,33 +39,40 @@ Notifications.setNotificationHandler({
  *  provider is missing), so there notifications use Expo's default channel. */
 let channelId: string | undefined
 let setupDone: Promise<void> | null = null
-const setup = () =>
-  (setupDone ??= (async () => {
-    if (Platform.OS === 'android') {
-      try {
-        await Notifications.setNotificationChannelAsync(CHANNEL, {
-          name: 'Reminders',
-          importance: Notifications.AndroidImportance.HIGH,
-        })
-        channelId = CHANNEL
-      } catch (e) {
-        console.log('[notif] using the default channel:', String(e).split('\n')[0])
+let setupLanguage = ''
+const setup = () => {
+  // The action buttons carry text: set them up again after a language change.
+  if (setupLanguage !== currentLanguage()) {
+    setupLanguage = currentLanguage()
+    setupDone = null
+  }
+  return (setupDone ??= (async () => {
+      if (Platform.OS === 'android') {
+        try {
+          await Notifications.setNotificationChannelAsync(CHANNEL, {
+            name: t('notifications.channel'),
+            importance: Notifications.AndroidImportance.HIGH,
+          })
+          channelId = CHANNEL
+        } catch (e) {
+          console.log('[notif] using the default channel:', String(e).split('\n')[0])
+        }
       }
-    }
-    const snooze = [
-      { identifier: 'snooze15', buttonTitle: 'Snooze 15 min', options: { opensAppToForeground: true } },
-      { identifier: 'snooze60', buttonTitle: 'Snooze 1 hour', options: { opensAppToForeground: true } },
-    ]
-    try {
-      await Notifications.setNotificationCategoryAsync('task', [
-        { identifier: 'done', buttonTitle: 'Done', options: { opensAppToForeground: true } },
-        ...snooze,
-      ])
-      await Notifications.setNotificationCategoryAsync('item', snooze)
-    } catch (e) {
-      console.log('[notif] no action buttons:', String(e).split('\n')[0])
-    }
+      const snooze = [
+        { identifier: 'snooze15', buttonTitle: t('notifications.snooze15'), options: { opensAppToForeground: true } },
+        { identifier: 'snooze60', buttonTitle: t('notifications.snooze60'), options: { opensAppToForeground: true } },
+      ]
+      try {
+        await Notifications.setNotificationCategoryAsync('task', [
+          { identifier: 'done', buttonTitle: t('common.done'), options: { opensAppToForeground: true } },
+          ...snooze,
+        ])
+        await Notifications.setNotificationCategoryAsync('item', snooze)
+      } catch (e) {
+        console.log('[notif] no action buttons:', String(e).split('\n')[0])
+      }
   })())
+}
 
 async function ensurePermission(): Promise<boolean> {
   await setup() // Android 13+ only asks once a channel exists
@@ -178,7 +186,7 @@ export function useNotifications() {
     Notifications.clearLastNotificationResponse()
     handleResponse(response)
       .then(() => queryClient.invalidateQueries())
-      .catch((e: Error) => Alert.alert('Couldn’t do that', e.message))
+      .catch((e: Error) => Alert.alert(t('notifications.actionFailed'), e.message))
   }, [response, queryClient])
 
   return { permitted }

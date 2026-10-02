@@ -16,6 +16,8 @@ import { SourceCapture } from '@/components/SourceCapture'
 import { Badge, Button } from '@/components/ui'
 import { useAction } from '@/lib/useAction'
 import { useColors } from '@/theme'
+import { t } from '@shared/i18n'
+import { priorityLabel, statusLabel } from '@shared/labels'
 
 const PRIORITIES: TaskPriority[] = ['None', 'Low', 'Medium', 'High']
 
@@ -36,16 +38,16 @@ export default function TaskDetailScreen() {
   const busy = complete.isPending || cancel.isPending || reopen.isPending || remove.isPending
   const actionError = complete.error ?? cancel.error ?? reopen.error ?? remove.error
 
-  if (isPending) return <Screen><Text style={{ color: c.muted }}>Loading…</Text></Screen>
-  if (error || !task) return <Screen><Text style={{ color: c.danger }}>{error?.message ?? 'Task not found.'}</Text></Screen>
+  if (isPending) return <Screen><Text style={{ color: c.muted }}>{t('common.loading')}</Text></Screen>
+  if (error || !task) return <Screen><Text style={{ color: c.danger }}>{error?.message ?? t('task.notFound')}</Text></Screen>
 
   const closed = task.status === 'Completed' || task.status === 'Cancelled'
 
   const confirmDelete = () =>
-    Alert.alert('Delete task?', task.title, [
-      { text: 'Keep', style: 'cancel' },
+    Alert.alert(t('task.confirmDelete'), task.title, [
+      { text: t('changeType.keep'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: () => {
           setDeleting(true)
@@ -56,24 +58,24 @@ export default function TaskDetailScreen() {
 
   return (
     <Screen>
-      <Stack.Screen options={{ title: editing ? 'Edit task' : 'Task' }} />
+      <Stack.Screen options={{ title: editing ? t('task.edit') : t('kind.task') }} />
       {editing ? (
         <TaskEditForm task={task} onDone={() => setEditing(false)} />
       ) : (
         <>
           <View style={{ gap: 8 }}>
-            <Text style={[s.kind, { color: c.muted, borderLeftColor: c.task }]}>TASK</Text>
+            <Text style={[s.kind, { color: c.muted, borderLeftColor: c.task }]}>{t('kind.task').toUpperCase()}</Text>
             <Text style={[s.title, { color: closed ? c.muted : c.text }, closed && s.struck]}>{task.title}</Text>
             <View style={s.badges}>
               <Badge
-                label={task.status}
+                label={statusLabel(task.status)}
                 color={task.status === 'Completed' ? c.task : task.status === 'Cancelled' ? c.danger : undefined}
               />
               {task.priority !== 'None' && (
-                <Badge label={`${task.priority} priority`} color={task.priority === 'High' ? c.danger : task.priority === 'Medium' ? c.warn : undefined} />
+                <Badge label={t('task.priorityBadge', { priority: priorityLabel(task.priority) })} color={task.priority === 'High' ? c.danger : task.priority === 'Medium' ? c.warn : undefined} />
               )}
-              {task.tags.map((t) => (
-                <Text key={t} style={{ color: c.muted }}>#{t}</Text>
+              {task.tags.map((tag) => (
+                <Text key={tag} style={{ color: c.muted }}>#{tag}</Text>
               ))}
             </View>
           </View>
@@ -81,29 +83,29 @@ export default function TaskDetailScreen() {
 
           <Facts
             rows={[
-              ['Due', task.dueDateUtc ? formatDue(task.dueDateUtc, task.hasDueTime, zone) : task.status === 'Ongoing' ? 'Ongoing — no deadline' : 'No due date'],
-              ['Reminders', task.reminders?.length ? task.reminders.map((r) => describeReminder(r, zone)).join(' · ') : 'None'],
-              ...(task.completedAtUtc ? [['Completed', formatDue(task.completedAtUtc, true, zone)] as [string, string]] : []),
-              ['Created', `${formatDateKey(dateKey(task.createdAtUtc, zone.timeZone), zone.locale, { month: 'short', day: 'numeric' })}, ${formatTime(task.createdAtUtc, zone)}`],
+              [t('task.due'), task.dueDateUtc ? formatDue(task.dueDateUtc, task.hasDueTime, zone) : task.status === 'Ongoing' ? t('task.ongoingNoDeadline') : t('task.noDueDate')],
+              [t('filter.reminders'), task.reminders?.length ? task.reminders.map((r) => describeReminder(r, zone)).join(' · ') : t('item.none')],
+              ...(task.completedAtUtc ? [[t('status.Completed'), formatDue(task.completedAtUtc, true, zone)] as [string, string]] : []),
+              [t('filter.created'), `${formatDateKey(dateKey(task.createdAtUtc, zone.timeZone), zone.locale, { month: 'short', day: 'numeric' })}, ${formatTime(task.createdAtUtc, zone)}`],
             ]}
           />
 
-          <TextBlock title="Description" text={task.description} />
-          <TextBlock title="Notes" text={task.notes} />
-          <TextBlock title="AI summary" text={task.aiSummary} />
+          <TextBlock title={t('item.description')} text={task.description} />
+          <TextBlock title={t('item.notes')} text={task.notes} />
+          <TextBlock title={t('item.aiSummary')} text={task.aiSummary} />
 
           {actionError && <Text style={{ color: c.danger }}>{actionError.message}</Text>}
           <View style={s.actions}>
             {closed ? (
-              <Button title="↺ Reopen" variant="primary" busy={reopen.isPending} disabled={busy} onPress={() => reopen.mutate(task.id)} />
+              <Button title={`↺ ${t('item.reopen')}`} variant="primary" busy={reopen.isPending} disabled={busy} onPress={() => reopen.mutate(task.id)} />
             ) : (
               <>
-                <Button title="✓ Complete" variant="primary" busy={complete.isPending} disabled={busy} onPress={() => complete.mutate(task.id)} />
-                <Button title="Cancel task" disabled={busy} onPress={() => cancel.mutate(task.id)} />
+                <Button title={`✓ ${t('task.complete')}`} variant="primary" busy={complete.isPending} disabled={busy} onPress={() => complete.mutate(task.id)} />
+                <Button title={t('task.cancel')} disabled={busy} onPress={() => cancel.mutate(task.id)} />
               </>
             )}
-            <Button title="Edit" disabled={busy} onPress={() => setEditing(true)} />
-            <Button title="Delete" variant="danger" disabled={busy} onPress={confirmDelete} />
+            <Button title={t('common.edit')} disabled={busy} onPress={() => setEditing(true)} />
+            <Button title={t('common.delete')} variant="danger" disabled={busy} onPress={confirmDelete} />
           </View>
         </>
       )}
@@ -140,7 +142,7 @@ function TaskEditForm({ task, onDone }: { task: Task; onDone: () => void }) {
         priority,
         isOngoing: ongoing,
         reminders,
-        tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
+        tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
       },
       { onSuccess: onDone },
     )
@@ -148,29 +150,29 @@ function TaskEditForm({ task, onDone }: { task: Task; onDone: () => void }) {
 
   return (
     <View style={s.form}>
-      <Field label="Title" value={title} onChangeText={setTitle} />
+      <Field label={t('item.title')} value={title} onChangeText={setTitle} />
       <View style={s.chips}>
-        <DateTimeField mode="date" value={date} onChange={setDate} placeholder="Due date" disabled={ongoing} />
-        <DateTimeField mode="time" value={time} onChange={setTime} placeholder="Time" date={date} disabled={ongoing || !date} />
+        <DateTimeField mode="date" value={date} onChange={setDate} placeholder={t('task.dueDate')} disabled={ongoing} />
+        <DateTimeField mode="time" value={time} onChange={setTime} placeholder={t('item.time')} date={date} disabled={ongoing || !date} />
       </View>
       <View style={s.chips}>
         <CycleChip
           values={PRIORITIES}
           value={priority}
           onChange={setPriority}
-          label={(p) => (p === 'None' ? 'No priority' : `${p} priority`)}
+          label={(p) => (p === 'None' ? t('task.noPriority') : t('task.priorityBadge', { priority: priorityLabel(p) }))}
           highlight={(p) => p !== 'None'}
         />
-        <CycleChip values={[false, true]} value={ongoing} onChange={setOngoing} label={(o) => (o ? 'Ongoing ✓' : 'Ongoing')} highlight={(o) => o} />
+        <CycleChip values={[false, true]} value={ongoing} onChange={setOngoing} label={(o) => (o ? `${t('today.ongoing')} ✓` : t('today.ongoing'))} highlight={(o) => o} />
       </View>
       <ReminderList value={reminders} onChange={setReminders} itemHasTime={!ongoing && !!date && !!time} />
-      <Field label="Tags (comma-separated)" value={tags} onChangeText={setTags} autoCapitalize="none" />
-      <Field label="Description" value={description} onChangeText={setDescription} multiline />
-      <Field label="Notes" value={notes} onChangeText={setNotes} multiline />
+      <Field label={`${t('task.tags')} ${t('item.commaSeparated')}`} value={tags} onChangeText={setTags} autoCapitalize="none" />
+      <Field label={t('item.description')} value={description} onChangeText={setDescription} multiline />
+      <Field label={t('item.notes')} value={notes} onChangeText={setNotes} multiline />
       {update.error && <Text style={{ color: c.danger }}>{update.error.message}</Text>}
       <View style={s.actions}>
-        <Button title="Cancel" onPress={onDone} />
-        <Button title="Save changes" variant="primary" busy={update.isPending} disabled={!title.trim() || !!reminderIssue} onPress={save} />
+        <Button title={t('common.cancel')} onPress={onDone} />
+        <Button title={t('item.saveChanges')} variant="primary" busy={update.isPending} disabled={!title.trim() || !!reminderIssue} onPress={save} />
       </View>
     </View>
   )

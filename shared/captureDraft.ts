@@ -1,4 +1,5 @@
 import { addDays, dateKey, timeKey, zonedToUtc } from './dates'
+import { t } from './i18n'
 import { remindersProblem } from './reminders'
 import type { AppendTarget, CaptureItem, ConfirmCaptureItem, ExtractionIntent, Reminder, TaskPriority } from './types'
 
@@ -7,9 +8,9 @@ import type { AppendTarget, CaptureItem, ConfirmCaptureItem, ExtractionIntent, R
  * shown as "Event". A reminder is not a type - any of these can carry one.
  */
 export const INTENT_OPTIONS: { intent: ExtractionIntent; label: string }[] = [
-  { intent: 'Task', label: 'Task' },
-  { intent: 'Appointment', label: 'Event' },
-  { intent: 'Note', label: 'Note' },
+  { intent: 'Task', get label() { return t('kind.task') } },
+  { intent: 'Appointment', get label() { return t('kind.event') } },
+  { intent: 'Note', get label() { return t('kind.note') } },
 ]
 
 /**
@@ -64,11 +65,11 @@ export const draftHasTime = (d: ItemDraft) => d.intent !== 'Note' && !!d.date &&
 /** What still has to be filled in before this item can be saved (empty = ready). */
 export function draftProblems(d: ItemDraft): string[] {
   if (!d.include) return []
-  if (d.appendTo) return (d.description ?? d.title).trim() ? [] : ['Add the text to add.']
+  if (d.appendTo) return (d.description ?? d.title).trim() ? [] : [t('draft.problem.appendText')]
   const problems: string[] = []
-  if (!d.title.trim()) problems.push('Add a title.')
-  if (d.intent === 'Appointment' && (!d.date || !d.time)) problems.push('An appointment needs a date and start time.')
-  if (d.intent === 'Task' && d.time && !d.date) problems.push('Pick a date for this time.')
+  if (!d.title.trim()) problems.push(t('draft.problem.title'))
+  if (d.intent === 'Appointment' && (!d.date || !d.time)) problems.push(t('draft.problem.eventTime'))
+  if (d.intent === 'Task' && d.time && !d.date) problems.push(t('draft.problem.dateForTime'))
   const reminder = remindersProblem(d.reminders, { itemHasTime: draftHasTime(d), isNote: d.intent === 'Note' })
   if (reminder) problems.push(reminder)
   return problems
@@ -81,7 +82,7 @@ export function toConfirmItem(d: ItemDraft, timeZone: string, target?: AppendTar
       id: d.id,
       include: d.include,
       intent: d.intent,
-      title: d.title.trim() || 'Addition',
+      title: d.title.trim() || t('draft.addition'),
       description: d.description,
       startUtc: null,
       endUtc: null,

@@ -16,6 +16,7 @@ import { useAuth } from '@/auth/useAuth'
 import { useColors } from '@/theme'
 import { DateTimeField } from './DateTimeField'
 import { Button } from './ui'
+import { t } from '@shared/i18n'
 
 /**
  * Filter button + panel + active-filter chips above the feed (same as the web
@@ -45,9 +46,9 @@ export function FeedFilterBar({
           style={[styles.toggle, { borderColor: chips.length ? c.accent : c.border, backgroundColor: c.surface }]}
           accessibilityRole="button"
           accessibilityState={{ expanded: open }}
-          accessibilityLabel={chips.length ? `Filter, ${chips.length} on` : 'Filter'}>
+          accessibilityLabel={chips.length ? t('filter.buttonOn', { count: chips.length }) : t('filter.button')}>
           <Ionicons name="funnel-outline" size={16} color={chips.length ? c.accent : c.text} />
-          <Text style={{ color: chips.length ? c.accent : c.text }}>Filter{chips.length ? ` · ${chips.length}` : ''}</Text>
+          <Text style={{ color: chips.length ? c.accent : c.text }}>{t('filter.button')}{chips.length ? ` · ${chips.length}` : ''}</Text>
         </Pressable>
         {selectChip}
         {sortChip}
@@ -63,12 +64,12 @@ export function FeedFilterBar({
               onPress={() => onChange(chip.clear(filters))}
               style={[styles.activeChip, { borderColor: c.accent }]}
               accessibilityRole="button"
-              accessibilityLabel={`Remove filter ${chip.label}`}>
+              accessibilityLabel={t('filter.remove', { label: chip.label })}>
               <Text style={{ color: c.text, fontSize: 13 }}>{chip.label}</Text>
               <Ionicons name="close" size={14} color={c.muted} />
             </Pressable>
           ))}
-          <Button title="Clear all" variant="link" onPress={() => onChange(NO_FILTERS)} />
+          <Button title={t('filter.clearAll')} variant="link" onPress={() => onChange(NO_FILTERS)} />
         </View>
       )}
     </View>
@@ -88,35 +89,35 @@ function FilterPanel({ filters: f, onChange, onClose }: { filters: FeedFilters; 
           style={[styles.searchInput, { color: c.text }]}
           value={f.text}
           onChangeText={(text) => set({ text })}
-          placeholder="Search text, details, location, tags"
+          placeholder={t('filter.searchPlaceholder')}
           placeholderTextColor={c.muted}
           autoFocus
           returnKeyType="search"
-          accessibilityLabel="Search"
+          accessibilityLabel={t('filter.search')}
         />
       </View>
 
-      <Options label="CREATED" options={CREATED_OPTIONS} value={f.created} onChange={(created) => set({ created })} />
+      <Options label={t('filter.created').toUpperCase()} options={CREATED_OPTIONS} value={f.created} onChange={(created) => set({ created })} />
       {f.created === 'custom' && (
         <View style={styles.wrap}>
-          <DateTimeField mode="date" value={f.createdFrom} onChange={(createdFrom) => set({ createdFrom })} placeholder="From" />
-          <DateTimeField mode="date" value={f.createdTo} onChange={(createdTo) => set({ createdTo })} placeholder="To" />
+          <DateTimeField mode="date" value={f.createdFrom} onChange={(createdFrom) => set({ createdFrom })} placeholder={t('filter.from')} />
+          <DateTimeField mode="date" value={f.createdTo} onChange={(createdTo) => set({ createdTo })} placeholder={t('filter.to')} />
         </View>
       )}
-      <Options label="WHEN (DUE / STARTS)" options={WHEN_OPTIONS} value={f.when} onChange={(when) => set({ when })} />
-      <Options label="STATUS" options={STATUS_OPTIONS} value={f.status} onChange={(status) => set({ status })} />
-      <Options label="REMINDERS" options={REMINDER_OPTIONS} value={f.reminders} onChange={(reminders) => set({ reminders })} />
+      <Options label={t('filter.when').toUpperCase()} options={WHEN_OPTIONS} value={f.when} onChange={(when) => set({ when })} />
+      <Options label={t('filter.status').toUpperCase()} options={STATUS_OPTIONS} value={f.status} onChange={(status) => set({ status })} />
+      <Options label={t('filter.reminders').toUpperCase()} options={REMINDER_OPTIONS} value={f.reminders} onChange={(reminders) => set({ reminders })} />
 
       <View style={{ gap: 6 }}>
-        <Text style={[styles.caption, { color: c.muted }]}>MORE</Text>
+        <Text style={[styles.caption, { color: c.muted }]}>{t('filter.more').toUpperCase()}</Text>
         <View style={styles.wrap}>
-          <OptionChip label="From voice" selected={f.fromVoice} onPress={() => set({ fromVoice: !f.fromVoice })} />
+          <OptionChip label={t('filter.fromVoice')} selected={f.fromVoice} onPress={() => set({ fromVoice: !f.fromVoice })} />
         </View>
       </View>
 
       {tags.data && tags.data.length > 0 && (
         <View style={{ gap: 6 }}>
-          <Text style={[styles.caption, { color: c.muted }]}>TAGS (TASKS)</Text>
+          <Text style={[styles.caption, { color: c.muted }]}>{t('filter.tags').toUpperCase()}</Text>
           <View style={styles.wrap}>
             {tags.data.map((t) => {
               const on = f.tags.includes(t.name)
@@ -134,7 +135,7 @@ function FilterPanel({ filters: f, onChange, onClose }: { filters: FeedFilters; 
       )}
 
       <View style={{ alignItems: 'flex-end' }}>
-        <Button title="Done" variant="primary" onPress={onClose} />
+        <Button title={t('common.done')} variant="primary" onPress={onClose} />
       </View>
     </View>
   )

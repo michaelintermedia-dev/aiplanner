@@ -17,6 +17,8 @@ import { SourceCapture } from '@/components/SourceCapture'
 import { Badge, Button } from '@/components/ui'
 import { useAction } from '@/lib/useAction'
 import { useColors } from '@/theme'
+import { t } from '@shared/i18n'
+import { statusLabel } from '@shared/labels'
 
 export default function AppointmentDetailScreen() {
   const { id, edit } = useLocalSearchParams<{ id: string; edit?: string }>()
@@ -35,17 +37,17 @@ export default function AppointmentDetailScreen() {
   const busy = complete.isPending || cancel.isPending || reopen.isPending || remove.isPending
   const actionError = complete.error ?? cancel.error ?? reopen.error ?? remove.error
 
-  if (isPending) return <Screen><Text style={{ color: c.muted }}>Loading…</Text></Screen>
-  if (error || !appt) return <Screen><Text style={{ color: c.danger }}>{error?.message ?? 'Appointment not found.'}</Text></Screen>
+  if (isPending) return <Screen><Text style={{ color: c.muted }}>{t('common.loading')}</Text></Screen>
+  if (error || !appt) return <Screen><Text style={{ color: c.danger }}>{error?.message ?? t('event.notFound')}</Text></Screen>
 
   const closed = appt.status !== 'Scheduled'
   const passed = eventPassed(appt)
 
   const confirmDelete = () =>
-    Alert.alert('Delete appointment?', appt.title, [
-      { text: 'Keep', style: 'cancel' },
+    Alert.alert(t('event.confirmDelete'), appt.title, [
+      { text: t('changeType.keep'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: () => {
           setDeleting(true)
@@ -56,19 +58,19 @@ export default function AppointmentDetailScreen() {
 
   return (
     <Screen>
-      <Stack.Screen options={{ title: editing ? 'Edit appointment' : 'Appointment' }} />
+      <Stack.Screen options={{ title: editing ? t('event.edit') : t('kind.event') }} />
       {editing ? (
         <AppointmentEditForm appt={appt} onDone={() => setEditing(false)} />
       ) : (
         <>
           <View style={{ gap: 8 }}>
-            <Text style={[s.kind, { color: c.muted, borderLeftColor: c.appointment }]}>APPOINTMENT</Text>
+            <Text style={[s.kind, { color: c.muted, borderLeftColor: c.appointment }]}>{t('kind.event').toUpperCase()}</Text>
             <Text style={[s.title, { color: closed || passed ? c.muted : c.text }, (closed || passed) && s.struck]}>{appt.title}</Text>
             <View style={s.badges}>
               {passed ? (
-                <Badge label="Passed" />
+                <Badge label={t('status.passed')} />
               ) : (
-                <Badge label={appt.status} color={appt.status === 'Completed' ? c.task : appt.status === 'Cancelled' ? c.danger : undefined} />
+                <Badge label={statusLabel(appt.status)} color={appt.status === 'Completed' ? c.task : appt.status === 'Cancelled' ? c.danger : undefined} />
               )}
             </View>
           </View>
@@ -76,28 +78,28 @@ export default function AppointmentDetailScreen() {
 
           <Facts
             rows={[
-              ['When', `${formatDateKey(dateKey(appt.startUtc, zone.timeZone), zone.locale, { weekday: 'long', month: 'long', day: 'numeric' })}\n${formatTime(appt.startUtc, zone)} – ${formatTime(appt.endUtc, zone)}`],
-              ...(appt.location ? [['Where', appt.location] as [string, string]] : []),
-              ...(appt.participants.length ? [['With', appt.participants.map((p) => p.name).join(', ')] as [string, string]] : []),
-              ['Reminders', appt.reminders?.length ? appt.reminders.map((r) => describeReminder(r, zone)).join(' · ') : 'None'],
+              [t('event.when'), `${formatDateKey(dateKey(appt.startUtc, zone.timeZone), zone.locale, { weekday: 'long', month: 'long', day: 'numeric' })}\n${formatTime(appt.startUtc, zone)} – ${formatTime(appt.endUtc, zone)}`],
+              ...(appt.location ? [[t('event.where'), appt.location] as [string, string]] : []),
+              ...(appt.participants.length ? [[t('event.with'), appt.participants.map((p) => p.name).join(', ')] as [string, string]] : []),
+              [t('filter.reminders'), appt.reminders?.length ? appt.reminders.map((r) => describeReminder(r, zone)).join(' · ') : t('item.none')],
             ]}
           />
 
-          <TextBlock title="Description" text={appt.description} />
-          <TextBlock title="Notes" text={appt.notes} />
+          <TextBlock title={t('item.description')} text={appt.description} />
+          <TextBlock title={t('item.notes')} text={appt.notes} />
 
           {actionError && <Text style={{ color: c.danger }}>{actionError.message}</Text>}
           <View style={s.actions}>
             {closed ? (
-              <Button title="↺ Reopen" variant="primary" busy={reopen.isPending} disabled={busy} onPress={() => reopen.mutate(appt.id)} />
+              <Button title={`↺ ${t('item.reopen')}`} variant="primary" busy={reopen.isPending} disabled={busy} onPress={() => reopen.mutate(appt.id)} />
             ) : (
               <>
-                <Button title="✓ Done" variant="primary" busy={complete.isPending} disabled={busy} onPress={() => complete.mutate(appt.id)} />
-                <Button title="Cancel appointment" disabled={busy} onPress={() => cancel.mutate(appt.id)} />
+                <Button title={`✓ ${t('common.done')}`} variant="primary" busy={complete.isPending} disabled={busy} onPress={() => complete.mutate(appt.id)} />
+                <Button title={t('event.cancel')} disabled={busy} onPress={() => cancel.mutate(appt.id)} />
               </>
             )}
-            <Button title="Edit / reschedule" disabled={busy} onPress={() => setEditing(true)} />
-            <Button title="Delete" variant="danger" disabled={busy} onPress={confirmDelete} />
+            <Button title={t('event.editReschedule')} disabled={busy} onPress={() => setEditing(true)} />
+            <Button title={t('common.delete')} variant="danger" disabled={busy} onPress={confirmDelete} />
           </View>
         </>
       )}
@@ -144,21 +146,21 @@ function AppointmentEditForm({ appt, onDone }: { appt: Appointment; onDone: () =
 
   return (
     <View style={s.form}>
-      <Field label="Title" value={title} onChangeText={setTitle} />
+      <Field label={t('item.title')} value={title} onChangeText={setTitle} />
       <View style={s.chips}>
-        <DateTimeField mode="date" value={date} onChange={setDate} placeholder="Date" />
-        <DateTimeField mode="time" value={start} onChange={setStart} placeholder="Start" date={date} />
-        <DateTimeField mode="time" value={end} onChange={setEnd} placeholder="End" date={date} prefix="until" />
+        <DateTimeField mode="date" value={date} onChange={setDate} placeholder={t('item.date')} />
+        <DateTimeField mode="time" value={start} onChange={setStart} placeholder={t('event.start')} date={date} />
+        <DateTimeField mode="time" value={end} onChange={setEnd} placeholder={t('event.end')} date={date} prefix={t('event.until')} />
       </View>
       <ReminderList value={reminders} onChange={setReminders} itemHasTime />
-      <Field label="Location" value={location} onChangeText={setLocation} />
-      <Field label="With (comma-separated)" value={people} onChangeText={setPeople} />
-      <Field label="Description" value={description} onChangeText={setDescription} multiline />
-      <Field label="Notes" value={notes} onChangeText={setNotes} multiline />
+      <Field label={t('event.location')} value={location} onChangeText={setLocation} />
+      <Field label={`${t('event.with')} ${t('item.commaSeparated')}`} value={people} onChangeText={setPeople} />
+      <Field label={t('item.description')} value={description} onChangeText={setDescription} multiline />
+      <Field label={t('item.notes')} value={notes} onChangeText={setNotes} multiline />
       {update.error && <Text style={{ color: c.danger }}>{update.error.message}</Text>}
       <View style={s.actions}>
-        <Button title="Cancel" onPress={onDone} />
-        <Button title="Save changes" variant="primary" busy={update.isPending} disabled={!title.trim() || !date || !start || !end || !!reminderIssue} onPress={save} />
+        <Button title={t('common.cancel')} onPress={onDone} />
+        <Button title={t('item.saveChanges')} variant="primary" busy={update.isPending} disabled={!title.trim() || !date || !start || !end || !!reminderIssue} onPress={save} />
       </View>
     </View>
   )

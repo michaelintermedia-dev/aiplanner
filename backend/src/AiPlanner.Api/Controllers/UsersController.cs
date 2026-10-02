@@ -1,5 +1,7 @@
 using AiPlanner.Application.Auth.DTOs;
 using AiPlanner.Application.Common.Interfaces;
+using AiPlanner.Application.Users.DTOs;
+using AiPlanner.Application.Users.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,11 +15,13 @@ public class UsersController : ControllerBase
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUserService _currentUser;
+    private readonly IUserProfileService _profile;
 
-    public UsersController(IApplicationDbContext db, ICurrentUserService currentUser)
+    public UsersController(IApplicationDbContext db, ICurrentUserService currentUser, IUserProfileService profile)
     {
         _db = db;
         _currentUser = currentUser;
+        _profile = profile;
     }
 
     [HttpGet("me")]
@@ -29,5 +33,13 @@ public class UsersController : ControllerBase
         if (user is null) return NotFound();
 
         return Ok(new UserDto(user.Id, user.Email, user.DisplayName, user.TimeZoneId, user.Locale, user.CreatedAtUtc));
+    }
+
+    /// <summary>PATCH /api/users/me - change profile settings (for now the language/locale).</summary>
+    [HttpPatch("me")]
+    public async Task<ActionResult<UserDto>> Update(UpdateProfileRequest request, CancellationToken ct)
+    {
+        var result = await _profile.UpdateAsync(request, ct);
+        return result.Succeeded ? Ok(result.Value) : NotFound(new { errors = result.Errors });
     }
 }

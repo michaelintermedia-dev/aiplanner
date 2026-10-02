@@ -14,11 +14,13 @@ import { FeedFilterBar } from '../components/FeedFilterBar'
 import { FeedRow } from '../components/FeedRow'
 import { KIND_ICON } from '../components/kindIcons'
 import { UndoToast } from '../components/UndoToast'
+import { t } from '@shared/i18n'
 
 /** ?show= values for the filters; the URL keeps the filter so Back works. */
 const SHOW = ['all', 'tasks', 'events', 'notes'] as const
 /** Same icons as the mobile tab bar. */
 const ICONS: ComponentType[] = [IoAlbumsOutline, KIND_ICON.Task, KIND_ICON.Appointment, KIND_ICON.Note]
+const EMPTY_KEYS = ['feed.empty.all', 'feed.empty.tasks', 'feed.empty.events', 'feed.empty.notes'] as const
 
 /**
  * Home: one continuous feed of tasks, events and notes, newest first by
@@ -87,24 +89,24 @@ export function FeedPage() {
     <div className="page feed-page">
       <CaptureBar />
       {selected ? (
-        <div className="selection-bar" role="toolbar" aria-label="Selected items">
-          <button type="button" className="icon-button" onClick={() => setSelected(null)} aria-label="Stop selecting">
+        <div className="selection-bar" role="toolbar" aria-label={t('select.bar')}>
+          <button type="button" className="icon-button" onClick={() => setSelected(null)} aria-label={t('select.stop')}>
             <IoClose aria-hidden />
           </button>
-          <span className="selection-count">{selected.size} selected</span>
+          <span className="selection-count">{t('select.count', { count: selected.size })}</span>
           <button
             type="button"
             className="link"
             disabled={items.length === 0}
             onClick={() => setSelected(allSelected ? new Map() : new Map(items.map((i) => [feedItemKey(i), i])))}>
-            {allSelected ? 'Select none' : 'Select all'}
+            {allSelected ? t('select.none') : t('select.all')}
           </button>
           <button
             type="button"
             className="danger-button"
             disabled={selected.size === 0 || deletion.busy}
             onClick={() => deletion.deleteItems([...selected.values()], () => setSelected(null))}>
-            <IoTrashOutline aria-hidden /> Delete
+            <IoTrashOutline aria-hidden /> {t('common.delete')}
           </button>
         </div>
       ) : (
@@ -114,7 +116,7 @@ export function FeedPage() {
           sortChip={
             <>
               <button type="button" className="chip filter-toggle" onClick={() => setSelected(new Map())} disabled={items.length === 0}>
-                <IoCheckmarkCircleOutline aria-hidden /> Select
+                <IoCheckmarkCircleOutline aria-hidden /> {t('select.start')}
               </button>
               <SortChip sort={sort} onChange={setSort} />
             </>
@@ -123,15 +125,11 @@ export function FeedPage() {
       )}
       {deletion.error && <p className="error">{deletion.error.message}</p>}
 
-      {feed.isPending && <p className="muted">Loading…</p>}
+      {feed.isPending && <p className="muted">{t('common.loading')}</p>}
       {feed.error && <p className="error">{feed.error.message}</p>}
       {feed.data && items.length === 0 && (
         <p className="empty">
-          {filtering
-            ? 'Nothing matches these filters.'
-            : showIndex === 0
-              ? 'Nothing here yet — hold the mic or type above to capture something.'
-              : `No ${filter.label.toLowerCase()} yet.`}
+          {filtering ? t('feed.noMatches') : t(EMPTY_KEYS[showIndex])}
         </p>
       )}
 
@@ -152,12 +150,12 @@ export function FeedPage() {
       ))}
 
       <div ref={sentinel} className="feed-end" aria-live="polite">
-        {isFetchingNextPage ? 'Loading more…' : feed.data && !hasNextPage && items.length > 0 ? 'That’s everything.' : ''}
+        {isFetchingNextPage ? t('feed.loadingMore') : feed.data && !hasNextPage && items.length > 0 ? t('feed.end') : ''}
       </div>
 
       {deletion.deleted && <UndoToast deleted={deletion.deleted} onUndo={deletion.undo} onClose={deletion.hide} />}
 
-      <nav className="tab-bar" aria-label="Show">
+      <nav className="tab-bar" aria-label={t('feed.show')}>
         <div className="tab-bar-inner" role="tablist">
           {FEED_FILTERS.map((f, i) => {
             const Icon = ICONS[i]
@@ -204,12 +202,12 @@ function SortChip({ sort, onChange }: { sort: FeedSort; onChange: (s: FeedSort) 
 
   return (
     <div className="menu-anchor sort-chip-anchor" ref={ref}>
-      <button className="chip" onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open} aria-label={`Sort: ${label}. Change sort`}>
+      <button className="chip" onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open} aria-label={t('feed.sortLabel', { sort: label })}>
         ⇅ {label}
       </button>
       {open && (
         <div className="menu" role="menu">
-          <span className="muted">Sort by</span>
+          <span className="muted">{t('feed.sortBy')}</span>
           {FEED_SORTS.map((s) => (
             <button
               key={s.sort}

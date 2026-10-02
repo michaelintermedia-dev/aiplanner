@@ -4,6 +4,7 @@ import { useRef } from 'react'
 import { Pressable, StyleSheet } from 'react-native'
 import type { RecorderState } from '@/lib/useSegmentRecorder'
 import { useColors } from '@/theme'
+import { t } from '@shared/i18n'
 
 /** Presses held at least this long are push-to-talk; shorter ones are taps. */
 const HOLD_MS = 350
@@ -60,10 +61,10 @@ export function MicButton({
 
   const label =
     state === 'paused'
-      ? 'Continue recording. Hold to talk, or tap.'
+      ? t('mic.continue')
       : recording
-        ? 'Pause recording'
-        : 'Record voice. Hold to talk, or tap to start and stop.'
+        ? t('mic.pause')
+        : t('mic.record')
 
   return (
     <Pressable

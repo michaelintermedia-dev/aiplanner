@@ -1,7 +1,7 @@
 import { draftHasTime, draftProblems, INTENT_OPTIONS, toConfirmItem, toDraft, type ItemDraft } from '@shared/captureDraft'
 import type { AppendTarget, Capture, ExtractionIntent, TaskPriority } from '@shared/types'
 import { useState } from 'react'
-import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native'
+import { I18nManager, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native'
 import { capturesApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
 import { useAction } from '@/lib/useAction'
@@ -9,9 +9,11 @@ import { useColors, type Colors } from '@/theme'
 import { DateTimeField } from './DateTimeField'
 import { ReminderList } from './ReminderList'
 import { Button } from './ui'
+import { t } from '@shared/i18n'
+import { priorityLabel } from '@shared/labels'
 
 const PRIORITIES: (TaskPriority | null)[] = [null, 'Low', 'Medium', 'High']
-const KIND_NAME = { Task: 'task', Appointment: 'event', Note: 'note' } as const
+const ADD_TO = { Task: 'review.addToTask', Appointment: 'review.addToEvent', Note: 'review.addToNote' } as const
 const intentColor = (intent: ExtractionIntent, c: Colors) =>
   intent === 'Appointment' ? c.appointment : intent === 'Reminder' ? c.warn : intent === 'Note' ? c.muted : c.task
 
@@ -46,7 +48,7 @@ export function CaptureReview({
   const save = () =>
     confirm.mutate(
       drafts.map((d) => toConfirmItem(d, zone.timeZone, appendTarget)),
-      { onSuccess: () => onDone(included.length ? `Saved ${included.length} item${included.length > 1 ? 's' : ''}.` : null) },
+      { onSuccess: () => onDone(included.length ? t('review.saved', { count: included.length }) : null) },
     )
 
   // Cancel rejects everything so the capture doesn't linger as pending.
@@ -62,15 +64,15 @@ export function CaptureReview({
     <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.accent }]}>
       {appendTarget ? (
         // Continuing: the capture and its transcription are already shown around this.
-        <Text style={{ color: c.muted }}>I understood your addition:</Text>
+        <Text style={{ color: c.muted }}>{t('review.understoodAddition')}</Text>
       ) : (
         <>
-          <Text style={{ color: c.muted }}>I understood:</Text>
+          <Text style={{ color: c.muted }}>{t('review.understood')}</Text>
           <Text style={[styles.title, { color: c.text }]}>{capture.title}</Text>
           {capture.summary && <Text style={{ color: c.text }}>{capture.summary}</Text>}
           <Pressable onPress={() => setShowTranscript((s) => !s)} accessibilityRole="button">
             <Text style={{ color: c.muted }}>
-              {showTranscript ? '▾' : '▸'} {capture.source === 'Voice' ? 'Full transcription' : 'What you typed'}
+              {showTranscript ? '▾' : I18nManager.isRTL ? '◂' : '▸'} {capture.source === 'Voice' ? t('capture.fullTranscription') : t('capture.whatYouTyped')}
             </Text>
           </Pressable>
           {showTranscript && (
@@ -80,16 +82,16 @@ export function CaptureReview({
       )}
 
       {drafts.length === 0 ? (
-        <Text style={{ color: c.muted }}>I didn’t find anything to plan in that.</Text>
+        <Text style={{ color: c.muted }}>{t('review.nothing')}</Text>
       ) : (
         drafts.map((d) => <ItemEditor key={d.id} draft={d} onChange={(patch) => update(d.id, patch)} appendTarget={appendTarget} />)
       )}
 
       {confirm.error && <Text style={{ color: c.danger }}>{confirm.error.message}</Text>}
       <View style={styles.actions}>
-        <Button title="Cancel" onPress={discard} disabled={confirm.isPending} />
+        <Button title={t('common.cancel')} onPress={discard} disabled={confirm.isPending} />
         <Button
-          title={included.length === drafts.length ? 'Save all' : `Save ${included.length}`}
+          title={included.length === drafts.length ? t('review.saveAll') : t('review.saveSome', { count: included.length })}
           variant="primary"
           onPress={save}
           busy={confirm.isPending}
@@ -120,14 +122,14 @@ function ItemEditor({
         <Switch
           value={d.include}
           onValueChange={(include) => onChange({ include })}
-          accessibilityLabel={d.include ? 'Included' : 'Excluded'}
+          accessibilityLabel={d.include ? t('review.include') : t('review.excluded')}
           trackColor={{ true: c.accent }}
         />
         <TextInput
           style={[styles.itemTitle, { color: c.text, borderColor: c.border }, !d.include && styles.struck]}
           value={d.title}
           onChangeText={(title) => onChange({ title })}
-          accessibilityLabel="Title"
+          accessibilityLabel={t('item.title')}
         />
       </View>
 
@@ -143,8 +145,8 @@ function ItemEditor({
                 style={[styles.chip, { borderColor: d.appendTo ? c.accent : c.border }, d.appendTo && { backgroundColor: c.surface2 }]}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: d.appendTo }}
-                accessibilityLabel={`Add to “${appendTarget.title}”`}>
-                <Text style={{ color: d.appendTo ? c.text : c.muted, fontSize: 13 }}>Add to this {KIND_NAME[appendTarget.itemType]}</Text>
+                accessibilityLabel={t('review.addToTitle', { title: appendTarget.title })}>
+                <Text style={{ color: d.appendTo ? c.text : c.muted, fontSize: 13 }}>{t(ADD_TO[appendTarget.itemType])}</Text>
               </Pressable>
             )}
             {INTENT_OPTIONS.map(({ intent, label }) => {
@@ -166,16 +168,16 @@ function ItemEditor({
             <View style={styles.stack}>
               {!isNote && (
                 <View style={styles.chips}>
-                  <DateTimeField mode="date" value={d.date} onChange={(date) => onChange({ date })} placeholder="Date" />
+                  <DateTimeField mode="date" value={d.date} onChange={(date) => onChange({ date })} placeholder={t('item.date')} />
                   <DateTimeField
                     mode="time"
                     value={d.time}
                     onChange={(time) => onChange({ time })}
-                    placeholder={d.intent === 'Appointment' ? 'Start' : 'Time'}
+                    placeholder={d.intent === 'Appointment' ? t('event.start') : t('item.time')}
                     date={d.date}
                   />
                   {d.intent === 'Appointment' && (
-                    <DateTimeField mode="time" value={d.endTime} onChange={(endTime) => onChange({ endTime })} placeholder="End" date={d.date} prefix="until" />
+                    <DateTimeField mode="time" value={d.endTime} onChange={(endTime) => onChange({ endTime })} placeholder={t('event.end')} date={d.date} prefix={t('event.until')} />
                   )}
                 </View>
               )}
@@ -183,7 +185,7 @@ function ItemEditor({
               {d.intent === 'Appointment' && (
                 <TextInput
                   style={[styles.field, { color: c.text, borderColor: c.border }]}
-                  placeholder="Location"
+                  placeholder={t('event.location')}
                   placeholderTextColor={c.muted}
                   value={d.location ?? ''}
                   onChangeText={(location) => onChange({ location: location || null })}
@@ -196,9 +198,9 @@ function ItemEditor({
                     onPress={() => onChange({ priority: cycle(PRIORITIES, d.priority) })}
                     style={[styles.chip, { borderColor: c.border }]}
                     accessibilityRole="button"
-                    accessibilityLabel={`Priority: ${d.priority ?? 'none'}. Tap to change.`}>
+                    accessibilityLabel={t('task.priorityAria', { priority: priorityLabel(d.priority ?? 'None') })}>
                     <Text style={{ color: d.priority === 'High' ? c.danger : d.priority ? c.text : c.muted }}>
-                      {d.priority ? `${d.priority} priority` : 'No priority'}
+                      {d.priority ? t('task.priorityBadge', { priority: priorityLabel(d.priority) }) : t('task.noPriority')}
                     </Text>
                   </Pressable>
                 </View>
@@ -215,12 +217,12 @@ function ItemEditor({
 
           <TextInput
             style={[styles.field, styles.details, { color: c.text, borderColor: c.border }]}
-            placeholder={d.appendTo ? 'What to add' : d.intent === 'Note' ? 'What do you want to keep?' : 'Details (optional)'}
+            placeholder={d.appendTo ? t('review.whatToAdd') : d.intent === 'Note' ? t('review.noteKeep') : t('review.detailsOptional')}
             placeholderTextColor={c.muted}
             multiline
             value={d.description ?? ''}
             onChangeText={(description) => onChange({ description: description || null })}
-            accessibilityLabel={d.appendTo ? 'Text to add' : d.intent === 'Note' ? 'Note text' : 'Details'}
+            accessibilityLabel={d.appendTo ? t('capture.textToAdd') : d.intent === 'Note' ? t('review.noteText') : t('review.details')}
           />
           {d.clarification && <Text style={{ color: c.warn, fontSize: 14 }}>❓ {d.clarification}</Text>}
         </>

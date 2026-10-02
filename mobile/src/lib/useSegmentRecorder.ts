@@ -6,6 +6,7 @@ import {
   useAudioRecorderState,
 } from 'expo-audio'
 import { useCallback, useRef, useState } from 'react'
+import { t } from '@shared/i18n'
 
 export type RecorderState = 'idle' | 'recording' | 'paused'
 
@@ -41,7 +42,7 @@ export function useSegmentRecorder() {
     try {
       const permission = await requestRecordingPermissionsAsync()
       if (!permission.granted) {
-        throw new Error('Microphone permission was denied. Allow it in the phone settings to record.')
+        throw new Error(t('mic.error.permission'))
       }
       await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true })
       await recorder.prepareToRecordAsync()

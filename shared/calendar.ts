@@ -1,4 +1,5 @@
 import { addDays, formatDateKey } from './dates'
+import { t } from './i18n'
 import type { CalendarView } from './types'
 
 /** Calendar period math shared by web and mobile, on "yyyy-MM-dd" keys. */
@@ -42,7 +43,7 @@ export function periodTitle(view: CalendarView, anchor: string, locale: string):
 }
 
 export const CALENDAR_VIEWS: { view: CalendarView; label: string }[] = [
-  { view: 'day', label: 'Day' },
-  { view: 'week', label: 'Week' },
-  { view: 'month', label: 'Month' },
+  { view: 'day', get label() { return t('calendar.day') } },
+  { view: 'week', get label() { return t('calendar.week') } },
+  { view: 'month', get label() { return t('calendar.month') } },
 ]

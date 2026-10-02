@@ -2,6 +2,7 @@ import type { AuthResponse } from '@shared/types'
 import Constants from 'expo-constants'
 import * as SecureStore from 'expo-secure-store'
 import { Platform } from 'react-native'
+import { t } from '@shared/i18n'
 
 // Single place where HTTP happens (spec section 29). Screens call the typed
 // functions in endpoints.ts, never fetch() directly.
@@ -121,7 +122,7 @@ export async function request<T>(
   try {
     response = await send()
   } catch {
-    throw new ApiError(0, [`Can't reach the server at ${API_URL}.`])
+    throw new ApiError(0, [t('common.serverUnreachable', { url: API_URL })])
   }
 
   if (response.status === 401 && !anonymous) {

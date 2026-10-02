@@ -382,4 +382,20 @@ export const he: Messages = {
   'calendar.allDay': 'כל היום',
   'calendar.nothingPlanned': 'אין תוכניות',
   'calendar.items': { one: 'פריט אחד', two: 'שני פריטים', other: '{count} פריטים' },
+
+  // ---- sort criteria ----
+  'feed.sort.priority': 'עדיפות גבוהה קודם',
+  'feed.sortShort.priority': 'עדיפות',
+  'feed.sortShort.newest': 'חדשים',
+  'feed.sortShort.oldest': 'ישנים',
+  'feed.sortShort.updated': 'עודכנו',
+  'feed.sortShort.date': 'לפי תאריך',
+  'feed.group.high': 'עדיפות גבוהה',
+  'sort.edit': 'מיון',
+  'sort.editHint': 'בוחרים לפי מה למיין וצבע לכל אחד. אחר כך לחיצה על עיגול מכבה או מדליקה אותו.',
+  'sort.color': 'צבע ל{label}',
+  'sort.toggleOn': '{label}: פעיל. לחיצה לכיבוי.',
+  'sort.toggleOff': '{label}: כבוי. לחיצה להפעלה.',
+  'sort.allOff': 'הכול כבוי - החדשים קודם.',
+  'sort.pickOne': 'יש לבחור לפחות אחד.',
 }

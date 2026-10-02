@@ -94,7 +94,7 @@ export interface CreateAppointmentRequest {
 
 /** "Appointment" is shown to users as "Event". */
 export type FeedKind = 'Task' | 'Appointment' | 'Note'
-export type FeedSort = 'CreatedDesc' | 'CreatedAsc' | 'UpdatedDesc' | 'DateAsc'
+export type FeedSort = 'CreatedDesc' | 'CreatedAsc' | 'UpdatedDesc' | 'DateAsc' | 'PriorityHigh'
 
 export interface FeedItem {
   id: string

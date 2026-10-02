@@ -1963,3 +1963,133 @@ button.kind-icon:hover:not(:disabled) {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* ---- Sort criteria as round coloured chips (same as mobile) ---- */
+
+.sort-chips-area {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sort-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.sort-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  width: 64px;
+  color: var(--text);
+}
+
+.sort-chip:hover:not(:disabled) {
+  background: none;
+}
+
+.sort-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 19px;
+  color: #fff;
+  background: var(--chip, var(--surface-2));
+  transition: background 0.15s, box-shadow 0.15s, color 0.15s;
+}
+
+.sort-circle.small {
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
+}
+
+/* On: full colour inside a green ring. */
+.sort-chip.on .sort-circle {
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px #2f9e44;
+}
+
+/* Off: a pale tint of the same colour, grey dashed ring - still recognizable. */
+.sort-chip.off .sort-circle {
+  background: color-mix(in srgb, var(--chip) 22%, var(--bg));
+  color: var(--chip);
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--border);
+}
+
+.sort-chip.off .sort-chip-label {
+  color: var(--muted);
+}
+
+.sort-chip.edit .sort-circle {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.sort-chip-label {
+  font-size: 0.72rem;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.sort-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sort-editor-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sort-editor-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sort-editor-list li.unpicked .sort-swatches {
+  opacity: 0.45;
+}
+
+.sort-editor-pick {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+}
+
+.sort-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-inline-start: 26px;
+}
+
+.swatch {
+  width: 26px;
+  height: 26px;
+  min-height: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+}
+
+.swatch.selected {
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--text);
+}

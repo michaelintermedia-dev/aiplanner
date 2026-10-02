@@ -386,4 +386,20 @@ export const en = {
   'calendar.allDay': 'All day',
   'calendar.nothingPlanned': 'Nothing planned',
   'calendar.items': { one: '{count} item', other: '{count} items' },
+
+  // ---- sort criteria ----
+  'feed.sort.priority': 'High priority first',
+  'feed.sortShort.priority': 'Priority',
+  'feed.sortShort.newest': 'New',
+  'feed.sortShort.oldest': 'Old',
+  'feed.sortShort.updated': 'Modified',
+  'feed.sortShort.date': 'By date',
+  'feed.group.high': 'High priority',
+  'sort.edit': 'Sort criteria',
+  'sort.editHint': 'Pick what to sort by and a colour for each. Tap a circle later to switch it off or on.',
+  'sort.color': 'Colour for {label}',
+  'sort.toggleOn': '{label}: on. Tap to switch off.',
+  'sort.toggleOff': '{label}: off. Tap to switch on.',
+  'sort.allOff': 'All off - newest first.',
+  'sort.pickOne': 'Pick at least one.',
 } satisfies Record<string, Message>

@@ -88,13 +88,14 @@ export function createApi(request: RequestFn) {
         filters,
       }: {
         kinds?: FeedKind[]
-        sort?: FeedSort
+        /** One criterion or several, applied in order. */
+        sort?: FeedSort | FeedSort[]
         cursor?: string | null
         take?: number
         /** From feedFilterParams() in feedFilter.ts. */
         filters?: Record<string, string>
       }) => {
-        const params = new URLSearchParams({ sort, take: String(take), ...filters })
+        const params = new URLSearchParams({ sort: [sort].flat().join(',') || 'CreatedDesc', take: String(take), ...filters })
         if (kinds?.length) params.set('kinds', kinds.join(','))
         if (cursor) params.set('cursor', cursor)
         return request<FeedPage>('GET', `/feed?${params}`)

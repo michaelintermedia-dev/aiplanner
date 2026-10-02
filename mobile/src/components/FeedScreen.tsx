@@ -1,20 +1,23 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { FEED_SORTS, feedGroupLabel, feedItemKey, groupFeed } from '@shared/feed'
+import { feedGroupLabel, feedItemKey, groupFeed } from '@shared/feed'
+import { activeSorts } from '@shared/sortCriteria'
 import { activeFilterCount, feedFilterParams } from '@shared/feedFilter'
-import type { FeedItem, FeedKind, FeedSort } from '@shared/types'
+import type { FeedItem, FeedKind } from '@shared/types'
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
 import { useFocusEffect } from 'expo-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ActivityIndicator, Alert, BackHandler, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, BackHandler, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
 import { feedApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
 import { useColors } from '@/theme'
 import { useFeedFilters } from '@/lib/feedFilters'
 import { useDebounced } from '@/lib/useDebounced'
 import { useItemDeletion } from '@/lib/useItemDeletion'
+import { useSortChips } from '@/lib/sortChips'
 import { DOCK_SPACE } from './CaptureDock'
 import { FeedFilterBar } from './FeedFilterBar'
 import { FeedRow } from './FeedRow'
+import { SortChips } from './SortChips'
 import { Button } from './ui'
 import { UndoToast } from './UndoToast'
 import { t } from '@shared/i18n'
@@ -33,7 +36,9 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
   const c = useColors()
   const { zone } = useAuth()
   const queryClient = useQueryClient()
-  const [sort, setSort] = useState<FeedSort>('CreatedDesc')
+  // Sort criteria as coloured chips, shared by all tabs.
+  const [sortChips, setSortChips] = useSortChips()
+  const sort = useMemo(() => activeSorts(sortChips), [sortChips])
   const [refreshing, setRefreshing] = useState(false)
   // One set of filters for every tab (switching tabs keeps them).
   const [filters, setFilters] = useFeedFilters()
@@ -90,14 +95,6 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
     setRefreshing(false)
   }
 
-  const chooseSort = () =>
-    Alert.alert(t('feed.sortBy'), undefined, [
-      ...FEED_SORTS.map((s) => ({ text: s.sort === sort ? `✓ ${s.label}` : s.label, onPress: () => setSort(s.sort) })),
-      { text: t('common.close'), style: 'cancel' as const },
-    ])
-
-  const sortLabel = FEED_SORTS.find((s) => s.sort === sort)?.label ?? t('feed.sort.newest')
-
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       {/* Above the list, not a sticky list header: toggling stickyHeaderIndices breaks FlatList rendering. */}
@@ -146,11 +143,6 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
               <FeedFilterBar
                 filters={filters}
                 onChange={setFilters}
-                sortChip={
-                  <Pressable onPress={chooseSort} style={[styles.sort, { borderColor: c.border, backgroundColor: c.surface }]} accessibilityRole="button" accessibilityLabel={t('feed.sortLabel', { sort: sortLabel })}>
-                    <Text style={{ color: c.text }}>⇅ {sortLabel}</Text>
-                  </Pressable>
-                }
                 selectChip={
                   <Pressable
                     onPress={() => setSelected(new Map())}
@@ -164,6 +156,7 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
                 }
               />
             )}
+            {!selected && <SortChips chips={sortChips} onChange={setSortChips} />}
             {deletion.error && <Text style={{ color: c.danger }}>{deletion.error.message}</Text>}
             {feed.isPending && <Text style={{ color: c.muted }}>{t('common.loading')}</Text>}
             {feed.error && <Text style={{ color: c.danger }}>{feed.error.message}</Text>}

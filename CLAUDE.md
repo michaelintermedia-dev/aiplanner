@@ -269,6 +269,18 @@ Local dev notes:
   paging still works; `shared/feedFilter.ts` turns choices into UTC ranges in
   the user's timezone. Notes drop out of status/date filters, events and notes
   out of tag filters (they have no status/date/tags).
+- **Sort criteria as coloured chips** (2026-10-02, web + mobile; replaced the
+  single "⇅ Newest" menu). The ⇅ "Sort by" chip opens an editor: pick
+  criteria (High priority first, Newest, Oldest, Recently updated, By date)
+  and a colour each; Save shows them as round chips. Tapping a chip switches
+  it off (pale tint, dashed grey ring) or on (full colour, green ring) and the
+  feed re-sorts by the chips that are on, in order (`shared/sortCriteria.ts`;
+  default = High priority + Newest). Kept per device (web localStorage,
+  mobile SecureStore via `lib/sortChips.ts`). API: `GET /api/feed?sort=A,B`
+  (FeedPager compares by each in turn; the cursor carries the priority flag);
+  with priority first, high-priority tasks group under "High priority". To
+  add a criterion (e.g. "Relevant"): FeedSort enum + FeedPager.CompareBy +
+  SORT_CRITERIA + an icon in each app's SortChips.
 - **Deleting from the feed** (2026-10-02, web + mobile): "Select" chip (mobile
   also long-press a row) enters select mode - a bar with N selected / Select
   all / Delete; web rows also have a trash button on hover for one item. No

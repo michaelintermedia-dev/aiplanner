@@ -20,8 +20,9 @@ public class FeedController : ControllerBase
 
     /// <summary>
     /// GET /api/feed?kinds=Task,Appointment,Note&amp;sort=CreatedDesc&amp;cursor=&amp;take=30
-    /// kinds: comma-separated, omit for all. sort: CreatedDesc (default), CreatedAsc,
-    /// UpdatedDesc, DateAsc. cursor: NextCursor from the previous page.
+    /// kinds: comma-separated, omit for all. sort: one or more (comma-separated, applied
+    /// in order) of CreatedDesc (default), CreatedAsc, UpdatedDesc, DateAsc, PriorityHigh.
+    /// cursor: NextCursor from the previous page.
     /// Filters (all optional, combined with AND, applied within the kinds):
     /// q (text), createdFrom/createdTo (UTC), reminders (Any/With/Repeating/Without),
     /// status (Any/Open/Done), dateFrom/dateTo (UTC, due/start), noDate, fromVoice,
@@ -30,7 +31,7 @@ public class FeedController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<FeedPageDto>> Get(
         [FromQuery] string? kinds,
-        [FromQuery] FeedSort sort = FeedSort.CreatedDesc,
+        [FromQuery] string? sort = null,
         [FromQuery] string? cursor = null,
         [FromQuery] int take = 30,
         [FromQuery] string? q = null,
@@ -55,6 +56,16 @@ public class FeedController : ControllerBase
             parsed.Add(kind);
         }
 
+        var sorts = new List<FeedSort>();
+        foreach (var part in (sort ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (!Enum.TryParse<FeedSort>(part, ignoreCase: true, out var s) || !Enum.IsDefined(s))
+            {
+                return BadRequest(new { errors = new[] { $"Unknown sort '{part}'." } });
+            }
+            if (!sorts.Contains(s)) sorts.Add(s);
+        }
+
         if (q?.Length > 200)
         {
             return BadRequest(new { errors = new[] { "The search text is too long." } });
@@ -63,7 +74,7 @@ public class FeedController : ControllerBase
         static DateTime? Utc(DateTime? d) => d is { } v ? (v.Kind == DateTimeKind.Utc ? v : v.ToUniversalTime()) : null;
         var tagList = (tags ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         var filter = new FeedFilter(q, Utc(createdFrom), Utc(createdTo), reminders, status, Utc(dateFrom), Utc(dateTo), noDate, fromVoice, tagList);
-        return Ok(await _feed.GetPageAsync(new FeedQueryParameters(parsed, sort, cursor, take, filter), ct));
+        return Ok(await _feed.GetPageAsync(new FeedQueryParameters(parsed, sorts, cursor, take, filter), ct));
     }
 
     /// <summary>GET /api/feed/tags - the user's tags in use, most used first.</summary>

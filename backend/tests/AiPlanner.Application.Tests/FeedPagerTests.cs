@@ -103,4 +103,37 @@ public class FeedPagerTests
         FeedPager.Page(rows, FeedSort.CreatedDesc, null, 4).NextCursor.Should().BeNull();
         FeedPager.Page(rows, FeedSort.CreatedDesc, null, 3).NextCursor.Should().NotBeNull();
     }
+
+    [Fact]
+    public void Several_criteria_apply_in_order_and_paging_still_covers_everything()
+    {
+        // High-priority tasks first, then by date (undated last), newest first among equals.
+        var rows = Enumerable.Range(0, 20)
+            .Select(i => Row(i, dateMinutes: i % 4 == 0 ? null : 100 - i) with { HighPriority = i % 5 == 0 })
+            .ToList();
+        FeedSort[] sorts = [FeedSort.PriorityHigh, FeedSort.DateAsc];
+
+        var seen = new List<FeedKeyRow>();
+        string? cursor = null;
+        for (var guard = 0; guard < 100; guard++)
+        {
+            var (page, next) = FeedPager.Page(rows, sorts, cursor, 3);
+            seen.AddRange(page);
+            if (next is null) break;
+            cursor = next;
+        }
+
+        seen.Should().HaveCount(20).And.OnlyHaveUniqueItems();
+        seen.TakeWhile(r => r.HighPriority).Should().HaveCount(rows.Count(r => r.HighPriority));
+        var rest = seen.SkipWhile(r => r.HighPriority).ToList();
+        rest.TakeWhile(r => r.DateUtc is not null).Select(r => r.DateUtc).Should().BeInAscendingOrder();
+        rest.SkipWhile(r => r.DateUtc is not null).Should().OnlyContain(r => r.DateUtc == null);
+    }
+
+    [Fact]
+    public void No_criteria_means_newest_first()
+    {
+        var rows = Enumerable.Range(0, 5).Select(i => Row(i)).ToList();
+        FeedPager.Page(rows, [], null, 10).Page.Select(r => r.CreatedAtUtc).Should().BeInDescendingOrder();
+    }
 }

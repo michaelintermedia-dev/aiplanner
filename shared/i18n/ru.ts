@@ -382,4 +382,20 @@ export const ru: Messages = {
   'calendar.allDay': 'Весь день',
   'calendar.nothingPlanned': 'Ничего не запланировано',
   'calendar.items': { one: '{count} элемент', few: '{count} элемента', many: '{count} элементов', other: '{count} элемента' },
+
+  // ---- sort criteria ----
+  'feed.sort.priority': 'Сначала важные',
+  'feed.sortShort.priority': 'Важные',
+  'feed.sortShort.newest': 'Новые',
+  'feed.sortShort.oldest': 'Старые',
+  'feed.sortShort.updated': 'Изменённые',
+  'feed.sortShort.date': 'По дате',
+  'feed.group.high': 'Высокий приоритет',
+  'sort.edit': 'Сортировка',
+  'sort.editHint': 'Выберите, по чему сортировать, и цвет для каждого. Потом нажатие на кружок выключает или включает его.',
+  'sort.color': 'Цвет: {label}',
+  'sort.toggleOn': '{label}: включено. Нажмите, чтобы выключить.',
+  'sort.toggleOff': '{label}: выключено. Нажмите, чтобы включить.',
+  'sort.allOff': 'Всё выключено — сначала новые.',
+  'sort.pickOne': 'Выберите хотя бы один.',
 }

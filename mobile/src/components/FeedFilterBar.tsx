@@ -30,7 +30,7 @@ export function FeedFilterBar({
 }: {
   filters: FeedFilters
   onChange: (f: FeedFilters) => void
-  sortChip: ReactNode
+  sortChip?: ReactNode
   selectChip?: ReactNode
 }) {
   const c = useColors()

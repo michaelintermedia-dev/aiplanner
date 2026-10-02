@@ -72,7 +72,7 @@ public class FeedService : IFeedService
             if (f.NoDate) q = q.Where(t => t.DueDateUtc == null);
             if (f.FromVoice) q = q.Where(t => t.SourceAiExtraction != null && t.SourceAiExtraction.TranscriptId != null);
             if (tags.Count > 0) q = q.Where(t => t.TaskTags.Any(tt => tags.Contains(tt.Tag.Name)));
-            keys.AddRange(await q.Select(t => new FeedKeyRow(t.Id, FeedKind.Task, t.CreatedAtUtc, t.UpdatedAtUtc, t.DueDateUtc)).ToListAsync(ct));
+            keys.AddRange(await q.Select(t => new FeedKeyRow(t.Id, FeedKind.Task, t.CreatedAtUtc, t.UpdatedAtUtc, t.DueDateUtc, t.Priority == TaskPriority.High)).ToListAsync(ct));
         }
         if (Wants(FeedKind.Appointment) && !f.NoDate) // every event has a date
         {
@@ -122,7 +122,7 @@ public class FeedService : IFeedService
             keys.AddRange(await q.Select(n => new FeedKeyRow(n.Id, FeedKind.Note, n.CreatedAtUtc, n.UpdatedAtUtc, (DateTime?)null)).ToListAsync(ct));
         }
 
-        var (page, nextCursor) = FeedPager.Page(keys, query.Sort, query.Cursor, query.Take);
+        var (page, nextCursor) = FeedPager.Page(keys, query.Sorts, query.Cursor, query.Take);
 
         // ---- 2. Details for this page only -----------------------------------
         var ids = page.ToLookup(r => r.Kind, r => r.Id);

@@ -1,6 +1,7 @@
-import { FEED_FILTERS, FEED_SORTS, feedGroupLabel, feedItemKey, groupFeed } from '@shared/feed'
+import { FEED_FILTERS, feedGroupLabel, feedItemKey, groupFeed } from '@shared/feed'
+import { activeSorts, parseSortChips, SORT_CHIPS_KEY, type SortChip } from '@shared/sortCriteria'
 import { activeFilterCount, feedFilterParams, NO_FILTERS, type FeedFilters } from '@shared/feedFilter'
-import type { FeedItem, FeedSort } from '@shared/types'
+import type { FeedItem } from '@shared/types'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type ComponentType } from 'react'
 import { IoAlbumsOutline, IoCheckmarkCircleOutline, IoClose, IoTrashOutline } from 'react-icons/io5'
@@ -13,6 +14,7 @@ import { CaptureBar } from '../components/CaptureBar'
 import { FeedFilterBar } from '../components/FeedFilterBar'
 import { FeedRow } from '../components/FeedRow'
 import { KIND_ICON } from '../components/kindIcons'
+import { SortChips } from '../components/SortChips'
 import { UndoToast } from '../components/UndoToast'
 import { t } from '@shared/i18n'
 
@@ -33,7 +35,23 @@ export function FeedPage() {
   const [params, setParams] = useSearchParams()
   const showIndex = Math.max(0, SHOW.indexOf((params.get('show') ?? 'all') as (typeof SHOW)[number]))
   const filter = FEED_FILTERS[showIndex]
-  const [sort, setSort] = useState<FeedSort>('CreatedDesc')
+  // Sort criteria as coloured chips; kept in this browser.
+  const [sortChips, setSortChips] = useState<SortChip[]>(() => {
+    try {
+      return parseSortChips(localStorage.getItem(SORT_CHIPS_KEY))
+    } catch {
+      return parseSortChips(null)
+    }
+  })
+  const changeSortChips = (chips: SortChip[]) => {
+    setSortChips(chips)
+    try {
+      localStorage.setItem(SORT_CHIPS_KEY, JSON.stringify(chips))
+    } catch {
+      // Storage blocked: the choice just won't survive a reload.
+    }
+  }
+  const sort = activeSorts(sortChips)
   // One set of filters for every tab: switching tabs keeps them.
   const [filters, setFilters] = useState<FeedFilters>(NO_FILTERS)
   // Search as you type, but only ask the server once typing pauses.
@@ -114,15 +132,13 @@ export function FeedPage() {
           filters={filters}
           onChange={setFilters}
           sortChip={
-            <>
-              <button type="button" className="chip filter-toggle" onClick={() => setSelected(new Map())} disabled={items.length === 0}>
-                <IoCheckmarkCircleOutline aria-hidden /> {t('select.start')}
-              </button>
-              <SortChip sort={sort} onChange={setSort} />
-            </>
+            <button type="button" className="chip filter-toggle" onClick={() => setSelected(new Map())} disabled={items.length === 0}>
+              <IoCheckmarkCircleOutline aria-hidden /> {t('select.start')}
+            </button>
           }
         />
       )}
+      {!selected && <SortChips chips={sortChips} onChange={changeSortChips} />}
       {deletion.error && <p className="error">{deletion.error.message}</p>}
 
       {feed.isPending && <p className="muted">{t('common.loading')}</p>}
@@ -177,53 +193,6 @@ export function FeedPage() {
           })}
         </div>
       </nav>
-    </div>
-  )
-}
-
-/** "⇅ Newest" chip with a small menu - same control as on mobile. */
-function SortChip({ sort, onChange }: { sort: FeedSort; onChange: (s: FeedSort) => void }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-  const label = FEED_SORTS.find((s) => s.sort === sort)?.label ?? 'Newest'
-
-  useEffect(() => {
-    if (!open) return
-    const close = (e: MouseEvent | KeyboardEvent) => {
-      if (e instanceof KeyboardEvent ? e.key === 'Escape' : !ref.current?.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', close)
-    document.addEventListener('keydown', close)
-    return () => {
-      document.removeEventListener('mousedown', close)
-      document.removeEventListener('keydown', close)
-    }
-  }, [open])
-
-  return (
-    <div className="menu-anchor sort-chip-anchor" ref={ref}>
-      <button className="chip" onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open} aria-label={t('feed.sortLabel', { sort: label })}>
-        ⇅ {label}
-      </button>
-      {open && (
-        <div className="menu" role="menu">
-          <span className="muted">{t('feed.sortBy')}</span>
-          {FEED_SORTS.map((s) => (
-            <button
-              key={s.sort}
-              role="menuitemradio"
-              aria-checked={s.sort === sort}
-              className={`menu-item${s.sort === sort ? ' selected' : ''}`}
-              onClick={() => {
-                onChange(s.sort)
-                setOpen(false)
-              }}>
-              {s.sort === sort ? '✓ ' : ''}
-              {s.label}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   )
 }

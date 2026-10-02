@@ -80,3 +80,13 @@ export const feedItemPassed = (item: FeedItem) =>
 
 /** Done = completed or cancelled (shown struck through). */
 export const isDone = (item: FeedItem) => item.status === 'Completed' || item.status === 'Cancelled'
+
+/** A feed item's identity across types (ids are unique per type only). */
+export const feedItemKey = (item: { kind: FeedKind; id: string }) => `${item.kind}-${item.id}`
+
+/** "Note deleted" / "3 items deleted" - the undo toast's text. */
+export const deletedLabel = (items: { kind: FeedKind }[]) =>
+  items.length === 1 ? `${KIND_LABEL[items[0].kind]} deleted` : `${items.length} items deleted`
+
+/** How long the undo toast stays after a delete. */
+export const UNDO_MS = 8000

@@ -22,8 +22,19 @@ function openDetail(item: FeedItem) {
 /**
  * One feed entry, marked with its type's filter-tab icon. A task's icon is its
  * tick box (empty square / filled check); tapping the row opens the detail view.
+ *
+ * Long-press starts selecting (`onLongPress`). While selecting (`selection`
+ * set) a tap picks the row instead.
  */
-export function FeedRow({ item }: { item: FeedItem }) {
+export function FeedRow({
+  item,
+  selection,
+  onLongPress,
+}: {
+  item: FeedItem
+  selection?: { selected: boolean; onToggle: () => void }
+  onLongPress?: () => void
+}) {
   const c = useColors()
   const { zone } = useAuth()
   const complete = useAction(tasksApi.complete)
@@ -33,9 +44,25 @@ export function FeedRow({ item }: { item: FeedItem }) {
   const when = feedWhen(item, zone)
   const showStatus = item.status && !['Scheduled', 'Planned', 'Inbox'].includes(item.status)
 
+  const selected = selection?.selected ?? false
+
   return (
-    <View style={[styles.row, { backgroundColor: c.surface, borderColor: c.border, borderLeftColor: kindColor(item, c) }]}>
-      {item.kind === 'Task' ? (
+    <View
+      style={[
+        styles.row,
+        { backgroundColor: selected ? c.accentSoft : c.surface, borderColor: selected ? c.accent : c.border, borderLeftColor: kindColor(item, c) },
+      ]}>
+      {selection ? (
+        <Pressable
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: selected }}
+          accessibilityLabel={`Select ${item.title}`}
+          hitSlop={12}
+          onPress={selection.onToggle}
+          style={styles.iconBox}>
+          <Ionicons name={selected ? 'checkmark-circle' : 'ellipse-outline'} size={24} color={c.accent} />
+        </Pressable>
+      ) : item.kind === 'Task' ? (
         <Pressable
           accessibilityRole="checkbox"
           accessibilityState={{ checked: item.status === 'Completed' }}
@@ -51,7 +78,12 @@ export function FeedRow({ item }: { item: FeedItem }) {
           <Ionicons name={KIND_ICON[item.kind]} size={24} color={kindColor(item, c)} />
         </View>
       )}
-      <Pressable style={styles.main} onPress={() => openDetail(item)} accessibilityRole="button" accessibilityHint={`Opens the ${KIND_LABEL[item.kind].toLowerCase()}`}>
+      <Pressable
+        style={styles.main}
+        onPress={() => (selection ? selection.onToggle() : openDetail(item))}
+        onLongPress={selection ? undefined : onLongPress}
+        accessibilityRole="button"
+        accessibilityHint={selection ? (selected ? 'Unselects it' : 'Selects it') : `Opens the ${KIND_LABEL[item.kind].toLowerCase()}. Long-press to select.`}>
         <Text style={[styles.title, { color: done || passed ? c.muted : c.text }, (done || passed) && styles.struck]} numberOfLines={2}>
           {item.title}
         </Text>

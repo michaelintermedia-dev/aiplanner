@@ -8,6 +8,8 @@ import type {
   ConfirmCaptureItem,
   ConvertedItem,
   ConvertItemRequest,
+  ItemRef,
+  ItemsResult,
   CreateAppointmentRequest,
   FeedKind,
   FeedPage,
@@ -112,6 +114,10 @@ export function createApi(request: RequestFn) {
     items: {
       /** Turn a task / event / note into another type; the old item is replaced. */
       convert: (body: ConvertItemRequest) => request<ConvertedItem>('POST', '/items/convert', body),
+      /** Delete one or many items of any type at once (soft - `restore` undoes it). */
+      delete: (items: ItemRef[]) => request<ItemsResult>('POST', '/items/delete', { items }),
+      /** Undo a delete. */
+      restore: (items: ItemRef[]) => request<ItemsResult>('POST', '/items/restore', { items }),
     },
     notifications: {
       /** Everything that should go off in the next `hours` hours (Phase 4). */

@@ -330,6 +330,17 @@ export interface ConvertItemRequest {
   hasDueTime?: boolean | null
 }
 
+/** Points at one item of any type. */
+export interface ItemRef {
+  itemType: ItemType
+  id: string
+}
+
+/** How many of the selected items an operation changed. */
+export interface ItemsResult {
+  count: number
+}
+
 /** The new item. needsDetails: something had to be guessed (an event's time) - open it for editing. */
 export interface ConvertedItem {
   itemType: ItemType

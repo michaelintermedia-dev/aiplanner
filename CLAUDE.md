@@ -269,6 +269,14 @@ Local dev notes:
   paging still works; `shared/feedFilter.ts` turns choices into UTC ranges in
   the user's timezone. Notes drop out of status/date filters, events and notes
   out of tag filters (they have no status/date/tags).
+- **Deleting from the feed** (2026-10-02, web + mobile): "Select" chip (mobile
+  also long-press a row) enters select mode - a bar with N selected / Select
+  all / Delete; web rows also have a trash button on hover for one item. No
+  confirm dialog: an Undo toast (`UNDO_MS`, `useItemDeletion`) instead.
+  `POST /api/items/delete` and `/api/items/restore` take `{ items: [{ itemType,
+  id }] }` of any mix (`ItemDeletionService`); delete pauses reminders with
+  the item (`PausedWithItem`) so restore brings them back - except on a
+  completed/cancelled item, where they wait for reopen.
 - Notes have full CRUD (`/api/notes`) and are created by confirming a Note
   item in a capture, or directly.
 - **A capture never dead-ends; any item can be any type** (user's rule).

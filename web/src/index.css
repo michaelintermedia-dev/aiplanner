@@ -1782,3 +1782,101 @@ button.kind-icon:hover:not(:disabled) {
   align-items: center;
   gap: 4px;
 }
+
+/* ---- Deleting from the feed: Select mode, row trash button, Undo toast ---- */
+
+.selection-bar {
+  position: sticky;
+  top: 57px; /* under the app header */
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.selection-count {
+  flex: 1;
+  font-weight: 600;
+}
+
+.danger-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.danger-button:hover:not(:disabled) {
+  background: var(--danger);
+  color: #fff;
+}
+
+.feed-row.selecting {
+  cursor: pointer;
+  user-select: none;
+}
+
+.feed-row.selected {
+  background: var(--accent-soft);
+}
+
+.feed-row .select-box,
+.kind-appointment .select-box,
+.kind-note .select-box {
+  color: var(--accent);
+}
+
+.row-delete {
+  align-self: center;
+  color: var(--muted);
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.feed-row:hover .row-delete,
+.row-delete:focus-visible {
+  opacity: 1;
+}
+
+.row-delete:hover:not(:disabled) {
+  color: var(--danger);
+}
+
+/* Touch screens have no hover: keep it visible (faintly). */
+@media (hover: none) {
+  .row-delete {
+    opacity: 0.6;
+  }
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(76px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 6px 6px 16px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.2);
+  white-space: nowrap;
+}
+
+.toast .toast-action {
+  color: var(--accent-soft);
+  font-weight: 600;
+}
+
+.toast .icon-button {
+  color: inherit;
+}

@@ -21,7 +21,17 @@ import { Button } from './ui'
  * Filter button + panel + active-filter chips above the feed (same as the web
  * app). The filters apply to whichever tab is showing and stay across tabs.
  */
-export function FeedFilterBar({ filters, onChange, sortChip }: { filters: FeedFilters; onChange: (f: FeedFilters) => void; sortChip: ReactNode }) {
+export function FeedFilterBar({
+  filters,
+  onChange,
+  sortChip,
+  selectChip,
+}: {
+  filters: FeedFilters
+  onChange: (f: FeedFilters) => void
+  sortChip: ReactNode
+  selectChip?: ReactNode
+}) {
   const c = useColors()
   const { zone } = useAuth()
   const [open, setOpen] = useState(false)
@@ -39,6 +49,7 @@ export function FeedFilterBar({ filters, onChange, sortChip }: { filters: FeedFi
           <Ionicons name="funnel-outline" size={16} color={chips.length ? c.accent : c.text} />
           <Text style={{ color: chips.length ? c.accent : c.text }}>Filter{chips.length ? ` · ${chips.length}` : ''}</Text>
         </Pressable>
+        {selectChip}
         {sortChip}
       </View>
 

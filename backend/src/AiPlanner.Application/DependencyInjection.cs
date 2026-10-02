@@ -34,6 +34,7 @@ public static class DependencyInjection
         services.AddScoped<ITodayService, TodayService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IItemConversionService, ItemConversionService>();
+        services.AddScoped<IItemDeletionService, ItemDeletionService>();
         services.AddScoped<ICalendarService, CalendarService>();
         services.AddScoped<ICaptureService, CaptureService>();
         services.AddScoped<INoteService, NoteService>();

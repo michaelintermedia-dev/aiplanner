@@ -300,9 +300,12 @@ Local dev notes:
   expo-notifications so the app still loads in Expo Go (without notifications).
 - **Mobile only: the new-entry controls are a floating toolbar** (user's
   request, 2026-10-02 - a deliberate exception to keeping web and mobile the
-  same). `CaptureDock` wraps the feed and Today: open by default; the X or a
-  touch anywhere on the screen behind it collapses it to a round mic button
-  that reopens it. It never collapses while recording/processing/reviewing
+  same). `CaptureDock` wraps the whole signed-in app (root layout), so it
+  floats over every screen and a recording survives navigation. Open by
+  default; the X or a touch anywhere behind it collapses it to a round mic
+  button that can be dragged anywhere and snaps to the nearest side (like
+  Expo's dev-tools bubble); a tap reopens it. It sits above the tab bar on tab
+  screens and lifts above the keyboard (edge-to-edge Android doesn't resize). It never collapses while recording/processing/reviewing
   (`CaptureBar onEngagedChange`), and typed text survives collapsing.
 - **A capture can be continued after saving** (user's request, 2026-10-02):
   "Add more - keep talking" on an item's source capture opens the capture

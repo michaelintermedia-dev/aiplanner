@@ -8,6 +8,7 @@ import { ApiError } from '@/api/client'
 import { AuthProvider } from '@/auth/AuthProvider'
 import { useAuth } from '@/auth/useAuth'
 import { AuthScreen } from '@/components/AuthScreen'
+import { CaptureDock } from '@/components/CaptureDock'
 import { useNotifications } from '@/lib/useNotifications'
 import { useColors } from '@/theme'
 
@@ -54,26 +55,31 @@ function Gate() {
   return <SignedIn />
 }
 
-/** The signed-in app; also keeps the phone's notifications in sync (Phase 4). */
+/**
+ * The signed-in app; also keeps the phone's notifications in sync (Phase 4).
+ * The new-entry toolbar floats over every screen (CaptureDock).
+ */
 function SignedIn() {
   const c = useColors()
   useNotifications()
 
   return (
-    <Stack
-      screenOptions={{
-        headerStyle: { backgroundColor: c.surface },
-        headerTintColor: c.text,
-        headerShadowVisible: false,
-        contentStyle: { backgroundColor: c.bg },
-      }}>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="today" options={{ title: 'Today' }} />
-      <Stack.Screen name="calendar" options={{ title: 'Calendar' }} />
-      <Stack.Screen name="task/[id]" options={{ title: 'Task' }} />
-      <Stack.Screen name="appointment/[id]" options={{ title: 'Appointment' }} />
-      <Stack.Screen name="note/[id]" options={{ title: 'Note' }} />
-      <Stack.Screen name="settings" options={{ title: 'Settings' }} />
-    </Stack>
+    <CaptureDock>
+      <Stack
+        screenOptions={{
+          headerStyle: { backgroundColor: c.surface },
+          headerTintColor: c.text,
+          headerShadowVisible: false,
+          contentStyle: { backgroundColor: c.bg },
+        }}>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="today" options={{ title: 'Today' }} />
+        <Stack.Screen name="calendar" options={{ title: 'Calendar' }} />
+        <Stack.Screen name="task/[id]" options={{ title: 'Task' }} />
+        <Stack.Screen name="appointment/[id]" options={{ title: 'Appointment' }} />
+        <Stack.Screen name="note/[id]" options={{ title: 'Note' }} />
+        <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+      </Stack>
+    </CaptureDock>
   )
 }

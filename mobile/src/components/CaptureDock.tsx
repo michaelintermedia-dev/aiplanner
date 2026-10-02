@@ -1,26 +1,46 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Dimensions, Keyboard, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native'
+import { useSegments } from 'expo-router'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import {
+  Animated,
+  Keyboard,
+  PanResponder,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useColors } from '@/theme'
 import { CaptureBar } from './CaptureBar'
 
 /**
- * The new-entry controls as a floating toolbar (mobile only, user's request):
- * open by default; the X or a touch anywhere on the screen behind it collapses
- * it into a round mic button, which opens it again. It stays open while
- * recording, processing or reviewing, so nothing in progress is hidden. The
- * bar stays mounted when collapsed, so typed text survives.
+ * The new-entry controls as a floating toolbar over the whole app (mobile
+ * only, user's request). Wraps the signed-in app, so it's on every screen and
+ * a recording keeps going while you move around.
  *
- * It lifts itself above the on-screen keyboard: Android apps are edge-to-edge
- * now, so the window no longer shrinks for the keyboard and a panel anchored
- * to the bottom would be covered (KeyboardAvoidingView doesn't move an
- * absolutely positioned view either).
+ * Open by default; the X or a touch anywhere behind it collapses it into a
+ * round mic button that can be dragged anywhere (it snaps to the nearest side,
+ * like Expo's dev-tools bubble) and opens it again on a tap. It stays open
+ * while recording, processing or reviewing, and the bar stays mounted when
+ * collapsed, so typed text survives.
+ *
+ * It lifts itself above the on-screen keyboard: Android apps are edge-to-edge,
+ * so the window no longer shrinks for the keyboard.
  */
 export function CaptureDock({ children }: { children: ReactNode }) {
   const c = useColors()
+  const insets = useSafeAreaInsets()
+  const { height } = useWindowDimensions()
   const [open, setOpen] = useState(true)
   const [engaged, setEngaged] = useState(false)
-  const { ref, lift, roomAbove } = useKeyboardLift()
+  const keyboard = useKeyboardHeight()
+  // Above the tab bar on the tab screens; above the system bar elsewhere.
+  const inTabs = useSegments()[0] === '(tabs)'
+  const base = insets.bottom + (inTabs ? TAB_BAR : 0)
+  const bottom = GAP + Math.max(base, keyboard)
 
   const collapse = () => {
     if (!open || engaged) return
@@ -28,18 +48,16 @@ export function CaptureDock({ children }: { children: ReactNode }) {
     setOpen(false)
   }
 
-  const maxHeight = Math.min(Dimensions.get('window').height * 0.7, roomAbove ?? Number.POSITIVE_INFINITY)
-
   return (
-    <View style={styles.fill} ref={ref} collapsable={false}>
+    <View style={styles.fill}>
       {/* onTouchStart doesn't take the touch: the tap or scroll still happens. */}
       <View style={styles.fill} onTouchStart={collapse}>
         {children}
       </View>
 
-      <View style={[styles.dock, { bottom: GAP + lift }]} pointerEvents="box-none">
+      <View style={[styles.dock, { bottom }]} pointerEvents="box-none">
         <View style={[styles.panel, !open && styles.hidden]}>
-          <ScrollView style={{ maxHeight }} keyboardShouldPersistTaps="handled">
+          <ScrollView style={{ maxHeight: Math.max(160, (height - bottom - insets.top) * 0.85) }} keyboardShouldPersistTaps="handled">
             <CaptureBar onEngagedChange={setEngaged} />
           </ScrollView>
           {!engaged && (
@@ -53,55 +71,89 @@ export function CaptureDock({ children }: { children: ReactNode }) {
             </Pressable>
           )}
         </View>
-
-        {!open && (
-          <Pressable
-            onPress={() => setOpen(true)}
-            style={[styles.fab, { backgroundColor: c.accent }]}
-            accessibilityRole="button"
-            accessibilityLabel="New entry">
-            <Ionicons name="mic" size={26} color="#fff" />
-          </Pressable>
-        )}
       </View>
+
+      {/* Always mounted (hidden while open), so it remembers where it was dragged. */}
+      <DraggableMic visible={!open} onOpen={setOpen} />
     </View>
   )
 }
 
-/** Space between the toolbar and the bottom of the screen (or the keyboard). */
+/** Approximate bottom tab bar height (without the system inset). */
+const TAB_BAR = 56
+/** Space between the toolbar and whatever is under it. */
 const GAP = 12
+const FAB = 56
+const EDGE = 12
 
-/**
- * How far the toolbar must rise to sit above the keyboard, and how much room
- * is left above it then. Measured against the dock's own area, so it's right
- * with or without a tab bar underneath.
- */
-function useKeyboardLift() {
-  const ref = useRef<View>(null)
-  const [lift, setLift] = useState(0)
-  const [roomAbove, setRoomAbove] = useState<number | null>(null)
-
+/** Keyboard height while it's up (0 when hidden). */
+function useKeyboardHeight() {
+  const [height, setHeight] = useState(0)
+  const { height: window } = useWindowDimensions()
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow'
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide'
-    const show = Keyboard.addListener(showEvent, (e) => {
-      ref.current?.measureInWindow((_x, top, _w, height) => {
-        const keyboardTop = e.endCoordinates.screenY
-        setLift(Math.max(0, top + height - keyboardTop))
-        setRoomAbove(Math.max(160, keyboardTop - top - GAP * 3))
-      })
-    })
-    const hide = Keyboard.addListener(hideEvent, () => {
-      setLift(0)
-      setRoomAbove(null)
-    })
+    const show = Keyboard.addListener(showEvent, (e) => setHeight(Math.max(0, window - e.endCoordinates.screenY)))
+    const hide = Keyboard.addListener(hideEvent, () => setHeight(0))
     return () => {
       show.remove()
       hide.remove()
     }
-  }, [])
+  }, [window])
+  return height
+}
 
-  return { ref, lift, roomAbove }
+/** The collapsed toolbar: a mic button you can drag anywhere; it snaps to the nearest side. */
+function DraggableMic({ visible, onOpen }: { visible: boolean; onOpen: (open: true) => void }) {
+  const c = useColors()
+  const insets = useSafeAreaInsets()
+  const { width, height } = useWindowDimensions()
+  const [start] = useState(() => ({ x: width - FAB - EDGE, y: height - FAB - insets.bottom - TAB_BAR - GAP * 2 }))
+  const [position] = useState(() => new Animated.ValueXY(start))
+  const at = useRef(start) // where it rests (read and written in the touch handlers only)
+  const moved = useRef(false)
+
+  const responder = useMemo(
+    () =>
+      // The refs are only read inside the touch callbacks, never during render;
+      // the compiler can't tell PanResponder's handlers apart from render code.
+      // eslint-disable-next-line react-hooks/refs
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onPanResponderGrant: () => {
+          moved.current = false
+        },
+        onPanResponderMove: (_e, g) => {
+          if (Math.abs(g.dx) + Math.abs(g.dy) > 6) moved.current = true
+          position.setValue({ x: at.current.x + g.dx, y: at.current.y + g.dy })
+        },
+        onPanResponderRelease: (_e, g) => {
+          if (!moved.current) {
+            position.setValue(at.current)
+            onOpen(true) // a tap, not a drag
+            return
+          }
+          const x = at.current.x + g.dx + FAB / 2 < width / 2 ? EDGE : width - FAB - EDGE
+          const y = Math.min(Math.max(at.current.y + g.dy, insets.top + EDGE), height - FAB - insets.bottom - EDGE)
+          at.current = { x, y }
+          Animated.spring(position, { toValue: { x, y }, useNativeDriver: false, friction: 7 }).start()
+        },
+      }),
+    [position, onOpen, width, height, insets.top, insets.bottom],
+  )
+
+  return (
+    <Animated.View
+      {...responder.panHandlers}
+      style={[styles.fab, !visible && styles.hidden, { backgroundColor: c.accent, transform: position.getTranslateTransform() }]}
+      accessible
+      accessibilityRole="button"
+      accessibilityLabel="New entry"
+      accessibilityHint="Drag to move it."
+      onAccessibilityTap={() => onOpen(true)}>
+      <Ionicons name="mic" size={26} color="#fff" />
+    </Animated.View>
+  )
 }
 
 /** Room to leave under scrolling content so the last rows can scroll clear of the toolbar. */
@@ -109,9 +161,8 @@ export const DOCK_SPACE = 220
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  dock: { position: 'absolute', left: 12, right: 12, alignItems: 'flex-end' },
+  dock: { position: 'absolute', left: 12, right: 12 },
   panel: {
-    alignSelf: 'stretch',
     borderRadius: 16,
     elevation: 8,
     shadowColor: '#000',
@@ -132,9 +183,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   fab: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    width: FAB,
+    height: FAB,
+    borderRadius: FAB / 2,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 6,

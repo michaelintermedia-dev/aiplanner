@@ -2,10 +2,11 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
 import { RefreshControl, ScrollView, StyleSheet } from 'react-native'
 import { useColors } from '@/theme'
+import { DOCK_SPACE } from './CaptureDock'
 
 /** Scrollable screen body with pull-to-refresh that refetches all data. */
-/** `bottomSpace`: extra room at the end, e.g. so content scrolls clear of a floating toolbar. */
-export function Screen({ children, bottomSpace }: { children: ReactNode; bottomSpace?: number }) {
+/** Room at the end so the content can scroll clear of the floating new-entry toolbar. */
+export function Screen({ children, bottomSpace = DOCK_SPACE }: { children: ReactNode; bottomSpace?: number }) {
   const c = useColors()
   const queryClient = useQueryClient()
   const [refreshing, setRefreshing] = useState(false)
@@ -19,7 +20,7 @@ export function Screen({ children, bottomSpace }: { children: ReactNode; bottomS
   return (
     <ScrollView
       style={{ backgroundColor: c.bg }}
-      contentContainerStyle={[styles.content, bottomSpace !== undefined && { paddingBottom: bottomSpace }]}
+      contentContainerStyle={[styles.content, { paddingBottom: bottomSpace }]}
       keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.muted} />}>
       {children}

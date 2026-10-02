@@ -666,6 +666,8 @@ label.inline-check {
 
 .mic-select select {
   max-width: 220px;
+  min-width: 0;
+  text-overflow: ellipsis;
   min-height: 32px;
   padding: 4px 8px;
   font-size: 0.85rem;
@@ -2079,3 +2081,22 @@ button.kind-icon:hover:not(:disabled) {
 
 
 
+
+/* Narrow screens: the mic picker gets its own line under the buttons (the
+   mic itself never moves - hold-to-talk aims at a fixed spot), and long
+   device names are cut instead of pushing things over. */
+@media (max-width: 560px) {
+  .capture-actions {
+    flex-wrap: wrap;
+  }
+
+  .mic-select {
+    order: 10;
+    flex: 1 1 100%;
+  }
+
+  .mic-select select {
+    flex: 1;
+    max-width: none;
+  }
+}

@@ -19,3 +19,4 @@ export { cancelScheduledNotificationAsync } from 'expo-notifications/build/cance
 export { scheduleNotificationAsync } from 'expo-notifications/build/scheduleNotificationAsync'
 export { dismissNotificationAsync } from 'expo-notifications/build/dismissNotificationAsync'
 export { useLastNotificationResponse } from 'expo-notifications/build/useLastNotificationResponse'
+export { clearLastNotificationResponse } from 'expo-notifications/build/NotificationsEmitter'

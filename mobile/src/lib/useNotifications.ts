@@ -173,6 +173,9 @@ export function useNotifications() {
     const id = `${response.notification.request.identifier}|${response.actionIdentifier}`
     if (handled.has(id)) return
     handled.add(id)
+    // Otherwise the OS hands the same response back on the next app load and
+    // the item would open (or the action run) again.
+    Notifications.clearLastNotificationResponse()
     handleResponse(response)
       .then(() => queryClient.invalidateQueries())
       .catch((e: Error) => Alert.alert('Couldn’t do that', e.message))

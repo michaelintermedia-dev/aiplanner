@@ -10,6 +10,7 @@ import { notesApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
 import { detailStyles as s, Field } from '@/components/detail'
 import { ReminderList } from '@/components/ReminderList'
+import { ChangeType } from '@/components/ChangeType'
 import { Screen } from '@/components/Screen'
 import { SourceCapture } from '@/components/SourceCapture'
 import { Button } from '@/components/ui'
@@ -88,6 +89,7 @@ export default function NoteDetailScreen() {
             <Text style={[s.kind, { color: c.muted, borderLeftColor: c.warn }]}>NOTE</Text>
             {note.title && note.title !== note.content && <Text style={[s.title, { color: c.text }]}>{note.title}</Text>}
           </View>
+          <ChangeType itemType="Note" id={note.id} />
           <Text style={{ color: c.text, fontSize: 17, lineHeight: 25 }} selectable>
             {note.content}
           </Text>

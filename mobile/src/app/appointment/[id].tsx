@@ -11,6 +11,7 @@ import { useAuth } from '@/auth/useAuth'
 import { DateTimeField } from '@/components/DateTimeField'
 import { detailStyles as s, Facts, Field, TextBlock } from '@/components/detail'
 import { ReminderList } from '@/components/ReminderList'
+import { ChangeType } from '@/components/ChangeType'
 import { Screen } from '@/components/Screen'
 import { SourceCapture } from '@/components/SourceCapture'
 import { Badge, Button } from '@/components/ui'
@@ -18,10 +19,11 @@ import { useAction } from '@/lib/useAction'
 import { useColors } from '@/theme'
 
 export default function AppointmentDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>()
+  const { id, edit } = useLocalSearchParams<{ id: string; edit?: string }>()
   const c = useColors()
   const { zone } = useAuth()
-  const [editing, setEditing] = useState(false)
+  // `edit=1`: just changed into an event and its time was guessed - check it.
+  const [editing, setEditing] = useState(edit === '1')
   // Once a delete starts, stop (re)fetching this item - it's about to 404.
   const [deleting, setDeleting] = useState(false)
   const { data: appt, isPending, error } = useQuery({ queryKey: ['appointment', id], queryFn: () => appointmentsApi.get(id), enabled: !deleting })
@@ -70,6 +72,7 @@ export default function AppointmentDetailScreen() {
               )}
             </View>
           </View>
+          <ChangeType itemType="Appointment" id={appt.id} />
 
           <Facts
             rows={[

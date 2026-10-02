@@ -3,10 +3,11 @@ import { eventPassed } from '@shared/feed'
 import type { Appointment, Reminder } from '@shared/types'
 import { useQuery } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { appointmentsApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { ReminderList } from '../components/ReminderList'
+import { ChangeType } from '../components/ChangeType'
 import { SourceCapture } from '../components/SourceCapture'
 import { describeReminder, remindersProblem } from '@shared/reminders'
 import { useAction } from '../lib/useAction'
@@ -15,7 +16,8 @@ export function AppointmentDetailPage() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
   const { zone } = useAuth()
-  const [editing, setEditing] = useState(false)
+  // ?edit=1: just converted and something was guessed - start in the edit form.
+  const [editing, setEditing] = useState(useSearchParams()[0].get('edit') === '1')
   // Once a delete starts, stop (re)fetching this item - it's about to 404.
   const [deleting, setDeleting] = useState(false)
   const { data: appt, isPending, error } = useQuery({ queryKey: ['appointment', id], queryFn: () => appointmentsApi.get(id), enabled: !deleting })
@@ -52,6 +54,7 @@ export function AppointmentDetailPage() {
               )}
             </div>
           </header>
+          <ChangeType itemType="Appointment" id={appt.id} />
 
           <dl className="facts">
             <dt>When</dt>

@@ -13,3 +13,4 @@ export const notesApi = api.notes
 export const feedApi = api.feed
 export const notificationsApi = api.notifications
 export const settingsApi = api.settings
+export const itemsApi = api.items

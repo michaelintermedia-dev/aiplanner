@@ -10,6 +10,7 @@ import { useAuth } from '@/auth/useAuth'
 import { DateTimeField } from '@/components/DateTimeField'
 import { CycleChip, detailStyles as s, Facts, Field, TextBlock } from '@/components/detail'
 import { ReminderList } from '@/components/ReminderList'
+import { ChangeType } from '@/components/ChangeType'
 import { Screen } from '@/components/Screen'
 import { SourceCapture } from '@/components/SourceCapture'
 import { Badge, Button } from '@/components/ui'
@@ -19,10 +20,11 @@ import { useColors } from '@/theme'
 const PRIORITIES: TaskPriority[] = ['None', 'Low', 'Medium', 'High']
 
 export default function TaskDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>()
+  const { id, edit } = useLocalSearchParams<{ id: string; edit?: string }>()
   const c = useColors()
   const { zone } = useAuth()
-  const [editing, setEditing] = useState(false)
+  // `edit=1`: just changed into a task and something needs checking.
+  const [editing, setEditing] = useState(edit === '1')
   // Once a delete starts, stop (re)fetching this item - it's about to 404.
   const [deleting, setDeleting] = useState(false)
   const { data: task, isPending, error } = useQuery({ queryKey: ['task', id], queryFn: () => tasksApi.get(id), enabled: !deleting })
@@ -75,6 +77,7 @@ export default function TaskDetailScreen() {
               ))}
             </View>
           </View>
+          <ChangeType itemType="Task" id={task.id} />
 
           <Facts
             rows={[

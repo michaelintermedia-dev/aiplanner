@@ -8,6 +8,7 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { notesApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { ReminderList } from '../components/ReminderList'
+import { ChangeType } from '../components/ChangeType'
 import { SourceCapture } from '../components/SourceCapture'
 import { useAction } from '../lib/useAction'
 
@@ -76,6 +77,7 @@ export function NoteDetailPage() {
             <span className="kind note">Note</span>
             {note.title && note.title !== note.content && <h1>{note.title}</h1>}
           </header>
+          <ChangeType itemType="Note" id={note.id} />
           <p className="note-body">{note.content}</p>
           {note.reminders.map((r, i) => (
             <p key={i} className="note-reminder">

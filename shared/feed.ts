@@ -16,6 +16,9 @@ export const FEED_SORTS: { label: string; sort: FeedSort }[] = [
   { label: 'By date', sort: 'DateAsc' },
 ]
 
+/** The types an item can be changed to, in display order (same labels as KIND_LABEL). */
+export const ITEM_TYPES: FeedKind[] = ['Task', 'Appointment', 'Note']
+
 /** What users see for each kind ("Appointment" is called "Event"). */
 export const KIND_LABEL: Record<FeedKind, string> = { Task: 'Task', Appointment: 'Event', Note: 'Note' }
 

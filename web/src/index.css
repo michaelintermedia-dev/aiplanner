@@ -1768,3 +1768,17 @@ button.kind-icon:hover:not(:disabled) {
   font-size: 0.88rem;
   border-color: var(--accent);
 }
+
+/* "Change type" on an item's page */
+.change-type {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.change-type .segmented button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}

@@ -318,3 +318,21 @@ export interface NotificationSettings {
   /** "HH:mm", the user's local time. */
   dailySummaryTime: string
 }
+
+/** Change an item's type (POST /items/convert). Dates override what's carried over. */
+export interface ConvertItemRequest {
+  fromType: ItemType
+  id: string
+  toType: ItemType
+  startUtc?: string | null
+  endUtc?: string | null
+  dueUtc?: string | null
+  hasDueTime?: boolean | null
+}
+
+/** The new item. needsDetails: something had to be guessed (an event's time) - open it for editing. */
+export interface ConvertedItem {
+  itemType: ItemType
+  id: string
+  needsDetails: boolean
+}

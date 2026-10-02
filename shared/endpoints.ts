@@ -6,6 +6,8 @@ import type {
   Capture,
   CaptureSummary,
   ConfirmCaptureItem,
+  ConvertedItem,
+  ConvertItemRequest,
   CreateAppointmentRequest,
   FeedKind,
   FeedPage,
@@ -106,6 +108,10 @@ export function createApi(request: RequestFn) {
     },
     today: {
       get: () => request<Today>('GET', '/today'),
+    },
+    items: {
+      /** Turn a task / event / note into another type; the old item is replaced. */
+      convert: (body: ConvertItemRequest) => request<ConvertedItem>('POST', '/items/convert', body),
     },
     notifications: {
       /** Everything that should go off in the next `hours` hours (Phase 4). */

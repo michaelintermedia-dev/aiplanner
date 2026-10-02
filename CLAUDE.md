@@ -279,6 +279,14 @@ Local dev notes:
   `INTENT_OPTIONS` in `shared/captureDraft.ts`) plus editable dates,
   time, priority, reminder and details, so the user can turn anything into
   anything and fill in what's missing before saving.
+- **Saved items can change type too** (2026-10-02): the "Type" chips on every
+  detail view (`ChangeType` on web and mobile) call `POST /api/items/convert`.
+  `ItemConversionService` creates the new item through the normal services
+  and soft-deletes the old one in one transaction, carrying over title, text,
+  date, reminders and the capture link (location goes into the text where the
+  type has no field for it). An event needs a time: if it had to guess one
+  (09:00), `needsDetails` is true and the client opens the new item in edit
+  mode (`?edit=1` / `edit: '1'`).
 - **A reminder is not a type; every type can carry one** (user's rule,
   2026-10-01). A reminder is a schedule on an item, on until turned off:
   `At` (once at a moment - "in 1 hour", "tomorrow 9:00"), `Before` (N minutes

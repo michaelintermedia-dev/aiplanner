@@ -98,10 +98,32 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
   const sortLabel = FEED_SORTS.find((s) => s.sort === sort)?.label ?? 'Newest'
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
+      {/* Above the list, not a sticky list header: toggling stickyHeaderIndices breaks FlatList rendering. */}
+      {selected && (
+        <View style={[styles.selectionBar, { backgroundColor: c.surface, borderColor: c.accent }]} accessibilityLabel="Selected items">
+          <Pressable onPress={() => setSelected(null)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Stop selecting">
+            <Ionicons name="close" size={22} color={c.text} />
+          </Pressable>
+          <Text style={{ flex: 1, color: c.text, fontSize: 16, fontWeight: '600' }}>{selected.size} selected</Text>
+          <Button
+            title={allSelected ? 'Select none' : 'Select all'}
+            variant="link"
+            onPress={() => setSelected(allSelected ? new Map() : new Map(items.map((i) => [feedItemKey(i), i])))}
+          />
+          <Button
+            title="Delete"
+            variant="danger"
+            busy={deletion.busy}
+            disabled={selected.size === 0}
+            onPress={() => deletion.deleteItems([...selected.values()], () => setSelected(null))}
+          />
+        </View>
+      )}
       <FlatList
         style={{ backgroundColor: c.bg }}
-        stickyHeaderIndices={selecting ? [0] : undefined}
+        // Rows depend on the selection too, not only on `data`.
+        extraData={selected}
         contentContainerStyle={styles.content}
         data={entries}
         keyExtractor={(e) => e.key}
@@ -118,27 +140,8 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
           )
         }
         ListHeaderComponent={
-          <View style={[styles.top, selecting && { backgroundColor: c.bg, paddingVertical: 4 }]}>
-            {selected ? (
-              <View style={[styles.selectionBar, { backgroundColor: c.surface, borderColor: c.accent }]} accessibilityLabel="Selected items">
-                <Pressable onPress={() => setSelected(null)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Stop selecting">
-                  <Ionicons name="close" size={22} color={c.text} />
-                </Pressable>
-                <Text style={{ flex: 1, color: c.text, fontSize: 16, fontWeight: '600' }}>{selected.size} selected</Text>
-                <Button
-                  title={allSelected ? 'Select none' : 'Select all'}
-                  variant="link"
-                  onPress={() => setSelected(allSelected ? new Map() : new Map(items.map((i) => [feedItemKey(i), i])))}
-                />
-                <Button
-                  title="Delete"
-                  variant="danger"
-                  busy={deletion.busy}
-                  disabled={selected.size === 0}
-                  onPress={() => deletion.deleteItems([...selected.values()], () => setSelected(null))}
-                />
-              </View>
-            ) : (
+          <View style={styles.top}>
+            {!selected && (
               <FeedFilterBar
                 filters={filters}
                 onChange={setFilters}
@@ -189,5 +192,5 @@ const styles = StyleSheet.create({
   header: { fontSize: 12, fontWeight: '600', letterSpacing: 0.8, marginTop: 10, marginBottom: 2 },
   end: { textAlign: 'center', fontSize: 13, margin: 16 },
   select: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  selectionBar: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 14, paddingLeft: 12, paddingRight: 4, minHeight: 50 },
+  selectionBar: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 14, margin: 16, marginBottom: 0, paddingLeft: 12, paddingRight: 4, minHeight: 50 },
 })

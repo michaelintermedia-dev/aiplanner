@@ -1964,7 +1964,7 @@ button.kind-icon:hover:not(:disabled) {
   outline-offset: 2px;
 }
 
-/* ---- Sort criteria as round coloured chips (same as mobile) ---- */
+/* ---- Sort criteria as round chips, one icon each (same as mobile) ---- */
 
 .sort-chips-area {
   display: flex;
@@ -2003,7 +2003,7 @@ button.kind-icon:hover:not(:disabled) {
   place-items: center;
   font-size: 19px;
   color: #fff;
-  background: var(--chip, var(--surface-2));
+  background: var(--accent);
   transition: background 0.15s, box-shadow 0.15s, color 0.15s;
 }
 
@@ -2013,15 +2013,15 @@ button.kind-icon:hover:not(:disabled) {
   font-size: 14px;
 }
 
-/* On: full colour inside a green ring. */
+/* On: filled, inside a green ring. */
 .sort-chip.on .sort-circle {
   box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px #2f9e44;
 }
 
-/* Off: a pale tint of the same colour, grey dashed ring - still recognizable. */
+/* Off: a pale tint, grey dashed ring - the icon keeps it recognizable. */
 .sort-chip.off .sort-circle {
-  background: color-mix(in srgb, var(--chip) 22%, var(--bg));
-  color: var(--chip);
+  background: var(--accent-soft);
+  color: var(--accent);
   box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--border);
 }
 
@@ -2062,9 +2062,6 @@ button.kind-icon:hover:not(:disabled) {
   gap: 6px;
 }
 
-.sort-editor-list li.unpicked .sort-swatches {
-  opacity: 0.45;
-}
 
 .sort-editor-pick {
   display: flex;
@@ -2074,22 +2071,5 @@ button.kind-icon:hover:not(:disabled) {
   font-weight: 500;
 }
 
-.sort-swatches {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding-inline-start: 26px;
-}
 
-.swatch {
-  width: 26px;
-  height: 26px;
-  min-height: 0;
-  padding: 0;
-  border-radius: 50%;
-  border: 2px solid transparent;
-}
 
-.swatch.selected {
-  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--text);
-}

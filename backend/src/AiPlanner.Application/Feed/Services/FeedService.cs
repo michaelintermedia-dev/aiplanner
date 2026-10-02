@@ -1,6 +1,7 @@
 using AiPlanner.Application.Common.Interfaces;
 using AiPlanner.Application.Feed.DTOs;
 using AiPlanner.Application.Feed.Interfaces;
+using AiPlanner.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiPlanner.Application.Feed.Services;
@@ -18,37 +19,107 @@ public class FeedService : IFeedService
 
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUserService _currentUser;
+    private readonly IDateTime _clock;
 
-    public FeedService(IApplicationDbContext db, ICurrentUserService currentUser)
+    public FeedService(IApplicationDbContext db, ICurrentUserService currentUser, IDateTime clock)
     {
         _db = db;
         _currentUser = currentUser;
+        _clock = clock;
     }
 
     public async Task<FeedPageDto> GetPageAsync(FeedQueryParameters query, CancellationToken ct = default)
     {
         var userId = _currentUser.UserId ?? throw new UnauthorizedAccessException("No authenticated user.");
-        bool Wants(FeedKind k) => query.Kinds.Count == 0 || query.Kinds.Contains(k);
+        var f = query.Filter ?? FeedFilter.None;
+        var text = string.IsNullOrWhiteSpace(f.Text) ? null : f.Text.Trim();
+        var now = _clock.UtcNow;
+        var dated = f.DateFromUtc is not null || f.DateToUtc is not null;
+        var tags = f.Tags?.Select(t => t.Trim()).Where(t => t.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList() ?? [];
+        // Notes have no status or date of their own, so those filters leave them out.
+        bool Wants(FeedKind k) => (query.Kinds.Count == 0 || query.Kinds.Contains(k))
+            && !(k == FeedKind.Note && (f.Status != FeedStatusFilter.Any || dated))
+            && !(k != FeedKind.Task && tags.Count > 0); // only tasks have tags
 
-        // ---- 1. Key rows -----------------------------------------------------
+        // ---- 1. Key rows (filtered) -----------------------------------------
         var keys = new List<FeedKeyRow>();
         if (Wants(FeedKind.Task))
         {
-            keys.AddRange(await _db.TaskItems.AsNoTracking().Where(t => t.UserId == userId)
-                .Select(t => new FeedKeyRow(t.Id, FeedKind.Task, t.CreatedAtUtc, t.UpdatedAtUtc, t.DueDateUtc))
-                .ToListAsync(ct));
+            var q = _db.TaskItems.AsNoTracking().Where(t => t.UserId == userId);
+            if (text is not null)
+            {
+                q = q.Where(t => t.Title.Contains(text) || (t.Description != null && t.Description.Contains(text))
+                    || (t.Notes != null && t.Notes.Contains(text)) || t.TaskTags.Any(tt => tt.Tag.Name.Contains(text)));
+            }
+            if (f.CreatedFromUtc is { } cFrom) q = q.Where(t => t.CreatedAtUtc >= cFrom);
+            if (f.CreatedToUtc is { } cTo) q = q.Where(t => t.CreatedAtUtc < cTo);
+            q = f.Reminders switch
+            {
+                FeedReminderFilter.With => q.Where(t => t.Reminders.Any(r => !r.IsCancelled)),
+                FeedReminderFilter.Repeating => q.Where(t => t.Reminders.Any(r => !r.IsCancelled
+                    && (r.Kind == ReminderKind.Daily || r.Kind == ReminderKind.Weekdays || r.Kind == ReminderKind.Weekly))),
+                FeedReminderFilter.Without => q.Where(t => !t.Reminders.Any(r => !r.IsCancelled)),
+                _ => q,
+            };
+            q = f.Status switch
+            {
+                FeedStatusFilter.Open => q.Where(t => t.Status != TaskItemStatus.Completed && t.Status != TaskItemStatus.Cancelled),
+                FeedStatusFilter.Done => q.Where(t => t.Status == TaskItemStatus.Completed || t.Status == TaskItemStatus.Cancelled),
+                _ => q,
+            };
+            if (f.DateFromUtc is { } dFrom) q = q.Where(t => t.DueDateUtc >= dFrom);
+            if (f.DateToUtc is { } dTo) q = q.Where(t => t.DueDateUtc < dTo);
+            if (f.NoDate) q = q.Where(t => t.DueDateUtc == null);
+            if (f.FromVoice) q = q.Where(t => t.SourceAiExtraction != null && t.SourceAiExtraction.TranscriptId != null);
+            if (tags.Count > 0) q = q.Where(t => t.TaskTags.Any(tt => tags.Contains(tt.Tag.Name)));
+            keys.AddRange(await q.Select(t => new FeedKeyRow(t.Id, FeedKind.Task, t.CreatedAtUtc, t.UpdatedAtUtc, t.DueDateUtc)).ToListAsync(ct));
         }
-        if (Wants(FeedKind.Appointment))
+        if (Wants(FeedKind.Appointment) && !f.NoDate) // every event has a date
         {
-            keys.AddRange(await _db.Appointments.AsNoTracking().Where(a => a.UserId == userId)
-                .Select(a => new FeedKeyRow(a.Id, FeedKind.Appointment, a.CreatedAtUtc, a.UpdatedAtUtc, (DateTime?)a.StartUtc))
-                .ToListAsync(ct));
+            var q = _db.Appointments.AsNoTracking().Where(a => a.UserId == userId);
+            if (text is not null)
+            {
+                q = q.Where(a => a.Title.Contains(text) || (a.Description != null && a.Description.Contains(text))
+                    || (a.Notes != null && a.Notes.Contains(text)) || (a.Location != null && a.Location.Contains(text)));
+            }
+            if (f.CreatedFromUtc is { } cFrom) q = q.Where(a => a.CreatedAtUtc >= cFrom);
+            if (f.CreatedToUtc is { } cTo) q = q.Where(a => a.CreatedAtUtc < cTo);
+            q = f.Reminders switch
+            {
+                FeedReminderFilter.With => q.Where(a => a.Reminders.Any(r => !r.IsCancelled)),
+                FeedReminderFilter.Repeating => q.Where(a => a.Reminders.Any(r => !r.IsCancelled
+                    && (r.Kind == ReminderKind.Daily || r.Kind == ReminderKind.Weekdays || r.Kind == ReminderKind.Weekly))),
+                FeedReminderFilter.Without => q.Where(a => !a.Reminders.Any(r => !r.IsCancelled)),
+                _ => q,
+            };
+            // A scheduled event that has ended counts as done ("passed").
+            q = f.Status switch
+            {
+                FeedStatusFilter.Open => q.Where(a => a.Status == AppointmentStatus.Scheduled && a.EndUtc >= now),
+                FeedStatusFilter.Done => q.Where(a => a.Status != AppointmentStatus.Scheduled || a.EndUtc < now),
+                _ => q,
+            };
+            if (f.DateFromUtc is { } dFrom) q = q.Where(a => a.StartUtc >= dFrom);
+            if (f.DateToUtc is { } dTo) q = q.Where(a => a.StartUtc < dTo);
+            if (f.FromVoice) q = q.Where(a => a.SourceAiExtraction != null && a.SourceAiExtraction.TranscriptId != null);
+            keys.AddRange(await q.Select(a => new FeedKeyRow(a.Id, FeedKind.Appointment, a.CreatedAtUtc, a.UpdatedAtUtc, (DateTime?)a.StartUtc)).ToListAsync(ct));
         }
         if (Wants(FeedKind.Note))
         {
-            keys.AddRange(await _db.Notes.AsNoTracking().Where(n => n.UserId == userId)
-                .Select(n => new FeedKeyRow(n.Id, FeedKind.Note, n.CreatedAtUtc, n.UpdatedAtUtc, (DateTime?)null))
-                .ToListAsync(ct));
+            var q = _db.Notes.AsNoTracking().Where(n => n.UserId == userId);
+            if (text is not null) q = q.Where(n => (n.Title != null && n.Title.Contains(text)) || n.Content.Contains(text));
+            if (f.CreatedFromUtc is { } cFrom) q = q.Where(n => n.CreatedAtUtc >= cFrom);
+            if (f.CreatedToUtc is { } cTo) q = q.Where(n => n.CreatedAtUtc < cTo);
+            q = f.Reminders switch
+            {
+                FeedReminderFilter.With => q.Where(n => n.Reminders.Any(r => !r.IsCancelled)),
+                FeedReminderFilter.Repeating => q.Where(n => n.Reminders.Any(r => !r.IsCancelled
+                    && (r.Kind == ReminderKind.Daily || r.Kind == ReminderKind.Weekdays || r.Kind == ReminderKind.Weekly))),
+                FeedReminderFilter.Without => q.Where(n => !n.Reminders.Any(r => !r.IsCancelled)),
+                _ => q,
+            };
+            if (f.FromVoice) q = q.Where(n => n.SourceAiExtraction != null && n.SourceAiExtraction.TranscriptId != null);
+            keys.AddRange(await q.Select(n => new FeedKeyRow(n.Id, FeedKind.Note, n.CreatedAtUtc, n.UpdatedAtUtc, (DateTime?)null)).ToListAsync(ct));
         }
 
         var (page, nextCursor) = FeedPager.Page(keys, query.Sort, query.Cursor, query.Take);
@@ -115,6 +186,19 @@ public class FeedService : IFeedService
         // Keep the pager's order; skip anything deleted between the two steps.
         var items = page.Where(r => details.ContainsKey(r.Id)).Select(r => details[r.Id]).ToList();
         return new FeedPageDto(items, nextCursor);
+    }
+
+    public async Task<IReadOnlyList<FeedTagDto>> GetTagsAsync(CancellationToken ct = default)
+    {
+        var userId = _currentUser.UserId ?? throw new UnauthorizedAccessException("No authenticated user.");
+        // Counted from the user's tasks, so deleted tasks (query filter) don't count.
+        var counts = await _db.TaskItems.AsNoTracking()
+            .Where(t => t.UserId == userId)
+            .SelectMany(t => t.TaskTags.Select(tt => tt.Tag.Name))
+            .GroupBy(name => name)
+            .Select(g => new { Name = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+        return counts.OrderByDescending(t => t.Count).ThenBy(t => t.Name).Select(t => new FeedTagDto(t.Name, t.Count)).ToList();
     }
 
     private static string? Snippet(string? text, int max = SnippetLength)

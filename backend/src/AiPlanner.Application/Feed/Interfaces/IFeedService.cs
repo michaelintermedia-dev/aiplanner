@@ -6,4 +6,6 @@ namespace AiPlanner.Application.Feed.Interfaces;
 public interface IFeedService
 {
     Task<FeedPageDto> GetPageAsync(FeedQueryParameters query, CancellationToken ct = default);
+    /// <summary>The user's tags in use, most used first (for the tag filter).</summary>
+    Task<IReadOnlyList<FeedTagDto>> GetTagsAsync(CancellationToken ct = default);
 }

@@ -259,6 +259,16 @@ Local dev notes:
   and pages them with a keyset cursor, then details load for one page only.
   Fine for personal-scale data; revisit (SQL UNION + keyset) if a user ever
   has tens of thousands of items. Shared grouping/labels: `shared/feed.ts`.
+- **Feed filters** (2026-10-02, web + mobile): Filter button next to the sort
+  chip; one set of filters for every tab, kept when the tab changes (mobile:
+  a tiny shared store, `lib/feedFilters.ts`). Text (title/details/note/
+  location/tags), created (today/7d/30d/dates), when (due/start: today/this
+  week/overdue/no date), status (open/done - passed events count as done),
+  reminders (has/repeating/none), from voice, tags (any of; tasks only). The
+  server filters (`GET /api/feed?q=&createdFrom=...`, `GET /api/feed/tags`), so
+  paging still works; `shared/feedFilter.ts` turns choices into UTC ranges in
+  the user's timezone. Notes drop out of status/date filters, events and notes
+  out of tag filters (they have no status/date/tags).
 - Notes have full CRUD (`/api/notes`) and are created by confirming a Note
   item in a capture, or directly.
 - **A capture never dead-ends; any item can be any type** (user's rule).

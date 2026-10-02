@@ -1,12 +1,15 @@
 import { FEED_FILTERS, FEED_SORTS, feedGroupLabel, groupFeed } from '@shared/feed'
+import { activeFilterCount, feedFilterParams, NO_FILTERS, type FeedFilters } from '@shared/feedFilter'
 import type { FeedSort } from '@shared/types'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type ComponentType } from 'react'
 import { IoAlbumsOutline } from 'react-icons/io5'
 import { useSearchParams } from 'react-router'
 import { feedApi } from '../api/endpoints'
+import { useDebounced } from '../lib/useDebounced'
 import { useAuth } from '../auth/useAuth'
 import { CaptureBar } from '../components/CaptureBar'
+import { FeedFilterBar } from '../components/FeedFilterBar'
 import { FeedRow } from '../components/FeedRow'
 import { KIND_ICON } from '../components/kindIcons'
 
@@ -25,10 +28,16 @@ export function FeedPage() {
   const showIndex = Math.max(0, SHOW.indexOf((params.get('show') ?? 'all') as (typeof SHOW)[number]))
   const filter = FEED_FILTERS[showIndex]
   const [sort, setSort] = useState<FeedSort>('CreatedDesc')
+  // One set of filters for every tab: switching tabs keeps them.
+  const [filters, setFilters] = useState<FeedFilters>(NO_FILTERS)
+  // Search as you type, but only ask the server once typing pauses.
+  const text = useDebounced(filters.text)
+  const filterParams = feedFilterParams({ ...filters, text }, zone.timeZone)
+  const filtering = activeFilterCount(filters) > 0
 
   const feed = useInfiniteQuery({
-    queryKey: ['feed', filter.kinds, sort],
-    queryFn: ({ pageParam }) => feedApi.page({ kinds: filter.kinds, sort, cursor: pageParam }),
+    queryKey: ['feed', filter.kinds, sort, filterParams],
+    queryFn: ({ pageParam }) => feedApi.page({ kinds: filter.kinds, sort, cursor: pageParam, filters: filterParams }),
     initialPageParam: null as string | null,
     getNextPageParam: (last) => last.nextCursor,
   })
@@ -52,13 +61,17 @@ export function FeedPage() {
   return (
     <div className="page feed-page">
       <CaptureBar />
-      <SortChip sort={sort} onChange={setSort} />
+      <FeedFilterBar filters={filters} onChange={setFilters} sortChip={<SortChip sort={sort} onChange={setSort} />} />
 
       {feed.isPending && <p className="muted">Loading…</p>}
       {feed.error && <p className="error">{feed.error.message}</p>}
       {feed.data && items.length === 0 && (
         <p className="empty">
-          {showIndex === 0 ? 'Nothing here yet — hold the mic or type above to capture something.' : `No ${filter.label.toLowerCase()} yet.`}
+          {filtering
+            ? 'Nothing matches these filters.'
+            : showIndex === 0
+              ? 'Nothing here yet — hold the mic or type above to capture something.'
+              : `No ${filter.label.toLowerCase()} yet.`}
         </p>
       )}
 

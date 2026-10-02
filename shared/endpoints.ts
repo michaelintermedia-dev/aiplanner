@@ -74,12 +74,27 @@ export function createApi(request: RequestFn) {
     },
     feed: {
       /** One page of the unified feed. `kinds` empty/omitted = everything. */
-      page: ({ kinds, sort = 'CreatedDesc', cursor, take = 30 }: { kinds?: FeedKind[]; sort?: FeedSort; cursor?: string | null; take?: number }) => {
-        const params = new URLSearchParams({ sort, take: String(take) })
+      page: ({
+        kinds,
+        sort = 'CreatedDesc',
+        cursor,
+        take = 30,
+        filters,
+      }: {
+        kinds?: FeedKind[]
+        sort?: FeedSort
+        cursor?: string | null
+        take?: number
+        /** From feedFilterParams() in feedFilter.ts. */
+        filters?: Record<string, string>
+      }) => {
+        const params = new URLSearchParams({ sort, take: String(take), ...filters })
         if (kinds?.length) params.set('kinds', kinds.join(','))
         if (cursor) params.set('cursor', cursor)
         return request<FeedPage>('GET', `/feed?${params}`)
       },
+      /** The user's tags in use, most used first (for the tag filter). */
+      tags: () => request<{ name: string; count: number }[]>('GET', '/feed/tags'),
     },
     notes: {
       list: (search?: string) =>

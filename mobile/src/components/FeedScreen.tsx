@@ -1,4 +1,5 @@
 import { FEED_SORTS, feedGroupLabel, groupFeed } from '@shared/feed'
+import { activeFilterCount, feedFilterParams } from '@shared/feedFilter'
 import type { FeedItem, FeedKind, FeedSort } from '@shared/types'
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
@@ -6,7 +7,10 @@ import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleShe
 import { feedApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
 import { useColors } from '@/theme'
+import { useFeedFilters } from '@/lib/feedFilters'
+import { useDebounced } from '@/lib/useDebounced'
 import { DOCK_SPACE } from './CaptureDock'
+import { FeedFilterBar } from './FeedFilterBar'
 import { FeedRow } from './FeedRow'
 
 type ListEntry = { type: 'header'; key: string; label: string } | { type: 'item'; key: string; item: FeedItem }
@@ -22,10 +26,16 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
   const queryClient = useQueryClient()
   const [sort, setSort] = useState<FeedSort>('CreatedDesc')
   const [refreshing, setRefreshing] = useState(false)
+  // One set of filters for every tab (switching tabs keeps them).
+  const [filters, setFilters] = useFeedFilters()
+  // Search as you type, but only ask the server once typing pauses.
+  const text = useDebounced(filters.text)
+  const filterParams = feedFilterParams({ ...filters, text }, zone.timeZone)
+  const filtering = activeFilterCount(filters) > 0
 
   const feed = useInfiniteQuery({
-    queryKey: ['feed', kinds, sort],
-    queryFn: ({ pageParam }) => feedApi.page({ kinds, sort, cursor: pageParam }),
+    queryKey: ['feed', kinds, sort, filterParams],
+    queryFn: ({ pageParam }) => feedApi.page({ kinds, sort, cursor: pageParam, filters: filterParams }),
     initialPageParam: null as string | null,
     getNextPageParam: (last) => last.nextCursor,
   })
@@ -69,12 +79,18 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
       }
       ListHeaderComponent={
         <View style={styles.top}>
-          <Pressable onPress={chooseSort} style={[styles.sort, { borderColor: c.border, backgroundColor: c.surface }]} accessibilityRole="button" accessibilityLabel={`Sort: ${sortLabel}. Tap to change.`}>
-            <Text style={{ color: c.text }}>⇅ {sortLabel}</Text>
-          </Pressable>
+          <FeedFilterBar
+            filters={filters}
+            onChange={setFilters}
+            sortChip={
+              <Pressable onPress={chooseSort} style={[styles.sort, { borderColor: c.border, backgroundColor: c.surface }]} accessibilityRole="button" accessibilityLabel={`Sort: ${sortLabel}. Tap to change.`}>
+                <Text style={{ color: c.text }}>⇅ {sortLabel}</Text>
+              </Pressable>
+            }
+          />
           {feed.isPending && <Text style={{ color: c.muted }}>Loading…</Text>}
           {feed.error && <Text style={{ color: c.danger }}>{feed.error.message}</Text>}
-          {feed.data && entries.length === 0 && <Text style={{ color: c.muted }}>{emptyText}</Text>}
+          {feed.data && entries.length === 0 && <Text style={{ color: c.muted }}>{filtering ? 'Nothing matches these filters.' : emptyText}</Text>}
         </View>
       }
       ListFooterComponent={

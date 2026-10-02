@@ -22,6 +22,10 @@ public class FeedController : ControllerBase
     /// GET /api/feed?kinds=Task,Appointment,Note&amp;sort=CreatedDesc&amp;cursor=&amp;take=30
     /// kinds: comma-separated, omit for all. sort: CreatedDesc (default), CreatedAsc,
     /// UpdatedDesc, DateAsc. cursor: NextCursor from the previous page.
+    /// Filters (all optional, combined with AND, applied within the kinds):
+    /// q (text), createdFrom/createdTo (UTC), reminders (Any/With/Repeating/Without),
+    /// status (Any/Open/Done), dateFrom/dateTo (UTC, due/start), noDate, fromVoice,
+    /// tags (comma-separated, any of; tasks only).
     /// </summary>
     [HttpGet]
     public async Task<ActionResult<FeedPageDto>> Get(
@@ -29,6 +33,16 @@ public class FeedController : ControllerBase
         [FromQuery] FeedSort sort = FeedSort.CreatedDesc,
         [FromQuery] string? cursor = null,
         [FromQuery] int take = 30,
+        [FromQuery] string? q = null,
+        [FromQuery] DateTime? createdFrom = null,
+        [FromQuery] DateTime? createdTo = null,
+        [FromQuery] FeedReminderFilter reminders = FeedReminderFilter.Any,
+        [FromQuery] FeedStatusFilter status = FeedStatusFilter.Any,
+        [FromQuery] DateTime? dateFrom = null,
+        [FromQuery] DateTime? dateTo = null,
+        [FromQuery] bool noDate = false,
+        [FromQuery] bool fromVoice = false,
+        [FromQuery] string? tags = null,
         CancellationToken ct = default)
     {
         var parsed = new List<FeedKind>();
@@ -41,6 +55,18 @@ public class FeedController : ControllerBase
             parsed.Add(kind);
         }
 
-        return Ok(await _feed.GetPageAsync(new FeedQueryParameters(parsed, sort, cursor, take), ct));
+        if (q?.Length > 200)
+        {
+            return BadRequest(new { errors = new[] { "The search text is too long." } });
+        }
+
+        static DateTime? Utc(DateTime? d) => d is { } v ? (v.Kind == DateTimeKind.Utc ? v : v.ToUniversalTime()) : null;
+        var tagList = (tags ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var filter = new FeedFilter(q, Utc(createdFrom), Utc(createdTo), reminders, status, Utc(dateFrom), Utc(dateTo), noDate, fromVoice, tagList);
+        return Ok(await _feed.GetPageAsync(new FeedQueryParameters(parsed, sort, cursor, take, filter), ct));
     }
+
+    /// <summary>GET /api/feed/tags - the user's tags in use, most used first.</summary>
+    [HttpGet("tags")]
+    public async Task<ActionResult<IReadOnlyList<FeedTagDto>>> Tags(CancellationToken ct) => Ok(await _feed.GetTagsAsync(ct));
 }

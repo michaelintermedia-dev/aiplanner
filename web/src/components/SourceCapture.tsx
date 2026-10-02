@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { capturesApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
+import { toWav } from '../lib/toWav'
 import { useAction } from '../lib/useAction'
 
 /**
@@ -33,9 +34,7 @@ export function SourceCapture({ captureId }: { captureId: string }) {
       {capture.source === 'Voice' &&
         (capture.audioParts > 0 ? (
           <div className="source-audio">
-            {Array.from({ length: capture.audioParts }, (_, part) => (
-              <AudioPart key={part} captureId={captureId} part={part} label={capture.audioParts > 1 ? `Part ${part + 1}` : null} />
-            ))}
+            <RecordingPlayer captureId={captureId} parts={capture.audioParts} />
             <button
               className="link danger"
               disabled={deleteAudio.isPending}
@@ -50,16 +49,20 @@ export function SourceCapture({ captureId }: { captureId: string }) {
   )
 }
 
-/** Audio needs the auth header, so it's fetched as a blob and played from an object URL. */
-function AudioPart({ captureId, part, label }: { captureId: string; part: number; label: string | null }) {
+/**
+ * The whole recording as one track, like the mobile app. A recording made with
+ * pauses is stored in parts; they're fetched (as blobs - audio needs the auth
+ * header) and joined end to end, so play, seek and duration cover all of it.
+ */
+function RecordingPlayer({ captureId, parts }: { captureId: string; parts: number }) {
   const [url, setUrl] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     let created: string | null = null
     let cancelled = false
-    capturesApi
-      .audio(captureId, part)
+    Promise.all(Array.from({ length: parts }, (_, part) => capturesApi.audio(captureId, part)))
+      .then((blobs) => (blobs.length === 1 ? blobs[0] : toWav(blobs)))
       .then((blob) => {
         if (cancelled) return
         created = URL.createObjectURL(blob)
@@ -70,13 +73,12 @@ function AudioPart({ captureId, part, label }: { captureId: string; part: number
       cancelled = true
       if (created) URL.revokeObjectURL(created)
     }
-  }, [captureId, part])
+  }, [captureId, parts])
 
   if (failed) return <p className="muted">Couldn’t load the recording.</p>
   return (
     <div className="audio-part">
-      {label && <span className="muted">{label}</span>}
-      {url ? <audio controls src={url} /> : <span className="muted">Loading recording…</span>}
+      {url ? <audio controls src={url} aria-label="Recording" /> : <span className="muted">Loading recording…</span>}
     </div>
   )
 }

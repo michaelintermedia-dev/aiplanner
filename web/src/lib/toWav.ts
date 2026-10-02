@@ -6,23 +6,32 @@
  * unsupported") once the recorder was paused/resumed or flushed with
  * requestData() - which pause-and-continue and listen-before-send need. WAV is
  * accepted everywhere. 16 kHz mono is plenty for speech: ~1.9 MB per minute.
+ *
+ * Several recordings (a capture's parts) are joined end to end into one track.
  */
-export async function toWav(recording: Blob, sampleRate = 16000): Promise<Blob> {
+export async function toWav(recording: Blob | Blob[], sampleRate = 16000): Promise<Blob> {
+  const parts = Array.isArray(recording) ? recording : [recording]
   const context = new AudioContext()
-  let decoded: AudioBuffer
+  let decoded: AudioBuffer[]
   try {
-    decoded = await context.decodeAudioData(await recording.arrayBuffer())
+    decoded = []
+    for (const part of parts) decoded.push(await context.decodeAudioData(await part.arrayBuffer()))
   } finally {
     void context.close()
   }
 
-  // Resample + downmix to mono by rendering through an offline context.
-  const frames = Math.ceil(decoded.duration * sampleRate)
-  const offline = new OfflineAudioContext(1, frames, sampleRate)
-  const source = offline.createBufferSource()
-  source.buffer = decoded
-  source.connect(offline.destination)
-  source.start()
+  // Resample + downmix to mono by rendering through an offline context,
+  // each part starting where the previous one ended.
+  const frames = Math.ceil(decoded.reduce((sum, d) => sum + d.duration, 0) * sampleRate)
+  const offline = new OfflineAudioContext(1, Math.max(frames, 1), sampleRate)
+  let offset = 0
+  for (const buffer of decoded) {
+    const source = offline.createBufferSource()
+    source.buffer = buffer
+    source.connect(offline.destination)
+    source.start(offset)
+    offset += buffer.duration
+  }
   const samples = (await offline.startRendering()).getChannelData(0)
 
   const header = 44

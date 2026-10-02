@@ -305,7 +305,10 @@ Local dev notes:
   `ItemConversionService` creates the new item through the normal services
   and soft-deletes the old one in one transaction, carrying over title, text,
   date, reminders and the capture link (location goes into the text where the
-  type has no field for it). An event needs a time: if it had to guess one
+  type has no field for it). The new item keeps the old one's `CreatedAtUtc`
+  (set after the insert so the SaveChanges stamp doesn't overwrite it), so the
+  Created filter and Newest/Oldest sorts see the original creation time; a
+  plain edit (PUT) never changes the id or created date. An event needs a time: if it had to guess one
   (09:00), `needsDetails` is true and the client opens the new item in edit
   mode (`?edit=1` / `edit: '1'`).
 - **A reminder is not a type; every type can carry one** (user's rule,

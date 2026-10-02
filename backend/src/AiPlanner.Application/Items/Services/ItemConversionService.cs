@@ -10,6 +10,7 @@ using AiPlanner.Application.Notes.Interfaces;
 using AiPlanner.Application.Reminders;
 using AiPlanner.Application.Tasks.DTOs;
 using AiPlanner.Application.Tasks.Interfaces;
+using AiPlanner.Domain.Common;
 using AiPlanner.Domain.Entities;
 using AiPlanner.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -21,7 +22,9 @@ namespace AiPlanner.Application.Items.Services;
 /// is created through the normal services (so the usual validation and
 /// reminder rules apply) and the old one is soft-deleted, all in one
 /// transaction. Carried over: title, details, notes, reminders, the source
-/// capture, and the date where both types have one (task due &lt;-&gt; event start).
+/// capture, the date where both types have one (task due &lt;-&gt; event start),
+/// and the creation time - it is the same item to the user, so "Created" and
+/// the newest/oldest sorts keep placing it where it was.
 /// </summary>
 public class ItemConversionService : IItemConversionService
 {
@@ -70,8 +73,9 @@ public class ItemConversionService : IItemConversionService
                 }
                 var newId = created.Value;
 
-                // Keep the link to the capture it came from, and repoint the capture's item.
-                await SetSourceAsync(request.ToType, newId, source.SourceCaptureId, innerCt);
+                // Keep when it was first created and the link to the capture it came
+                // from, and repoint the capture's item.
+                await CarryOverAsync(request.ToType, newId, source, innerCt);
                 var captureItems = await _db.AIExtractionItems
                     .Where(i => i.ResultingTaskItemId == source.Id || i.ResultingAppointmentId == source.Id || i.ResultingNoteId == source.Id)
                     .ToListAsync(innerCt);
@@ -152,7 +156,7 @@ public class ItemConversionService : IItemConversionService
     /// <summary>The fields every type can give, plus how to delete it.</summary>
     private sealed record Source(
         Guid Id, string Title, string? Details, string? Notes, DateTime? WhenUtc, bool HasTime, DateTime? EndUtc,
-        string? Location, Guid? SourceCaptureId, IReadOnlyList<ReminderDto> Reminders, Action Delete);
+        string? Location, Guid? SourceCaptureId, DateTime CreatedAtUtc, IReadOnlyList<ReminderDto> Reminders, Action Delete);
 
     private async Task<Source?> LoadAsync(Guid userId, string type, Guid id, CancellationToken ct)
     {
@@ -162,14 +166,14 @@ public class ItemConversionService : IItemConversionService
             {
                 var t = await _db.TaskItems.Include(x => x.Reminders).FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId, ct);
                 return t is null ? null : new Source(
-                    t.Id, t.Title, t.Description, t.Notes, t.DueDateUtc, t.HasDueTime, null, null, t.SourceAiExtractionId,
+                    t.Id, t.Title, t.Description, t.Notes, t.DueDateUtc, t.HasDueTime, null, null, t.SourceAiExtractionId, t.CreatedAtUtc,
                     ReminderPlanner.ToDtos(t.Reminders), () => { t.IsDeleted = true; ReminderPlanner.TurnOff(t.Reminders); });
             }
             case "Appointment":
             {
                 var a = await _db.Appointments.Include(x => x.Reminders).FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId, ct);
                 return a is null ? null : new Source(
-                    a.Id, a.Title, a.Description, a.Notes, a.StartUtc, true, a.EndUtc, a.Location, a.SourceAiExtractionId,
+                    a.Id, a.Title, a.Description, a.Notes, a.StartUtc, true, a.EndUtc, a.Location, a.SourceAiExtractionId, a.CreatedAtUtc,
                     ReminderPlanner.ToDtos(a.Reminders), () => { a.IsDeleted = true; ReminderPlanner.TurnOff(a.Reminders); });
             }
             default:
@@ -180,26 +184,34 @@ public class ItemConversionService : IItemConversionService
                 var title = n.Title ?? Shorten(n.Content);
                 var details = n.Title is null && title == n.Content ? null : n.Content;
                 return new Source(
-                    n.Id, title, details, null, null, false, null, null, n.SourceAiExtractionId,
+                    n.Id, title, details, null, null, false, null, null, n.SourceAiExtractionId, n.CreatedAtUtc,
                     ReminderPlanner.ToDtos(n.Reminders), () => { n.IsDeleted = true; ReminderPlanner.TurnOff(n.Reminders); });
             }
         }
     }
 
-    private async Task SetSourceAsync(string type, Guid id, Guid? captureId, CancellationToken ct)
+    /// <summary>
+    /// The new item keeps the old one's creation time and source capture. Set
+    /// after the create, so SaveChanges sees a modification (which only touches
+    /// UpdatedAtUtc) rather than an insert (which stamps CreatedAtUtc).
+    /// </summary>
+    private async Task CarryOverAsync(string type, Guid id, Source source, CancellationToken ct)
     {
-        if (captureId is null) return;
-        switch (type)
+        BaseEntity created = type switch
         {
-            case "Task":
-                (await _db.TaskItems.FindAsync([id], ct))!.SourceAiExtractionId = captureId;
-                break;
-            case "Appointment":
-                (await _db.Appointments.FindAsync([id], ct))!.SourceAiExtractionId = captureId;
-                break;
-            default:
-                (await _db.Notes.FindAsync([id], ct))!.SourceAiExtractionId = captureId;
-                break;
+            "Task" => (await _db.TaskItems.FindAsync([id], ct))!,
+            "Appointment" => (await _db.Appointments.FindAsync([id], ct))!,
+            _ => (await _db.Notes.FindAsync([id], ct))!,
+        };
+        created.CreatedAtUtc = source.CreatedAtUtc;
+        if (source.SourceCaptureId is { } captureId)
+        {
+            switch (created)
+            {
+                case TaskItem t: t.SourceAiExtractionId = captureId; break;
+                case Appointment ap: ap.SourceAiExtractionId = captureId; break;
+                case Note n: n.SourceAiExtractionId = captureId; break;
+            }
         }
     }
 

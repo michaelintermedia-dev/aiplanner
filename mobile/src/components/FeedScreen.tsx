@@ -6,7 +6,7 @@ import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleShe
 import { feedApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
 import { useColors } from '@/theme'
-import { CaptureBar } from './CaptureBar'
+import { CaptureDock, DOCK_SPACE } from './CaptureDock'
 import { FeedRow } from './FeedRow'
 
 type ListEntry = { type: 'header'; key: string; label: string } | { type: 'item'; key: string; item: FeedItem }
@@ -54,46 +54,47 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
   const sortLabel = FEED_SORTS.find((s) => s.sort === sort)?.label ?? 'Newest'
 
   return (
-    <FlatList
-      style={{ backgroundColor: c.bg }}
-      contentContainerStyle={styles.content}
-      data={entries}
-      keyExtractor={(e) => e.key}
-      keyboardShouldPersistTaps="handled"
-      renderItem={({ item: entry }) =>
-        entry.type === 'header' ? (
-          <Text style={[styles.header, { color: c.muted }]}>{entry.label.toUpperCase()}</Text>
-        ) : (
-          <FeedRow item={entry.item} />
-        )
-      }
-      ListHeaderComponent={
-        <View style={styles.top}>
-          <CaptureBar />
-          <Pressable onPress={chooseSort} style={[styles.sort, { borderColor: c.border, backgroundColor: c.surface }]} accessibilityRole="button" accessibilityLabel={`Sort: ${sortLabel}. Tap to change.`}>
-            <Text style={{ color: c.text }}>⇅ {sortLabel}</Text>
-          </Pressable>
-          {feed.isPending && <Text style={{ color: c.muted }}>Loading…</Text>}
-          {feed.error && <Text style={{ color: c.danger }}>{feed.error.message}</Text>}
-          {feed.data && entries.length === 0 && <Text style={{ color: c.muted }}>{emptyText}</Text>}
-        </View>
-      }
-      ListFooterComponent={
-        feed.isFetchingNextPage ? (
-          <ActivityIndicator color={c.muted} style={{ margin: 16 }} />
-        ) : feed.data && !feed.hasNextPage && entries.length > 0 ? (
-          <Text style={[styles.end, { color: c.muted }]}>That’s everything.</Text>
-        ) : null
-      }
-      onEndReached={() => feed.hasNextPage && !feed.isFetchingNextPage && void feed.fetchNextPage()}
-      onEndReachedThreshold={0.6}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.muted} />}
-    />
+    <CaptureDock>
+      <FlatList
+        style={{ backgroundColor: c.bg }}
+        contentContainerStyle={styles.content}
+        data={entries}
+        keyExtractor={(e) => e.key}
+        keyboardShouldPersistTaps="handled"
+        renderItem={({ item: entry }) =>
+          entry.type === 'header' ? (
+            <Text style={[styles.header, { color: c.muted }]}>{entry.label.toUpperCase()}</Text>
+          ) : (
+            <FeedRow item={entry.item} />
+          )
+        }
+        ListHeaderComponent={
+          <View style={styles.top}>
+            <Pressable onPress={chooseSort} style={[styles.sort, { borderColor: c.border, backgroundColor: c.surface }]} accessibilityRole="button" accessibilityLabel={`Sort: ${sortLabel}. Tap to change.`}>
+              <Text style={{ color: c.text }}>⇅ {sortLabel}</Text>
+            </Pressable>
+            {feed.isPending && <Text style={{ color: c.muted }}>Loading…</Text>}
+            {feed.error && <Text style={{ color: c.danger }}>{feed.error.message}</Text>}
+            {feed.data && entries.length === 0 && <Text style={{ color: c.muted }}>{emptyText}</Text>}
+          </View>
+        }
+        ListFooterComponent={
+          feed.isFetchingNextPage ? (
+            <ActivityIndicator color={c.muted} style={{ margin: 16 }} />
+          ) : feed.data && !feed.hasNextPage && entries.length > 0 ? (
+            <Text style={[styles.end, { color: c.muted }]}>That’s everything.</Text>
+          ) : null
+        }
+        onEndReached={() => feed.hasNextPage && !feed.isFetchingNextPage && void feed.fetchNextPage()}
+        onEndReachedThreshold={0.6}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.muted} />}
+      />
+    </CaptureDock>
   )
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 16, gap: 8, paddingBottom: 48 },
+  content: { padding: 16, gap: 8, paddingBottom: DOCK_SPACE },
   top: { gap: 12, marginBottom: 4 },
   sort: { alignSelf: 'flex-end', borderWidth: 1, borderRadius: 999, paddingHorizontal: 14, minHeight: 36, justifyContent: 'center' },
   header: { fontSize: 12, fontWeight: '600', letterSpacing: 0.8, marginTop: 10, marginBottom: 2 },

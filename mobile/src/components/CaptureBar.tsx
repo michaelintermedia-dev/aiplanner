@@ -36,7 +36,14 @@ function continueForm({ target }: ContinueFrom) {
  * proposes items; the user reviews them. Nothing is saved until Save.
  * With `continueFrom` the same bar adds to an existing capture instead.
  */
-export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {}) {
+export function CaptureBar({
+  continueFrom,
+  onEngagedChange,
+}: {
+  continueFrom?: ContinueFrom
+  /** True while recording, processing or reviewing - the dock mustn't hide it then. */
+  onEngagedChange?: (engaged: boolean) => void
+} = {}) {
   const c = useColors()
   const recorder = useSegmentRecorder()
   const [text, setText] = useState('')
@@ -45,6 +52,9 @@ export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {
   const [capture, setCapture] = useState<Capture | null>(null)
   const [savedMessage, setSavedMessage] = useState<string | null>(null)
   const [silent, setSilent] = useState(false)
+
+  const engaged = recorder.state !== 'idle' || busy !== null || capture !== null
+  useEffect(() => onEngagedChange?.(engaged), [engaged, onEngagedChange])
 
   // Stop at the 10-minute cap (uploads are limited in size).
   useEffect(() => {

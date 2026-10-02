@@ -4,7 +4,8 @@ import { RefreshControl, ScrollView, StyleSheet } from 'react-native'
 import { useColors } from '@/theme'
 
 /** Scrollable screen body with pull-to-refresh that refetches all data. */
-export function Screen({ children }: { children: ReactNode }) {
+/** `bottomSpace`: extra room at the end, e.g. so content scrolls clear of a floating toolbar. */
+export function Screen({ children, bottomSpace }: { children: ReactNode; bottomSpace?: number }) {
   const c = useColors()
   const queryClient = useQueryClient()
   const [refreshing, setRefreshing] = useState(false)
@@ -18,7 +19,7 @@ export function Screen({ children }: { children: ReactNode }) {
   return (
     <ScrollView
       style={{ backgroundColor: c.bg }}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, bottomSpace !== undefined && { paddingBottom: bottomSpace }]}
       keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.muted} />}>
       {children}

@@ -63,8 +63,8 @@ export function feedWhen(item: FeedItem, zone: ZoneContext): string | null {
 
 /**
  * A scheduled event whose end (or start, without an end) is behind us. Worked
- * out from the clock, never stored, so it can't go stale. Shown as "Passed"
- * and muted (not struck through - that means done or cancelled).
+ * out from the clock, never stored, so it can't go stale. Shown like a
+ * completed task (muted, struck through) with a "Passed" badge.
  */
 export function eventPassed(e: { status: string | null; startUtc: string | null; endUtc: string | null }, now = Date.now()): boolean {
   const end = e.endUtc ?? e.startUtc

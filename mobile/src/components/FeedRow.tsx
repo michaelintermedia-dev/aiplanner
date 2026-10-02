@@ -52,7 +52,7 @@ export function FeedRow({ item }: { item: FeedItem }) {
         </View>
       )}
       <Pressable style={styles.main} onPress={() => openDetail(item)} accessibilityRole="button" accessibilityHint={`Opens the ${KIND_LABEL[item.kind].toLowerCase()}`}>
-        <Text style={[styles.title, { color: done || passed ? c.muted : c.text }, done && styles.struck]} numberOfLines={2}>
+        <Text style={[styles.title, { color: done || passed ? c.muted : c.text }, (done || passed) && styles.struck]} numberOfLines={2}>
           {item.title}
         </Text>
         {item.snippet && (

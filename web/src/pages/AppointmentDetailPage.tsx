@@ -43,7 +43,7 @@ export function AppointmentDetailPage() {
         <>
           <header className="detail-header">
             <span className="kind appointment">Appointment</span>
-            <h1 className={closed ? 'struck' : undefined}>{appt.title}</h1>
+            <h1 className={closed || passed ? 'struck' : undefined}>{appt.title}</h1>
             <div className="row-meta">
               {passed ? (
                 <span className="badge status-passed">Passed</span>

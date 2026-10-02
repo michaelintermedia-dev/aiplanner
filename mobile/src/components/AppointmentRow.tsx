@@ -37,7 +37,7 @@ export function AppointmentRow({ appointment: a, last }: { appointment: Appointm
         delayLongPress={350}
         accessibilityRole="button"
         accessibilityHint="Opens the appointment. Long-press for quick actions.">
-        <Text style={[styles.title, { color: done || passed ? c.muted : c.text }, done && styles.struck]}>{a.title}</Text>
+        <Text style={[styles.title, { color: done || passed ? c.muted : c.text }, (done || passed) && styles.struck]}>{a.title}</Text>
         <View style={styles.meta}>
           {a.location && <Text style={[styles.metaText, { color: c.muted }]}>{a.location}</Text>}
           {done && <Badge label={a.status} />}

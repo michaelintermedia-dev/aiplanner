@@ -15,7 +15,7 @@ import { Row } from '@/components/ui'
 import { useColors, type Colors } from '@/theme'
 
 const isClosed = (item: CalendarItem) => item.status === 'Completed' || item.status === 'Cancelled'
-/** Ended events are muted like closed items (but not struck through). */
+/** Ended events look like completed items. */
 const isPassed = (item: CalendarItem) => item.itemType === 'Appointment' && eventPassed(item)
 
 /**
@@ -136,7 +136,7 @@ export default function CalendarScreen() {
                   />
                   <Text style={[styles.time, { color: c.muted }]}>{item.hasTime ? formatTime(item.startUtc, zone) : 'All day'}</Text>
                   <Text
-                    style={[styles.itemTitle, { color: isClosed(item) || isPassed(item) ? c.muted : c.text }, isClosed(item) && styles.struck]}
+                    style={[styles.itemTitle, { color: isClosed(item) || isPassed(item) ? c.muted : c.text }, (isClosed(item) || isPassed(item)) && styles.struck]}
                     numberOfLines={1}>
                     {item.title}
                   </Text>

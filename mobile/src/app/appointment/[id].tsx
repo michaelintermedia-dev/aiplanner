@@ -61,7 +61,7 @@ export default function AppointmentDetailScreen() {
         <>
           <View style={{ gap: 8 }}>
             <Text style={[s.kind, { color: c.muted, borderLeftColor: c.appointment }]}>APPOINTMENT</Text>
-            <Text style={[s.title, { color: closed ? c.muted : c.text }, closed && s.struck]}>{appt.title}</Text>
+            <Text style={[s.title, { color: closed || passed ? c.muted : c.text }, (closed || passed) && s.struck]}>{appt.title}</Text>
             <View style={s.badges}>
               {passed ? (
                 <Badge label="Passed" />

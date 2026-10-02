@@ -1643,3 +1643,16 @@ button.kind-icon:hover:not(:disabled) {
   flex-direction: column;
   gap: 6px;
 }
+
+/* "Add more - keep talking" on an item's source capture */
+.continue-button {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+}
+
+.intent-chip.append.selected {
+  border-color: var(--accent);
+}

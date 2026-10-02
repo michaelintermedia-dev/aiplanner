@@ -1,8 +1,11 @@
 import { formatDateKey, formatTime, dateKey } from '@shared/dates'
 import { useQuery } from '@tanstack/react-query'
+import type { AppendTarget } from '@shared/types'
 import { useEffect, useState } from 'react'
+import { IoMicOutline } from 'react-icons/io5'
 import { capturesApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
+import { CaptureBar } from './CaptureBar'
 import { toWav } from '../lib/toWav'
 import { useAction } from '../lib/useAction'
 
@@ -10,8 +13,9 @@ import { useAction } from '../lib/useAction'
  * "Where this came from": the capture an item was created from, with the
  * original words and the recording (spec section 21 - voice capture history).
  */
-export function SourceCapture({ captureId }: { captureId: string }) {
+export function SourceCapture({ captureId, item }: { captureId: string; item?: AppendTarget }) {
   const { zone } = useAuth()
+  const [continuing, setContinuing] = useState(false)
   const { data: capture, error } = useQuery({ queryKey: ['capture', captureId], queryFn: () => capturesApi.get(captureId) })
   const deleteAudio = useAction(() => capturesApi.deleteAudio(captureId))
 
@@ -31,6 +35,16 @@ export function SourceCapture({ captureId }: { captureId: string }) {
         <summary>{capture.source === 'Voice' ? 'Full transcription' : 'What you typed'}</summary>
         <p className="source-text">{capture.inputText}</p>
       </details>
+      {item &&
+        (continuing ? (
+          <CaptureBar continueFrom={{ captureId, target: item, onClose: () => setContinuing(false) }} />
+        ) : (
+          // Complete an unfinished thought or add an insight, even after saving.
+          <button type="button" className="continue-button" onClick={() => setContinuing(true)}>
+            <IoMicOutline aria-hidden /> Add more - keep talking
+          </button>
+        ))}
+
       {capture.source === 'Voice' &&
         (capture.audioParts > 0 ? (
           <div className="source-audio">

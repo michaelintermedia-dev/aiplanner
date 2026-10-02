@@ -87,6 +87,50 @@ public class CapturesController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// POST /api/captures/{id}/continue (multipart/form-data) - add to an existing
+    /// capture: "audio" field(s) and/or "text", plus optional "itemType"/"itemId"
+    /// of the saved item being continued. Returns the capture with new items to review.
+    /// </summary>
+    [HttpPost("{id:guid}/continue")]
+    [RequestSizeLimit(MaxTotalBytes + 256 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = MaxAudioBytes + 64 * 1024)]
+    public async Task<ActionResult<CaptureDto>> Continue(
+        Guid id,
+        [FromForm] List<IFormFile>? audio,
+        [FromForm] string? text,
+        [FromForm] string? itemType,
+        [FromForm] Guid? itemId,
+        CancellationToken ct)
+    {
+        var files = (audio ?? []).Where(f => f.Length > 0).ToList();
+        if (files.Any(f => f.Length > MaxAudioBytes) || files.Sum(f => f.Length) > MaxTotalBytes)
+        {
+            return BadRequest(new { errors = new[] { "The recording is too large (max 25 MB per part)." } });
+        }
+        if (files.Any(f => !CaptureService.IsSupportedAudioFile(f.FileName)))
+        {
+            return BadRequest(new { errors = new[] { "Unsupported audio format. Use m4a, mp3, wav, webm, ogg, flac or aac." } });
+        }
+        if (text?.Length > 10_000)
+        {
+            return BadRequest(new { errors = new[] { "The text is too long." } });
+        }
+
+        var streams = files.Select(f => f.OpenReadStream()).ToList();
+        try
+        {
+            var segments = files.Select((f, i) => new AudioSegment(streams[i], f.FileName, f.ContentType)).ToList();
+            var result = await _captures.ContinueAsync(id, new ContinueCaptureRequest(text, segments, itemType, itemId), ct);
+            if (result.Succeeded) return Ok(result.Value);
+            return result.Errors.Contains("Capture not found.") ? NotFound(new { errors = result.Errors }) : BadRequest(new { errors = result.Errors });
+        }
+        finally
+        {
+            foreach (var s in streams) await s.DisposeAsync();
+        }
+    }
+
     /// <summary>POST /api/captures/{id}/confirm - save the accepted (possibly edited) items, reject the rest.</summary>
     [HttpPost("{id:guid}/confirm")]
     public async Task<ActionResult<CaptureDto>> Confirm(Guid id, ConfirmCaptureRequest request, CancellationToken ct)

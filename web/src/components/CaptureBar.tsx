@@ -1,4 +1,4 @@
-import type { Capture } from '@shared/types'
+import type { AppendTarget, Capture } from '@shared/types'
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { IoArrowUp } from 'react-icons/io5'
 import { capturesApi } from '../api/endpoints'
@@ -40,13 +40,29 @@ function usePreview(state: RecorderState, pauseCount: number, snapshot: () => Pr
   return state === 'paused' && preview?.pause === pauseCount ? preview.url : null
 }
 
+/** The form for a continue request, naming the item continued from. */
+function continueForm({ target }: ContinueFrom) {
+  const form = new FormData()
+  form.append('itemType', target.itemType)
+  form.append('itemId', target.itemId)
+  return form
+}
+
 const formatDuration = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+
+/** Adding to an existing capture from an item's page ("continue talking"). */
+export interface ContinueFrom {
+  captureId: string
+  target: AppendTarget
+  onClose: () => void
+}
 
 /**
  * Quick capture (spec section 14): type or speak, the AI proposes items, the
  * user reviews them. Nothing is saved until "Save" on the review.
+ * With `continueFrom` the same bar adds to an existing capture instead.
  */
-export function CaptureBar() {
+export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {}) {
   const recorder = useAudioRecorder()
   const [text, setText] = useState('')
   const [busy, setBusy] = useState<Busy>(null)
@@ -73,7 +89,13 @@ export function CaptureBar() {
 
   const submitText = (e?: FormEvent) => {
     e?.preventDefault()
-    if (text.trim()) void run('understanding', () => capturesApi.text(text.trim()))
+    if (!text.trim()) return
+    void run('understanding', () => {
+      if (!continueFrom) return capturesApi.text(text.trim())
+      const form = continueForm(continueFrom)
+      form.append('text', text.trim())
+      return capturesApi.continue(continueFrom.captureId, form)
+    })
   }
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -85,9 +107,9 @@ export function CaptureBar() {
     const recording = await recorder.stop()
     await run('transcribing', async () => {
       // Upload WAV, not the recorder's WebM - see toWav for why.
-      const form = new FormData()
+      const form = continueFrom ? continueForm(continueFrom) : new FormData()
       form.append('audio', await toWav(recording.blob), 'recording.wav')
-      return capturesApi.voice(form)
+      return continueFrom ? capturesApi.continue(continueFrom.captureId, form) : capturesApi.voice(form)
     })
   }
 
@@ -128,9 +150,11 @@ export function CaptureBar() {
     return (
       <CaptureReview
         capture={capture}
+        appendTarget={continueFrom?.target}
         onDone={(message) => {
           setCapture(null)
-          setSavedMessage(message)
+          if (continueFrom) continueFrom.onClose()
+          else setSavedMessage(message)
         }}
       />
     )
@@ -167,13 +191,18 @@ export function CaptureBar() {
       ) : (
         <textarea
           className="capture-input"
-          placeholder="What's on your mind? e.g. “Dentist next Thursday at 9:30 and finish the slides by Friday”"
+          placeholder={
+            continueFrom
+              ? 'Add to it: hold the mic and keep talking, or type'
+              : 'What\'s on your mind? e.g. “Dentist next Thursday at 9:30 and finish the slides by Friday”'
+          }
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={onKeyDown}
           rows={2}
           disabled={busy !== null}
-          aria-label="Capture text"
+          aria-label={continueFrom ? 'Text to add' : 'Capture text'}
+          autoFocus={!!continueFrom}
         />
       )}
       <div className="capture-actions">
@@ -205,6 +234,11 @@ export function CaptureBar() {
         {hasAudio && (
           <button type="button" className="link" onClick={recorder.discard}>
             Discard
+          </button>
+        )}
+        {continueFrom && !hasAudio && !busy && (
+          <button type="button" className="link" onClick={continueFrom.onClose}>
+            Cancel
           </button>
         )}
         {/* One send arrow for typed text and recordings; it only shows when there's something to send. */}

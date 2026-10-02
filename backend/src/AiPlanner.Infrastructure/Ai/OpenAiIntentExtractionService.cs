@@ -88,7 +88,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             i.Intent, i.Title, i.Summary, i.Description, i.Date, i.Time, i.EndTime, i.Location,
             i.Priority,
             i.Reminders?.Select(r => new RawReminder(r.Kind, r.MinutesBefore, r.Date, r.Time, r.Days)).ToList(),
-            i.Recurrence, i.Clarification, i.Confidence)).ToList();
+            i.Recurrence, i.Clarification, i.Confidence, i.AddsToCurrent ?? false)).ToList();
 
         return new RawExtraction(parsed.Title, parsed.Summary, items, content, "OpenAI", completion.Model ?? _options.Model);
     }
@@ -133,7 +133,29 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             - Top-level "title": 2-5 words naming the whole capture. Top-level "summary": 1-2 sentences if the input is longer than one sentence, otherwise null.
 
             Only extract what the user actually said. Never invent items, people, places or times.
+            - "addsToCurrent": false, unless the "Continuing" section below says otherwise.
+
             Never return nothing: if the input is a question, an idea, or anything that isn't clearly a task or appointment, return it as a single "note" whose "description" keeps the user's words. The user can change any item's type in the review.
+            """ + Continuing(c);
+    }
+
+    /// <summary>Extra instructions when the user adds to an earlier capture ("continue talking").</summary>
+    private static string Continuing(ExtractionContext c)
+    {
+        if (c.PreviousText is null)
+        {
+            return "";
+        }
+        var item = c.CurrentItem is null ? "" : $"""
+
+            They are looking at the saved item "{c.CurrentItem}". If the new input completes it or adds detail to it (an unfinished thought, an insight about it), return that as ONE item with "addsToCurrent": true whose "description" is the added detail in the user's own words and whose "title" is a short label for it. Anything new and separate is a normal item with "addsToCurrent": false.
+            """;
+        return $"""
+
+
+            Continuing: the user is adding to something they said earlier. Earlier they said (already handled - do not extract it again):
+            «{c.PreviousText}»
+            Use it only as context; extract items from the new input only.{item}
             """;
     }
 
@@ -175,7 +197,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             ["type"] = "object",
             ["additionalProperties"] = false,
             ["required"] = new JsonArray("intent", "title", "summary", "description", "date", "time", "endTime",
-                "location", "priority", "reminders", "recurrence", "clarification", "confidence"),
+                "location", "priority", "reminders", "recurrence", "clarification", "confidence", "addsToCurrent"),
             ["properties"] = new JsonObject
             {
                 ["intent"] = new JsonObject { ["type"] = "string", ["enum"] = new JsonArray("task", "appointment", "note") },
@@ -191,6 +213,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
                 ["recurrence"] = Nullable("string", values: new JsonArray("daily", "weekdays", "weekly", "monthly", null)),
                 ["clarification"] = Nullable("string"),
                 ["confidence"] = new JsonObject { ["type"] = "number" },
+                ["addsToCurrent"] = new JsonObject { ["type"] = "boolean" },
             },
         };
 
@@ -221,7 +244,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
     private sealed record ItemJson(
         string? Intent, string? Title, string? Summary, string? Description,
         string? Date, string? Time, string? EndTime, string? Location, string? Priority,
-        List<ReminderJson>? Reminders, string? Recurrence, string? Clarification, double? Confidence);
+        List<ReminderJson>? Reminders, string? Recurrence, string? Clarification, double? Confidence, bool? AddsToCurrent);
 
     private sealed record ReminderJson(string? Kind, int? MinutesBefore, string? Date, string? Time, List<string>? Days);
 }

@@ -1,4 +1,6 @@
+import Ionicons from '@expo/vector-icons/Ionicons'
 import { dateKey, formatDateKey, formatTime } from '@shared/dates'
+import type { AppendTarget } from '@shared/types'
 import { useQuery } from '@tanstack/react-query'
 import { useAudioPlayer } from 'expo-audio'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -8,14 +10,16 @@ import { capturesApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
 import { useAction } from '@/lib/useAction'
 import { useColors } from '@/theme'
+import { CaptureBar } from './CaptureBar'
 import { Button } from './ui'
 
 /**
  * "Where this came from": the capture an item was created from, with the
  * original words and the recording (spec section 21).
  */
-export function SourceCapture({ captureId }: { captureId: string }) {
+export function SourceCapture({ captureId, item }: { captureId: string; item?: AppendTarget }) {
   const c = useColors()
+  const [continuing, setContinuing] = useState(false)
   const { zone } = useAuth()
   const { data: capture, error } = useQuery({ queryKey: ['capture', captureId], queryFn: () => capturesApi.get(captureId) })
   const deleteAudio = useAction(() => capturesApi.deleteAudio(captureId))
@@ -41,6 +45,20 @@ export function SourceCapture({ captureId }: { captureId: string }) {
         </Text>
       </Pressable>
       {showText && <Text style={[styles.text, { color: c.text, backgroundColor: c.surface2 }]}>{capture.inputText}</Text>}
+
+      {item &&
+        (continuing ? (
+          <CaptureBar continueFrom={{ captureId, target: item, onClose: () => setContinuing(false) }} />
+        ) : (
+          // Complete an unfinished thought or add an insight, even after saving.
+          <Pressable
+            onPress={() => setContinuing(true)}
+            style={[styles.continue, { borderColor: c.border }]}
+            accessibilityRole="button">
+            <Ionicons name="mic-outline" size={18} color={c.text} />
+            <Text style={{ color: c.text }}>Add more - keep talking</Text>
+          </Pressable>
+        ))}
 
       {capture.source === 'Voice' &&
         (capture.audioParts > 0 ? (
@@ -120,5 +138,6 @@ const styles = StyleSheet.create({
   card: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 14, padding: 14, gap: 8 },
   heading: { fontSize: 12, fontWeight: '600', letterSpacing: 0.8 },
   text: { padding: 10, borderRadius: 8, fontSize: 14, lineHeight: 20 },
+  continue: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', borderWidth: 1, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
   audio: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
 })

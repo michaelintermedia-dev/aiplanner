@@ -1,5 +1,5 @@
 import { draftHasTime, draftProblems, INTENT_OPTIONS, toConfirmItem, toDraft, type ItemDraft } from '@shared/captureDraft'
-import type { Capture, ExtractionIntent, TaskPriority } from '@shared/types'
+import type { AppendTarget, Capture, ExtractionIntent, TaskPriority } from '@shared/types'
 import { useState } from 'react'
 import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native'
 import { capturesApi } from '@/api/endpoints'
@@ -11,6 +11,7 @@ import { ReminderList } from './ReminderList'
 import { Button } from './ui'
 
 const PRIORITIES: (TaskPriority | null)[] = [null, 'Low', 'Medium', 'High']
+const KIND_NAME = { Task: 'task', Appointment: 'event', Note: 'note' } as const
 const intentColor = (intent: ExtractionIntent, c: Colors) =>
   intent === 'Appointment' ? c.appointment : intent === 'Reminder' ? c.warn : intent === 'Note' ? c.muted : c.task
 
@@ -18,12 +19,21 @@ const intentColor = (intent: ExtractionIntent, c: Colors) =>
  * "I understood:" (spec section 18). Every property is editable; only switched-on
  * items are saved, and only when the user presses Save.
  */
-export function CaptureReview({ capture, onDone }: { capture: Capture; onDone: (message: string | null) => void }) {
+export function CaptureReview({
+  capture,
+  onDone,
+  appendTarget,
+}: {
+  capture: Capture
+  onDone: (message: string | null) => void
+  /** Reviewing a continued capture: offer "Add to this <item>". */
+  appendTarget?: AppendTarget
+}) {
   const c = useColors()
   const { zone } = useAuth()
   const confirm = useAction((items: ReturnType<typeof toConfirmItem>[]) => capturesApi.confirm(capture.id, items))
   const [drafts, setDrafts] = useState<ItemDraft[]>(() =>
-    capture.items.filter((i) => i.status === 'PendingReview').map((i) => toDraft(i, zone.timeZone)),
+    capture.items.filter((i) => i.status === 'PendingReview').map((i) => toDraft(i, zone.timeZone, !!appendTarget)),
   )
   const [showTranscript, setShowTranscript] = useState(false)
 
@@ -35,7 +45,7 @@ export function CaptureReview({ capture, onDone }: { capture: Capture; onDone: (
 
   const save = () =>
     confirm.mutate(
-      drafts.map((d) => toConfirmItem(d, zone.timeZone)),
+      drafts.map((d) => toConfirmItem(d, zone.timeZone, appendTarget)),
       { onSuccess: () => onDone(included.length ? `Saved ${included.length} item${included.length > 1 ? 's' : ''}.` : null) },
     )
 
@@ -50,22 +60,29 @@ export function CaptureReview({ capture, onDone }: { capture: Capture; onDone: (
 
   return (
     <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.accent }]}>
-      <Text style={{ color: c.muted }}>I understood:</Text>
-      <Text style={[styles.title, { color: c.text }]}>{capture.title}</Text>
-      {capture.summary && <Text style={{ color: c.text }}>{capture.summary}</Text>}
-      <Pressable onPress={() => setShowTranscript((s) => !s)} accessibilityRole="button">
-        <Text style={{ color: c.muted }}>
-          {showTranscript ? '▾' : '▸'} {capture.source === 'Voice' ? 'Full transcription' : 'What you typed'}
-        </Text>
-      </Pressable>
-      {showTranscript && (
-        <Text style={[styles.transcript, { color: c.text, backgroundColor: c.surface2 }]}>{capture.inputText}</Text>
+      {appendTarget ? (
+        // Continuing: the capture and its transcription are already shown around this.
+        <Text style={{ color: c.muted }}>I understood your addition:</Text>
+      ) : (
+        <>
+          <Text style={{ color: c.muted }}>I understood:</Text>
+          <Text style={[styles.title, { color: c.text }]}>{capture.title}</Text>
+          {capture.summary && <Text style={{ color: c.text }}>{capture.summary}</Text>}
+          <Pressable onPress={() => setShowTranscript((s) => !s)} accessibilityRole="button">
+            <Text style={{ color: c.muted }}>
+              {showTranscript ? '▾' : '▸'} {capture.source === 'Voice' ? 'Full transcription' : 'What you typed'}
+            </Text>
+          </Pressable>
+          {showTranscript && (
+            <Text style={[styles.transcript, { color: c.text, backgroundColor: c.surface2 }]}>{capture.inputText}</Text>
+          )}
+        </>
       )}
 
       {drafts.length === 0 ? (
         <Text style={{ color: c.muted }}>I didn’t find anything to plan in that.</Text>
       ) : (
-        drafts.map((d) => <ItemEditor key={d.id} draft={d} onChange={(patch) => update(d.id, patch)} />)
+        drafts.map((d) => <ItemEditor key={d.id} draft={d} onChange={(patch) => update(d.id, patch)} appendTarget={appendTarget} />)
       )}
 
       {confirm.error && <Text style={{ color: c.danger }}>{confirm.error.message}</Text>}
@@ -83,7 +100,15 @@ export function CaptureReview({ capture, onDone }: { capture: Capture; onDone: (
   )
 }
 
-function ItemEditor({ draft: d, onChange }: { draft: ItemDraft; onChange: (patch: Partial<ItemDraft>) => void }) {
+function ItemEditor({
+  draft: d,
+  onChange,
+  appendTarget,
+}: {
+  draft: ItemDraft
+  onChange: (patch: Partial<ItemDraft>) => void
+  appendTarget?: AppendTarget
+}) {
   const c = useColors()
   const problems = draftProblems(d)
   const isNote = d.intent === 'Note'
@@ -111,79 +136,91 @@ function ItemEditor({ draft: d, onChange }: { draft: ItemDraft; onChange: (patch
           <View style={styles.chips}>
             {/* Any item can be any type (user's rule) - switching keeps the dates.
                 A reminder isn't a type: every type has its own reminder chip. */}
-            {INTENT_OPTIONS.map(({ intent, label }) => (
+            {appendTarget && (
+              // Continuing from an item: this can complete it instead of becoming a new one.
               <Pressable
-                key={intent}
-                onPress={() => onChange({ intent })}
-                style={[
-                  styles.chip,
-                  { borderColor: d.intent === intent ? intentColor(intent, c) : c.border },
-                  d.intent === intent && { backgroundColor: c.surface2 },
-                ]}
+                onPress={() => onChange({ appendTo: true })}
+                style={[styles.chip, { borderColor: d.appendTo ? c.accent : c.border }, d.appendTo && { backgroundColor: c.surface2 }]}
                 accessibilityRole="radio"
-                accessibilityState={{ selected: d.intent === intent }}>
-                <Text style={{ color: d.intent === intent ? c.text : c.muted, fontSize: 13 }}>{label}</Text>
+                accessibilityState={{ selected: d.appendTo }}
+                accessibilityLabel={`Add to “${appendTarget.title}”`}>
+                <Text style={{ color: d.appendTo ? c.text : c.muted, fontSize: 13 }}>Add to this {KIND_NAME[appendTarget.itemType]}</Text>
               </Pressable>
-            ))}
-          </View>
-
-          <View style={styles.stack}>
-            {!isNote && (
-              <View style={styles.chips}>
-                <DateTimeField mode="date" value={d.date} onChange={(date) => onChange({ date })} placeholder="Date" />
-                <DateTimeField
-                  mode="time"
-                  value={d.time}
-                  onChange={(time) => onChange({ time })}
-                  placeholder={d.intent === 'Appointment' ? 'Start' : 'Time'}
-                  date={d.date}
-                />
-                {d.intent === 'Appointment' && (
-                  <DateTimeField mode="time" value={d.endTime} onChange={(endTime) => onChange({ endTime })} placeholder="End" date={d.date} prefix="until" />
-                )}
-              </View>
             )}
-
-            {d.intent === 'Appointment' && (
-              <TextInput
-                style={[styles.field, { color: c.text, borderColor: c.border }]}
-                placeholder="Location"
-                placeholderTextColor={c.muted}
-                value={d.location ?? ''}
-                onChangeText={(location) => onChange({ location: location || null })}
-              />
-            )}
-
-            {d.intent === 'Task' && (
-              <View style={styles.chips}>
+            {INTENT_OPTIONS.map(({ intent, label }) => {
+              const selected = !d.appendTo && d.intent === intent
+              return (
                 <Pressable
-                  onPress={() => onChange({ priority: cycle(PRIORITIES, d.priority) })}
-                  style={[styles.chip, { borderColor: c.border }]}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Priority: ${d.priority ?? 'none'}. Tap to change.`}>
-                  <Text style={{ color: d.priority === 'High' ? c.danger : d.priority ? c.text : c.muted }}>
-                    {d.priority ? `${d.priority} priority` : 'No priority'}
-                  </Text>
+                  key={intent}
+                  onPress={() => onChange({ intent, appendTo: false })}
+                  style={[styles.chip, { borderColor: selected ? intentColor(intent, c) : c.border }, selected && { backgroundColor: c.surface2 }]}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected }}>
+                  <Text style={{ color: selected ? c.text : c.muted, fontSize: 13 }}>{label}</Text>
                 </Pressable>
-              </View>
-            )}
-            <ReminderList
-              value={d.reminders}
-              onChange={(reminders) => onChange({ reminders })}
-              itemHasTime={draftHasTime(d)}
-              isNote={isNote}
-              showProblem={false}
-            />
+              )
+            })}
           </View>
+
+          {!d.appendTo && (
+            <View style={styles.stack}>
+              {!isNote && (
+                <View style={styles.chips}>
+                  <DateTimeField mode="date" value={d.date} onChange={(date) => onChange({ date })} placeholder="Date" />
+                  <DateTimeField
+                    mode="time"
+                    value={d.time}
+                    onChange={(time) => onChange({ time })}
+                    placeholder={d.intent === 'Appointment' ? 'Start' : 'Time'}
+                    date={d.date}
+                  />
+                  {d.intent === 'Appointment' && (
+                    <DateTimeField mode="time" value={d.endTime} onChange={(endTime) => onChange({ endTime })} placeholder="End" date={d.date} prefix="until" />
+                  )}
+                </View>
+              )}
+
+              {d.intent === 'Appointment' && (
+                <TextInput
+                  style={[styles.field, { color: c.text, borderColor: c.border }]}
+                  placeholder="Location"
+                  placeholderTextColor={c.muted}
+                  value={d.location ?? ''}
+                  onChangeText={(location) => onChange({ location: location || null })}
+                />
+              )}
+
+              {d.intent === 'Task' && (
+                <View style={styles.chips}>
+                  <Pressable
+                    onPress={() => onChange({ priority: cycle(PRIORITIES, d.priority) })}
+                    style={[styles.chip, { borderColor: c.border }]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Priority: ${d.priority ?? 'none'}. Tap to change.`}>
+                    <Text style={{ color: d.priority === 'High' ? c.danger : d.priority ? c.text : c.muted }}>
+                      {d.priority ? `${d.priority} priority` : 'No priority'}
+                    </Text>
+                  </Pressable>
+                </View>
+              )}
+              <ReminderList
+                value={d.reminders}
+                onChange={(reminders) => onChange({ reminders })}
+                itemHasTime={draftHasTime(d)}
+                isNote={isNote}
+                showProblem={false}
+              />
+            </View>
+          )}
 
           <TextInput
             style={[styles.field, styles.details, { color: c.text, borderColor: c.border }]}
-            placeholder={d.intent === 'Note' ? 'What do you want to keep?' : 'Details (optional)'}
+            placeholder={d.appendTo ? 'What to add' : d.intent === 'Note' ? 'What do you want to keep?' : 'Details (optional)'}
             placeholderTextColor={c.muted}
             multiline
             value={d.description ?? ''}
             onChangeText={(description) => onChange({ description: description || null })}
-            accessibilityLabel={d.intent === 'Note' ? 'Note text' : 'Details'}
+            accessibilityLabel={d.appendTo ? 'Text to add' : d.intent === 'Note' ? 'Note text' : 'Details'}
           />
           {d.clarification && <Text style={{ color: c.warn, fontSize: 14 }}>❓ {d.clarification}</Text>}
         </>

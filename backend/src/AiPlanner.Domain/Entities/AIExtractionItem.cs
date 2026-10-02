@@ -27,6 +27,11 @@ public class AIExtractionItem : BaseEntity
     public List<ProposedReminder> ProposedReminders { get; set; } = [];
     public RecurrenceFrequency? RecurrenceFrequency { get; set; }
     public double? Confidence { get; set; }
+    /// <summary>
+    /// From a continued capture: the AI thinks this completes the item the user
+    /// continued from, so the review offers "Add to this item" first.
+    /// </summary>
+    public bool AddsToCurrent { get; set; }
 
     public Guid? ResultingTaskItemId { get; set; }
     public Guid? ResultingAppointmentId { get; set; }

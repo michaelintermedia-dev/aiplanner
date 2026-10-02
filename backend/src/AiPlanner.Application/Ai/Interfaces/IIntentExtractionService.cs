@@ -18,7 +18,10 @@ public interface IIntentExtractionService
 /// <param name="LocalNow">The current wall-clock time in the user's timezone - relative dates resolve against this.</param>
 /// <param name="TimeZoneId">The user's IANA timezone, e.g. "Europe/Moscow".</param>
 /// <param name="Locale">The user's locale, e.g. "en-US".</param>
-public record ExtractionContext(string Text, DateTime LocalNow, string TimeZoneId, string Locale);
+/// <param name="PreviousText">When continuing a capture: what the user said before (already handled).</param>
+/// <param name="CurrentItem">When continuing from a saved item: its title.</param>
+public record ExtractionContext(
+    string Text, DateTime LocalNow, string TimeZoneId, string Locale, string? PreviousText = null, string? CurrentItem = null);
 
 /// <summary>What the provider returned, before validation.</summary>
 public record RawExtraction(
@@ -47,7 +50,8 @@ public record RawExtractedItem(
     IReadOnlyList<RawReminder>? Reminders,
     string? Recurrence,
     string? Clarification,
-    double? Confidence);
+    double? Confidence,
+    bool AddsToCurrent = false);
 
 /// <summary>
 /// A requested reminder: Kind is at/before/daily/weekdays/weekly. Date/Time are

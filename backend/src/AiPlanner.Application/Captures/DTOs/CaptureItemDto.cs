@@ -27,4 +27,5 @@ public record CaptureItemDto(
     double? Confidence,
     Guid? ResultingTaskId,
     Guid? ResultingAppointmentId,
-    Guid? ResultingNoteId);
+    Guid? ResultingNoteId,
+    bool AddsToCurrent = false);

@@ -22,6 +22,13 @@ public interface ICaptureService
     Task<Result<CaptureDto>> GetByIdAsync(Guid id, CancellationToken ct = default);
 
     /// <summary>Creates the accepted items as real tasks/appointments/notes, all in one transaction.</summary>
+    /// <summary>
+    /// Adds to a capture after the fact ("continue talking"): new audio parts are
+    /// appended to the recording, the new words to the transcript, and what the
+    /// AI makes of them is added as new items to review.
+    /// </summary>
+    Task<Result<CaptureDto>> ContinueAsync(Guid id, ContinueCaptureRequest request, CancellationToken ct = default);
+
     Task<Result<CaptureDto>> ConfirmAsync(Guid id, ConfirmCaptureRequest request, CancellationToken ct = default);
 
     /// <summary>Opens segment <paramref name="part"/> of the original recording, or fails if there is none.</summary>

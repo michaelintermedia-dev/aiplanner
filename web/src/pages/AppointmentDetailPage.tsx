@@ -112,7 +112,7 @@ export function AppointmentDetailPage() {
         </>
       )}
 
-      {appt.sourceCaptureId && <SourceCapture captureId={appt.sourceCaptureId} />}
+      {appt.sourceCaptureId && <SourceCapture captureId={appt.sourceCaptureId} item={{ itemType: 'Appointment', itemId: appt.id, title: appt.title }} />}
     </div>
   )
 }

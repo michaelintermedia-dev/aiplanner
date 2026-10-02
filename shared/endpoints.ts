@@ -110,6 +110,12 @@ export function createApi(request: RequestFn) {
       text: (text: string) => request<Capture>('POST', '/captures/text', { text }),
       /** Upload a recording: a FormData with the file in field "audio". */
       voice: (form: FormData) => request<Capture>('POST', '/captures/voice', form),
+      /**
+       * Add to an existing capture ("continue talking"): FormData with "audio"
+       * part(s) and/or "text", plus "itemType"/"itemId" of the item continued from.
+       * Returns the capture with the new items to review.
+       */
+      continue: (id: string, form: FormData) => request<Capture>('POST', `/captures/${id}/continue`, form),
       list: (take = 50) => request<CaptureSummary[]>('GET', `/captures?take=${take}`),
       get: (id: string) => request<Capture>('GET', `/captures/${id}`),
       confirm: (id: string, items: ConfirmCaptureItem[]) =>

@@ -1,5 +1,5 @@
 import { draftHasTime, draftProblems, INTENT_OPTIONS, toConfirmItem, toDraft, type ItemDraft } from '@shared/captureDraft'
-import type { Capture, TaskPriority } from '@shared/types'
+import type { AppendTarget, Capture, TaskPriority } from '@shared/types'
 import { useState } from 'react'
 import { capturesApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
@@ -10,11 +10,20 @@ import { ReminderList } from './ReminderList'
  * "I understood:" - the review screen (spec section 18). Every property is
  * editable; only checked items are saved, and only when the user presses Save.
  */
-export function CaptureReview({ capture, onDone }: { capture: Capture; onDone: (message: string | null) => void }) {
+export function CaptureReview({
+  capture,
+  onDone,
+  appendTarget,
+}: {
+  capture: Capture
+  onDone: (message: string | null) => void
+  /** Reviewing a continued capture: offer "Add to this <item>". */
+  appendTarget?: AppendTarget
+}) {
   const { zone } = useAuth()
   const confirm = useAction((items: ReturnType<typeof toConfirmItem>[]) => capturesApi.confirm(capture.id, items))
   const [drafts, setDrafts] = useState<ItemDraft[]>(() =>
-    capture.items.filter((i) => i.status === 'PendingReview').map((i) => toDraft(i, zone.timeZone)),
+    capture.items.filter((i) => i.status === 'PendingReview').map((i) => toDraft(i, zone.timeZone, !!appendTarget)),
   )
 
   const update = (id: string, patch: Partial<ItemDraft>) =>
@@ -25,7 +34,7 @@ export function CaptureReview({ capture, onDone }: { capture: Capture; onDone: (
 
   const save = () =>
     confirm.mutate(
-      drafts.map((d) => toConfirmItem(d, zone.timeZone)),
+      drafts.map((d) => toConfirmItem(d, zone.timeZone, appendTarget)),
       { onSuccess: () => onDone(included.length ? `Saved ${included.length} item${included.length > 1 ? 's' : ''}.` : null) },
     )
 
@@ -40,25 +49,32 @@ export function CaptureReview({ capture, onDone }: { capture: Capture; onDone: (
 
   return (
     <section className="card review" aria-label="Review what the AI understood">
-      <header className="review-header">
-        <div>
-          <p className="muted">I understood:</p>
-          <h3>{capture.title}</h3>
-        </div>
-        <span className="badge">{capture.source === 'Voice' ? '🎤 Voice' : 'Text'}</span>
-      </header>
-      {capture.summary && <p className="review-summary">{capture.summary}</p>}
-      <details className="transcript">
-        <summary>{capture.source === 'Voice' ? 'Full transcription' : 'What you typed'}</summary>
-        <p>{capture.inputText}</p>
-      </details>
+      {appendTarget ? (
+        // Continuing: the capture and its transcription are already shown around this.
+        <p className="muted">I understood your addition:</p>
+      ) : (
+        <>
+          <header className="review-header">
+            <div>
+              <p className="muted">I understood:</p>
+              <h3>{capture.title}</h3>
+            </div>
+            <span className="badge">{capture.source === 'Voice' ? '🎤 Voice' : 'Text'}</span>
+          </header>
+          {capture.summary && <p className="review-summary">{capture.summary}</p>}
+          <details className="transcript">
+            <summary>{capture.source === 'Voice' ? 'Full transcription' : 'What you typed'}</summary>
+            <p>{capture.inputText}</p>
+          </details>
+        </>
+      )}
 
       {drafts.length === 0 ? (
         <p className="empty">I didn’t find anything to plan in that.</p>
       ) : (
         <ul className="review-items">
           {drafts.map((d) => (
-            <ItemEditor key={d.id} draft={d} onChange={(patch) => update(d.id, patch)} />
+            <ItemEditor key={d.id} draft={d} onChange={(patch) => update(d.id, patch)} appendTarget={appendTarget} />
           ))}
         </ul>
       )}
@@ -76,7 +92,17 @@ export function CaptureReview({ capture, onDone }: { capture: Capture; onDone: (
   )
 }
 
-function ItemEditor({ draft: d, onChange }: { draft: ItemDraft; onChange: (patch: Partial<ItemDraft>) => void }) {
+const KIND_NAME = { Task: 'task', Appointment: 'event', Note: 'note' }
+
+function ItemEditor({
+  draft: d,
+  onChange,
+  appendTarget,
+}: {
+  draft: ItemDraft
+  onChange: (patch: Partial<ItemDraft>) => void
+  appendTarget?: AppendTarget
+}) {
   const problems = draftProblems(d)
   const isNote = d.intent === 'Note'
 
@@ -101,21 +127,33 @@ function ItemEditor({ draft: d, onChange }: { draft: ItemDraft; onChange: (patch
         // Any item can be any type (user's rule) - switching keeps the dates.
         // A reminder isn't a type: every type has its own reminder below.
         <div className="intent-chips" role="radiogroup" aria-label="Save as">
+          {appendTarget && (
+            // Continuing from an item: this can complete it instead of becoming a new one.
+            <button
+              type="button"
+              role="radio"
+              aria-checked={d.appendTo}
+              className={`intent-chip append${d.appendTo ? ' selected' : ''}`}
+              onClick={() => onChange({ appendTo: true })}
+              title={`Add to “${appendTarget.title}”`}>
+              Add to this {KIND_NAME[appendTarget.itemType]}
+            </button>
+          )}
           {INTENT_OPTIONS.map((o) => (
             <button
               key={o.intent}
               type="button"
               role="radio"
-              aria-checked={d.intent === o.intent}
-              className={`intent-chip intent-${o.intent.toLowerCase()}${d.intent === o.intent ? ' selected' : ''}`}
-              onClick={() => onChange({ intent: o.intent })}>
+              aria-checked={!d.appendTo && d.intent === o.intent}
+              className={`intent-chip intent-${o.intent.toLowerCase()}${!d.appendTo && d.intent === o.intent ? ' selected' : ''}`}
+              onClick={() => onChange({ intent: o.intent, appendTo: false })}>
               {o.label}
             </button>
           ))}
         </div>
       )}
 
-      {d.include && (
+      {d.include && !d.appendTo && (
         <div className="review-fields">
           {!isNote && (
             <>
@@ -156,7 +194,7 @@ function ItemEditor({ draft: d, onChange }: { draft: ItemDraft; onChange: (patch
         </div>
       )}
 
-      {d.include && (
+      {d.include && !d.appendTo && (
         <ReminderList
           value={d.reminders}
           onChange={(reminders) => onChange({ reminders })}
@@ -168,11 +206,11 @@ function ItemEditor({ draft: d, onChange }: { draft: ItemDraft; onChange: (patch
 
       {d.include && (
         <label className="review-details">
-          {d.intent === 'Note' ? 'Note text' : 'Details'}
+          {d.appendTo && appendTarget ? `Added to “${appendTarget.title}”` : d.intent === 'Note' ? 'Note text' : 'Details'}
           <textarea
-            rows={d.intent === 'Note' ? 4 : 2}
+            rows={d.intent === 'Note' || d.appendTo ? 4 : 2}
             value={d.description ?? ''}
-            placeholder={d.intent === 'Note' ? 'What do you want to keep?' : 'Optional'}
+            placeholder={d.appendTo ? 'What to add' : d.intent === 'Note' ? 'What do you want to keep?' : 'Optional'}
             onChange={(e) => onChange({ description: e.target.value || null })}
           />
         </label>

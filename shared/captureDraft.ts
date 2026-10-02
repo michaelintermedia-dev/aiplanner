@@ -1,6 +1,6 @@
 import { addDays, dateKey, timeKey, zonedToUtc } from './dates'
 import { remindersProblem } from './reminders'
-import type { CaptureItem, ConfirmCaptureItem, ExtractionIntent, Reminder, TaskPriority } from './types'
+import type { AppendTarget, CaptureItem, ConfirmCaptureItem, ExtractionIntent, Reminder, TaskPriority } from './types'
 
 /**
  * Every item can become any type in the review (user's rule); "Appointment" is
@@ -31,10 +31,13 @@ export interface ItemDraft {
   priority: TaskPriority | null
   /** Any item can carry several (see Reminder). */
   reminders: Reminder[]
+  /** "Add to this item": the text goes into the item continued from (see AppendTarget). */
+  appendTo: boolean
   clarification: string | null
 }
 
-export function toDraft(item: CaptureItem, timeZone: string): ItemDraft {
+/** `canAppend`: reviewing a continued capture, so "Add to this item" is available. */
+export function toDraft(item: CaptureItem, timeZone: string, canAppend = false): ItemDraft {
   const when = item.startUtc ?? item.dueUtc
   // "Reminder" was a type once; it's now a task that reminds at its time.
   const legacyReminder = item.intent === 'Reminder'
@@ -51,6 +54,7 @@ export function toDraft(item: CaptureItem, timeZone: string): ItemDraft {
     priority: item.priority,
     reminders: item.reminders.length || !legacyReminder ? item.reminders : [{ kind: 'Before', minutesBefore: 0 }],
     clarification: item.clarification,
+    appendTo: canAppend && item.addsToCurrent,
   }
 }
 
@@ -60,6 +64,7 @@ export const draftHasTime = (d: ItemDraft) => d.intent !== 'Note' && !!d.date &&
 /** What still has to be filled in before this item can be saved (empty = ready). */
 export function draftProblems(d: ItemDraft): string[] {
   if (!d.include) return []
+  if (d.appendTo) return (d.description ?? d.title).trim() ? [] : ['Add the text to add.']
   const problems: string[] = []
   if (!d.title.trim()) problems.push('Add a title.')
   if (d.intent === 'Appointment' && (!d.date || !d.time)) problems.push('An appointment needs a date and start time.')
@@ -70,7 +75,26 @@ export function draftProblems(d: ItemDraft): string[] {
 }
 
 /** Converts an edited draft to the /confirm payload, turning local dates into UTC. */
-export function toConfirmItem(d: ItemDraft, timeZone: string): ConfirmCaptureItem {
+export function toConfirmItem(d: ItemDraft, timeZone: string, target?: AppendTarget): ConfirmCaptureItem {
+  if (d.appendTo && target) {
+    return {
+      id: d.id,
+      include: d.include,
+      intent: d.intent,
+      title: d.title.trim() || 'Addition',
+      description: d.description,
+      startUtc: null,
+      endUtc: null,
+      dueUtc: null,
+      hasTime: false,
+      location: null,
+      priority: null,
+      reminders: [],
+      appendToType: target.itemType,
+      appendToId: target.itemId,
+    }
+  }
+
   const base = {
     id: d.id,
     include: d.include,

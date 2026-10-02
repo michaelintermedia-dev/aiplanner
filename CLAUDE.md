@@ -298,6 +298,16 @@ Local dev notes:
   reminders inexactly (up to an hour late). See mobile/README.md.
   `src/lib/expoNotifications.ts` imports only the local-notification parts of
   expo-notifications so the app still loads in Expo Go (without notifications).
+- **A capture can be continued after saving** (user's request, 2026-10-02):
+  "Add more - keep talking" on an item's source capture opens the capture
+  bar in continue mode (`CaptureBar continueFrom`, web + mobile).
+  `POST /api/captures/{id}/continue` (audio parts and/or text + the item)
+  appends the audio to the same recording (one track), the words to the
+  transcript, and asks the AI about the new words only, with the earlier text
+  and the item's title as context. Proposals that complete the item come back
+  `addsToCurrent`; the review offers "Add to this task/event/note" (preselected
+  for those), which on confirm (`appendToType/appendToId`) appends the text to
+  the item's details instead of creating a new item.
 - Icons are standard Ionicons, never emoji, for UI controls (the mic button
   is `mic`/`pause`). Each item type has ONE icon (`KIND_ICON` in
   `components/kindIcons.ts` in each app): the filter tab, feed rows and calendar

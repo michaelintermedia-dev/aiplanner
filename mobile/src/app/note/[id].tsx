@@ -118,7 +118,7 @@ export default function NoteDetailScreen() {
         </>
       )}
 
-      {note.sourceCaptureId && <SourceCapture captureId={note.sourceCaptureId} />}
+      {note.sourceCaptureId && <SourceCapture captureId={note.sourceCaptureId} item={{ itemType: 'Note', itemId: note.id, title: note.title ?? note.content }} />}
     </Screen>
   )
 }

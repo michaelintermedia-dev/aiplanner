@@ -210,6 +210,8 @@ export interface CaptureItem {
   resultingTaskId: string | null
   resultingAppointmentId: string | null
   resultingNoteId: string | null
+  /** From continuing a capture: completes the item the user continued from. */
+  addsToCurrent: boolean
 }
 
 export interface Capture {
@@ -250,6 +252,16 @@ export interface ConfirmCaptureItem {
   location: string | null
   priority: TaskPriority | null
   reminders: Reminder[]
+  /** Set to add this item's text to an existing item instead of creating one. */
+  appendToType?: ItemType | null
+  appendToId?: string | null
+}
+
+/** The saved item a capture is continued from ("Add to this task"). */
+export interface AppendTarget {
+  itemType: ItemType
+  itemId: string
+  title: string
 }
 
 export type ReminderKind = 'At' | 'Before' | 'Daily' | 'Weekdays' | 'Weekly'

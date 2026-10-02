@@ -18,7 +18,12 @@ public class ConfirmCaptureRequestValidator : AbstractValidator<ConfirmCaptureRe
             item.RuleFor(i => i.Id).NotEmpty();
             item.RuleFor(i => i.Intent).IsInEnum();
 
-            item.When(i => i.Include, () =>
+            item.RuleFor(i => i.AppendToType).Must(t => t is "Task" or "Appointment" or "Note")
+                .When(i => i.Include && i.AppendToId is not null)
+                .WithMessage("AppendToType must be Task, Appointment or Note.");
+
+            // Items added to an existing one only contribute text; the rest is for new items.
+            item.When(i => i.Include && i.AppendToId is null, () =>
             {
                 item.RuleFor(i => i.Title).NotEmpty().MaximumLength(ExtractionNormalizer.MaxTitleLength);
                 item.RuleFor(i => i.Description).MaximumLength(4000);

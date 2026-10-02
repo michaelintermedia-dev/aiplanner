@@ -21,7 +21,8 @@ public record NormalizedItem(
     IReadOnlyList<ReminderDto> Reminders,
     RecurrenceFrequency? Recurrence,
     string? Clarification,
-    double? Confidence);
+    double? Confidence,
+    bool AddsToCurrent = false);
 
 public record NormalizedExtraction(string Title, string? Summary, IReadOnlyList<NormalizedItem> Items);
 
@@ -174,7 +175,8 @@ public static class ExtractionNormalizer
             reminders,
             ParseRecurrence(raw.Recurrence),
             questions.Count > 0 ? Truncate(string.Join(" ", questions.Distinct()), 500) : null,
-            raw.Confidence is { } c && double.IsFinite(c) ? Math.Clamp(c, 0, 1) : null);
+            raw.Confidence is { } c && double.IsFinite(c) ? Math.Clamp(c, 0, 1) : null,
+            raw.AddsToCurrent);
     }
 
     /// <summary>

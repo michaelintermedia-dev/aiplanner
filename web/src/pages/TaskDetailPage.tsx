@@ -102,7 +102,7 @@ export function TaskDetailPage() {
         </>
       )}
 
-      {task.sourceCaptureId && <SourceCapture captureId={task.sourceCaptureId} />}
+      {task.sourceCaptureId && <SourceCapture captureId={task.sourceCaptureId} item={{ itemType: 'Task', itemId: task.id, title: task.title }} />}
     </div>
   )
 }

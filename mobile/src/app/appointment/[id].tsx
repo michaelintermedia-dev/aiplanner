@@ -93,7 +93,7 @@ export default function AppointmentDetailScreen() {
         </>
       )}
 
-      {appt.sourceCaptureId && <SourceCapture captureId={appt.sourceCaptureId} />}
+      {appt.sourceCaptureId && <SourceCapture captureId={appt.sourceCaptureId} item={{ itemType: 'Appointment', itemId: appt.id, title: appt.title }} />}
     </Screen>
   )
 }

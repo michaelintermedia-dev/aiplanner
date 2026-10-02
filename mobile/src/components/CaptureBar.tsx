@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
-import type { Capture } from '@shared/types'
+import type { AppendTarget, Capture } from '@shared/types'
 import { File } from 'expo-file-system'
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
@@ -16,11 +16,27 @@ type Busy = null | 'transcribing' | 'understanding'
 
 const formatDuration = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 
+/** Adding to an existing capture from an item's screen ("continue talking"). */
+export interface ContinueFrom {
+  captureId: string
+  target: AppendTarget
+  onClose: () => void
+}
+
+/** The form for a continue request, naming the item continued from. */
+function continueForm({ target }: ContinueFrom) {
+  const form = new FormData()
+  form.append('itemType', target.itemType)
+  form.append('itemId', target.itemId)
+  return form
+}
+
 /**
  * Quick capture (spec sections 14-15): type, or talk with the big mic; the AI
  * proposes items; the user reviews them. Nothing is saved until Save.
+ * With `continueFrom` the same bar adds to an existing capture instead.
  */
-export function CaptureBar() {
+export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {}) {
   const c = useColors()
   const recorder = useSegmentRecorder()
   const [text, setText] = useState('')
@@ -53,7 +69,13 @@ export function CaptureBar() {
   }
 
   const submitText = () => {
-    if (text.trim()) void run('understanding', () => capturesApi.text(text.trim()))
+    if (!text.trim()) return
+    void run('understanding', () => {
+      if (!continueFrom) return capturesApi.text(text.trim())
+      const form = continueForm(continueFrom)
+      form.append('text', text.trim())
+      return capturesApi.continue(continueFrom.captureId, form)
+    })
   }
 
   const send = async () => {
@@ -63,11 +85,11 @@ export function CaptureBar() {
       return
     }
     const sent = await run('transcribing', () => {
-      const form = new FormData()
+      const form = continueFrom ? continueForm(continueFrom) : new FormData()
       // Expo's fetch (the global fetch since SDK 52) doesn't accept React
       // Native's { uri, name, type } parts; an expo-file-system File is a Blob.
       segments.forEach((s, i) => form.append('audio', new File(s.uri), `part-${i + 1}.m4a`))
-      return capturesApi.voice(form)
+      return continueFrom ? capturesApi.continue(continueFrom.captureId, form) : capturesApi.voice(form)
     })
     // On failure the recording stays (paused) so the user can retry Send.
     if (sent) recorder.clear()
@@ -79,9 +101,11 @@ export function CaptureBar() {
     return (
       <CaptureReview
         capture={capture}
+        appendTarget={continueFrom?.target}
         onDone={(message) => {
           setCapture(null)
-          setSavedMessage(message)
+          if (continueFrom) continueFrom.onClose()
+          else setSavedMessage(message)
         }}
       />
     )
@@ -114,13 +138,13 @@ export function CaptureBar() {
       ) : (
         <TextInput
           style={[styles.input, { color: c.text }]}
-          placeholder="What's on your mind? Or hold the mic and talk."
+          placeholder={continueFrom ? 'Add to it: hold the mic and keep talking, or type' : "What's on your mind? Or hold the mic and talk."}
           placeholderTextColor={c.muted}
           value={text}
           onChangeText={setText}
           multiline
           editable={busy === null}
-          accessibilityLabel="Capture text"
+          accessibilityLabel={continueFrom ? 'Text to add' : 'Capture text'}
         />
       )}
 
@@ -147,8 +171,11 @@ export function CaptureBar() {
               />
             </>
           ) : (
-            // One send arrow for typed text and recordings; it only shows when there's something to send.
-            text.trim() !== '' && <SendButton label="Send" onPress={submitText} disabled={busy !== null} />
+            <>
+              {continueFrom && busy === null && <Button title="Cancel" variant="link" onPress={continueFrom.onClose} />}
+              {/* One send arrow for typed text and recordings; it only shows when there's something to send. */}
+              {text.trim() !== '' && <SendButton label="Send" onPress={submitText} disabled={busy !== null} />}
+            </>
           )}
         </View>
         {/* Fixed position on the right, so hold-to-talk always hits it. */}

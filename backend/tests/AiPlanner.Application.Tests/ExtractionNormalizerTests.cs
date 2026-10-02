@@ -269,6 +269,19 @@ public class ExtractionNormalizerTests
     }
 
     [Fact]
+    public void Addition_to_the_current_item_is_marked()
+    {
+        var raw = new RawExtractedItem("note", "Second step detail", null, "Users drop off at the pricing page", null, null, null, null, null,
+            null, null, null, 0.8, AddsToCurrent: true);
+
+        var item = Normalize(raw);
+
+        item.AddsToCurrent.Should().BeTrue();
+        item.Description.Should().Be("Users drop off at the pricing page");
+        Normalize(Item()).AddsToCurrent.Should().BeFalse();
+    }
+
+    [Fact]
     public void Unknown_reminder_kind_is_ignored()
     {
         Normalize(Item(reminder: new RawReminder("hourly", null, null, "10:00", null))).Reminders.Should().BeEmpty();

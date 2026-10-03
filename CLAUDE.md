@@ -351,7 +351,7 @@ Local dev notes:
   floats over every screen and a recording survives navigation. Open by
   default; the X or a touch anywhere behind it collapses it to a round mic
   button that can be dragged anywhere and snaps to the nearest side (like
-  Expo's dev-tools bubble); a tap reopens it. It sits above the tab bar on tab
+  Expo's dev-tools bubble); a tap reopens it. Collapsing shrinks the toolbar into the button and opening grows it back out of it (Animated, native driver; the button's drag and its pop are two layers, since one view can't mix JS- and native-driven transforms; Reduce motion skips it). It sits above the tab bar on tab
   screens and lifts above the keyboard (edge-to-edge Android doesn't resize). It never collapses while recording/processing/reviewing
   (`CaptureBar onEngagedChange`), and typed text survives collapsing.
 - **A capture can be continued after saving** (user's request, 2026-10-02):

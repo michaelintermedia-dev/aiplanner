@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AiPlanner.Application.Ai.Services;
 using AiPlanner.Application.Captures.Services;
 using AiPlanner.Application.Reminders;
 using AiPlanner.Domain.Enums;
@@ -63,5 +64,64 @@ public class ContinuedItemTests
     {
         ContinuedItem.JoinDetails("Old text.", " New words ").Should().Be("Old text.\n\nNew words");
         ContinuedItem.JoinDetails(null, "New words").Should().Be("New words");
+    }
+
+    private static readonly DateTime Friday19 = new(2026, 10, 9, 16, 0, 0, DateTimeKind.Utc);
+
+    private static NormalizedItem Item(ExtractionIntent intent, string title, string? details, DateTime? start = null, DateTime? due = null,
+        string? location = null, bool addsToCurrent = false) =>
+        new(intent, title, null, details, start, start?.AddHours(1), due, start is not null || due is not null, location, null, [], null, null, null,
+            AddsToCurrent: addsToCurrent);
+
+    [Fact]
+    public void A_proposal_meant_as_a_new_item_never_replaces_the_item()
+    {
+        var dinner = Item(ExtractionIntent.Appointment, "Dinner with Sara", "Book a table", start: Friday19, location: "Bistro");
+        var stray = Item(ExtractionIntent.Task, "Ask about tickets", "Ask her about the concert tickets");
+
+        var kept = ContinuedItem.Keep([stray], dinner, "Ask her about the concert tickets as well. Also call mom tonight.");
+
+        kept.Intent.Should().Be(ExtractionIntent.Appointment);
+        kept.Title.Should().Be("Dinner with Sara");
+        kept.StartUtc.Should().Be(Friday19);
+        kept.Location.Should().Be("Bistro");
+        kept.Description.Should().Be("Book a table\n\nAsk her about the concert tickets as well. Also call mom tonight.");
+        kept.AddsToCurrent.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Fields_the_update_left_out_keep_the_items_values()
+    {
+        var plumber = Item(ExtractionIntent.Task, "Call plumber back", "Leak under the sink", due: Friday19);
+        var update = Item(ExtractionIntent.Task, "Call plumber back", "Leak under the sink. Ask about the kitchen tap", addsToCurrent: true);
+
+        var kept = ContinuedItem.Keep([update], plumber, "Ask him about the kitchen tap as well");
+
+        kept.DueUtc.Should().Be(Friday19);
+        kept.HasTime.Should().BeTrue();
+        kept.Description.Should().Be("Leak under the sink. Ask about the kitchen tap");
+    }
+
+    [Fact]
+    public void Details_that_lost_the_old_text_get_both_back()
+    {
+        var plumber = Item(ExtractionIntent.Task, "Call plumber back", "Leak under the sink, spare key with neighbour", due: Friday19);
+        var update = Item(ExtractionIntent.Task, "Call plumber back", "Ask him about the kitchen tap", due: Friday19, addsToCurrent: true);
+
+        var kept = ContinuedItem.Keep([update], plumber, "Ask him about the kitchen tap as well");
+
+        kept.Description.Should().Be("Leak under the sink, spare key with neighbour\n\nAsk him about the kitchen tap as well");
+    }
+
+    [Fact]
+    public void An_asked_for_type_change_is_kept()
+    {
+        var note = Item(ExtractionIntent.Note, "Dentist", "Dentist on Friday");
+        var update = Item(ExtractionIntent.Appointment, "Dentist", "Dentist on Friday", start: Friday19, addsToCurrent: true);
+
+        var kept = ContinuedItem.Keep([update], note, "Make it an event on Friday at seven");
+
+        kept.Intent.Should().Be(ExtractionIntent.Appointment);
+        kept.StartUtc.Should().Be(Friday19);
     }
 }

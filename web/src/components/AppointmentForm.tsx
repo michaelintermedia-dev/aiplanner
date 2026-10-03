@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { appointmentsApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
-import { todayKey, zonedToUtc, endsNextDay } from '@shared/dates'
+import { addDays, todayKey, zonedToUtc, endsNextDay } from '@shared/dates'
 import type { Reminder } from '@shared/types'
 import { remindersProblem } from '@shared/reminders'
 import { useAction } from '../lib/useAction'
@@ -27,7 +27,7 @@ export function AppointmentForm({ initialDate, onDone }: { initialDate?: string;
       {
         title: title.trim(),
         startUtc: zonedToUtc(date, start, zone.timeZone),
-        endUtc: zonedToUtc(date, end, zone.timeZone),
+        endUtc: zonedToUtc(endsNextDay(start, end) ? addDays(date, 1) : date, end, zone.timeZone), // after midnight: next day
         location: location.trim() || null,
         reminders,
       },

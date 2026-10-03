@@ -384,6 +384,13 @@ Local dev notes:
   the AI's verbatim quote), never the rest of the message, and exactly one
   proposal is kept - that item. Unrelated words go into its details; other
   items from the same message are never re-read or changed.
+  Adding never wipes anything (`ContinuedItem.Keep`, unit-tested): only a
+  proposal the AI marked `addsToCurrent` counts - if it proposed a new item
+  instead, the item itself is the proposal with the words added to its
+  details; date/time/place/priority the AI left out keep the item's values;
+  details that lost the old text or the new words get both back. A new
+  "Add more" on an item rejects earlier unsaved ones of that capture, and the
+  review shows only the item's own proposal (`reviewItems`).
 - **Each item plays its own part of a voice message** (user's request,
   2026-10-03). The AI quotes each item's words verbatim (`sourceText`);
   `OpenAiTranscriptionService` makes a second, parallel call to `TimingModel`

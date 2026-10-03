@@ -517,13 +517,16 @@ public class CaptureService : ICaptureService
 
         var (_, normalized) = await ProposeAsync(userId, newText, previousText, currentItem, ct);
         // For one item, exactly one proposal comes back: that item, updated.
-        var proposals = currentItem is null
-            ? normalized.Items
-            : normalized.Items.OrderByDescending(i => i.AddsToCurrent).Take(1).Select(i => i with { AddsToCurrent = true }).ToList();
-        if (currentItem is not null && proposals.Count == 1 && !ContinuedItem.MentionsWords(proposals[0].Description, newText))
+        var proposals = normalized.Items;
+        if (currentItem is not null && await CurrentProposalAsync(userId, request.ItemType, request.ItemId!.Value, ct) is { } current)
         {
-            var existing = await ItemDetailsAsync(userId, request.ItemType, request.ItemId!.Value, ct);
-            proposals = [proposals[0] with { Description = ContinuedItem.JoinDetails(existing, newText) }];
+            proposals = [ContinuedItem.Keep(normalized.Items, current, newText)];
+            // An earlier "Add more" review left unsaved is superseded by this one -
+            // otherwise it would show up in this review as a change to this item.
+            foreach (var leftover in extraction.Items.Where(i => i.Status == ExtractionStatus.PendingReview))
+            {
+                leftover.Status = ExtractionStatus.Rejected;
+            }
         }
         foreach (var proposed in proposals)
         {
@@ -709,14 +712,30 @@ public class CaptureService : ICaptureService
         return words.Count > 0 ? string.Join("\n\n", words) : null;
     }
 
-    /// <summary>The item's current details (task/event description, note text).</summary>
-    private async Task<string?> ItemDetailsAsync(Guid userId, string? type, Guid id, CancellationToken ct) => type switch
+    /// <summary>The item continued from, as a proposal of itself (null if it's gone).</summary>
+    private async Task<NormalizedItem?> CurrentProposalAsync(Guid userId, string? type, Guid id, CancellationToken ct)
     {
-        "Task" => await _db.TaskItems.Where(t => t.Id == id && t.UserId == userId).Select(t => t.Description).FirstOrDefaultAsync(ct),
-        "Appointment" => await _db.Appointments.Where(a => a.Id == id && a.UserId == userId).Select(a => a.Description).FirstOrDefaultAsync(ct),
-        "Note" => await _db.Notes.Where(n => n.Id == id && n.UserId == userId).Select(n => n.Content).FirstOrDefaultAsync(ct),
-        _ => null,
-    };
+        switch (type)
+        {
+            case "Task":
+                var task = await _tasks.GetByIdAsync(id, ct);
+                return task.Value is not { } t ? null : new NormalizedItem(
+                    ExtractionIntent.Task, t.Title, null, t.Description, null, null, t.DueDateUtc, t.HasDueTime, null,
+                    t.Priority == TaskPriority.None ? null : t.Priority, t.Reminders ?? [], null, null, null);
+            case "Appointment":
+                var appointment = await _appointments.GetByIdAsync(id, ct);
+                return appointment.Value is not { } a ? null : new NormalizedItem(
+                    ExtractionIntent.Appointment, a.Title, null, a.Description, a.StartUtc, a.EndUtc, null, true, a.Location,
+                    null, a.Reminders ?? [], null, null, null);
+            case "Note":
+                var note = await _db.Notes.AsNoTracking().Include(n => n.Reminders).FirstOrDefaultAsync(n => n.Id == id && n.UserId == userId, ct);
+                return note is null ? null : new NormalizedItem(
+                    ExtractionIntent.Note, note.Title ?? note.Content[..Math.Min(note.Content.Length, ExtractionNormalizer.MaxTitleLength)], null, note.Content, null, null, null, false, null,
+                    null, ReminderPlanner.ToDtos(note.Reminders), null, null, null);
+            default:
+                return null;
+        }
+    }
 
     /// <summary>The item continued from, as the AI's item JSON (null if it's gone).</summary>
     private async Task<string?> DescribeItemAsync(Guid userId, string? type, Guid id, CancellationToken ct)

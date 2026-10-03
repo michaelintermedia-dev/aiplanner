@@ -408,6 +408,7 @@ export const en = {
 
   // ---- updating an item by voice ----
   'review.updatesItem': 'Updates “{title}” - its title and created date stay. Check the changes before saving.',
+  'review.updatesItemRenamed': 'Updates “{title}” - it gets the new title, its created date stays. Check the changes before saving.',
 
   // ---- settings - recordings ----
   'settings.recordings': 'Recordings',
@@ -433,5 +434,5 @@ export const en = {
   // ---- qa fixes ----
   'event.endsNextDay': 'Ends the next day',
   'review.useNewTitle': 'Rename it to “{title}”',
-  'review.titleKept': 'The title stays - rename it below if you like',
+  'review.titleKept': 'The title stays as it is',
 } satisfies Record<string, Message>

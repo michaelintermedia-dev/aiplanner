@@ -1,4 +1,4 @@
-import { draftHasTime, draftProblems, INTENT_OPTIONS, toConfirmItem, movedItem, suggestedTitle, toDraft, typeChange, updatesWholeItem, type ItemDraft } from '@shared/captureDraft'
+import { draftHasTime, draftProblems, INTENT_OPTIONS, toConfirmItem, movedItem, reviewItems, suggestedTitle, toDraft, typeChange, updatesWholeItem, type ItemDraft } from '@shared/captureDraft'
 import { endsNextDay } from '@shared/dates'
 import { KIND_LABEL } from '@shared/feed'
 import type { AppendTarget, Capture, TaskPriority, ItemType } from '@shared/types'
@@ -30,7 +30,7 @@ export function CaptureReview({
   const { zone } = useAuth()
   const confirm = useAction((items: ReturnType<typeof toConfirmItem>[]) => capturesApi.confirm(capture.id, items))
   const [drafts, setDrafts] = useState<ItemDraft[]>(() =>
-    capture.items.filter((i) => i.status === 'PendingReview').map((i) => toDraft(i, zone.timeZone, appendTarget)),
+    reviewItems(capture, appendTarget).map((i) => toDraft(i, zone.timeZone, appendTarget)),
   )
 
   const update = (id: string, patch: Partial<ItemDraft>) =>
@@ -136,7 +136,7 @@ function ItemEditor({
             value={d.useNewTitle ? d.title : appendTarget.title}
             readOnly
             aria-label={t('item.title')}
-            title={t('review.titleKept')}
+            title={d.useNewTitle ? undefined : t('review.titleKept')}
           />
         ) : (
           <input
@@ -178,7 +178,7 @@ function ItemEditor({
           ))}
         </div>
       )}
-      {d.include && updatesWholeItem(d) && appendTarget && <p className="muted small">{t('review.updatesItem', { title: appendTarget.title })}</p>}
+      {d.include && updatesWholeItem(d) && appendTarget && <p className="muted small">{t(d.useNewTitle ? 'review.updatesItemRenamed' : 'review.updatesItem', { title: appendTarget.title })}</p>}
       {d.include && suggestedTitle(d, appendTarget) && (
         <label className="inline-check">
           <input type="checkbox" checked={!!d.useNewTitle} onChange={(e) => onChange({ useNewTitle: e.target.checked })} />

@@ -172,3 +172,10 @@ export function movedItem(drafts: ItemDraft[], saved: Capture, target?: AppendTa
 /** Updating with a type change, and the AI suggested a different title: offer it. */
 export const suggestedTitle = (d: ItemDraft, target?: AppendTarget) =>
   typeChange(d, target) && target && d.title.trim() && d.title.trim() !== target.title ? d.title.trim() : null
+
+/**
+ * The proposals a review shows. Adding to an item: only the one for that item
+ * (the server already set aside any earlier unsaved one, this makes sure).
+ */
+export const reviewItems = (capture: Capture, target?: AppendTarget) =>
+  capture.items.filter((i) => i.status === 'PendingReview' && (!target || i.addsToCurrent))

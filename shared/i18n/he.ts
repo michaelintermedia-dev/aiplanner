@@ -404,6 +404,7 @@ export const he: Messages = {
 
   // ---- updating an item by voice ----
   'review.updatesItem': 'יעדכן את ״{title}״ - הכותרת ותאריך היצירה יישארו. כדאי לבדוק את השינויים לפני השמירה.',
+  'review.updatesItemRenamed': 'יעדכן את ״{title}״ - עם הכותרת החדשה, תאריך היצירה יישאר. כדאי לבדוק את השינויים לפני השמירה.',
 
   // ---- settings - recordings ----
   'settings.recordings': 'הקלטות',
@@ -429,5 +430,5 @@ export const he: Messages = {
   // ---- qa fixes ----
   'event.endsNextDay': 'מסתיים למחרת',
   'review.useNewTitle': 'לשנות את השם ל״{title}״',
-  'review.titleKept': 'הכותרת נשארת - אפשר לשנות אותה למטה',
+  'review.titleKept': 'הכותרת נשארת כפי שהיא',
 }

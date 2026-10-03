@@ -404,6 +404,7 @@ export const ru: Messages = {
 
   // ---- updating an item by voice ----
   'review.updatesItem': 'Обновит «{title}» — название и дата создания останутся. Проверьте изменения перед сохранением.',
+  'review.updatesItemRenamed': 'Обновит «{title}» — с новым названием, дата создания останется. Проверьте изменения перед сохранением.',
 
   // ---- settings - recordings ----
   'settings.recordings': 'Записи',
@@ -429,5 +430,5 @@ export const ru: Messages = {
   // ---- qa fixes ----
   'event.endsNextDay': 'Заканчивается на следующий день',
   'review.useNewTitle': 'Переименовать в «{title}»',
-  'review.titleKept': 'Название останется — ниже можно переименовать',
+  'review.titleKept': 'Название останется прежним',
 }

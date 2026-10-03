@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
 import type { AppendTarget, Capture, ItemType } from '@shared/types'
 import { File } from 'expo-file-system'
+import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { capturesApi } from '@/api/endpoints'
@@ -68,6 +69,7 @@ export function CaptureBar({
   }, [recorder])
 
   /** Runs a capture request; returns whether it succeeded. */
+  const queryClient = useQueryClient()
   const run = async (phase: Exclude<Busy, null>, work: () => Promise<Capture>) => {
     setBusy(phase)
     setError(null)
@@ -81,6 +83,8 @@ export function CaptureBar({
       return false
     } finally {
       setBusy(null)
+      // A new capture is pending until saved: the "Unsaved review" banner must know it at once.
+      void queryClient.invalidateQueries({ queryKey: ['captures'] })
     }
   }
 

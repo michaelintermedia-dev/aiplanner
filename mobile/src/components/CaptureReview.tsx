@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { draftHasTime, draftProblems, INTENT_OPTIONS, toConfirmItem, movedItem, suggestedTitle, toDraft, typeChange, updatesWholeItem, type ItemDraft } from '@shared/captureDraft'
+import { draftHasTime, draftProblems, INTENT_OPTIONS, toConfirmItem, movedItem, reviewItems, suggestedTitle, toDraft, typeChange, updatesWholeItem, type ItemDraft } from '@shared/captureDraft'
 import { endsNextDay } from '@shared/dates'
 import { KIND_LABEL } from '@shared/feed'
 import type { AppendTarget, Capture, ExtractionIntent, TaskPriority, ItemType } from '@shared/types'
@@ -41,7 +41,7 @@ export function CaptureReview({
   const { zone } = useAuth()
   const confirm = useAction((items: ReturnType<typeof toConfirmItem>[]) => capturesApi.confirm(capture.id, items))
   const [drafts, setDrafts] = useState<ItemDraft[]>(() =>
-    capture.items.filter((i) => i.status === 'PendingReview').map((i) => toDraft(i, zone.timeZone, appendTarget)),
+    reviewItems(capture, appendTarget).map((i) => toDraft(i, zone.timeZone, appendTarget)),
   )
   const [showTranscript, setShowTranscript] = useState(false)
 
@@ -181,7 +181,7 @@ function ItemEditor({
           </View>
 
           {updatesWholeItem(d) && appendTarget && (
-            <Text style={{ color: c.muted, fontSize: 13 }}>{t('review.updatesItem', { title: appendTarget.title })}</Text>
+            <Text style={{ color: c.muted, fontSize: 13 }}>{t(d.useNewTitle ? 'review.updatesItemRenamed' : 'review.updatesItem', { title: appendTarget.title })}</Text>
           )}
           {suggestedTitle(d, appendTarget) && (
             <Pressable

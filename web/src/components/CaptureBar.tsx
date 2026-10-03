@@ -1,4 +1,5 @@
 import type { AppendTarget, Capture, ItemType } from '@shared/types'
+import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { IoArrowUp } from 'react-icons/io5'
 import { capturesApi } from '../api/endpoints'
@@ -89,6 +90,7 @@ export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {
   const mics = useMicrophones()
   const [silent, setSilent] = useState(false)
 
+  const queryClient = useQueryClient()
   const run = async (phase: Exclude<Busy, null>, work: () => Promise<Capture>) => {
     setBusy(phase)
     setError(null)
@@ -100,6 +102,8 @@ export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {
       setError(err instanceof Error ? err.message : t('common.error'))
     } finally {
       setBusy(null)
+      // A new capture is pending until saved: the "Unsaved review" banner must know it at once.
+      void queryClient.invalidateQueries({ queryKey: ['captures'] })
     }
   }
 

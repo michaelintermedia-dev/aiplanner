@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using AiPlanner.Application.Ai.Services;
 using AiPlanner.Application.Reminders;
 using AiPlanner.Domain.Enums;
 
@@ -62,4 +63,48 @@ public static class ContinuedItem
     /// <summary>The existing details, then the new words as their own paragraph.</summary>
     public static string JoinDetails(string? existing, string addition) =>
         string.IsNullOrWhiteSpace(existing) ? addition.Trim() : $"{existing.TrimEnd()}\n\n{addition.Trim()}";
+
+    /// <summary>
+    /// The one proposal kept when adding to an item: the item, updated. Only a
+    /// proposal the AI marked as this item counts - anything else it proposed
+    /// (it read the words as a new item) never stands in for it; the item stays
+    /// as it is and the words go into its details. Fields the proposal left out
+    /// (date, time, place, priority) keep the item's values, and the details
+    /// keep both the old text and the new words - adding never wipes anything.
+    /// </summary>
+    public static NormalizedItem Keep(IReadOnlyList<NormalizedItem> proposals, NormalizedItem current, string newWords)
+    {
+        var proposal = proposals.FirstOrDefault(p => p.AddsToCurrent);
+        if (proposal is null)
+        {
+            return current with
+            {
+                Description = JoinDetails(current.Description, newWords),
+                AddsToCurrent = true,
+                SourceText = newWords,
+                Clarification = null,
+            };
+        }
+
+        var kept = proposal with { AddsToCurrent = true };
+        if (kept.Intent == current.Intent)
+        {
+            if (kept.Intent == ExtractionIntent.Task && kept.DueUtc is null && current.DueUtc is not null)
+            {
+                kept = kept with { DueUtc = current.DueUtc, HasTime = current.HasTime, Clarification = null };
+            }
+            if (kept.Intent == ExtractionIntent.Appointment && kept.StartUtc is null && current.StartUtc is not null)
+            {
+                kept = kept with { StartUtc = current.StartUtc, EndUtc = current.EndUtc, HasTime = current.HasTime, Clarification = null };
+            }
+            if (kept.Location is null && current.Location is not null) kept = kept with { Location = current.Location };
+            if (kept.Priority is null && current.Priority is not null) kept = kept with { Priority = current.Priority };
+        }
+        if (!MentionsWords(kept.Description, current.Description ?? "") || !MentionsWords(kept.Description, newWords))
+        {
+            // The merge lost the old text or the new words: keep both as written.
+            kept = kept with { Description = JoinDetails(current.Description, newWords) };
+        }
+        return kept;
+    }
 }

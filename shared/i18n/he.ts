@@ -421,4 +421,13 @@ export const he: Messages = {
 
   // ---- type change by voice ----
   'review.typeChange': 'הסוג ישתנה: {from} ← {to}',
+
+  // ---- unsaved review ----
+  'review.pending': 'בדיקה שלא נשמרה: ״{title}״',
+  'review.resume': 'המשך',
+
+  // ---- qa fixes ----
+  'event.endsNextDay': 'מסתיים למחרת',
+  'review.useNewTitle': 'לשנות את השם ל״{title}״',
+  'review.titleKept': 'הכותרת נשארת - אפשר לשנות אותה למטה',
 }

@@ -425,4 +425,13 @@ export const en = {
 
   // ---- type change by voice ----
   'review.typeChange': 'Changes it from {from} to {to}',
+
+  // ---- unsaved review ----
+  'review.pending': 'Unsaved review: “{title}”',
+  'review.resume': 'Resume',
+
+  // ---- qa fixes ----
+  'event.endsNextDay': 'Ends the next day',
+  'review.useNewTitle': 'Rename it to “{title}”',
+  'review.titleKept': 'The title stays - rename it below if you like',
 } satisfies Record<string, Message>

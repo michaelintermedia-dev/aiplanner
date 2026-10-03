@@ -40,6 +40,8 @@ export interface ItemDraft {
    * adding to it only appends this text to its details.
    */
   wholeItem: boolean
+  /** Updating the item with a type change: use the AI's new title instead of keeping the item's. */
+  useNewTitle?: boolean
   clarification: string | null
 }
 
@@ -94,7 +96,7 @@ export function toConfirmItem(d: ItemDraft, timeZone: string, target?: AppendTar
     // The whole item after the addition, as the type chosen in the review (a
     // different one changes its type first); the server keeps its title.
     return {
-      ...toConfirmItem({ ...d, appendTo: false, title: target.title }, timeZone),
+      ...toConfirmItem({ ...d, appendTo: false, title: d.useNewTitle ? d.title : target.title }, timeZone),
       appendToType: target.itemType,
       appendToId: target.itemId,
       replacesItem: true,
@@ -166,3 +168,7 @@ export function movedItem(drafts: ItemDraft[], saved: Capture, target?: AppendTa
   if (item.resultingTaskId) return { itemType: 'Task', itemId: item.resultingTaskId }
   return null
 }
+
+/** Updating with a type change, and the AI suggested a different title: offer it. */
+export const suggestedTitle = (d: ItemDraft, target?: AppendTarget) =>
+  typeChange(d, target) && target && d.title.trim() && d.title.trim() !== target.title ? d.title.trim() : null

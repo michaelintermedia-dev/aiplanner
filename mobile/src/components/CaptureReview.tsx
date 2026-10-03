@@ -1,4 +1,6 @@
-import { draftHasTime, draftProblems, INTENT_OPTIONS, toConfirmItem, movedItem, toDraft, typeChange, updatesWholeItem, type ItemDraft } from '@shared/captureDraft'
+import Ionicons from '@expo/vector-icons/Ionicons'
+import { draftHasTime, draftProblems, INTENT_OPTIONS, toConfirmItem, movedItem, suggestedTitle, toDraft, typeChange, updatesWholeItem, type ItemDraft } from '@shared/captureDraft'
+import { endsNextDay } from '@shared/dates'
 import { KIND_LABEL } from '@shared/feed'
 import type { AppendTarget, Capture, ExtractionIntent, TaskPriority, ItemType } from '@shared/types'
 import { useState } from 'react'
@@ -139,7 +141,7 @@ function ItemEditor({
         <TextInput
           style={[styles.itemTitle, { color: c.text, borderColor: c.border }, !d.include && styles.struck]}
           // Updating the item continued from: its title stays.
-          value={updatesWholeItem(d) && appendTarget ? appendTarget.title : d.title}
+          value={updatesWholeItem(d) && appendTarget ? (d.useNewTitle ? d.title : appendTarget.title) : d.title}
           editable={!updatesWholeItem(d)}
           onChangeText={(title) => onChange({ title })}
           accessibilityLabel={t('item.title')}
@@ -151,7 +153,7 @@ function ItemEditor({
           <View style={styles.chips}>
             {/* Any item can be any type (user's rule) - switching keeps the dates.
                 A reminder isn't a type: every type has its own reminder chip. */}
-            {appendTarget && (
+            {appendTarget && !updatesWholeItem(d) && (
               // Continuing from an item: this can complete it instead of becoming a new one.
               <Pressable
                 onPress={() => onChange(d.wholeItem ? { appendTo: true, intent: appendTarget.itemType } : { appendTo: true })}
@@ -181,6 +183,16 @@ function ItemEditor({
           {updatesWholeItem(d) && appendTarget && (
             <Text style={{ color: c.muted, fontSize: 13 }}>{t('review.updatesItem', { title: appendTarget.title })}</Text>
           )}
+          {suggestedTitle(d, appendTarget) && (
+            <Pressable
+              onPress={() => onChange({ useNewTitle: !d.useNewTitle })}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: !!d.useNewTitle }}>
+              <Ionicons name={d.useNewTitle ? 'checkbox' : 'square-outline'} size={20} color={c.accent} />
+              <Text style={{ color: c.text, flex: 1 }}>{t('review.useNewTitle', { title: suggestedTitle(d, appendTarget)! })}</Text>
+            </Pressable>
+          )}
           {typeChange(d, appendTarget) && (
             <Text style={{ color: c.warn, fontSize: 13, fontWeight: '600' }}>
               {t('review.typeChange', { from: KIND_LABEL[typeChange(d, appendTarget)!.from], to: KIND_LABEL[typeChange(d, appendTarget)!.to as ItemType] })}
@@ -201,6 +213,9 @@ function ItemEditor({
                   />
                   {d.intent === 'Appointment' && (
                     <DateTimeField mode="time" value={d.endTime} onChange={(endTime) => onChange({ endTime })} placeholder={t('event.end')} date={d.date} prefix={t('event.until')} />
+                  )}
+                  {d.intent === 'Appointment' && endsNextDay(d.time, d.endTime) && (
+                    <Text style={{ color: c.warn, fontSize: 13, alignSelf: 'center' }}>{t('event.endsNextDay')}</Text>
                   )}
                 </View>
               )}

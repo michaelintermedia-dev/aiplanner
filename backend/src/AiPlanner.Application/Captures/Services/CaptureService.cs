@@ -255,7 +255,7 @@ public class CaptureService : ICaptureService
             return Result<CaptureDto>.Failure("Some items were already saved or rejected. Reload the capture.");
         }
 
-        var errors = await ValidateAsync(request.Items.Where(i => i.Include && i.AppendToId is null), ct);
+        var errors = await ValidateAsync(request.Items.Where(i => i.Include && (i.AppendToId is null || i.ReplacesItem)), ct);
         if (errors.Count > 0)
         {
             return Result<CaptureDto>.Failure(errors.ToArray());
@@ -379,7 +379,7 @@ public class CaptureService : ICaptureService
         var started = _dateTime.UtcNow;
         var raw = await _extraction.ExtractAsync(
             new ExtractionContext(text, localNow, timeZone.Id, user.Locale, previousText, currentItem), ct);
-        var normalized = ExtractionNormalizer.Normalize(raw, text, localNow, timeZone);
+        var normalized = ExtractionNormalizer.Normalize(raw, text, localNow, timeZone, user.Locale);
 
         // Log counts and timing only - never the user's words (spec section 37).
         _logger.LogInformation(
@@ -520,6 +520,11 @@ public class CaptureService : ICaptureService
         var proposals = currentItem is null
             ? normalized.Items
             : normalized.Items.OrderByDescending(i => i.AddsToCurrent).Take(1).Select(i => i with { AddsToCurrent = true }).ToList();
+        if (currentItem is not null && proposals.Count == 1 && !ContinuedItem.MentionsWords(proposals[0].Description, newText))
+        {
+            var existing = await ItemDetailsAsync(userId, request.ItemType, request.ItemId!.Value, ct);
+            proposals = [proposals[0] with { Description = ContinuedItem.JoinDetails(existing, newText) }];
+        }
         foreach (var proposed in proposals)
         {
             var item = ToItem(userId, proposed, newTimeline);
@@ -704,6 +709,15 @@ public class CaptureService : ICaptureService
         return words.Count > 0 ? string.Join("\n\n", words) : null;
     }
 
+    /// <summary>The item's current details (task/event description, note text).</summary>
+    private async Task<string?> ItemDetailsAsync(Guid userId, string? type, Guid id, CancellationToken ct) => type switch
+    {
+        "Task" => await _db.TaskItems.Where(t => t.Id == id && t.UserId == userId).Select(t => t.Description).FirstOrDefaultAsync(ct),
+        "Appointment" => await _db.Appointments.Where(a => a.Id == id && a.UserId == userId).Select(a => a.Description).FirstOrDefaultAsync(ct),
+        "Note" => await _db.Notes.Where(n => n.Id == id && n.UserId == userId).Select(n => n.Content).FirstOrDefaultAsync(ct),
+        _ => null,
+    };
+
     /// <summary>The item continued from, as the AI's item JSON (null if it's gone).</summary>
     private async Task<string?> DescribeItemAsync(Guid userId, string? type, Guid id, CancellationToken ct)
     {
@@ -761,7 +775,7 @@ public class CaptureService : ICaptureService
             {
                 if ((await _tasks.GetByIdAsync(targetId, ct)).Value is not { } t) return "The task to add to was not found.";
                 var updated = await _tasks.UpdateAsync(targetId, new UpdateTaskRequest(
-                    t.Title, decision.Description ?? t.Description, t.Notes, t.StartDateUtc,
+                    TitleOr(decision, t.Title), decision.Description ?? t.Description, t.Notes, t.StartDateUtc,
                     decision.DueUtc, decision.DueUtc is not null && decision.HasTime,
                     decision.Priority ?? TaskPriority.None, t.Status == TaskItemStatus.Ongoing && decision.DueUtc is null,
                     decision.Reminders ?? [], t.Tags), ct);
@@ -775,7 +789,7 @@ public class CaptureService : ICaptureService
                 var start = decision.StartUtc ?? a.StartUtc;
                 var end = decision.EndUtc is { } e && e > start ? e : start + (a.EndUtc - a.StartUtc);
                 var updated = await _appointments.UpdateAsync(targetId, new UpdateAppointmentRequest(
-                    a.Title, decision.Description ?? a.Description, a.Notes, start, end,
+                    TitleOr(decision, a.Title), decision.Description ?? a.Description, a.Notes, start, end,
                     decision.Location ?? a.Location, a.Participants.Select(p => p.Name).ToList(), decision.Reminders ?? []), ct);
                 if (!updated.Succeeded) return string.Join(" ", updated.Errors);
                 item.ResultingAppointmentId = targetId;
@@ -785,13 +799,25 @@ public class CaptureService : ICaptureService
             {
                 if ((await _notes.GetByIdAsync(targetId, ct)).Value is not { } n) return "The note to add to was not found.";
                 var content = string.IsNullOrWhiteSpace(decision.Description) ? n.Content : decision.Description;
-                var updated = await _notes.UpdateAsync(targetId, new SaveNoteRequest(n.Title, content, decision.Reminders ?? []), ct);
+                var updated = await _notes.UpdateAsync(targetId, new SaveNoteRequest(KeepsNoteUntitled(n.Title, n.Content, decision.Title) ? null : TitleOr(decision, n.Title ?? ""), content, decision.Reminders ?? []), ct);
                 if (!updated.Succeeded) return string.Join(" ", updated.Errors);
                 item.ResultingNoteId = targetId;
                 return null;
             }
         }
     }
+
+    /// <summary>
+    /// An untitled note is shown by its first words; getting those back means
+    /// "keep it untitled", not "give it this title".
+    /// </summary>
+    private static bool KeepsNoteUntitled(string? title, string content, string? sent) =>
+        title is null && (string.IsNullOrWhiteSpace(sent)
+            || string.Join(' ', content.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).StartsWith(sent.Trim().TrimEnd('…'), StringComparison.Ordinal));
+
+    /// <summary>The title from the review (the item's own unless the user picked the AI's new one).</summary>
+    private static string TitleOr(ConfirmCaptureItem decision, string current) =>
+        string.IsNullOrWhiteSpace(decision.Title) ? current : decision.Title.Trim();
 
     /// <summary>Old "add text only" path, kept for confirm requests without the item's fields.</summary>
     private async Task<string?> AppendToItemAsync(
@@ -800,24 +826,29 @@ public class CaptureService : ICaptureService
         var addition = (string.IsNullOrWhiteSpace(decision.Description) ? decision.Title : decision.Description).Trim();
         static string Join(string? existing, string addition) =>
             string.IsNullOrWhiteSpace(existing) ? addition : $"{existing.TrimEnd()}\n\n{addition}";
+        const int MaxText = 4000;
+        const string TooLong = "The text would get too long - shorten what you add, or edit the item's details.";
 
         switch (type)
         {
             case "Task":
                 var task = await _db.TaskItems.FirstOrDefaultAsync(t => t.Id == targetId && t.UserId == userId, ct);
                 if (task is null) return "The task to add to was not found.";
+                if (Join(task.Description, addition).Length > MaxText) return TooLong;
                 task.Description = Join(task.Description, addition);
                 item.ResultingTaskItemId = task.Id;
                 return null;
             case "Appointment":
                 var appointment = await _db.Appointments.FirstOrDefaultAsync(a => a.Id == targetId && a.UserId == userId, ct);
                 if (appointment is null) return "The event to add to was not found.";
+                if (Join(appointment.Description, addition).Length > MaxText) return TooLong;
                 appointment.Description = Join(appointment.Description, addition);
                 item.ResultingAppointmentId = appointment.Id;
                 return null;
             default:
                 var note = await _db.Notes.FirstOrDefaultAsync(n => n.Id == targetId && n.UserId == userId, ct);
                 if (note is null) return "The note to add to was not found.";
+                if (Join(note.Content, addition).Length > MaxText) return TooLong;
                 note.Content = Join(note.Content, addition);
                 item.ResultingNoteId = note.Id;
                 return null;

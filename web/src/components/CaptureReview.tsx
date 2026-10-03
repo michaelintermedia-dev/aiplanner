@@ -1,4 +1,5 @@
-import { draftHasTime, draftProblems, INTENT_OPTIONS, toConfirmItem, movedItem, toDraft, typeChange, updatesWholeItem, type ItemDraft } from '@shared/captureDraft'
+import { draftHasTime, draftProblems, INTENT_OPTIONS, toConfirmItem, movedItem, suggestedTitle, toDraft, typeChange, updatesWholeItem, type ItemDraft } from '@shared/captureDraft'
+import { endsNextDay } from '@shared/dates'
 import { KIND_LABEL } from '@shared/feed'
 import type { AppendTarget, Capture, TaskPriority, ItemType } from '@shared/types'
 import { useState } from 'react'
@@ -130,7 +131,13 @@ function ItemEditor({
         />
         {updatesWholeItem(d) && appendTarget ? (
           // Updating the item continued from: its title stays.
-          <input className="review-title" value={appendTarget.title} readOnly aria-label={t('item.title')} />
+          <input
+            className="review-title"
+            value={d.useNewTitle ? d.title : appendTarget.title}
+            readOnly
+            aria-label={t('item.title')}
+            title={t('review.titleKept')}
+          />
         ) : (
           <input
             className="review-title"
@@ -145,7 +152,7 @@ function ItemEditor({
         // Any item can be any type (user's rule) - switching keeps the dates.
         // A reminder isn't a type: every type has its own reminder below.
         <div className="intent-chips" role="radiogroup" aria-label={t('review.saveAs')}>
-          {appendTarget && (
+          {appendTarget && !updatesWholeItem(d) && (
             // Continuing from an item: this can complete it instead of becoming a new one.
             <button
               type="button"
@@ -172,6 +179,12 @@ function ItemEditor({
         </div>
       )}
       {d.include && updatesWholeItem(d) && appendTarget && <p className="muted small">{t('review.updatesItem', { title: appendTarget.title })}</p>}
+      {d.include && suggestedTitle(d, appendTarget) && (
+        <label className="inline-check">
+          <input type="checkbox" checked={!!d.useNewTitle} onChange={(e) => onChange({ useNewTitle: e.target.checked })} />
+          {t('review.useNewTitle', { title: suggestedTitle(d, appendTarget)! })}
+        </label>
+      )}
       {d.include && typeChange(d, appendTarget) && (
         <p className="type-change">
           {t('review.typeChange', { from: KIND_LABEL[typeChange(d, appendTarget)!.from], to: KIND_LABEL[typeChange(d, appendTarget)!.to as ItemType] })}
@@ -197,6 +210,7 @@ function ItemEditor({
               <label>
                 {t('event.end')}
                 <input type="time" value={d.endTime ?? ''} onChange={(e) => onChange({ endTime: e.target.value || null })} />
+                {endsNextDay(d.time, d.endTime) && <span className="hint warn">{t('event.endsNextDay')}</span>}
               </label>
               <label>
                 {t('event.location')}

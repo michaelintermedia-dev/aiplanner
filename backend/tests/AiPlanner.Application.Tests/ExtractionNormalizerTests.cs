@@ -346,6 +346,24 @@ public class ExtractionNormalizerTests
         item.Clarification.Should().Contain("Which Sarah?").And.Contain("When");
     }
 
+    [Fact]
+    public void Our_time_question_is_not_repeated_when_the_ai_asked_it()
+    {
+        var item = Normalize(Item(intent: "appointment", clarification: "What time next week should I put the meeting?"));
+
+        item.Clarification.Should().Be("What time next week should I put the meeting?");
+    }
+
+    [Fact]
+    public void Our_questions_follow_the_users_language()
+    {
+        var raw = new RawExtraction(null, null, [Item(intent: "appointment")], "{}", "Test", "test-model");
+
+        var item = ExtractionNormalizer.Normalize(raw, "встреча", LocalNow, Moscow, "ru-RU").Items.Single();
+
+        item.Clarification.Should().Be("Когда это событие?");
+    }
+
     [Theory]
     [InlineData("What's the weather like tomorrow?")]
     [InlineData("hmm, random thought about the garden")]

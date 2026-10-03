@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { appointmentsApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
-import { todayKey, zonedToUtc } from '@shared/dates'
+import { todayKey, zonedToUtc, endsNextDay } from '@shared/dates'
 import type { Reminder } from '@shared/types'
 import { remindersProblem } from '@shared/reminders'
 import { useAction } from '../lib/useAction'
@@ -54,6 +54,7 @@ export function AppointmentForm({ initialDate, onDone }: { initialDate?: string;
         <label>
           {t('event.end')}
           <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} required />
+          {endsNextDay(start, end) && <span className="hint warn">{t('event.endsNextDay')}</span>}
         </label>
       </div>
       <div className="form-row">

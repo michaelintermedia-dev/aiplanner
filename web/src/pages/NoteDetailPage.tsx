@@ -1,3 +1,4 @@
+import { noteName } from '@shared/feed'
 import { dateKey, formatDateKey, formatTime } from '@shared/dates'
 import { describeReminder, remindersProblem, repeats } from '@shared/reminders'
 import type { Reminder, SaveNoteRequest } from '@shared/types'
@@ -105,7 +106,7 @@ export function NoteDetailPage() {
         </>
       )}
 
-      {note.sourceCaptureId && <SourceCapture captureId={note.sourceCaptureId} item={{ itemType: 'Note', itemId: note.id, title: note.title ?? note.content }} />}
+      {note.sourceCaptureId && <SourceCapture captureId={note.sourceCaptureId} item={{ itemType: 'Note', itemId: note.id, title: noteName(note) }} />}
     </div>
   )
 }

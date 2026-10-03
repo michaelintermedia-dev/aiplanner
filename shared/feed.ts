@@ -120,3 +120,10 @@ export function feedReminder(item: FeedItem, zone: ZoneContext): { label: string
     repeats: !!item.reminderRepeats,
   }
 }
+
+/** What an untitled note is called (its first words) - e.g. in "Updates ..." when adding to it. */
+export const noteName = (note: { title: string | null; content: string }) => {
+  if (note.title) return note.title
+  const flat = note.content.replace(/\s+/g, ' ').trim()
+  return flat.length <= 80 ? flat : `${flat.slice(0, 79).trimEnd()}…`
+}

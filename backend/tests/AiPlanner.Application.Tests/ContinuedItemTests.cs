@@ -49,4 +49,19 @@ public class ContinuedItemTests
         root.GetProperty("time").ValueKind.Should().Be(JsonValueKind.Null);
         root.GetProperty("priority").GetString().Should().Be("high");
     }
+
+    [Theory]
+    [InlineData("Bring the yellow slip and the passport.", "bring the yellow slip too", true)]
+    [InlineData(null, "call the plumber back tomorrow at noon", false)]
+    [InlineData("Incomplete fragment", "call the plumber back tomorrow at noon", false)]
+    [InlineData("anything", "ok", true)] // nothing worth checking
+    public void New_words_are_noticed_when_missing(string? details, string words, bool expected) =>
+        ContinuedItem.MentionsWords(details, words).Should().Be(expected);
+
+    [Fact]
+    public void Missing_words_are_added_as_their_own_paragraph()
+    {
+        ContinuedItem.JoinDetails("Old text.", " New words ").Should().Be("Old text.\n\nNew words");
+        ContinuedItem.JoinDetails(null, "New words").Should().Be("New words");
+    }
 }

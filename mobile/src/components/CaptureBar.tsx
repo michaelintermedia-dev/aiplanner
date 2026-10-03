@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { capturesApi } from '@/api/endpoints'
 import { useSegmentRecorder } from '@/lib/useSegmentRecorder'
+import { usePendingReview } from '@/lib/usePendingReview'
 import { useColors } from '@/theme'
 import { CaptureReview } from './CaptureReview'
 import { LevelMeter } from './LevelMeter'
@@ -53,6 +54,8 @@ export function CaptureBar({
   const [busy, setBusy] = useState<Busy>(null)
   const [error, setError] = useState<string | null>(null)
   const [capture, setCapture] = useState<Capture | null>(null)
+  // A review left unfinished earlier (not when adding to an item - that has its own review).
+  const pending = usePendingReview(!continueFrom && capture === null)
   const [savedMessage, setSavedMessage] = useState<string | null>(null)
   const [silent, setSilent] = useState(false)
 
@@ -129,6 +132,14 @@ export function CaptureBar({
 
   return (
     <View style={[styles.card, { backgroundColor: c.surface, borderColor: hasAudio ? c.accent : c.border }]}>
+      {pending.capture && !hasAudio && busy === null && (
+        // A review left unfinished earlier: never silently lost.
+        <View style={[styles.pending, { borderColor: c.warn }]} accessibilityRole="alert">
+          <Text style={{ color: c.text, flex: 1 }}>{t('review.pending', { title: pending.capture.title })}</Text>
+          {pending.resumable && <Button title={t('review.resume')} variant="link" onPress={() => setCapture(pending.capture)} />}
+          <Button title={t('capture.discard')} variant="danger" disabled={pending.discard.isPending} onPress={() => pending.discard.mutate(pending.capture!)} />
+        </View>
+      )}
       {hasAudio ? (
         <View style={styles.recording}>
           <View style={styles.recordingRow}>
@@ -226,6 +237,7 @@ function SendButton({ label, onPress, disabled }: { label: string; onPress: () =
 }
 
 const styles = StyleSheet.create({
+  pending: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 4, borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
   send: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   card: { borderWidth: 1, borderRadius: 16, padding: 14, gap: 12 },
   input: { fontSize: 17, minHeight: 56, textAlignVertical: 'top' },

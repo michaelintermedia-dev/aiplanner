@@ -1,3 +1,4 @@
+import { noteName } from '@shared/feed'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { dateKey, formatDateKey, formatTime } from '@shared/dates'
 import { describeReminder, remindersProblem, repeats } from '@shared/reminders'
@@ -121,7 +122,7 @@ export default function NoteDetailScreen() {
         </>
       )}
 
-      {note.sourceCaptureId && <SourceCapture captureId={note.sourceCaptureId} item={{ itemType: 'Note', itemId: note.id, title: note.title ?? note.content }} />}
+      {note.sourceCaptureId && <SourceCapture captureId={note.sourceCaptureId} item={{ itemType: 'Note', itemId: note.id, title: noteName(note) }} />}
     </Screen>
   )
 }

@@ -50,6 +50,15 @@ public class ExceptionHandlingMiddleware
             _logger.LogWarning(ex, "AI provider failure processing {Method} {Path}", context.Request.Method, context.Request.Path);
             await WriteProblemAsync(context, HttpStatusCode.BadGateway, "The AI service is unavailable right now. Please try again.", [ex.Message]);
         }
+        catch (DbUpdateException ex)
+        {
+            // SQL Server's error text quotes the value that failed (e.g. "Truncated value: '...'"),
+            // which can be the user's words - never log it (spec section 37). The kind is enough.
+            _logger.LogError("Saving failed processing {Method} {Path}: {Error} ({Inner}, SQL error {Number})",
+                context.Request.Method, context.Request.Path, ex.GetType().Name, ex.InnerException?.GetType().Name,
+                (ex.InnerException as System.Data.Common.DbException)?.ErrorCode);
+            await WriteProblemAsync(context, HttpStatusCode.InternalServerError, "An unexpected error occurred.");
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception processing {Method} {Path}", context.Request.Method, context.Request.Path);

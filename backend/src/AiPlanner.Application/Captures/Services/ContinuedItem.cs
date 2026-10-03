@@ -42,4 +42,24 @@ public static class ContinuedItem
         };
         return JsonSerializer.Serialize(item, Json);
     }
+
+    /// <summary>
+    /// Whether the merged details carry the user's new words (at least a third
+    /// of the longer ones) - if not, they'd be lost, so they get added as-is.
+    /// </summary>
+    public static bool MentionsWords(string? details, string newWords)
+    {
+        static IEnumerable<string> Words(string? text) =>
+            (text ?? "").ToLowerInvariant().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+                .Select(w => new string(w.Where(char.IsLetterOrDigit).ToArray()))
+                .Where(w => w.Length > 3);
+        var wanted = Words(newWords).Distinct().ToList();
+        if (wanted.Count == 0) return true;
+        var present = Words(details).ToHashSet();
+        return wanted.Count(present.Contains) * 3 >= wanted.Count;
+    }
+
+    /// <summary>The existing details, then the new words as their own paragraph.</summary>
+    public static string JoinDetails(string? existing, string addition) =>
+        string.IsNullOrWhiteSpace(existing) ? addition.Trim() : $"{existing.TrimEnd()}\n\n{addition.Trim()}";
 }

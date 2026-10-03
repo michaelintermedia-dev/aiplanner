@@ -41,18 +41,20 @@ public static class ExtractionNormalizer
     public const int MaxReminderMinutes = 30 * 24 * 60;
     private static readonly TimeSpan DefaultAppointmentLength = TimeSpan.FromHours(1);
 
-    public static NormalizedExtraction Normalize(RawExtraction raw, string inputText, DateTime localNow, TimeZoneInfo timeZone)
+    /// <param name="locale">The user's locale - the server's own questions are written in it.</param>
+    public static NormalizedExtraction Normalize(RawExtraction raw, string inputText, DateTime localNow, TimeZoneInfo timeZone, string? locale = null)
     {
+        var texts = ClarificationTexts.For(locale);
         var items = raw.Items
             .Take(MaxItems)
-            .Select(item => NormalizeItem(item, localNow, timeZone))
+            .Select(item => NormalizeItem(item, localNow, timeZone, texts))
             .OfType<NormalizedItem>()
             .ToList();
 
         var title = Clean(raw.Title, MaxTitleLength)
             ?? items.FirstOrDefault()?.Title
             ?? Clean(inputText, 60)
-            ?? "Capture";
+            ?? texts.DefaultCaptureTitle;
 
         // Nothing is ever a dead end (user's rule): if the AI found nothing it
         // could use - a question, a stray thought - keep the words as a note the
@@ -61,7 +63,7 @@ public static class ExtractionNormalizer
         {
             items.Add(new NormalizedItem(
                 ExtractionIntent.Note,
-                Clean(raw.Title, MaxTitleLength) ?? Clean(inputText, 80) ?? "Note",
+                Clean(raw.Title, MaxTitleLength) ?? Clean(inputText, 80) ?? texts.DefaultNoteTitle,
                 Summary: null,
                 Description: text,
                 StartUtc: null, EndUtc: null, DueUtc: null, HasTime: false,
@@ -72,7 +74,7 @@ public static class ExtractionNormalizer
         return new NormalizedExtraction(title, Clean(raw.Summary, 2000), items);
     }
 
-    public static NormalizedItem? NormalizeItem(RawExtractedItem raw, DateTime localNow, TimeZoneInfo timeZone)
+    public static NormalizedItem? NormalizeItem(RawExtractedItem raw, DateTime localNow, TimeZoneInfo timeZone, ClarificationTexts? texts = null)
     {
         var title = Clean(raw.Title, MaxTitleLength);
         if (title is null)
@@ -89,10 +91,10 @@ public static class ExtractionNormalizer
             intent = ExtractionIntent.Task;
         }
 
-        var questions = new List<string>();
+        var questions = new Questions(texts ?? ClarificationTexts.English);
         if (Clean(raw.Clarification, 500) is { } fromProvider)
         {
-            questions.Add(fromProvider);
+            questions.FromProvider(fromProvider);
         }
 
         var date = ParseDate(raw.Date, localNow, questions);
@@ -114,11 +116,11 @@ public static class ExtractionNormalizer
             case ExtractionIntent.Appointment:
                 if (date is null)
                 {
-                    questions.Add("When is this appointment?");
+                    questions.Ask(questions.Texts.WhenIsAppointment);
                 }
                 else if (time is null)
                 {
-                    questions.Add("What time does it start?");
+                    questions.Ask(questions.Texts.WhatTimeStarts);
                     startUtc = UserTimeZoneHelper.LocalDateStartToUtc(date.Value, timeZone);
                 }
                 else
@@ -150,7 +152,7 @@ public static class ExtractionNormalizer
         // keep it, but make the user look at it rather than save a stale item.
         if (intent != ExtractionIntent.Note && date is not null && IsInPast(date.Value, time, localNow))
         {
-            questions.Add("This time has already passed - please check the date.");
+            questions.Warn(questions.Texts.TimePassed);
         }
 
         IReadOnlyList<RawReminder> rawReminders = raw.Reminders is { Count: > 0 } given
@@ -186,7 +188,7 @@ public static class ExtractionNormalizer
     /// a question and is left empty for the user to fill in on the review.
     /// </summary>
     private static ReminderDto? NormalizeReminder(
-        RawReminder? raw, ExtractionIntent intent, bool itemHasTime, DateTime localNow, TimeZoneInfo timeZone, List<string> questions)
+        RawReminder? raw, ExtractionIntent intent, bool itemHasTime, DateTime localNow, TimeZoneInfo timeZone, Questions questions)
     {
         if (raw is null || !Enum.TryParse<ReminderKind>(raw.Kind?.Trim(), ignoreCase: true, out var kind) || !Enum.IsDefined(kind))
         {
@@ -199,7 +201,7 @@ public static class ExtractionNormalizer
             case ReminderKind.Before when intent != ExtractionIntent.Note:
                 if (!itemHasTime)
                 {
-                    questions.Add("What time should I remind you?");
+                    questions.Ask(questions.Texts.WhatTimeRemind);
                 }
                 var minutes = raw.MinutesBefore is >= 0 and <= MaxReminderMinutes ? raw.MinutesBefore.Value : 0;
                 return new ReminderDto(ReminderKind.Before, MinutesBefore: minutes);
@@ -214,19 +216,19 @@ public static class ExtractionNormalizer
                 }
                 if (date is null || time is null)
                 {
-                    questions.Add("When should I remind you?");
+                    questions.Ask(questions.Texts.WhenRemind);
                     return new ReminderDto(ReminderKind.At);
                 }
                 if (IsInPast(date.Value, time, localNow))
                 {
-                    questions.Add("This reminder time has already passed - please check it.");
+                    questions.Warn(questions.Texts.ReminderPassed);
                 }
                 return new ReminderDto(ReminderKind.At, AtUtc: ToUtc(date.Value, time.Value, timeZone));
 
             default: // daily, weekdays, weekly
                 if (time is null)
                 {
-                    questions.Add("What time should I remind you?");
+                    questions.Ask(questions.Texts.WhatTimeRemind);
                 }
                 IReadOnlyList<DayOfWeek>? days = null;
                 if (kind == ReminderKind.Weekly)
@@ -238,7 +240,7 @@ public static class ExtractionNormalizer
                         .ToList();
                     if (days.Count == 0)
                     {
-                        questions.Add("Which days should I remind you?");
+                        questions.Ask(questions.Texts.WhichDays);
                     }
                 }
                 return new ReminderDto(kind, Time: time is { } t ? ReminderSchedule.FormatTime(t) : null, Days: days);
@@ -255,7 +257,7 @@ public static class ExtractionNormalizer
             ? intent
             : ExtractionIntent.Task;
 
-    private static DateOnly? ParseDate(string? value, DateTime localNow, List<string> questions)
+    private static DateOnly? ParseDate(string? value, DateTime localNow, Questions questions)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
@@ -263,14 +265,14 @@ public static class ExtractionNormalizer
         }
         if (!DateOnly.TryParseExact(value.Trim(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
         {
-            questions.Add("Please check the date.");
+            questions.Warn(questions.Texts.CheckDate);
             return null;
         }
         // A planner item years away (or long past) is almost certainly a misread.
         var today = DateOnly.FromDateTime(localNow);
         if (date < today.AddYears(-1) || date > today.AddYears(5))
         {
-            questions.Add("Please check the date.");
+            questions.Warn(questions.Texts.CheckDate);
             return null;
         }
         return date;

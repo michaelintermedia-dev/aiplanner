@@ -1,4 +1,4 @@
-import { addDays, dateKey, formatDateKey, formatTime, timeKey, zonedToUtc } from '@shared/dates'
+import { addDays, dateKey, formatDateKey, formatTime, timeKey, zonedToUtc, endsNextDay } from '@shared/dates'
 import { eventPassed } from '@shared/feed'
 import type { Appointment, Reminder } from '@shared/types'
 import { useQuery } from '@tanstack/react-query'
@@ -182,6 +182,7 @@ function AppointmentEditForm({ appt, onDone }: { appt: Appointment; onDone: () =
         <label>
           {t('event.end')}
           <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} required />
+          {endsNextDay(start, end) && <span className="hint warn">{t('event.endsNextDay')}</span>}
         </label>
       </div>
       <div className="field">

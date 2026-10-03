@@ -5,6 +5,7 @@ import { capturesApi } from '../api/endpoints'
 import { toWav } from '../lib/toWav'
 import { useAudioRecorder, type RecorderState } from '../lib/useAudioRecorder'
 import { useMicrophones } from '../lib/useMicrophones'
+import { usePendingReview } from '../lib/usePendingReview'
 import { CaptureReview } from './CaptureReview'
 import { LevelMeter } from './LevelMeter'
 import { MicButton } from './MicButton'
@@ -74,6 +75,15 @@ export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {
   const [busy, setBusy] = useState<Busy>(null)
   const [error, setError] = useState<string | null>(null)
   const [capture, setCapture] = useState<Capture | null>(null)
+  // A review left unfinished earlier (not when adding to an item - that has its own review).
+  const pending = usePendingReview(!continueFrom && capture === null)
+  // Reloading or closing the tab mid-review asks first (it can be resumed, but say so).
+  useEffect(() => {
+    if (!capture) return
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault()
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [capture])
   const [savedMessage, setSavedMessage] = useState<string | null>(null)
   const preview = usePreview(recorder.state, recorder.pauseCount, recorder.snapshot)
   const mics = useMicrophones()
@@ -170,6 +180,21 @@ export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {
   const hasAudio = recorder.state === 'recording' || recorder.state === 'paused'
 
   return (
+    <>
+    {pending.capture && !hasAudio && busy === null && (
+      // A review left unfinished earlier: never silently lost.
+      <div className="pending-review" role="status">
+        <span>{t('review.pending', { title: pending.capture.title })}</span>
+        {pending.resumable && (
+          <button type="button" className="link" onClick={() => setCapture(pending.capture)}>
+            {t('review.resume')}
+          </button>
+        )}
+        <button type="button" className="link danger" disabled={pending.discard.isPending} onClick={() => pending.discard.mutate(pending.capture!)}>
+          {t('capture.discard')}
+        </button>
+      </div>
+    )}
     <form className="capture" onSubmit={submitText}>
       {hasAudio ? (
         <div className="capture-recording">
@@ -275,5 +300,6 @@ export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {
       </div>
       {error && <p className="error">{error}</p>}
     </form>
+    </>
   )
 }

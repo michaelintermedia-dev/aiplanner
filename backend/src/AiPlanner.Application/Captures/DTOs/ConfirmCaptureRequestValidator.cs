@@ -22,8 +22,12 @@ public class ConfirmCaptureRequestValidator : AbstractValidator<ConfirmCaptureRe
                 .When(i => i.Include && i.AppendToId is not null)
                 .WithMessage("AppendToType must be Task, Appointment or Note.");
 
-            // Items added to an existing one only contribute text; the rest is for new items.
-            item.When(i => i.Include && i.AppendToId is null, () =>
+            // A text-only addition to an existing item only contributes text.
+            item.RuleFor(i => i.Description).MaximumLength(4000)
+                .When(i => i.Include && i.AppendToId is not null && !i.ReplacesItem);
+
+            // New items, and whole-item updates (ReplacesItem: the fields ARE the item after the change).
+            item.When(i => i.Include && (i.AppendToId is null || i.ReplacesItem), () =>
             {
                 item.RuleFor(i => i.Title).NotEmpty().MaximumLength(ExtractionNormalizer.MaxTitleLength);
                 item.RuleFor(i => i.Description).MaximumLength(4000);

@@ -421,4 +421,13 @@ export const ru: Messages = {
 
   // ---- type change by voice ----
   'review.typeChange': 'Тип изменится: {from} → {to}',
+
+  // ---- unsaved review ----
+  'review.pending': 'Несохранённый разбор: «{title}»',
+  'review.resume': 'Продолжить',
+
+  // ---- qa fixes ----
+  'event.endsNextDay': 'Заканчивается на следующий день',
+  'review.useNewTitle': 'Переименовать в «{title}»',
+  'review.titleKept': 'Название останется — ниже можно переименовать',
 }

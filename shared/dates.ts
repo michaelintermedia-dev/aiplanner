@@ -95,3 +95,6 @@ export function formatDue(utc: string, hasTime: boolean, zone: ZoneContext): str
           : formatDateKey(key, zone.locale, { weekday: 'short', month: 'short', day: 'numeric' })
   return hasTime ? `${day} ${formatTime(utc, zone)}` : day
 }
+
+/** An event whose end time ("HH:mm") is not after its start ends the next day - say so. */
+export const endsNextDay = (start: string | null | undefined, end: string | null | undefined) => !!start && !!end && end <= start

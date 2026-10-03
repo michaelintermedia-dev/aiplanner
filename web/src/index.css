@@ -2150,3 +2150,30 @@ button.kind-icon:hover:not(:disabled) {
   font-weight: 600;
   color: var(--warn);
 }
+
+/* "Unsaved review: ... Resume · Discard" above the capture box. */
+.pending-review {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--warn);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 0.9rem;
+}
+
+.pending-review span {
+  flex: 1 1 200px;
+}
+
+/* A small note under a field, e.g. "Ends the next day". */
+.hint {
+  font-size: 0.8rem;
+  font-weight: normal;
+}
+
+.hint.warn {
+  color: var(--warn);
+}

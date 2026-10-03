@@ -1,4 +1,4 @@
-import { addDays, dateKey, formatDateKey, formatTime, timeKey, zonedToUtc } from '@shared/dates'
+import { addDays, dateKey, formatDateKey, formatTime, timeKey, zonedToUtc, endsNextDay } from '@shared/dates'
 import { eventPassed } from '@shared/feed'
 import { describeReminder, remindersProblem } from '@shared/reminders'
 import type { Appointment, Reminder } from '@shared/types'
@@ -152,6 +152,7 @@ function AppointmentEditForm({ appt, onDone }: { appt: Appointment; onDone: () =
         <DateTimeField mode="time" value={start} onChange={setStart} placeholder={t('event.start')} date={date} />
         <DateTimeField mode="time" value={end} onChange={setEnd} placeholder={t('event.end')} date={date} prefix={t('event.until')} />
       </View>
+      {endsNextDay(start, end) && <Text style={{ color: c.warn, fontSize: 13 }}>{t('event.endsNextDay')}</Text>}
       <ReminderList value={reminders} onChange={setReminders} itemHasTime />
       <Field label={t('event.location')} value={location} onChangeText={setLocation} />
       <Field label={`${t('event.with')} ${t('item.commaSeparated')}`} value={people} onChangeText={setPeople} />

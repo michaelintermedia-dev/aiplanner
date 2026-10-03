@@ -416,4 +416,7 @@ export const en = {
 
   // ---- feed reminder badge ----
   'feed.reminderAt': 'Reminder: {when}',
+
+  // ---- item audio in pieces ----
+  'player.playItsParts': { one: 'Play its part ({length})', other: 'Play its {count} parts ({length})' },
 } satisfies Record<string, Message>

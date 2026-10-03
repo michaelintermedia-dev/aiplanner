@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { clipTime, itemSnippet, locateInParts, partStartsMs, type Snippet } from '@shared/audioSnippet'
+import { clipsLabel, itemClips, locateInParts, partStartsMs, type Snippet } from '@shared/audioSnippet'
 import { dateKey, formatDateKey, formatTime } from '@shared/dates'
 import type { AppendTarget } from '@shared/types'
 import { useQuery } from '@tanstack/react-query'
@@ -69,7 +69,7 @@ export function SourceCapture({ captureId, item }: { captureId: string; item?: A
               captureId={captureId}
               parts={capture.audioParts}
               durationsMs={capture.audioPartDurationsMs ?? null}
-              snippet={itemSnippet(capture, item)}
+              clips={itemClips(capture, item)}
             />
             <Button
               title={t('source.deleteAudio')}
@@ -92,20 +92,21 @@ export function SourceCapture({ captureId, item }: { captureId: string; item?: A
 
 /**
  * Streams the recording's parts from the API (with the auth header), one after
- * another. When the message held several items, `snippet` is this item's own
- * part: "Play this part" starts in the right part at the right moment and stops
- * at its end, even when that's in a later part.
+ * another. When the message held several items, `clips` are this item's own
+ * parts (its words, plus anything spoken when adding to it): "Play this part"
+ * plays them in order - starting in the right file at the right moment and
+ * stopping at each one's end, even across files.
  */
 function RecordingPlayer({
   captureId,
   parts,
   durationsMs,
-  snippet,
+  clips,
 }: {
   captureId: string
   parts: number
   durationsMs: number[] | null
-  snippet: Snippet | null
+  clips: Snippet[]
 }) {
   const player = useAudioPlayer(null)
   const [playing, setPlaying] = useState<{ part: number; snippet: boolean } | null>(null)
@@ -113,10 +114,11 @@ function RecordingPlayer({
   const startedAt = useRef(0)
   // Seek once the part has loaded (seeking before that is ignored).
   const pendingSeekMs = useRef(0)
-  // Stop here (ms on the whole-recording timeline) - playing a snippet.
+  // Stop here (ms on the whole-recording timeline) - playing the item's parts.
   const stopAtMs = useRef<number | null>(null)
+  const clip = useRef(0)
   // Snippets need every part's length to find their place; otherwise only the whole recording.
-  const canSnip = !!snippet && (parts === 1 || durationsMs?.length === parts)
+  const canSnip = clips.length > 0 && (parts === 1 || durationsMs?.length === parts)
   const starts = useMemo(() => (durationsMs?.length === parts ? partStartsMs(durationsMs) : [0]), [durationsMs, parts])
 
   const stop = useCallback(() => {
@@ -141,12 +143,17 @@ function RecordingPlayer({
     [player, captureId],
   )
 
-  const playSnippet = () => {
-    if (!snippet) return
-    const at = durationsMs?.length === parts ? locateInParts(durationsMs, snippet.startMs) : { part: 0, offsetMs: snippet.startMs }
-    stopAtMs.current = snippet.endMs
-    play(at.part, at.offsetMs, true)
-  }
+  const playClip = useCallback(
+    (i: number) => {
+      const c = clips[i]
+      if (!c) return
+      clip.current = i
+      const at = durationsMs?.length === parts ? locateInParts(durationsMs, c.startMs) : { part: 0, offsetMs: c.startMs }
+      stopAtMs.current = c.endMs
+      play(at.part, at.offsetMs, true)
+    },
+    [clips, durationsMs, parts, play],
+  )
 
   // Next part when one ends. Events rather than polled status (didJustFinish
   // lasts one update); replace() re-reports the previous finish, so ignore
@@ -163,7 +170,9 @@ function RecordingPlayer({
       // Right after switching parts the status still carries the previous part's position.
       const settled = Date.now() - startedAt.current > 400
       if (stopAtMs.current !== null && settled && st.isLoaded && (starts[p] ?? 0) + st.currentTime * 1000 >= stopAtMs.current) {
-        stop()
+        // End of this part of the item: on to the next one, or stop.
+        if (clip.current + 1 < clips.length) playClip(clip.current + 1)
+        else stop()
         return
       }
       if (!st.didJustFinish || Date.now() - startedAt.current < 300) return
@@ -171,17 +180,17 @@ function RecordingPlayer({
       else stop()
     })
     return () => sub.remove()
-  }, [player, parts, play, stop, starts])
+  }, [player, parts, play, stop, starts, clips.length, playClip])
 
   const wholeLabel = `▶ ${t('player.play')}${parts > 1 ? ` (${t('player.parts', { count: parts })})` : ''}`
   const stopLabel = `■ ${t('player.stop')}${parts > 1 && playing ? ` (${t('player.part', { part: playing.part + 1, parts })})` : ''}`
   return (
     <View style={{ gap: 8, alignItems: 'flex-start' }}>
-      {canSnip && snippet && (
+      {canSnip && (
         <Button
-          title={playing?.snippet ? stopLabel : `▶ ${t('player.playThisPart', { from: clipTime(snippet.startMs), to: clipTime(snippet.endMs) })}`}
+          title={playing?.snippet ? stopLabel : `▶ ${clipsLabel(clips)}`}
           variant={playing?.snippet ? 'default' : 'primary'}
-          onPress={() => (playing ? stop() : playSnippet())}
+          onPress={() => (playing ? stop() : playClip(0))}
         />
       )}
       <Button

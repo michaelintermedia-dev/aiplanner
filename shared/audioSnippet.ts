@@ -1,3 +1,4 @@
+import { t } from './i18n'
 import type { AppendTarget, Capture } from './types'
 
 /**
@@ -10,14 +11,35 @@ export interface Snippet {
   endMs: number
 }
 
-/** The snippet of the saved item `item` in `capture`, or null (typed capture, unknown, or audio deleted). */
-export function itemSnippet(capture: Capture, item: AppendTarget | undefined): Snippet | null {
-  if (!item || capture.audioParts === 0) return null
-  const source = capture.items.find((i) =>
-    item.itemType === 'Task' ? i.resultingTaskId === item.itemId : item.itemType === 'Appointment' ? i.resultingAppointmentId === item.itemId : i.resultingNoteId === item.itemId,
-  )
-  if (source?.audioStartMs == null || source.audioEndMs == null || source.audioEndMs <= source.audioStartMs) return null
-  return { startMs: source.audioStartMs, endMs: source.audioEndMs }
+/**
+ * Everything said about the saved item `item` in `capture`, in order: the
+ * words it came from plus anything spoken when adding to it later (typed
+ * additions have no audio and are skipped). Overlapping pieces are merged.
+ * Empty = nothing to play (typed capture, unknown, or audio deleted).
+ */
+export function itemClips(capture: Capture, item: AppendTarget | undefined): Snippet[] {
+  if (!item || capture.audioParts === 0) return []
+  const clips = capture.items
+    .filter((i) =>
+      item.itemType === 'Task' ? i.resultingTaskId === item.itemId : item.itemType === 'Appointment' ? i.resultingAppointmentId === item.itemId : i.resultingNoteId === item.itemId,
+    )
+    .filter((i) => i.audioStartMs != null && i.audioEndMs != null && i.audioEndMs > i.audioStartMs)
+    .map((i) => ({ startMs: i.audioStartMs!, endMs: i.audioEndMs! }))
+    .sort((a, b) => a.startMs - b.startMs)
+  const merged: Snippet[] = []
+  for (const c of clips) {
+    const last = merged[merged.length - 1]
+    if (last && c.startMs <= last.endMs) last.endMs = Math.max(last.endMs, c.endMs)
+    else merged.push({ ...c })
+  }
+  return merged
+}
+
+/** "Play this part (0:02–0:05)", or "Play its 2 parts (0:08)" when it was said in pieces. */
+export function clipsLabel(clips: Snippet[]): string {
+  if (clips.length === 1) return t('player.playThisPart', { from: clipTime(clips[0].startMs), to: clipTime(clips[0].endMs) })
+  const length = clips.reduce((sum, c) => sum + c.endMs - c.startMs, 0)
+  return t('player.playItsParts', { count: clips.length, length: clipTime(length) })
 }
 
 /** Which part a moment on the whole-recording timeline falls in, and where in that part. */

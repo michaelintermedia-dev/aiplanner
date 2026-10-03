@@ -412,4 +412,7 @@ export const he: Messages = {
 
   // ---- feed reminder badge ----
   'feed.reminderAt': 'תזכורת: {when}',
+
+  // ---- item audio in pieces ----
+  'player.playItsParts': { one: 'השמעת החלק ({length})', two: 'השמעת שני החלקים ({length})', other: 'השמעת {count} החלקים ({length})' },
 }

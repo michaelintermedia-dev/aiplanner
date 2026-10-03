@@ -412,4 +412,7 @@ export const ru: Messages = {
 
   // ---- feed reminder badge ----
   'feed.reminderAt': 'Напоминание: {when}',
+
+  // ---- item audio in pieces ----
+  'player.playItsParts': { one: 'Прослушать {count} часть ({length})', few: 'Прослушать {count} части ({length})', many: 'Прослушать {count} частей ({length})', other: 'Прослушать {count} части ({length})' },
 }

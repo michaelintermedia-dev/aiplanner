@@ -1,7 +1,7 @@
 import { formatDateKey, formatTime, dateKey } from '@shared/dates'
 import { useQuery } from '@tanstack/react-query'
 import type { AppendTarget } from '@shared/types'
-import { clipTime, itemSnippet, type Snippet } from '@shared/audioSnippet'
+import { clipsLabel, itemClips, type Snippet } from '@shared/audioSnippet'
 import { useEffect, useRef, useState } from 'react'
 import { IoMicOutline, IoPlay } from 'react-icons/io5'
 import { capturesApi } from '../api/endpoints'
@@ -50,7 +50,7 @@ export function SourceCapture({ captureId, item }: { captureId: string; item?: A
       {capture.source === 'Voice' &&
         (capture.audioParts > 0 ? (
           <div className="source-audio">
-            <RecordingPlayer captureId={captureId} parts={capture.audioParts} snippet={itemSnippet(capture, item)} />
+            <RecordingPlayer captureId={captureId} parts={capture.audioParts} clips={itemClips(capture, item)} />
             <button
               className="link danger"
               disabled={deleteAudio.isPending}
@@ -69,21 +69,27 @@ export function SourceCapture({ captureId, item }: { captureId: string; item?: A
  * The whole recording as one track, like the mobile app. A recording made with
  * pauses is stored in parts; they're fetched (as blobs - audio needs the auth
  * header) and joined end to end, so play, seek and duration cover all of it.
- * When the message held several items, `snippet` is this item's own part:
- * "Play this part" plays just that, and the full player is still there.
+ * When the message held several items, `clips` are this item's own parts (its
+ * words, plus anything spoken when adding to it): "Play this part" plays just
+ * those, one after another, and the full player is still there.
  */
-function RecordingPlayer({ captureId, parts, snippet }: { captureId: string; parts: number; snippet: Snippet | null }) {
+function RecordingPlayer({ captureId, parts, clips }: { captureId: string; parts: number; clips: Snippet[] }) {
   const [url, setUrl] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
   const audio = useRef<HTMLAudioElement>(null)
-  // Where to stop when playing just this item's part (null = play on).
+  // Playing this item's parts: which one, where it ends (null = play on), and
+  // where we just seeked to (any other seek means the user took over).
+  const clip = useRef(0)
   const stopAt = useRef<number | null>(null)
+  const seekedTo = useRef<number | null>(null)
 
-  const playSnippet = () => {
+  const playClip = (i: number) => {
     const a = audio.current
-    if (!a || !snippet) return
-    a.currentTime = snippet.startMs / 1000
-    stopAt.current = snippet.endMs / 1000
+    if (!a || !clips[i]) return
+    clip.current = i
+    seekedTo.current = clips[i].startMs / 1000
+    a.currentTime = clips[i].startMs / 1000
+    stopAt.current = clips[i].endMs / 1000
     void a.play()
   }
 
@@ -107,9 +113,9 @@ function RecordingPlayer({ captureId, parts, snippet }: { captureId: string; par
   if (failed) return <p className="muted">{t('source.audioFailed')}</p>
   return (
     <div className="audio-part">
-      {url && snippet && (
-        <button type="button" className="snippet-button" onClick={playSnippet}>
-          <IoPlay aria-hidden /> {t('player.playThisPart', { from: clipTime(snippet.startMs), to: clipTime(snippet.endMs) })}
+      {url && clips.length > 0 && (
+        <button type="button" className="snippet-button" onClick={() => playClip(0)}>
+          <IoPlay aria-hidden /> {clipsLabel(clips)}
         </button>
       )}
       {url ? (
@@ -117,9 +123,12 @@ function RecordingPlayer({ captureId, parts, snippet }: { captureId: string; par
           ref={audio}
           controls
           src={url}
-          aria-label={snippet ? t('player.playWhole') : t('source.recording')}
+          aria-label={clips.length ? t('player.playWhole') : t('source.recording')}
           onTimeUpdate={(e) => {
-            if (stopAt.current !== null && e.currentTarget.currentTime >= stopAt.current) {
+            if (stopAt.current === null || e.currentTarget.currentTime < stopAt.current) return
+            // End of this part: on to the next one, or stop.
+            if (clip.current + 1 < clips.length) playClip(clip.current + 1)
+            else {
               e.currentTarget.pause()
               stopAt.current = null
             }
@@ -127,7 +136,8 @@ function RecordingPlayer({ captureId, parts, snippet }: { captureId: string; par
           // Any other pause or a manual seek means the user took over: play on freely.
           onPause={() => (stopAt.current = null)}
           onSeeked={(e) => {
-            if (snippet && Math.abs(e.currentTarget.currentTime - snippet.startMs / 1000) > 0.3) stopAt.current = null
+            if (seekedTo.current === null || Math.abs(e.currentTarget.currentTime - seekedTo.current) > 0.3) stopAt.current = null
+            seekedTo.current = null
           }}
         />
       ) : (

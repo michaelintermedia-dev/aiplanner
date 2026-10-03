@@ -389,6 +389,9 @@ Local dev notes:
   joined track and pauses at the end; mobile starts in the right part
   (`locateInParts`) and stops across parts. "Play this part (0:02-0:05)" +
   "Whole recording" on the item's source capture (`shared/audioSnippet.ts`).
+  An item can have several capture items (its words + each later addition):
+  `itemClips` collects all of them that have audio (typed additions have
+  none), in order, and the players play them back to back.
   If timings fail, items just have no snippet (whole recording).
   Audio is stored once per message (never per item). `RecordingCleanup`
   (run by `RecordingCleanupWorker`, every 6 h) deletes a recording when no

@@ -99,6 +99,13 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
 
     public Task<T> ExecuteInTransactionAsync<T>(Func<CancellationToken, Task<T>> operation, CancellationToken cancellationToken = default)
     {
+        // Already inside one (e.g. a type change while saving a capture): join
+        // it, so the whole thing still commits or rolls back together.
+        if (Database.CurrentTransaction is not null)
+        {
+            return operation(cancellationToken);
+        }
+
         // With retry-on-failure enabled, a user-initiated transaction must run
         // inside the execution strategy so a transient failure retries the
         // whole unit rather than half of it.

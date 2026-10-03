@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
-import type { AppendTarget, Capture } from '@shared/types'
+import type { AppendTarget, Capture, ItemType } from '@shared/types'
 import { File } from 'expo-file-system'
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
@@ -22,6 +22,8 @@ export interface ContinueFrom {
   captureId: string
   target: AppendTarget
   onClose: () => void
+  /** Saving changed the item's type, so it has a new id: show that one. */
+  onMoved?: (item: { itemType: ItemType; itemId: string }) => void
 }
 
 /** The form for a continue request, naming the item continued from. */
@@ -113,6 +115,7 @@ export function CaptureBar({
       <CaptureReview
         capture={capture}
         appendTarget={continueFrom?.target}
+        onMoved={continueFrom?.onMoved}
         onDone={(message) => {
           setCapture(null)
           if (continueFrom) continueFrom.onClose()

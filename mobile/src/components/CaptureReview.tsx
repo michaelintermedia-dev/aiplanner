@@ -1,5 +1,6 @@
-import { draftHasTime, draftProblems, INTENT_OPTIONS, toConfirmItem, toDraft, updatesWholeItem, type ItemDraft } from '@shared/captureDraft'
-import type { AppendTarget, Capture, ExtractionIntent, TaskPriority } from '@shared/types'
+import { draftHasTime, draftProblems, INTENT_OPTIONS, toConfirmItem, movedItem, toDraft, typeChange, updatesWholeItem, type ItemDraft } from '@shared/captureDraft'
+import { KIND_LABEL } from '@shared/feed'
+import type { AppendTarget, Capture, ExtractionIntent, TaskPriority, ItemType } from '@shared/types'
 import { useState } from 'react'
 import { I18nManager, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native'
 import { capturesApi } from '@/api/endpoints'
@@ -25,11 +26,14 @@ export function CaptureReview({
   capture,
   onDone,
   appendTarget,
+  onMoved,
 }: {
   capture: Capture
   onDone: (message: string | null) => void
   /** Reviewing a continued capture: offer "Add to this <item>". */
   appendTarget?: AppendTarget
+  /** The item's type was changed, so it has a new id. */
+  onMoved?: (item: { itemType: ItemType; itemId: string }) => void
 }) {
   const c = useColors()
   const { zone } = useAuth()
@@ -45,11 +49,18 @@ export function CaptureReview({
   const included = drafts.filter((d) => d.include)
   const blocked = drafts.some((d) => draftProblems(d).length > 0)
 
+  // The awaited result, not a mutate() callback: saving refreshes the item's
+  // page, and when its type changed that page unmounts this review first -
+  // which drops mutate() callbacks, but never the promise.
   const save = () =>
-    confirm.mutate(
-      drafts.map((d) => toConfirmItem(d, zone.timeZone, appendTarget)),
-      { onSuccess: () => onDone(included.length ? t('review.saved', { count: included.length }) : null) },
-    )
+    confirm
+      .mutateAsync(drafts.map((d) => toConfirmItem(d, zone.timeZone, appendTarget)))
+      .then((saved) => {
+        onDone(included.length ? t('review.saved', { count: included.length }) : null)
+        const moved = movedItem(drafts, saved, appendTarget)
+        if (moved) onMoved?.(moved)
+      })
+      .catch(() => {}) // shown from confirm.error
 
   // Cancel rejects everything so the capture doesn't linger as pending.
   const discard = () =>
@@ -152,11 +163,12 @@ function ItemEditor({
               </Pressable>
             )}
             {INTENT_OPTIONS.map(({ intent, label }) => {
-              const selected = !d.appendTo && d.intent === intent
+              const selected = (!d.appendTo || d.wholeItem) && d.intent === intent
               return (
                 <Pressable
                   key={intent}
-                  onPress={() => onChange({ intent, appendTo: false })}
+                  // Updating the item: the chips pick its type (it stays the same item).
+                  onPress={() => onChange(updatesWholeItem(d) ? { intent } : { intent, appendTo: false })}
                   style={[styles.chip, { borderColor: selected ? intentColor(intent, c) : c.border }, selected && { backgroundColor: c.surface2 }]}
                   accessibilityRole="radio"
                   accessibilityState={{ selected }}>
@@ -168,6 +180,11 @@ function ItemEditor({
 
           {updatesWholeItem(d) && appendTarget && (
             <Text style={{ color: c.muted, fontSize: 13 }}>{t('review.updatesItem', { title: appendTarget.title })}</Text>
+          )}
+          {typeChange(d, appendTarget) && (
+            <Text style={{ color: c.warn, fontSize: 13, fontWeight: '600' }}>
+              {t('review.typeChange', { from: KIND_LABEL[typeChange(d, appendTarget)!.from], to: KIND_LABEL[typeChange(d, appendTarget)!.to as ItemType] })}
+            </Text>
           )}
 
           {(!d.appendTo || d.wholeItem) && (

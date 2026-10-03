@@ -422,4 +422,7 @@ export const en = {
 
   // ---- playback speed ----
   'player.speed': 'Playback speed',
+
+  // ---- type change by voice ----
+  'review.typeChange': 'Changes it from {from} to {to}',
 } satisfies Record<string, Message>

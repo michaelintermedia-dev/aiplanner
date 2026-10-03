@@ -371,6 +371,14 @@ Local dev notes:
   are kept. Only drafts that came back whole (`ItemDraft.wholeItem`) do this;
   "Add to this" on any other proposal still just appends its text
   (`AppendToItemAsync`), so an item's dates/reminders are never wiped.
+  The type can change by voice too, from the item's page only and only on an
+  explicit request ("make it an event", "turn this into a note") - a time,
+  place or person alone never does it (prompt rule). The review marks it
+  ("Changes it from Task to Event", `typeChange`); on save `ApplyToItemAsync`
+  converts first (`IItemConversionService`, same transaction - nested
+  `ExecuteInTransactionAsync` joins the open one) then updates; the client
+  opens the new item (`movedItem`, `ContinueFrom.onMoved`). Save uses
+  `mutateAsync`: the refresh unmounts the review, which drops mutate() callbacks.
   Adding to an item is strictly scoped to it (user's rule, 2026-10-03): the AI
   gets only that item and the words said about it (`AIExtractionItem.SourceText`,
   the AI's verbatim quote), never the rest of the message, and exactly one

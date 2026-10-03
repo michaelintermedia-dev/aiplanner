@@ -418,4 +418,7 @@ export const ru: Messages = {
 
   // ---- playback speed ----
   'player.speed': 'Скорость воспроизведения',
+
+  // ---- type change by voice ----
+  'review.typeChange': 'Тип изменится: {from} → {to}',
 }

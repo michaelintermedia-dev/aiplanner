@@ -159,7 +159,8 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
                 {c.CurrentItem}{earlier}
 
                 Work only on this item. Return exactly ONE item, with "addsToCurrent": true, that is the WHOLE item after the change:
-                - "intent" and "title": exactly as in the saved item.
+                - "title": exactly as in the saved item.
+                - "intent": as in the saved item, unless the user explicitly asks to change what it is ("make it an event", "turn this into a note", "it's actually a meeting", "make it a task") - then the new type. A date, time, place or person alone never changes it.
                 - "description": the saved description followed by the new detail in the user's own words (keep everything that was there). Anything in the new input that isn't a field change goes here - never into a separate item.
                 - "date", "time", "endTime", "location", "priority": the saved values, unless the new input changes them.
                 - "reminders": the saved reminders plus any new ones; remove or change one only if the user says so.

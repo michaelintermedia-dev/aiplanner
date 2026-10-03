@@ -1,7 +1,7 @@
 import { addDays, dateKey, timeKey, zonedToUtc } from './dates'
 import { t } from './i18n'
 import { remindersProblem } from './reminders'
-import type { AppendTarget, CaptureItem, ConfirmCaptureItem, ExtractionIntent, Reminder, TaskPriority } from './types'
+import type { AppendTarget, Capture, CaptureItem, ConfirmCaptureItem, ExtractionIntent, ItemType, Reminder, TaskPriority } from './types'
 
 /**
  * Every item can become any type in the review (user's rule); "Appointment" is
@@ -52,8 +52,8 @@ export function toDraft(item: CaptureItem, timeZone: string, target?: AppendTarg
   return {
     id: item.id,
     include: true,
-    // The whole updated item keeps its own type.
-    intent: wholeItem ? target.itemType : legacyReminder ? 'Task' : item.intent,
+    // The whole updated item keeps its type - unless the user asked to change it ("make it an event").
+    intent: legacyReminder ? 'Task' : item.intent,
     title: item.title,
     description: item.description,
     date: when ? dateKey(when, timeZone) : null,
@@ -91,9 +91,10 @@ export function draftProblems(d: ItemDraft): string[] {
 /** Converts an edited draft to the /confirm payload, turning local dates into UTC. */
 export function toConfirmItem(d: ItemDraft, timeZone: string, target?: AppendTarget): ConfirmCaptureItem {
   if (d.appendTo && target && d.wholeItem) {
-    // The whole item after the addition, as its own type; the server keeps its title.
+    // The whole item after the addition, as the type chosen in the review (a
+    // different one changes its type first); the server keeps its title.
     return {
-      ...toConfirmItem({ ...d, appendTo: false, intent: target.itemType, title: target.title }, timeZone),
+      ...toConfirmItem({ ...d, appendTo: false, title: target.title }, timeZone),
       appendToType: target.itemType,
       appendToId: target.itemId,
       replacesItem: true,
@@ -146,4 +147,22 @@ export function toConfirmItem(d: ItemDraft, timeZone: string, target?: AppendTar
   }
 
   return base
+}
+
+/** Updating an item and changing its type too: "Task" -> "Appointment", or null. */
+export const typeChange = (d: ItemDraft, target?: AppendTarget) =>
+  updatesWholeItem(d) && target && d.intent !== target.itemType && d.intent !== 'Reminder' ? { from: target.itemType, to: d.intent } : null
+
+/**
+ * After saving: the item an update changed the type of now has a new id -
+ * this finds it in the saved capture (null if nothing moved).
+ */
+export function movedItem(drafts: ItemDraft[], saved: Capture, target?: AppendTarget): { itemType: ItemType; itemId: string } | null {
+  const changed = drafts.find((d) => d.include && typeChange(d, target))
+  const item = changed && saved.items.find((i) => i.id === changed.id)
+  if (!item) return null
+  if (item.resultingAppointmentId) return { itemType: 'Appointment', itemId: item.resultingAppointmentId }
+  if (item.resultingNoteId) return { itemType: 'Note', itemId: item.resultingNoteId }
+  if (item.resultingTaskId) return { itemType: 'Task', itemId: item.resultingTaskId }
+  return null
 }

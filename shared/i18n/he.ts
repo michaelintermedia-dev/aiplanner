@@ -418,4 +418,7 @@ export const he: Messages = {
 
   // ---- playback speed ----
   'player.speed': 'מהירות השמעה',
+
+  // ---- type change by voice ----
+  'review.typeChange': 'הסוג ישתנה: {from} ← {to}',
 }

@@ -7,6 +7,8 @@ using AiPlanner.Application.Captures.Interfaces;
 using AiPlanner.Application.Common.Exceptions;
 using AiPlanner.Application.Common.Interfaces;
 using AiPlanner.Application.Common.Models;
+using AiPlanner.Application.Items.DTOs;
+using AiPlanner.Application.Items.Interfaces;
 using AiPlanner.Application.Notes.DTOs;
 using AiPlanner.Application.Notes.Interfaces;
 using AiPlanner.Application.Reminders;
@@ -48,6 +50,7 @@ public class CaptureService : ICaptureService
     private readonly IAppointmentService _appointments;
     private readonly INoteService _notes;
     private readonly IAudioCompressor _compressor;
+    private readonly IItemConversionService _conversion;
     private readonly IValidator<CreateTaskRequest> _taskValidator;
     private readonly IValidator<CreateAppointmentRequest> _appointmentValidator;
     private readonly ILogger<CaptureService> _logger;
@@ -64,6 +67,7 @@ public class CaptureService : ICaptureService
         IAppointmentService appointments,
         INoteService notes,
         IAudioCompressor compressor,
+        IItemConversionService conversion,
         IValidator<CreateTaskRequest> taskValidator,
         IValidator<CreateAppointmentRequest> appointmentValidator,
         ReminderPlanner reminders,
@@ -80,6 +84,7 @@ public class CaptureService : ICaptureService
         _appointments = appointments;
         _notes = notes;
         _compressor = compressor;
+        _conversion = conversion;
         _taskValidator = taskValidator;
         _appointmentValidator = appointmentValidator;
         _logger = logger;
@@ -557,7 +562,7 @@ public class CaptureService : ICaptureService
         if (decision.AppendToId is { } targetId)
         {
             return decision.ReplacesItem
-                ? await ApplyToItemAsync(item, decision.AppendToType!, targetId, decision, ct)
+                ? await ApplyToItemAsync(item, decision.AppendToType!, targetId, decision, ct, extraction.Id)
                 : await AppendToItemAsync(extraction.UserId, item, decision.AppendToType!, targetId, decision, ct);
         }
 
@@ -730,8 +735,26 @@ public class CaptureService : ICaptureService
     /// ongoing) is kept.
     /// </summary>
     private async Task<string?> ApplyToItemAsync(
-        AIExtractionItem item, string type, Guid targetId, ConfirmCaptureItem decision, CancellationToken ct)
+        AIExtractionItem item, string type, Guid targetId, ConfirmCaptureItem decision, CancellationToken ct, Guid? captureId = null)
     {
+        // Asked to change what it is ("make it an event"): change the type first -
+        // same title, created date, reminders and capture link, in this transaction -
+        // then update the new item with the rest.
+        var newType = decision.Intent switch
+        {
+            ExtractionIntent.Appointment => "Appointment",
+            ExtractionIntent.Note => "Note",
+            _ => "Task",
+        };
+        if (newType != type)
+        {
+            var converted = await _conversion.ConvertAsync(new ConvertItemRequest(
+                type, targetId, newType, decision.StartUtc, decision.EndUtc, decision.DueUtc, decision.HasTime), ct);
+            if (!converted.Succeeded) return string.Join(" ", converted.Errors);
+            (type, targetId) = (newType, converted.Value!.Id);
+            item.ResultingTaskItemId = item.ResultingAppointmentId = item.ResultingNoteId = null;
+        }
+
         switch (type)
         {
             case "Task":

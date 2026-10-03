@@ -4,6 +4,7 @@ import { dateKey, formatDateKey, formatTime } from '@shared/dates'
 import type { AppendTarget } from '@shared/types'
 import { useQuery } from '@tanstack/react-query'
 import { useAudioPlayer } from 'expo-audio'
+import { router } from 'expo-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Pressable, StyleSheet, Text, View, I18nManager } from 'react-native'
 import { API_URL, getAccessToken } from '@/api/client'
@@ -52,7 +53,18 @@ export function SourceCapture({ captureId, item }: { captureId: string; item?: A
 
       {item &&
         (continuing ? (
-          <CaptureBar continueFrom={{ captureId, target: item, onClose: () => setContinuing(false) }} />
+          <CaptureBar
+            continueFrom={{
+              captureId,
+              target: item,
+              onClose: () => setContinuing(false),
+              onMoved: (moved) =>
+                router.replace({
+                  pathname: moved.itemType === 'Task' ? '/task/[id]' : moved.itemType === 'Appointment' ? '/appointment/[id]' : '/note/[id]',
+                  params: { id: moved.itemId },
+                }),
+            }}
+          />
         ) : (
           // Complete an unfinished thought or add an insight, even after saving.
           <Pressable

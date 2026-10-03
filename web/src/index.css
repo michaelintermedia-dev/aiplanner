@@ -2142,3 +2142,11 @@ button.kind-icon:hover:not(:disabled) {
 .speed-chips button {
   min-width: 44px;
 }
+
+/* "Changes it from Task to Event" - a type change by voice must not slip by. */
+.type-change {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--warn);
+}

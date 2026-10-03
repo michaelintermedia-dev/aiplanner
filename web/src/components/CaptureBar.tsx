@@ -1,4 +1,4 @@
-import type { AppendTarget, Capture } from '@shared/types'
+import type { AppendTarget, Capture, ItemType } from '@shared/types'
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { IoArrowUp } from 'react-icons/io5'
 import { capturesApi } from '../api/endpoints'
@@ -58,6 +58,8 @@ export interface ContinueFrom {
   captureId: string
   target: AppendTarget
   onClose: () => void
+  /** Saving changed the item's type, so it has a new id: show that one. */
+  onMoved?: (item: { itemType: ItemType; itemId: string }) => void
 }
 
 /**
@@ -155,6 +157,7 @@ export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {
       <CaptureReview
         capture={capture}
         appendTarget={continueFrom?.target}
+        onMoved={continueFrom?.onMoved}
         onDone={(message) => {
           setCapture(null)
           if (continueFrom) continueFrom.onClose()

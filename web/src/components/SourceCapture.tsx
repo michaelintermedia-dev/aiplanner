@@ -4,7 +4,9 @@ import type { AppendTarget } from '@shared/types'
 import { clipsLabel, itemClips, type Snippet } from '@shared/audioSnippet'
 import { useEffect, useRef, useState } from 'react'
 import { IoMicOutline, IoPlay } from 'react-icons/io5'
+import { useNavigate } from 'react-router'
 import { capturesApi } from '../api/endpoints'
+import { itemPath } from '../lib/notifications'
 import { useAuth } from '../auth/useAuth'
 import { CaptureBar } from './CaptureBar'
 import { toWav } from '../lib/toWav'
@@ -20,6 +22,7 @@ import { t } from '@shared/i18n'
 export function SourceCapture({ captureId, item }: { captureId: string; item?: AppendTarget }) {
   const { zone } = useAuth()
   const [continuing, setContinuing] = useState(false)
+  const navigate = useNavigate()
   const { data: capture, error } = useQuery({ queryKey: ['capture', captureId], queryFn: () => capturesApi.get(captureId) })
   const deleteAudio = useAction(() => capturesApi.deleteAudio(captureId))
 
@@ -41,7 +44,14 @@ export function SourceCapture({ captureId, item }: { captureId: string; item?: A
       </details>
       {item &&
         (continuing ? (
-          <CaptureBar continueFrom={{ captureId, target: item, onClose: () => setContinuing(false) }} />
+          <CaptureBar
+            continueFrom={{
+              captureId,
+              target: item,
+              onClose: () => setContinuing(false),
+              onMoved: (moved) => navigate(itemPath(moved), { replace: true }),
+            }}
+          />
         ) : (
           // Complete an unfinished thought or add an insight, even after saving.
           <button type="button" className="continue-button" onClick={() => setContinuing(true)}>

@@ -1,5 +1,6 @@
-import { draftHasTime, draftProblems, INTENT_OPTIONS, toConfirmItem, toDraft, updatesWholeItem, type ItemDraft } from '@shared/captureDraft'
-import type { AppendTarget, Capture, TaskPriority } from '@shared/types'
+import { draftHasTime, draftProblems, INTENT_OPTIONS, toConfirmItem, movedItem, toDraft, typeChange, updatesWholeItem, type ItemDraft } from '@shared/captureDraft'
+import { KIND_LABEL } from '@shared/feed'
+import type { AppendTarget, Capture, TaskPriority, ItemType } from '@shared/types'
 import { useState } from 'react'
 import { capturesApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
@@ -16,11 +17,14 @@ export function CaptureReview({
   capture,
   onDone,
   appendTarget,
+  onMoved,
 }: {
   capture: Capture
   onDone: (message: string | null) => void
   /** Reviewing a continued capture: offer "Add to this <item>". */
   appendTarget?: AppendTarget
+  /** The item's type was changed, so it has a new id. */
+  onMoved?: (item: { itemType: ItemType; itemId: string }) => void
 }) {
   const { zone } = useAuth()
   const confirm = useAction((items: ReturnType<typeof toConfirmItem>[]) => capturesApi.confirm(capture.id, items))
@@ -34,11 +38,18 @@ export function CaptureReview({
   const included = drafts.filter((d) => d.include)
   const blocked = drafts.some((d) => draftProblems(d).length > 0)
 
+  // The awaited result, not a mutate() callback: saving refreshes the item's
+  // page, and when its type changed that page unmounts this review first -
+  // which drops mutate() callbacks, but never the promise.
   const save = () =>
-    confirm.mutate(
-      drafts.map((d) => toConfirmItem(d, zone.timeZone, appendTarget)),
-      { onSuccess: () => onDone(included.length ? t('review.saved', { count: included.length }) : null) },
-    )
+    confirm
+      .mutateAsync(drafts.map((d) => toConfirmItem(d, zone.timeZone, appendTarget)))
+      .then((saved) => {
+        onDone(included.length ? t('review.saved', { count: included.length }) : null)
+        const moved = movedItem(drafts, saved, appendTarget)
+        if (moved) onMoved?.(moved)
+      })
+      .catch(() => {}) // shown from confirm.error
 
   // Cancel rejects everything, so the capture doesn't linger as pending.
   const discard = () =>
@@ -151,15 +162,21 @@ function ItemEditor({
               key={o.intent}
               type="button"
               role="radio"
-              aria-checked={!d.appendTo && d.intent === o.intent}
-              className={`intent-chip intent-${o.intent.toLowerCase()}${!d.appendTo && d.intent === o.intent ? ' selected' : ''}`}
-              onClick={() => onChange({ intent: o.intent, appendTo: false })}>
+              aria-checked={(!d.appendTo || d.wholeItem) && d.intent === o.intent}
+              className={`intent-chip intent-${o.intent.toLowerCase()}${(!d.appendTo || d.wholeItem) && d.intent === o.intent ? ' selected' : ''}`}
+              // Updating the item: the chips pick its type (it stays the same item).
+              onClick={() => onChange(updatesWholeItem(d) ? { intent: o.intent } : { intent: o.intent, appendTo: false })}>
               {o.label}
             </button>
           ))}
         </div>
       )}
       {d.include && updatesWholeItem(d) && appendTarget && <p className="muted small">{t('review.updatesItem', { title: appendTarget.title })}</p>}
+      {d.include && typeChange(d, appendTarget) && (
+        <p className="type-change">
+          {t('review.typeChange', { from: KIND_LABEL[typeChange(d, appendTarget)!.from], to: KIND_LABEL[typeChange(d, appendTarget)!.to as ItemType] })}
+        </p>
+      )}
 
       {d.include && (!d.appendTo || d.wholeItem) && (
         <div className="review-fields">

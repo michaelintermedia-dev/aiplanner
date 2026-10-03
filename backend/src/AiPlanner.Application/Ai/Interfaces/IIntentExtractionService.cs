@@ -18,7 +18,7 @@ public interface IIntentExtractionService
 /// <param name="LocalNow">The current wall-clock time in the user's timezone - relative dates resolve against this.</param>
 /// <param name="TimeZoneId">The user's IANA timezone, e.g. "Europe/Moscow".</param>
 /// <param name="Locale">The user's locale, e.g. "en-US".</param>
-/// <param name="PreviousText">When continuing a capture: what the user said before (already handled).</param>
+/// <param name="PreviousText">When continuing: what the user said before (already handled) - with CurrentItem, only the words about that item.</param>
 /// <param name="CurrentItem">When continuing from a saved item: the whole item as JSON in the answer's item shape (see ContinuedItem).</param>
 public record ExtractionContext(
     string Text, DateTime LocalNow, string TimeZoneId, string Locale, string? PreviousText = null, string? CurrentItem = null);

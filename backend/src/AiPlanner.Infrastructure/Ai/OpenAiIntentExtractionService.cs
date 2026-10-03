@@ -143,28 +143,39 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
     /// <summary>Extra instructions when the user adds to an earlier capture ("continue talking").</summary>
     private static string Continuing(ExtractionContext c)
     {
+        if (c.CurrentItem is not null)
+        {
+            // Adding to one saved item: strictly that item - nothing else from the
+            // original message is shown, and nothing else may come back.
+            var earlier = string.IsNullOrWhiteSpace(c.PreviousText) ? "" : $"""
+
+                What they said about this item before (context only):
+                «{c.PreviousText}»
+                """;
+            return $"""
+
+
+                UPDATING ONE ITEM. The user opened this saved item and is adding to it (dates and times are local):
+                {c.CurrentItem}{earlier}
+
+                Work only on this item. Return exactly ONE item, with "addsToCurrent": true, that is the WHOLE item after the change:
+                - "intent" and "title": exactly as in the saved item.
+                - "description": the saved description followed by the new detail in the user's own words (keep everything that was there). Anything in the new input that isn't a field change goes here - never into a separate item.
+                - "date", "time", "endTime", "location", "priority": the saved values, unless the new input changes them.
+                - "reminders": the saved reminders plus any new ones; remove or change one only if the user says so.
+                - "sourceText": the new words.
+                """;
+        }
         if (c.PreviousText is null)
         {
             return "";
         }
-        var item = c.CurrentItem is null ? "" : $"""
-
-            They are looking at this saved item (dates and times are local):
-            {c.CurrentItem}
-            The user opened this item and chose to add to it, so assume the new input is about it - details, things to bring or do for it, a reminder, a changed date, time, place or priority - unless it is clearly a separate matter. Return ONE item with "addsToCurrent": true that is the WHOLE item after the change:
-            - "intent" and "title": exactly as in the saved item.
-            - "description": the saved description followed by the new detail in the user's own words (keep everything that was there).
-            - "date", "time", "endTime", "location", "priority": the saved values, unless the new input changes them.
-            - "reminders": the saved reminders plus any new ones; remove or change one only if the user says so.
-            - "sourceText": the new words about it.
-            Anything new and separate is a normal item with "addsToCurrent": false.
-            """;
         return $"""
 
 
             Continuing: the user is adding to something they said earlier. Earlier they said (already handled - do not extract it again):
             «{c.PreviousText}»
-            Use it only as context; extract items from the new input only.{item}
+            Use it only as context; extract items from the new input only.
             """;
     }
 

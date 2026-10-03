@@ -366,6 +366,11 @@ Local dev notes:
   are kept. Only drafts that came back whole (`ItemDraft.wholeItem`) do this;
   "Add to this" on any other proposal still just appends its text
   (`AppendToItemAsync`), so an item's dates/reminders are never wiped.
+  Adding to an item is strictly scoped to it (user's rule, 2026-10-03): the AI
+  gets only that item and the words said about it (`AIExtractionItem.SourceText`,
+  the AI's verbatim quote), never the rest of the message, and exactly one
+  proposal is kept - that item. Unrelated words go into its details; other
+  items from the same message are never re-read or changed.
 - **Each item plays its own part of a voice message** (user's request,
   2026-10-03). The AI quotes each item's words verbatim (`sourceText`);
   `OpenAiTranscriptionService` makes a second, parallel call to `TimingModel`

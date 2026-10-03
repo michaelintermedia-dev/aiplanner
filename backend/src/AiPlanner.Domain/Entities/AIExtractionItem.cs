@@ -39,6 +39,12 @@ public class AIExtractionItem : BaseEntity
     /// typed captures or when it couldn't be placed - then the whole recording.
     /// </summary>
     public int? AudioStartMs { get; set; }
+    /// <summary>
+    /// The user's words this item came from (as the AI quoted them). When the
+    /// user later adds to the saved item, only these - not the rest of the
+    /// message - are its context.
+    /// </summary>
+    public string? SourceText { get; set; }
     public int? AudioEndMs { get; set; }
 
     public Guid? ResultingTaskItemId { get; set; }

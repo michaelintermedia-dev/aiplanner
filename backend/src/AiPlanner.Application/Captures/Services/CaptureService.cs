@@ -404,6 +404,7 @@ public class CaptureService : ICaptureService
         Clarification = i.Clarification,
         Confidence = i.Confidence,
         AddsToCurrent = i.AddsToCurrent,
+        SourceText = i.SourceText,
         ProposedReminders = ReminderPlanner.ToProposed(i.Reminders),
     };
 
@@ -435,7 +436,11 @@ public class CaptureService : ICaptureService
         // The saved item the user continues from, whole - the AI returns it updated.
         var currentItem = request.ItemId is { } itemId ? await DescribeItemAsync(userId, request.ItemType, itemId, ct) : null;
 
-        var previousText = extraction.Transcript?.Text ?? extraction.RawInputText ?? "";
+        // Adding to one saved item is scoped to it: the AI sees only that item and
+        // what was said about it - not the rest of the message.
+        var previousText = currentItem is not null
+            ? await ItemWordsAsync(extraction.Id, request.ItemId!.Value, ct)
+            : extraction.Transcript?.Text ?? extraction.RawInputText ?? "";
         var added = new List<string>();
         IReadOnlyList<TimedWord>? newTimeline = null;
 
@@ -498,7 +503,11 @@ public class CaptureService : ICaptureService
         await _db.SaveChangesAsync(ct); // the words are kept even if the AI fails next
 
         var (_, normalized) = await ProposeAsync(userId, newText, previousText, currentItem, ct);
-        foreach (var proposed in normalized.Items)
+        // For one item, exactly one proposal comes back: that item, updated.
+        var proposals = currentItem is null
+            ? normalized.Items
+            : normalized.Items.OrderByDescending(i => i.AddsToCurrent).Take(1).Select(i => i with { AddsToCurrent = true }).ToList();
+        foreach (var proposed in proposals)
         {
             var item = ToItem(userId, proposed, newTimeline);
             item.AiExtractionId = extraction.Id;
@@ -509,7 +518,7 @@ public class CaptureService : ICaptureService
         await _db.SaveChangesAsync(ct);
 
         _logger.LogInformation("Capture {CaptureId} continued: {Parts} audio part(s), {Items} new item(s)",
-            extraction.Id, request.Audio.Count, normalized.Items.Count);
+            extraction.Id, request.Audio.Count, proposals.Count);
         return Result<CaptureDto>.Success(ToDto(extraction, extraction.Transcript));
     }
 
@@ -580,6 +589,18 @@ public class CaptureService : ICaptureService
                 return null;
             }
         }
+    }
+
+    /// <summary>What was said about one saved item in this capture (its quoted words, oldest first), or null.</summary>
+    private async Task<string?> ItemWordsAsync(Guid extractionId, Guid itemId, CancellationToken ct)
+    {
+        var words = await _db.AIExtractionItems
+            .Where(i => i.AiExtractionId == extractionId && i.SourceText != null
+                && (i.ResultingTaskItemId == itemId || i.ResultingAppointmentId == itemId || i.ResultingNoteId == itemId))
+            .OrderBy(i => i.CreatedAtUtc)
+            .Select(i => i.SourceText!)
+            .ToListAsync(ct);
+        return words.Count > 0 ? string.Join("\n\n", words) : null;
     }
 
     /// <summary>The item continued from, as the AI's item JSON (null if it's gone).</summary>

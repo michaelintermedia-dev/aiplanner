@@ -32,20 +32,28 @@ export interface ItemDraft {
   priority: TaskPriority | null
   /** Any item can carry several (see Reminder). */
   reminders: Reminder[]
-  /** "Add to this item": the text goes into the item continued from (see AppendTarget). */
+  /** "Add to this item": this goes into the item continued from (see AppendTarget). */
   appendTo: boolean
+  /**
+   * The AI returned the item continued from as a whole, updated (details merged,
+   * new reminder or time applied): adding to it updates every field. Otherwise
+   * adding to it only appends this text to its details.
+   */
+  wholeItem: boolean
   clarification: string | null
 }
 
-/** `canAppend`: reviewing a continued capture, so "Add to this item" is available. */
-export function toDraft(item: CaptureItem, timeZone: string, canAppend = false): ItemDraft {
+/** `target`: reviewing a continued capture, so "Add to this item" is available. */
+export function toDraft(item: CaptureItem, timeZone: string, target?: AppendTarget): ItemDraft {
   const when = item.startUtc ?? item.dueUtc
   // "Reminder" was a type once; it's now a task that reminds at its time.
   const legacyReminder = item.intent === 'Reminder'
+  const wholeItem = !!target && item.addsToCurrent
   return {
     id: item.id,
     include: true,
-    intent: legacyReminder ? 'Task' : item.intent,
+    // The whole updated item keeps its own type.
+    intent: wholeItem ? target.itemType : legacyReminder ? 'Task' : item.intent,
     title: item.title,
     description: item.description,
     date: when ? dateKey(when, timeZone) : null,
@@ -55,9 +63,13 @@ export function toDraft(item: CaptureItem, timeZone: string, canAppend = false):
     priority: item.priority,
     reminders: item.reminders.length || !legacyReminder ? item.reminders : [{ kind: 'Before', minutesBefore: 0 }],
     clarification: item.clarification,
-    appendTo: canAppend && item.addsToCurrent,
+    appendTo: wholeItem,
+    wholeItem,
   }
 }
+
+/** "Add to this item" with every field: the draft is the whole updated item. */
+export const updatesWholeItem = (d: ItemDraft) => d.appendTo && d.wholeItem
 
 /** Whether the item has its own time - what a "before" reminder counts back from. */
 export const draftHasTime = (d: ItemDraft) => d.intent !== 'Note' && !!d.date && !!d.time
@@ -65,9 +77,10 @@ export const draftHasTime = (d: ItemDraft) => d.intent !== 'Note' && !!d.date &&
 /** What still has to be filled in before this item can be saved (empty = ready). */
 export function draftProblems(d: ItemDraft): string[] {
   if (!d.include) return []
-  if (d.appendTo) return (d.description ?? d.title).trim() ? [] : [t('draft.problem.appendText')]
+  if (d.appendTo && !d.wholeItem) return (d.description ?? d.title).trim() ? [] : [t('draft.problem.appendText')]
   const problems: string[] = []
-  if (!d.title.trim()) problems.push(t('draft.problem.title'))
+  // Updating an item keeps its own title.
+  if (!d.appendTo && !d.title.trim()) problems.push(t('draft.problem.title'))
   if (d.intent === 'Appointment' && (!d.date || !d.time)) problems.push(t('draft.problem.eventTime'))
   if (d.intent === 'Task' && d.time && !d.date) problems.push(t('draft.problem.dateForTime'))
   const reminder = remindersProblem(d.reminders, { itemHasTime: draftHasTime(d), isNote: d.intent === 'Note' })
@@ -77,6 +90,15 @@ export function draftProblems(d: ItemDraft): string[] {
 
 /** Converts an edited draft to the /confirm payload, turning local dates into UTC. */
 export function toConfirmItem(d: ItemDraft, timeZone: string, target?: AppendTarget): ConfirmCaptureItem {
+  if (d.appendTo && target && d.wholeItem) {
+    // The whole item after the addition, as its own type; the server keeps its title.
+    return {
+      ...toConfirmItem({ ...d, appendTo: false, intent: target.itemType, title: target.title }, timeZone),
+      appendToType: target.itemType,
+      appendToId: target.itemId,
+      replacesItem: true,
+    }
+  }
   if (d.appendTo && target) {
     return {
       id: d.id,

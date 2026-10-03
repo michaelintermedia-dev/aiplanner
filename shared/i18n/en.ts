@@ -405,4 +405,7 @@ export const en = {
   // ---- item audio snippet ----
   'player.playThisPart': 'Play this part ({from}–{to})',
   'player.playWhole': 'Whole recording',
+
+  // ---- updating an item by voice ----
+  'review.updatesItem': 'Updates “{title}” - its title and created date stay. Check the changes before saving.',
 } satisfies Record<string, Message>

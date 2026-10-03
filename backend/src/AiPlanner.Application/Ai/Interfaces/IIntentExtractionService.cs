@@ -19,7 +19,7 @@ public interface IIntentExtractionService
 /// <param name="TimeZoneId">The user's IANA timezone, e.g. "Europe/Moscow".</param>
 /// <param name="Locale">The user's locale, e.g. "en-US".</param>
 /// <param name="PreviousText">When continuing a capture: what the user said before (already handled).</param>
-/// <param name="CurrentItem">When continuing from a saved item: its title.</param>
+/// <param name="CurrentItem">When continuing from a saved item: the whole item as JSON in the answer's item shape (see ContinuedItem).</param>
 public record ExtractionContext(
     string Text, DateTime LocalNow, string TimeZoneId, string Locale, string? PreviousText = null, string? CurrentItem = null);
 

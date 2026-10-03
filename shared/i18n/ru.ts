@@ -401,4 +401,7 @@ export const ru: Messages = {
   // ---- item audio snippet ----
   'player.playThisPart': 'Прослушать эту часть ({from}–{to})',
   'player.playWhole': 'Вся запись',
+
+  // ---- updating an item by voice ----
+  'review.updatesItem': 'Обновит «{title}» — название и дата создания останутся. Проверьте изменения перед сохранением.',
 }

@@ -7,6 +7,8 @@ using AiPlanner.Application.Captures.Interfaces;
 using AiPlanner.Application.Common.Exceptions;
 using AiPlanner.Application.Common.Interfaces;
 using AiPlanner.Application.Common.Models;
+using AiPlanner.Application.Notes.DTOs;
+using AiPlanner.Application.Notes.Interfaces;
 using AiPlanner.Application.Reminders;
 using AiPlanner.Application.Common.Utils;
 using AiPlanner.Application.Tasks.DTOs;
@@ -44,6 +46,7 @@ public class CaptureService : ICaptureService
     private readonly IFileStorageService _storage;
     private readonly ITaskService _tasks;
     private readonly IAppointmentService _appointments;
+    private readonly INoteService _notes;
     private readonly IValidator<CreateTaskRequest> _taskValidator;
     private readonly IValidator<CreateAppointmentRequest> _appointmentValidator;
     private readonly ILogger<CaptureService> _logger;
@@ -58,6 +61,7 @@ public class CaptureService : ICaptureService
         IFileStorageService storage,
         ITaskService tasks,
         IAppointmentService appointments,
+        INoteService notes,
         IValidator<CreateTaskRequest> taskValidator,
         IValidator<CreateAppointmentRequest> appointmentValidator,
         ReminderPlanner reminders,
@@ -72,6 +76,7 @@ public class CaptureService : ICaptureService
         _storage = storage;
         _tasks = tasks;
         _appointments = appointments;
+        _notes = notes;
         _taskValidator = taskValidator;
         _appointmentValidator = appointmentValidator;
         _logger = logger;
@@ -427,14 +432,8 @@ public class CaptureService : ICaptureService
             return Result<CaptureDto>.Failure($"Unsupported audio format '{unsupported}'.");
         }
 
-        // The saved item the user continues from - context for the AI.
-        string? currentItem = request.ItemId is not { } itemId ? null : request.ItemType switch
-        {
-            "Task" => await _db.TaskItems.Where(t => t.Id == itemId && t.UserId == userId).Select(t => t.Title).FirstOrDefaultAsync(ct),
-            "Appointment" => await _db.Appointments.Where(a => a.Id == itemId && a.UserId == userId).Select(a => a.Title).FirstOrDefaultAsync(ct),
-            "Note" => await _db.Notes.Where(n => n.Id == itemId && n.UserId == userId).Select(n => n.Title ?? n.Content).FirstOrDefaultAsync(ct),
-            _ => null,
-        };
+        // The saved item the user continues from, whole - the AI returns it updated.
+        var currentItem = request.ItemId is { } itemId ? await DescribeItemAsync(userId, request.ItemType, itemId, ct) : null;
 
         var previousText = extraction.Transcript?.Text ?? extraction.RawInputText ?? "";
         var added = new List<string>();
@@ -540,7 +539,9 @@ public class CaptureService : ICaptureService
     {
         if (decision.AppendToId is { } targetId)
         {
-            return await AppendToItemAsync(extraction.UserId, item, decision.AppendToType!, targetId, decision, ct);
+            return decision.ReplacesItem
+                ? await ApplyToItemAsync(item, decision.AppendToType!, targetId, decision, ct)
+                : await AppendToItemAsync(extraction.UserId, item, decision.AppendToType!, targetId, decision, ct);
         }
 
         switch (decision.Intent)
@@ -581,7 +582,78 @@ public class CaptureService : ICaptureService
         }
     }
 
-    /// <summary>"Add to this item": the reviewed text goes into the existing item's details.</summary>
+    /// <summary>The item continued from, as the AI's item JSON (null if it's gone).</summary>
+    private async Task<string?> DescribeItemAsync(Guid userId, string? type, Guid id, CancellationToken ct)
+    {
+        var zone = await _reminders.ZoneAsync(userId, ct);
+        switch (type)
+        {
+            case "Task":
+                var task = await _tasks.GetByIdAsync(id, ct);
+                return task.Value is not { } t ? null : ContinuedItem.Describe(
+                    "task", t.Title, t.Description, t.DueDateUtc, t.HasDueTime, null, null, t.Priority, t.Reminders ?? [], zone);
+            case "Appointment":
+                var appointment = await _appointments.GetByIdAsync(id, ct);
+                return appointment.Value is not { } a ? null : ContinuedItem.Describe(
+                    "appointment", a.Title, a.Description, a.StartUtc, true, a.EndUtc, a.Location, null, a.Reminders ?? [], zone);
+            case "Note":
+                var note = await _db.Notes.AsNoTracking().Include(n => n.Reminders).FirstOrDefaultAsync(n => n.Id == id && n.UserId == userId, ct);
+                return note is null ? null : ContinuedItem.Describe(
+                    "note", note.Title ?? note.Content, note.Content, null, false, null, null, null, ReminderPlanner.ToDtos(note.Reminders), zone);
+            default:
+                return null;
+        }
+    }
+
+    /// <summary>
+    /// "Add to this item": the reviewed proposal is the whole item after the
+    /// addition (details merged, new reminder or time applied), so the existing
+    /// item is updated in place through its normal service - same id, title
+    /// and created date. What the proposal doesn't carry (notes, tags, people,
+    /// ongoing) is kept.
+    /// </summary>
+    private async Task<string?> ApplyToItemAsync(
+        AIExtractionItem item, string type, Guid targetId, ConfirmCaptureItem decision, CancellationToken ct)
+    {
+        switch (type)
+        {
+            case "Task":
+            {
+                if ((await _tasks.GetByIdAsync(targetId, ct)).Value is not { } t) return "The task to add to was not found.";
+                var updated = await _tasks.UpdateAsync(targetId, new UpdateTaskRequest(
+                    t.Title, decision.Description ?? t.Description, t.Notes, t.StartDateUtc,
+                    decision.DueUtc, decision.DueUtc is not null && decision.HasTime,
+                    decision.Priority ?? TaskPriority.None, t.Status == TaskItemStatus.Ongoing && decision.DueUtc is null,
+                    decision.Reminders ?? [], t.Tags), ct);
+                if (!updated.Succeeded) return string.Join(" ", updated.Errors);
+                item.ResultingTaskItemId = targetId;
+                return null;
+            }
+            case "Appointment":
+            {
+                if ((await _appointments.GetByIdAsync(targetId, ct)).Value is not { } a) return "The event to add to was not found.";
+                var start = decision.StartUtc ?? a.StartUtc;
+                var end = decision.EndUtc is { } e && e > start ? e : start + (a.EndUtc - a.StartUtc);
+                var updated = await _appointments.UpdateAsync(targetId, new UpdateAppointmentRequest(
+                    a.Title, decision.Description ?? a.Description, a.Notes, start, end,
+                    decision.Location ?? a.Location, a.Participants.Select(p => p.Name).ToList(), decision.Reminders ?? []), ct);
+                if (!updated.Succeeded) return string.Join(" ", updated.Errors);
+                item.ResultingAppointmentId = targetId;
+                return null;
+            }
+            default:
+            {
+                if ((await _notes.GetByIdAsync(targetId, ct)).Value is not { } n) return "The note to add to was not found.";
+                var content = string.IsNullOrWhiteSpace(decision.Description) ? n.Content : decision.Description;
+                var updated = await _notes.UpdateAsync(targetId, new SaveNoteRequest(n.Title, content, decision.Reminders ?? []), ct);
+                if (!updated.Succeeded) return string.Join(" ", updated.Errors);
+                item.ResultingNoteId = targetId;
+                return null;
+            }
+        }
+    }
+
+    /// <summary>Old "add text only" path, kept for confirm requests without the item's fields.</summary>
     private async Task<string?> AppendToItemAsync(
         Guid userId, AIExtractionItem item, string type, Guid targetId, ConfirmCaptureItem decision, CancellationToken ct)
     {

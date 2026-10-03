@@ -149,7 +149,15 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
         }
         var item = c.CurrentItem is null ? "" : $"""
 
-            They are looking at the saved item "{c.CurrentItem}". If the new input completes it or adds detail to it (an unfinished thought, an insight about it), return that as ONE item with "addsToCurrent": true whose "description" is the added detail in the user's own words and whose "title" is a short label for it. Anything new and separate is a normal item with "addsToCurrent": false.
+            They are looking at this saved item (dates and times are local):
+            {c.CurrentItem}
+            The user opened this item and chose to add to it, so assume the new input is about it - details, things to bring or do for it, a reminder, a changed date, time, place or priority - unless it is clearly a separate matter. Return ONE item with "addsToCurrent": true that is the WHOLE item after the change:
+            - "intent" and "title": exactly as in the saved item.
+            - "description": the saved description followed by the new detail in the user's own words (keep everything that was there).
+            - "date", "time", "endTime", "location", "priority": the saved values, unless the new input changes them.
+            - "reminders": the saved reminders plus any new ones; remove or change one only if the user says so.
+            - "sourceText": the new words about it.
+            Anything new and separate is a normal item with "addsToCurrent": false.
             """;
         return $"""
 

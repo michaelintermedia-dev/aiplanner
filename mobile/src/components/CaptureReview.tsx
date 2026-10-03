@@ -1,4 +1,4 @@
-import { draftHasTime, draftProblems, INTENT_OPTIONS, toConfirmItem, toDraft, type ItemDraft } from '@shared/captureDraft'
+import { draftHasTime, draftProblems, INTENT_OPTIONS, toConfirmItem, toDraft, updatesWholeItem, type ItemDraft } from '@shared/captureDraft'
 import type { AppendTarget, Capture, ExtractionIntent, TaskPriority } from '@shared/types'
 import { useState } from 'react'
 import { I18nManager, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native'
@@ -35,7 +35,7 @@ export function CaptureReview({
   const { zone } = useAuth()
   const confirm = useAction((items: ReturnType<typeof toConfirmItem>[]) => capturesApi.confirm(capture.id, items))
   const [drafts, setDrafts] = useState<ItemDraft[]>(() =>
-    capture.items.filter((i) => i.status === 'PendingReview').map((i) => toDraft(i, zone.timeZone, !!appendTarget)),
+    capture.items.filter((i) => i.status === 'PendingReview').map((i) => toDraft(i, zone.timeZone, appendTarget)),
   )
   const [showTranscript, setShowTranscript] = useState(false)
 
@@ -127,7 +127,9 @@ function ItemEditor({
         />
         <TextInput
           style={[styles.itemTitle, { color: c.text, borderColor: c.border }, !d.include && styles.struck]}
-          value={d.title}
+          // Updating the item continued from: its title stays.
+          value={updatesWholeItem(d) && appendTarget ? appendTarget.title : d.title}
+          editable={!updatesWholeItem(d)}
           onChangeText={(title) => onChange({ title })}
           accessibilityLabel={t('item.title')}
         />
@@ -141,7 +143,7 @@ function ItemEditor({
             {appendTarget && (
               // Continuing from an item: this can complete it instead of becoming a new one.
               <Pressable
-                onPress={() => onChange({ appendTo: true })}
+                onPress={() => onChange(d.wholeItem ? { appendTo: true, intent: appendTarget.itemType } : { appendTo: true })}
                 style={[styles.chip, { borderColor: d.appendTo ? c.accent : c.border }, d.appendTo && { backgroundColor: c.surface2 }]}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: d.appendTo }}
@@ -164,7 +166,11 @@ function ItemEditor({
             })}
           </View>
 
-          {!d.appendTo && (
+          {updatesWholeItem(d) && appendTarget && (
+            <Text style={{ color: c.muted, fontSize: 13 }}>{t('review.updatesItem', { title: appendTarget.title })}</Text>
+          )}
+
+          {(!d.appendTo || d.wholeItem) && (
             <View style={styles.stack}>
               {!isNote && (
                 <View style={styles.chips}>
@@ -217,12 +223,12 @@ function ItemEditor({
 
           <TextInput
             style={[styles.field, styles.details, { color: c.text, borderColor: c.border }]}
-            placeholder={d.appendTo ? t('review.whatToAdd') : d.intent === 'Note' ? t('review.noteKeep') : t('review.detailsOptional')}
+            placeholder={d.appendTo && !d.wholeItem ? t('review.whatToAdd') : d.intent === 'Note' ? t('review.noteKeep') : t('review.detailsOptional')}
             placeholderTextColor={c.muted}
             multiline
             value={d.description ?? ''}
             onChangeText={(description) => onChange({ description: description || null })}
-            accessibilityLabel={d.appendTo ? t('capture.textToAdd') : d.intent === 'Note' ? t('review.noteText') : t('review.details')}
+            accessibilityLabel={d.appendTo && !d.wholeItem ? t('capture.textToAdd') : d.intent === 'Note' ? t('review.noteText') : t('review.details')}
           />
           {d.clarification && <Text style={{ color: c.warn, fontSize: 14 }}>❓ {d.clarification}</Text>}
         </>

@@ -260,6 +260,8 @@ export interface ConfirmCaptureItem {
   /** Set to add this item's text to an existing item instead of creating one. */
   appendToType?: ItemType | null
   appendToId?: string | null
+  /** The fields are the whole item after the addition: update it in place (title and created date kept). */
+  replacesItem?: boolean
 }
 
 /** The saved item a capture is continued from ("Add to this task"). */

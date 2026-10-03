@@ -357,8 +357,15 @@ Local dev notes:
   transcript, and asks the AI about the new words only, with the earlier text
   and the item's title as context. Proposals that complete the item come back
   `addsToCurrent`; the review offers "Add to this task/event/note" (preselected
-  for those), which on confirm (`appendToType/appendToId`) appends the text to
-  the item's details instead of creating a new item.
+  for those). Since 2026-10-03 the AI gets the whole item (`ContinuedItem`
+  JSON in its own answer shape, local times) and returns it whole, updated:
+  same title/type, details merged, new reminders added, changed date/time/
+  place applied. The review shows all its fields (title locked), and confirm
+  with `replacesItem` updates the item in place through its service
+  (`ApplyToItemAsync`) - same id, title and created date; notes, tags, people
+  are kept. Only drafts that came back whole (`ItemDraft.wholeItem`) do this;
+  "Add to this" on any other proposal still just appends its text
+  (`AppendToItemAsync`), so an item's dates/reminders are never wiped.
 - **Each item plays its own part of a voice message** (user's request,
   2026-10-03). The AI quotes each item's words verbatim (`sourceText`);
   `OpenAiTranscriptionService` makes a second, parallel call to `TimingModel`

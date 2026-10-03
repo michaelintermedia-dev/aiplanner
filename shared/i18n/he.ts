@@ -401,4 +401,7 @@ export const he: Messages = {
   // ---- item audio snippet ----
   'player.playThisPart': 'השמעת החלק הזה ({from}–{to})',
   'player.playWhole': 'כל ההקלטה',
+
+  // ---- updating an item by voice ----
+  'review.updatesItem': 'יעדכן את ״{title}״ - הכותרת ותאריך היצירה יישארו. כדאי לבדוק את השינויים לפני השמירה.',
 }

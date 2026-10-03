@@ -1,4 +1,4 @@
-import { draftHasTime, draftProblems, INTENT_OPTIONS, toConfirmItem, toDraft, type ItemDraft } from '@shared/captureDraft'
+import { draftHasTime, draftProblems, INTENT_OPTIONS, toConfirmItem, toDraft, updatesWholeItem, type ItemDraft } from '@shared/captureDraft'
 import type { AppendTarget, Capture, TaskPriority } from '@shared/types'
 import { useState } from 'react'
 import { capturesApi } from '../api/endpoints'
@@ -25,7 +25,7 @@ export function CaptureReview({
   const { zone } = useAuth()
   const confirm = useAction((items: ReturnType<typeof toConfirmItem>[]) => capturesApi.confirm(capture.id, items))
   const [drafts, setDrafts] = useState<ItemDraft[]>(() =>
-    capture.items.filter((i) => i.status === 'PendingReview').map((i) => toDraft(i, zone.timeZone, !!appendTarget)),
+    capture.items.filter((i) => i.status === 'PendingReview').map((i) => toDraft(i, zone.timeZone, appendTarget)),
   )
 
   const update = (id: string, patch: Partial<ItemDraft>) =>
@@ -117,12 +117,17 @@ function ItemEditor({
           onChange={(e) => onChange({ include: e.target.checked })}
           aria-label={d.include ? t('review.include') : t('review.excluded')}
         />
-        <input
-          className="review-title"
-          value={d.title}
-          onChange={(e) => onChange({ title: e.target.value })}
-          aria-label={t('item.title')}
-        />
+        {updatesWholeItem(d) && appendTarget ? (
+          // Updating the item continued from: its title stays.
+          <input className="review-title" value={appendTarget.title} readOnly aria-label={t('item.title')} />
+        ) : (
+          <input
+            className="review-title"
+            value={d.title}
+            onChange={(e) => onChange({ title: e.target.value })}
+            aria-label={t('item.title')}
+          />
+        )}
       </div>
 
       {d.include && (
@@ -136,7 +141,7 @@ function ItemEditor({
               role="radio"
               aria-checked={d.appendTo}
               className={`intent-chip append${d.appendTo ? ' selected' : ''}`}
-              onClick={() => onChange({ appendTo: true })}
+              onClick={() => onChange(d.wholeItem ? { appendTo: true, intent: appendTarget.itemType } : { appendTo: true })}
               title={t('review.addToTitle', { title: appendTarget.title })}>
               {t(ADD_TO[appendTarget.itemType])}
             </button>
@@ -154,8 +159,9 @@ function ItemEditor({
           ))}
         </div>
       )}
+      {d.include && updatesWholeItem(d) && appendTarget && <p className="muted small">{t('review.updatesItem', { title: appendTarget.title })}</p>}
 
-      {d.include && !d.appendTo && (
+      {d.include && (!d.appendTo || d.wholeItem) && (
         <div className="review-fields">
           {!isNote && (
             <>
@@ -198,7 +204,7 @@ function ItemEditor({
         </div>
       )}
 
-      {d.include && !d.appendTo && (
+      {d.include && (!d.appendTo || d.wholeItem) && (
         <ReminderList
           value={d.reminders}
           onChange={(reminders) => onChange({ reminders })}
@@ -210,11 +216,11 @@ function ItemEditor({
 
       {d.include && (
         <label className="review-details">
-          {d.appendTo && appendTarget ? t('review.addedTo', { title: appendTarget.title }) : d.intent === 'Note' ? t('review.noteText') : t('review.details')}
+          {d.appendTo && !d.wholeItem && appendTarget ? t('review.addedTo', { title: appendTarget.title }) : d.intent === 'Note' ? t('review.noteText') : t('review.details')}
           <textarea
             rows={d.intent === 'Note' || d.appendTo ? 4 : 2}
             value={d.description ?? ''}
-            placeholder={d.appendTo ? t('review.whatToAdd') : d.intent === 'Note' ? t('review.noteKeep') : t('review.optional')}
+            placeholder={d.appendTo && !d.wholeItem ? t('review.whatToAdd') : d.intent === 'Note' ? t('review.noteKeep') : t('review.optional')}
             onChange={(e) => onChange({ description: e.target.value || null })}
           />
         </label>

@@ -22,7 +22,8 @@ public record NormalizedItem(
     RecurrenceFrequency? Recurrence,
     string? Clarification,
     double? Confidence,
-    bool AddsToCurrent = false);
+    bool AddsToCurrent = false,
+    string? SourceText = null); // the user's words it came from - finds its part of a recording
 
 public record NormalizedExtraction(string Title, string? Summary, IReadOnlyList<NormalizedItem> Items);
 
@@ -65,7 +66,7 @@ public static class ExtractionNormalizer
                 Description: text,
                 StartUtc: null, EndUtc: null, DueUtc: null, HasTime: false,
                 Location: null, Priority: null, Reminders: [], Recurrence: null,
-                Clarification: null, Confidence: null));
+                Clarification: null, Confidence: null, SourceText: text));
         }
 
         return new NormalizedExtraction(title, Clean(raw.Summary, 2000), items);
@@ -176,7 +177,8 @@ public static class ExtractionNormalizer
             ParseRecurrence(raw.Recurrence),
             questions.Count > 0 ? Truncate(string.Join(" ", questions.Distinct()), 500) : null,
             raw.Confidence is { } c && double.IsFinite(c) ? Math.Clamp(c, 0, 1) : null,
-            raw.AddsToCurrent);
+            raw.AddsToCurrent,
+            Clean(raw.SourceText, 4000));
     }
 
     /// <summary>

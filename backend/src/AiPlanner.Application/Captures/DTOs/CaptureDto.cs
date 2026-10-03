@@ -14,4 +14,5 @@ public record CaptureDto(
     string? LanguageCode,
     int AudioParts, // playable recording segments (0 = text capture, or recording deleted)
     DateTime CreatedAtUtc,
-    IReadOnlyList<CaptureItemDto> Items);
+    IReadOnlyList<CaptureItemDto> Items,
+    IReadOnlyList<int>? AudioPartDurationsMs = null); // per part, to place item snippets across parts

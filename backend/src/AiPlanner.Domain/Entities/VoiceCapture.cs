@@ -11,6 +11,13 @@ public class VoiceCapture : BaseEntity
     /// pause finalizes a segment). Empty after the user deletes the recording.
     /// </summary>
     public List<string> AudioStorageKeys { get; set; } = [];
+
+    /// <summary>
+    /// Length of each audio file (same order as AudioStorageKeys), so item
+    /// snippets (AIExtractionItem.AudioStartMs) can be placed across parts.
+    /// Empty when unknown.
+    /// </summary>
+    public List<int> AudioPartDurationsMs { get; set; } = [];
     public string? MimeType { get; set; }
     public int? DurationSeconds { get; set; }
     public VoiceCaptureStatus Status { get; set; } = VoiceCaptureStatus.PendingUpload;

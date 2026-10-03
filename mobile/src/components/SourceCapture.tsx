@@ -1,9 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
+import { clipTime, itemSnippet, locateInParts, partStartsMs, type Snippet } from '@shared/audioSnippet'
 import { dateKey, formatDateKey, formatTime } from '@shared/dates'
 import type { AppendTarget } from '@shared/types'
 import { useQuery } from '@tanstack/react-query'
 import { useAudioPlayer } from 'expo-audio'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Pressable, StyleSheet, Text, View, I18nManager } from 'react-native'
 import { API_URL, getAccessToken } from '@/api/client'
 import { capturesApi } from '@/api/endpoints'
@@ -64,7 +65,12 @@ export function SourceCapture({ captureId, item }: { captureId: string; item?: A
       {capture.source === 'Voice' &&
         (capture.audioParts > 0 ? (
           <View style={styles.audio}>
-            <RecordingPlayer captureId={captureId} parts={capture.audioParts} />
+            <RecordingPlayer
+              captureId={captureId}
+              parts={capture.audioParts}
+              durationsMs={capture.audioPartDurationsMs ?? null}
+              snippet={itemSnippet(capture, item)}
+            />
             <Button
               title={t('source.deleteAudio')}
               variant="danger"
@@ -84,54 +90,105 @@ export function SourceCapture({ captureId, item }: { captureId: string; item?: A
   )
 }
 
-/** Streams the recording's parts from the API (with the auth header), one after another. */
-function RecordingPlayer({ captureId, parts }: { captureId: string; parts: number }) {
+/**
+ * Streams the recording's parts from the API (with the auth header), one after
+ * another. When the message held several items, `snippet` is this item's own
+ * part: "Play this part" starts in the right part at the right moment and stops
+ * at its end, even when that's in a later part.
+ */
+function RecordingPlayer({
+  captureId,
+  parts,
+  durationsMs,
+  snippet,
+}: {
+  captureId: string
+  parts: number
+  durationsMs: number[] | null
+  snippet: Snippet | null
+}) {
   const player = useAudioPlayer(null)
-  const [part, setPart] = useState<number | null>(null)
+  const [playing, setPlaying] = useState<{ part: number; snippet: boolean } | null>(null)
   const current = useRef<number | null>(null)
   const startedAt = useRef(0)
+  // Seek once the part has loaded (seeking before that is ignored).
+  const pendingSeekMs = useRef(0)
+  // Stop here (ms on the whole-recording timeline) - playing a snippet.
+  const stopAtMs = useRef<number | null>(null)
+  // Snippets need every part's length to find their place; otherwise only the whole recording.
+  const canSnip = !!snippet && (parts === 1 || durationsMs?.length === parts)
+  const starts = useMemo(() => (durationsMs?.length === parts ? partStartsMs(durationsMs) : [0]), [durationsMs, parts])
+
+  const stop = useCallback(() => {
+    player.pause()
+    current.current = null
+    stopAtMs.current = null
+    setPlaying(null)
+  }, [player])
 
   const play = useCallback(
-    (p: number) => {
+    (p: number, seekMs = 0, asSnippet = false) => {
       current.current = p
       startedAt.current = Date.now()
+      pendingSeekMs.current = seekMs
       player.replace({
         uri: `${API_URL}/api/captures/${captureId}/audio?part=${p}`,
         headers: { Authorization: `Bearer ${getAccessToken() ?? ''}` },
       })
       player.play()
-      setPart(p)
+      setPlaying({ part: p, snippet: asSnippet })
     },
     [player, captureId],
   )
+
+  const playSnippet = () => {
+    if (!snippet) return
+    const at = durationsMs?.length === parts ? locateInParts(durationsMs, snippet.startMs) : { part: 0, offsetMs: snippet.startMs }
+    stopAtMs.current = snippet.endMs
+    play(at.part, at.offsetMs, true)
+  }
 
   // Next part when one ends. Events rather than polled status (didJustFinish
   // lasts one update); replace() re-reports the previous finish, so ignore
   // finishes right after starting a part.
   useEffect(() => {
-    const sub = player.addListener('playbackStatusUpdate', (s) => {
-      if (!s.didJustFinish || current.current === null || Date.now() - startedAt.current < 300) return
-      if (current.current + 1 < parts) play(current.current + 1)
-      else {
-        current.current = null
-        setPart(null)
+    const sub = player.addListener('playbackStatusUpdate', (st) => {
+      const p = current.current
+      if (p === null) return
+      if (pendingSeekMs.current > 0 && st.isLoaded) {
+        void player.seekTo(pendingSeekMs.current / 1000)
+        pendingSeekMs.current = 0
+        return
       }
+      // Right after switching parts the status still carries the previous part's position.
+      const settled = Date.now() - startedAt.current > 400
+      if (stopAtMs.current !== null && settled && st.isLoaded && (starts[p] ?? 0) + st.currentTime * 1000 >= stopAtMs.current) {
+        stop()
+        return
+      }
+      if (!st.didJustFinish || Date.now() - startedAt.current < 300) return
+      if (p + 1 < parts) play(p + 1, 0, stopAtMs.current !== null)
+      else stop()
     })
     return () => sub.remove()
-  }, [player, parts, play])
+  }, [player, parts, play, stop, starts])
 
-  const playing = part !== null
+  const wholeLabel = `▶ ${t('player.play')}${parts > 1 ? ` (${t('player.parts', { count: parts })})` : ''}`
+  const stopLabel = `■ ${t('player.stop')}${parts > 1 && playing ? ` (${t('player.part', { part: playing.part + 1, parts })})` : ''}`
   return (
-    <Button
-      title={playing ? `■ ${t('player.stop')}${parts > 1 ? ` (${t('player.part', { part: part + 1, parts })})` : ''}` : `▶ ${t('player.play')}${parts > 1 ? ` (${t('player.parts', { count: parts })})` : ''}`}
-      onPress={() => {
-        if (playing) {
-          player.pause()
-          current.current = null
-          setPart(null)
-        } else play(0)
-      }}
-    />
+    <View style={{ gap: 8, alignItems: 'flex-start' }}>
+      {canSnip && snippet && (
+        <Button
+          title={playing?.snippet ? stopLabel : `▶ ${t('player.playThisPart', { from: clipTime(snippet.startMs), to: clipTime(snippet.endMs) })}`}
+          variant={playing?.snippet ? 'default' : 'primary'}
+          onPress={() => (playing ? stop() : playSnippet())}
+        />
+      )}
+      <Button
+        title={playing && !playing.snippet ? stopLabel : canSnip ? `▶ ${t('player.playWhole')}` : wholeLabel}
+        onPress={() => (playing ? stop() : play(0))}
+      />
+    </View>
   )
 }
 

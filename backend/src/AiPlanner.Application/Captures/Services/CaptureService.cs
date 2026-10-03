@@ -84,7 +84,7 @@ public class CaptureService : ICaptureService
     public async Task<Result<CaptureDto>> CaptureTextAsync(CaptureTextRequest request, CancellationToken ct = default)
     {
         var userId = RequireUserId();
-        var extraction = await ExtractAsync(userId, request.Text.Trim(), transcript: null, ct);
+        var extraction = await ExtractAsync(userId, request.Text.Trim(), transcript: null, timeline: null, ct);
         return Result<CaptureDto>.Success(ToDto(extraction, transcript: null));
     }
 
@@ -147,6 +147,9 @@ public class CaptureService : ICaptureService
             string.Join(" ", parts.Select(p => p.Text.Trim()).Where(t => t.Length > 0)),
             parts.Select(p => p.LanguageCode).FirstOrDefault(l => l is not null),
             parts[0].ProviderName);
+        // When each word was said, so every item can play just its part.
+        var timeline = AudioSnippets.Timeline(parts);
+        voice.AudioPartDurationsMs = timeline?.PartDurationsMs ?? [];
 
         var text = transcription.Text.Trim();
         if (text.Length == 0)
@@ -173,7 +176,7 @@ public class CaptureService : ICaptureService
         AIExtraction extraction;
         try
         {
-            extraction = await ExtractAsync(userId, text, transcript, ct);
+            extraction = await ExtractAsync(userId, text, transcript, timeline?.Words, ct);
         }
         catch (AiProviderException ex)
         {
@@ -312,13 +315,14 @@ public class CaptureService : ICaptureService
         }
         // Assign a new list (not Clear) so EF sees the JSON column change.
         voice.AudioStorageKeys = [];
+        voice.AudioPartDurationsMs = [];
         await _db.SaveChangesAsync(ct);
         return Result.Success();
     }
 
     // ---- Extraction --------------------------------------------------------
 
-    private async Task<AIExtraction> ExtractAsync(Guid userId, string text, Transcript? transcript, CancellationToken ct)
+    private async Task<AIExtraction> ExtractAsync(Guid userId, string text, Transcript? transcript, IReadOnlyList<TimedWord>? timeline, CancellationToken ct)
     {
         var (raw, normalized) = await ProposeAsync(userId, text, previousText: null, currentItem: null, ct);
 
@@ -334,7 +338,7 @@ public class CaptureService : ICaptureService
             ProcessedAtUtc = _dateTime.UtcNow,
             Title = normalized.Title,
             Summary = normalized.Summary,
-            Items = normalized.Items.Select(i => ToItem(userId, i)).ToList(),
+            Items = normalized.Items.Select(i => ToItem(userId, i, timeline)).ToList(),
         };
 
         _db.AIExtractions.Add(extraction);
@@ -365,6 +369,16 @@ public class CaptureService : ICaptureService
             "Extracted {ItemCount} item(s) ({RawCount} proposed) with {Model} in {ElapsedMs} ms",
             normalized.Items.Count, raw.Items.Count, raw.ModelName, (_dateTime.UtcNow - started).TotalMilliseconds);
         return (raw, normalized);
+    }
+
+    private static AIExtractionItem ToItem(Guid userId, NormalizedItem i, IReadOnlyList<TimedWord>? timeline)
+    {
+        var item = ToItem(userId, i);
+        if (timeline is { Count: > 0 } && AudioSnippets.Find(i.SourceText, timeline, timeline[^1].EndMs + 1000) is { } range)
+        {
+            (item.AudioStartMs, item.AudioEndMs) = range;
+        }
+        return item;
     }
 
     private static AIExtractionItem ToItem(Guid userId, NormalizedItem i) => new()
@@ -424,6 +438,7 @@ public class CaptureService : ICaptureService
 
         var previousText = extraction.Transcript?.Text ?? extraction.RawInputText ?? "";
         var added = new List<string>();
+        IReadOnlyList<TimedWord>? newTimeline = null;
 
         if (request.Audio.Count > 0)
         {
@@ -448,7 +463,13 @@ public class CaptureService : ICaptureService
 
             if (voice is not null)
             {
-                // Assign a new list (not Add) so EF sees the JSON column change.
+                // The new parts play after the existing ones; place their words there
+                // (only if every earlier part's length is known).
+                var known = voice.AudioPartDurationsMs.Count == voice.AudioStorageKeys.Count;
+                var placed = known ? AudioSnippets.Timeline(parts, voice.AudioPartDurationsMs.Sum()) : null;
+                newTimeline = placed?.Words;
+                // Assign new lists (not Add) so EF sees the JSON column change.
+                voice.AudioPartDurationsMs = placed is null ? [] : [.. voice.AudioPartDurationsMs, .. placed.Value.PartDurationsMs];
                 voice.AudioStorageKeys = [.. voice.AudioStorageKeys, .. keys];
             }
             else
@@ -480,7 +501,7 @@ public class CaptureService : ICaptureService
         var (_, normalized) = await ProposeAsync(userId, newText, previousText, currentItem, ct);
         foreach (var proposed in normalized.Items)
         {
-            var item = ToItem(userId, proposed);
+            var item = ToItem(userId, proposed, newTimeline);
             item.AiExtractionId = extraction.Id;
             // Explicit Add (attached only via the navigation, EF would UPDATE the pre-keyed
             // row); EF's fix-up then puts it in extraction.Items.
@@ -681,8 +702,12 @@ public class CaptureService : ICaptureService
                 i.StartDateUtc, i.EndDateUtc, i.DueDateUtc, i.HasTime, i.Location,
                 i.Priority, ReminderPlanner.FromProposed(i.ProposedReminders), i.RecurrenceFrequency,
                 i.Clarification, i.Confidence,
-                i.ResultingTaskItemId, i.ResultingAppointmentId, i.ResultingNoteId, i.AddsToCurrent))
-            .ToList());
+                i.ResultingTaskItemId, i.ResultingAppointmentId, i.ResultingNoteId, i.AddsToCurrent,
+                i.AudioStartMs, i.AudioEndMs))
+            .ToList(),
+        transcript?.VoiceCapture is { } v && v.AudioPartDurationsMs.Count == v.AudioStorageKeys.Count && v.AudioStorageKeys.Count > 0
+            ? v.AudioPartDurationsMs
+            : null);
 
     /// <summary>Aborts a confirm transaction with a message for the user.</summary>
     private sealed class CaptureConfirmException(string message) : Exception(message);

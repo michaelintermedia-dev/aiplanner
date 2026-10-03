@@ -401,4 +401,8 @@ export const en = {
   'sort.toggleOff': '{label}: off. Tap to switch on.',
   'sort.allOff': 'All off - newest first.',
   'sort.pickOne': 'Pick at least one.',
+
+  // ---- item audio snippet ----
+  'player.playThisPart': 'Play this part ({from}–{to})',
+  'player.playWhole': 'Whole recording',
 } satisfies Record<string, Message>

@@ -88,7 +88,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             i.Intent, i.Title, i.Summary, i.Description, i.Date, i.Time, i.EndTime, i.Location,
             i.Priority,
             i.Reminders?.Select(r => new RawReminder(r.Kind, r.MinutesBefore, r.Date, r.Time, r.Days)).ToList(),
-            i.Recurrence, i.Clarification, i.Confidence, i.AddsToCurrent ?? false)).ToList();
+            i.Recurrence, i.Clarification, i.Confidence, i.AddsToCurrent ?? false, i.SourceText)).ToList();
 
         return new RawExtraction(parsed.Title, parsed.Summary, items, content, "OpenAI", completion.Model ?? _options.Model);
     }
@@ -130,6 +130,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             - "location": only if a place is mentioned.
             - "clarification": a short question for the user when something important is missing or ambiguous (e.g. an appointment with no time); otherwise null.
             - "confidence": 0 to 1, how sure you are that the item is right.
+            - "sourceText": the exact words from the input this item came from, copied verbatim (same language, same wording, no paraphrase) - the whole stretch that talks about it. Used to play just that part of a voice recording.
             - Top-level "title": 2-5 words naming the whole capture. Top-level "summary": 1-2 sentences if the input is longer than one sentence, otherwise null.
 
             Only extract what the user actually said. Never invent items, people, places or times.
@@ -197,7 +198,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             ["type"] = "object",
             ["additionalProperties"] = false,
             ["required"] = new JsonArray("intent", "title", "summary", "description", "date", "time", "endTime",
-                "location", "priority", "reminders", "recurrence", "clarification", "confidence", "addsToCurrent"),
+                "location", "priority", "reminders", "recurrence", "clarification", "confidence", "addsToCurrent", "sourceText"),
             ["properties"] = new JsonObject
             {
                 ["intent"] = new JsonObject { ["type"] = "string", ["enum"] = new JsonArray("task", "appointment", "note") },
@@ -214,6 +215,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
                 ["clarification"] = Nullable("string"),
                 ["confidence"] = new JsonObject { ["type"] = "number" },
                 ["addsToCurrent"] = new JsonObject { ["type"] = "boolean" },
+                ["sourceText"] = new JsonObject { ["type"] = "string", ["description"] = "Verbatim excerpt of the input this item came from" },
             },
         };
 
@@ -244,7 +246,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
     private sealed record ItemJson(
         string? Intent, string? Title, string? Summary, string? Description,
         string? Date, string? Time, string? EndTime, string? Location, string? Priority,
-        List<ReminderJson>? Reminders, string? Recurrence, string? Clarification, double? Confidence, bool? AddsToCurrent);
+        List<ReminderJson>? Reminders, string? Recurrence, string? Clarification, double? Confidence, bool? AddsToCurrent, string? SourceText);
 
     private sealed record ReminderJson(string? Kind, int? MinutesBefore, string? Date, string? Time, List<string>? Days);
 }

@@ -397,4 +397,8 @@ export const he: Messages = {
   'sort.toggleOff': '{label}: כבוי. לחיצה להפעלה.',
   'sort.allOff': 'הכול כבוי - החדשים קודם.',
   'sort.pickOne': 'יש לבחור לפחות אחד.',
+
+  // ---- item audio snippet ----
+  'player.playThisPart': 'השמעת החלק הזה ({from}–{to})',
+  'player.playWhole': 'כל ההקלטה',
 }

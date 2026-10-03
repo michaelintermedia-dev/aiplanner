@@ -359,6 +359,20 @@ Local dev notes:
   `addsToCurrent`; the review offers "Add to this task/event/note" (preselected
   for those), which on confirm (`appendToType/appendToId`) appends the text to
   the item's details instead of creating a new item.
+- **Each item plays its own part of a voice message** (user's request,
+  2026-10-03). The AI quotes each item's words verbatim (`sourceText`);
+  `OpenAiTranscriptionService` makes a second, parallel call to `TimingModel`
+  (whisper-1 - the only model with word timestamps; `gpt-4o-mini-transcribe`
+  still makes the text) and `AudioSnippets` (pure, unit-tested) fuzzily
+  aligns the quote to the timed words (Smith-Waterman over tokens, small
+  spelling differences allowed). Stored as `AIExtractionItem.AudioStartMs/
+  AudioEndMs` on one timeline with parts back to back, plus
+  `VoiceCapture.AudioPartDurationsMs`; continued captures place new parts
+  after the old ones. No audio is cut - clients play a range: web seeks the
+  joined track and pauses at the end; mobile starts in the right part
+  (`locateInParts`) and stops across parts. "Play this part (0:02-0:05)" +
+  "Whole recording" on the item's source capture (`shared/audioSnippet.ts`).
+  If timings fail, items just have no snippet (whole recording).
 - **UI languages: English, Russian, Hebrew; Hebrew is right-to-left**
   (2026-10-02, web + mobile). All UI text goes through `t('key', vars)` from
   `shared/i18n` - never write user-visible English in a component. `en.ts`

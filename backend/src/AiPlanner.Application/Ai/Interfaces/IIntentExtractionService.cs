@@ -51,7 +51,8 @@ public record RawExtractedItem(
     string? Recurrence,
     string? Clarification,
     double? Confidence,
-    bool AddsToCurrent = false);
+    bool AddsToCurrent = false,
+    string? SourceText = null); // the user's words this item came from, verbatim
 
 /// <summary>
 /// A requested reminder: Kind is at/before/daily/weekdays/weekly. Date/Time are

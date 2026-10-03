@@ -6,7 +6,8 @@ namespace AiPlanner.Application.Captures.DTOs;
 /// <summary>
 /// A proposed task/appointment/note. Dates are UTC: StartUtc/EndUtc for
 /// appointments, DueUtc for tasks. Any of them can carry reminders. Once saved, the Resulting*
-/// id points at the real item.
+/// id points at the real item. AudioStartMs/AudioEndMs: the part of the recording
+/// it came from (on the whole-recording timeline), if known.
 /// </summary>
 public record CaptureItemDto(
     Guid Id,
@@ -28,4 +29,6 @@ public record CaptureItemDto(
     Guid? ResultingTaskId,
     Guid? ResultingAppointmentId,
     Guid? ResultingNoteId,
-    bool AddsToCurrent = false);
+    bool AddsToCurrent = false,
+    int? AudioStartMs = null,
+    int? AudioEndMs = null);

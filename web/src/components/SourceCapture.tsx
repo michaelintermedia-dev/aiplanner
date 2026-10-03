@@ -1,8 +1,9 @@
 import { formatDateKey, formatTime, dateKey } from '@shared/dates'
 import { useQuery } from '@tanstack/react-query'
 import type { AppendTarget } from '@shared/types'
-import { useEffect, useState } from 'react'
-import { IoMicOutline } from 'react-icons/io5'
+import { clipTime, itemSnippet, type Snippet } from '@shared/audioSnippet'
+import { useEffect, useRef, useState } from 'react'
+import { IoMicOutline, IoPlay } from 'react-icons/io5'
 import { capturesApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { CaptureBar } from './CaptureBar'
@@ -49,7 +50,7 @@ export function SourceCapture({ captureId, item }: { captureId: string; item?: A
       {capture.source === 'Voice' &&
         (capture.audioParts > 0 ? (
           <div className="source-audio">
-            <RecordingPlayer captureId={captureId} parts={capture.audioParts} />
+            <RecordingPlayer captureId={captureId} parts={capture.audioParts} snippet={itemSnippet(capture, item)} />
             <button
               className="link danger"
               disabled={deleteAudio.isPending}
@@ -68,10 +69,23 @@ export function SourceCapture({ captureId, item }: { captureId: string; item?: A
  * The whole recording as one track, like the mobile app. A recording made with
  * pauses is stored in parts; they're fetched (as blobs - audio needs the auth
  * header) and joined end to end, so play, seek and duration cover all of it.
+ * When the message held several items, `snippet` is this item's own part:
+ * "Play this part" plays just that, and the full player is still there.
  */
-function RecordingPlayer({ captureId, parts }: { captureId: string; parts: number }) {
+function RecordingPlayer({ captureId, parts, snippet }: { captureId: string; parts: number; snippet: Snippet | null }) {
   const [url, setUrl] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
+  const audio = useRef<HTMLAudioElement>(null)
+  // Where to stop when playing just this item's part (null = play on).
+  const stopAt = useRef<number | null>(null)
+
+  const playSnippet = () => {
+    const a = audio.current
+    if (!a || !snippet) return
+    a.currentTime = snippet.startMs / 1000
+    stopAt.current = snippet.endMs / 1000
+    void a.play()
+  }
 
   useEffect(() => {
     let created: string | null = null
@@ -93,7 +107,32 @@ function RecordingPlayer({ captureId, parts }: { captureId: string; parts: numbe
   if (failed) return <p className="muted">{t('source.audioFailed')}</p>
   return (
     <div className="audio-part">
-      {url ? <audio controls src={url} aria-label={t('source.recording')} /> : <span className="muted">{t('source.loadingAudio')}</span>}
+      {url && snippet && (
+        <button type="button" className="snippet-button" onClick={playSnippet}>
+          <IoPlay aria-hidden /> {t('player.playThisPart', { from: clipTime(snippet.startMs), to: clipTime(snippet.endMs) })}
+        </button>
+      )}
+      {url ? (
+        <audio
+          ref={audio}
+          controls
+          src={url}
+          aria-label={snippet ? t('player.playWhole') : t('source.recording')}
+          onTimeUpdate={(e) => {
+            if (stopAt.current !== null && e.currentTarget.currentTime >= stopAt.current) {
+              e.currentTarget.pause()
+              stopAt.current = null
+            }
+          }}
+          // Any other pause or a manual seek means the user took over: play on freely.
+          onPause={() => (stopAt.current = null)}
+          onSeeked={(e) => {
+            if (snippet && Math.abs(e.currentTarget.currentTime - snippet.startMs / 1000) > 0.3) stopAt.current = null
+          }}
+        />
+      ) : (
+        <span className="muted">{t('source.loadingAudio')}</span>
+      )}
     </div>
   )
 }

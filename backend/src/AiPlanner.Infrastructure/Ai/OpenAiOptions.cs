@@ -18,6 +18,12 @@ public class OpenAiOptions
     /// </summary>
     public string TranscriptionModel { get; set; } = "gpt-4o-mini-transcribe";
 
+    /// <summary>
+    /// Model asked separately for word timestamps, so each item can play just its
+    /// part of a recording (only whisper-1 returns them). Empty = no timings.
+    /// </summary>
+    public string? TimingModel { get; set; } = "whisper-1";
+
     /// <summary>Reasoning effort for the extraction model ("low" keeps capture fast).</summary>
     public string? ReasoningEffort { get; set; } = "low";
 

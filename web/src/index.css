@@ -2100,3 +2100,18 @@ button.kind-icon:hover:not(:disabled) {
     max-width: none;
   }
 }
+
+/* "Play this part": an item's own stretch of a longer recording. */
+.audio-part {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.snippet-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+}

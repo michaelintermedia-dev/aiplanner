@@ -397,4 +397,8 @@ export const ru: Messages = {
   'sort.toggleOff': '{label}: выключено. Нажмите, чтобы включить.',
   'sort.allOff': 'Всё выключено — сначала новые.',
   'sort.pickOne': 'Выберите хотя бы один.',
+
+  // ---- item audio snippet ----
+  'player.playThisPart': 'Прослушать эту часть ({from}–{to})',
+  'player.playWhole': 'Вся запись',
 }

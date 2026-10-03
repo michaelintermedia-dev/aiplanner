@@ -22,6 +22,8 @@ public class UserSettings
     public string TimeFormat { get; set; } = "HH:mm";
 
     public bool RetainAudioAfterTranscription { get; set; } = false;
+    /// <summary>Cut pauses longer than a second out of saved recordings (PauseTrimmer). Off by default - it can't be undone.</summary>
+    public bool ShortenPauses { get; set; }
     public int TranscriptRetentionDays { get; set; } = 90;
 
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;

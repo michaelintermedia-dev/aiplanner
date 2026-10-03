@@ -9,7 +9,8 @@ namespace AiPlanner.Infrastructure.Audio;
 /// Re-encodes WAV recordings to AAC in .m4a (mono, 32 kbit/s - plenty for
 /// speech, and it plays on web, Android and iOS) with ffmpeg. ffmpeg is looked
 /// up at "Recordings:FfmpegPath" or on PATH; without it recordings stay WAV.
-/// Already-compressed uploads (the phone's .m4a) are left alone.
+/// Already-compressed uploads (the phone's .m4a) are left alone - unless pauses
+/// are cut out of them (CutAsync), which re-encodes them the same way.
 /// </summary>
 public class FfmpegAudioCompressor : IAudioCompressor
 {
@@ -49,6 +50,38 @@ public class FfmpegAudioCompressor : IAudioCompressor
                 return null;
             }
             return (await File.ReadAllBytesAsync(output, ct), ".m4a");
+        }
+        finally
+        {
+            TryDelete(input);
+            TryDelete(output);
+        }
+    }
+
+    public async Task<byte[]?> CutAsync(Stream audio, string extension, IReadOnlyList<(int StartMs, int EndMs)> keep, CancellationToken ct = default)
+    {
+        if (keep.Count == 0 || !await AvailableAsync(ct)) return null;
+
+        var dir = Path.Combine(Path.GetTempPath(), "aiplanner-audio");
+        Directory.CreateDirectory(dir);
+        var input = Path.Combine(dir, $"{Guid.NewGuid():N}{extension}");
+        var output = Path.Combine(dir, $"{Guid.NewGuid():N}.m4a");
+        try
+        {
+            await using (var file = File.Create(input))
+            {
+                await audio.CopyToAsync(file, ct);
+            }
+            // Keep the stretches, then close the gaps (timestamps restart from the kept samples).
+            var select = string.Join("+", keep.Select(k => FormattableString.Invariant($"between(t,{k.StartMs / 1000.0:0.###},{k.EndMs / 1000.0:0.###})")));
+            var exit = await RunAsync(["-hide_banner", "-loglevel", "error", "-y", "-i", input,
+                "-af", $"aselect='{select}',asetpts=N/SR/TB", "-ac", "1", "-c:a", "aac", "-b:a", "32k", "-movflags", "+faststart", output], ct);
+            if (exit != 0 || !File.Exists(output) || new FileInfo(output).Length == 0)
+            {
+                _logger.LogWarning("Shortening pauses failed (ffmpeg exit {Exit}); keeping the recording as it was", exit);
+                return null;
+            }
+            return await File.ReadAllBytesAsync(output, ct);
         }
         finally
         {

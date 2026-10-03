@@ -395,6 +395,14 @@ Local dev notes:
   `FfmpegAudioCompressor` behind `IAudioCompressor` - only if ffmpeg is found
   (`Recordings:FfmpegPath` or PATH; otherwise WAV is kept). The phone already
   uploads .m4a. Install locally with `winget install Gyan.FFmpeg`.
+  Settings → Recordings → "Shorten long pauses" (`UserSettings.ShortenPauses`,
+  off by default, `GET/PUT /api/settings/recordings`): on save, pauses over 1 s
+  are cut to 0.4 s. The pauses come from the word timings (not loudness), so
+  `PauseTrimmer` moves the timings with the cuts and item snippets stay right.
+  WAV is cut in code (`PauseTrimmer.CutWav`), other formats by ffmpeg
+  (`IAudioCompressor.CutAsync`); the shorter file gets a new key (storage
+  never overwrites - FileMode.CreateNew) and the original is deleted.
+  Needs word timings; a part without them is kept as it was.
 - **UI languages: English, Russian, Hebrew; Hebrew is right-to-left**
   (2026-10-02, web + mobile). All UI text goes through `t('key', vars)` from
   `shared/i18n` - never write user-visible English in a component. `en.ts`

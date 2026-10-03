@@ -404,4 +404,9 @@ export const ru: Messages = {
 
   // ---- updating an item by voice ----
   'review.updatesItem': 'Обновит «{title}» — название и дата создания останутся. Проверьте изменения перед сохранением.',
+
+  // ---- settings - recordings ----
+  'settings.recordings': 'Записи',
+  'settings.shortenPauses': 'Сокращать долгие паузы',
+  'settings.shortenPausesHint': 'При сохранении записи паузы длиннее секунды сокращаются до короткой — быстрее слушать и меньше места. Для сохранённой записи это не отменить.',
 }

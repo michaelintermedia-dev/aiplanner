@@ -19,6 +19,8 @@ export default function SettingsScreen() {
   const [languageError, setLanguageError] = useState<string | null>(null)
   const { data: settings, error } = useQuery({ queryKey: ['settings', 'notifications'], queryFn: settingsApi.notifications })
   const save = useAction(settingsApi.updateNotifications)
+  const recordings = useQuery({ queryKey: ['settings', 'recordings'], queryFn: settingsApi.recordings })
+  const saveRecordings = useAction(settingsApi.updateRecordings)
   const [osAllowed, setOsAllowed] = useState<boolean | null>(null)
 
   useEffect(() => {
@@ -85,6 +87,19 @@ export default function SettingsScreen() {
         )}
       </View>
       {save.error && <Text style={{ color: c.danger }}>{save.error.message}</Text>}
+
+      <Text style={[styles.heading, { color: c.muted }]}>{t('settings.recordings').toUpperCase()}</Text>
+      {recordings.data && (
+        <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.border }]}>
+          <Row
+            label={t('settings.shortenPauses')}
+            hint={t('settings.shortenPausesHint')}
+            value={recordings.data.shortenPauses}
+            onChange={(shortenPauses) => saveRecordings.mutate({ shortenPauses })}
+          />
+        </View>
+      )}
+      {(recordings.error ?? saveRecordings.error) && <Text style={{ color: c.danger }}>{(recordings.error ?? saveRecordings.error)!.message}</Text>}
     </Screen>
   )
 }

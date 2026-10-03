@@ -10,6 +10,7 @@ import type {
   ConvertItemRequest,
   ItemRef,
   ItemsResult,
+  RecordingSettings,
   CreateAppointmentRequest,
   FeedKind,
   FeedPage,
@@ -130,6 +131,8 @@ export function createApi(request: RequestFn) {
     settings: {
       notifications: () => request<NotificationSettings>('GET', '/settings/notifications'),
       updateNotifications: (body: NotificationSettings) => request<NotificationSettings>('PUT', '/settings/notifications', body),
+      recordings: () => request<RecordingSettings>('GET', '/settings/recordings'),
+      updateRecordings: (body: RecordingSettings) => request<RecordingSettings>('PUT', '/settings/recordings', body),
     },
     calendar: {
       get: (view: CalendarView, date: string) =>

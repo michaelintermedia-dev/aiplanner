@@ -404,4 +404,9 @@ export const he: Messages = {
 
   // ---- updating an item by voice ----
   'review.updatesItem': 'יעדכן את ״{title}״ - הכותרת ותאריך היצירה יישארו. כדאי לבדוק את השינויים לפני השמירה.',
+
+  // ---- settings - recordings ----
+  'settings.recordings': 'הקלטות',
+  'settings.shortenPauses': 'קיצור הפסקות ארוכות',
+  'settings.shortenPausesHint': 'כששומרים הקלטה, הפסקות של יותר משנייה מתקצרות להפסקה קצרה - מהיר יותר להאזנה וחוסך מקום. אי אפשר לבטל זאת להקלטה שנשמרה.',
 }

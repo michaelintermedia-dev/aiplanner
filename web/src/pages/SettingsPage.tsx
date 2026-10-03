@@ -13,6 +13,8 @@ export function SettingsPage() {
   const [languageError, setLanguageError] = useState<string | null>(null)
   const { data: settings, error } = useQuery({ queryKey: ['settings', 'notifications'], queryFn: settingsApi.notifications })
   const save = useAction(settingsApi.updateNotifications)
+  const recordings = useQuery({ queryKey: ['settings', 'recordings'], queryFn: settingsApi.recordings })
+  const saveRecordings = useAction(settingsApi.updateRecordings)
   const supported = browserNotificationsSupported()
   const [permission, setPermission] = useState(() => (supported ? Notification.permission : 'denied'))
   useEffect(() => onPermissionChange(() => setPermission(Notification.permission)), [])
@@ -92,6 +94,19 @@ export function SettingsPage() {
           )}
         </fieldset>
         {save.error && <p className="error">{save.error.message}</p>}
+      </section>
+
+      <section className="card form">
+        <h3>{t('settings.recordings')}</h3>
+        {recordings.data && (
+          <Toggle
+            label={t('settings.shortenPauses')}
+            hint={t('settings.shortenPausesHint')}
+            checked={recordings.data.shortenPauses}
+            onChange={(shortenPauses) => saveRecordings.mutate({ shortenPauses })}
+          />
+        )}
+        {(recordings.error ?? saveRecordings.error) && <p className="error">{(recordings.error ?? saveRecordings.error)!.message}</p>}
       </section>
     </div>
   )

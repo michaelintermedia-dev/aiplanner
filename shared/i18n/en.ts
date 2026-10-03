@@ -408,4 +408,9 @@ export const en = {
 
   // ---- updating an item by voice ----
   'review.updatesItem': 'Updates “{title}” - its title and created date stay. Check the changes before saving.',
+
+  // ---- settings - recordings ----
+  'settings.recordings': 'Recordings',
+  'settings.shortenPauses': 'Shorten long pauses',
+  'settings.shortenPausesHint': 'When a recording is saved, pauses longer than a second are cut to a short gap - quicker to listen back and smaller to store. Can’t be undone for that recording.',
 } satisfies Record<string, Message>

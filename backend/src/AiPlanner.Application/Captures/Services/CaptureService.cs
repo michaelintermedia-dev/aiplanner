@@ -156,6 +156,8 @@ public class CaptureService : ICaptureService
             parts.Select(p => p.LanguageCode).FirstOrDefault(l => l is not null),
             parts[0].ProviderName);
         // When each word was said, so every item can play just its part.
+        // "Shorten long pauses" (Settings): cut them now; the word timings move with the cuts.
+        (parts, voice.AudioStorageKeys) = await ShortenPausesAsync(userId, voice.AudioStorageKeys, parts, ct);
         var timeline = AudioSnippets.Timeline(parts);
         voice.AudioPartDurationsMs = timeline?.PartDurationsMs ?? [];
         // Transcribed: now keep it small (WAV -> compressed; same length, so the timings still fit).
@@ -469,6 +471,7 @@ public class CaptureService : ICaptureService
                 return await _transcription.TranscribeAsync(stored, Path.GetFileName(key), mime!, ct);
             }));
             var spoken = string.Join(" ", parts.Select(p => p.Text.Trim()).Where(t => t.Length > 0));
+            (parts, keys) = await ShortenPausesAsync(userId, keys, parts, ct);
 
             if (voice is not null)
             {
@@ -594,6 +597,59 @@ public class CaptureService : ICaptureService
                 return null;
             }
         }
+    }
+
+    /// <summary>
+    /// "Shorten long pauses": when the user turned it on, cuts pauses over a
+    /// second out of each part (found from its word timings), stores the shorter
+    /// file under a new key (storage never overwrites) and deletes the original;
+    /// returns the parts with their timings moved to match, and the keys to keep.
+    /// Best effort - a part that can't be cut stays as it was.
+    /// </summary>
+    private async Task<(TranscriptionResult[] Parts, List<string> Keys)> ShortenPausesAsync(
+        Guid userId, IReadOnlyList<string> keys, TranscriptionResult[] parts, CancellationToken ct)
+    {
+        var newKeys = keys.ToList();
+        var on = await _db.UserSettings.Where(s => s.UserId == userId).Select(s => s.ShortenPauses).FirstOrDefaultAsync(ct);
+        if (!on) return (parts, newKeys);
+
+        var result = parts.ToArray();
+        for (var i = 0; i < parts.Length && i < keys.Count; i++)
+        {
+            if (parts[i].Words is not { Count: > 0 } words) continue;
+            var duration = parts[i].DurationMs ?? words[^1].EndMs;
+            if (PauseTrimmer.Plan(words, duration) is not { } keep) continue;
+            try
+            {
+                byte[] original;
+                await using (var stored = await _storage.OpenReadAsync(keys[i], ct))
+                {
+                    if (stored is null) continue;
+                    using var buffer = new MemoryStream();
+                    await stored.CopyToAsync(buffer, ct);
+                    original = buffer.ToArray();
+                }
+                var extension = Path.GetExtension(keys[i]);
+                var cut = extension.Equals(".wav", StringComparison.OrdinalIgnoreCase)
+                    ? PauseTrimmer.CutWav(original, keep)
+                    : await _compressor.CutAsync(new MemoryStream(original), extension, keep.Select(k => (k.StartMs, k.EndMs)).ToList(), ct);
+                if (cut is null) continue;
+                var shortKey = $"{Path.ChangeExtension(keys[i], null)}-short{(extension.Equals(".wav", StringComparison.OrdinalIgnoreCase) ? extension : ".m4a")}";
+                using (var content = new MemoryStream(cut))
+                {
+                    await _storage.SaveAsync(shortKey, content, ct);
+                }
+                await _storage.DeleteAsync(keys[i], ct);
+                newKeys[i] = shortKey;
+                result[i] = PauseTrimmer.Apply(parts[i], keep);
+                _logger.LogInformation("Shortened pauses: {Before} ms -> {After} ms", duration, result[i].DurationMs);
+            }
+            catch (Exception ex) when (ex is IOException or InvalidOperationException or UnauthorizedAccessException)
+            {
+                _logger.LogWarning("Keeping a recording part as it was ({Error})", ex.GetType().Name);
+            }
+        }
+        return (result, newKeys);
     }
 
     /// <summary>

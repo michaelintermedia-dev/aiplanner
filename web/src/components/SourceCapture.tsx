@@ -8,7 +8,9 @@ import { capturesApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { CaptureBar } from './CaptureBar'
 import { toWav } from '../lib/toWav'
+import { speedRef, usePlaybackSpeed } from '../lib/playbackSpeed'
 import { useAction } from '../lib/useAction'
+import { SpeedChips } from './SpeedChips'
 import { t } from '@shared/i18n'
 
 /**
@@ -77,6 +79,7 @@ function RecordingPlayer({ captureId, parts, clips }: { captureId: string; parts
   const [url, setUrl] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
   const audio = useRef<HTMLAudioElement>(null)
+  const [speed] = usePlaybackSpeed()
   // Playing this item's parts: which one, where it ends (null = play on), and
   // where we just seeked to (any other seek means the user took over).
   const clip = useRef(0)
@@ -120,7 +123,10 @@ function RecordingPlayer({ captureId, parts, clips }: { captureId: string; parts
       )}
       {url ? (
         <audio
-          ref={audio}
+          ref={(a) => {
+            audio.current = a
+            speedRef(speed)(a)
+          }}
           controls
           src={url}
           aria-label={clips.length ? t('player.playWhole') : t('source.recording')}
@@ -143,6 +149,7 @@ function RecordingPlayer({ captureId, parts, clips }: { captureId: string; parts
       ) : (
         <span className="muted">{t('source.loadingAudio')}</span>
       )}
+      {url && <SpeedChips />}
     </div>
   )
 }

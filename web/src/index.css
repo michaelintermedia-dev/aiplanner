@@ -2137,3 +2137,8 @@ button.kind-icon:hover:not(:disabled) {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* Playback speed next to a player. */
+.speed-chips button {
+  min-width: 44px;
+}

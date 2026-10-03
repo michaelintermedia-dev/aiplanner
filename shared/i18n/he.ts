@@ -407,12 +407,15 @@ export const he: Messages = {
 
   // ---- settings - recordings ----
   'settings.recordings': 'הקלטות',
-  'settings.shortenPauses': 'קיצור הפסקות ארוכות',
-  'settings.shortenPausesHint': 'כששומרים הקלטה, הפסקות של יותר משנייה מתקצרות להפסקה קצרה - מהיר יותר להאזנה וחוסך מקום. אי אפשר לבטל זאת להקלטה שנשמרה.',
+  'settings.shortenPauses': 'קיצור הפסקות',
+  'settings.shortenPausesHint': 'כששומרים הקלטה, הפסקות (ארוכות מ-0.3 שנ׳ - בין משפטים, בזמן מחשבה) מתקצרות להפסקה קצרה - מהיר יותר להאזנה וחוסך מקום. אי אפשר לבטל זאת להקלטה שנשמרה.',
 
   // ---- feed reminder badge ----
   'feed.reminderAt': 'תזכורת: {when}',
 
   // ---- item audio in pieces ----
   'player.playItsParts': { one: 'השמעת החלק ({length})', two: 'השמעת שני החלקים ({length})', other: 'השמעת {count} החלקים ({length})' },
+
+  // ---- playback speed ----
+  'player.speed': 'מהירות השמעה',
 }

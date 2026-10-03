@@ -8,6 +8,8 @@ import { useMicrophones } from '../lib/useMicrophones'
 import { CaptureReview } from './CaptureReview'
 import { LevelMeter } from './LevelMeter'
 import { MicButton } from './MicButton'
+import { speedRef, usePlaybackSpeed } from '../lib/playbackSpeed'
+import { SpeedChips } from './SpeedChips'
 import { t } from '@shared/i18n'
 
 type Busy = null | 'transcribing' | 'understanding'
@@ -65,6 +67,7 @@ export interface ContinueFrom {
  */
 export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {}) {
   const recorder = useAudioRecorder()
+  const [speed] = usePlaybackSpeed()
   const [text, setText] = useState('')
   const [busy, setBusy] = useState<Busy>(null)
   const [error, setError] = useState<string | null>(null)
@@ -181,7 +184,10 @@ export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {
             </p>
           )}
           {recorder.state === 'paused' && preview && (
-            <audio className="rec-preview" controls src={preview} aria-label={t('capture.listenSoFar')} />
+            <>
+              <audio className="rec-preview" controls src={preview} aria-label={t('capture.listenSoFar')} ref={speedRef(speed)} />
+              <SpeedChips />
+            </>
           )}
         </div>
       ) : (

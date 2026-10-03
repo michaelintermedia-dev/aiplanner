@@ -9,9 +9,11 @@ import { Alert, Pressable, StyleSheet, Text, View, I18nManager } from 'react-nat
 import { API_URL, getAccessToken } from '@/api/client'
 import { capturesApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
+import { usePlaybackSpeed } from '@/lib/playbackSpeed'
 import { useAction } from '@/lib/useAction'
 import { useColors } from '@/theme'
 import { CaptureBar } from './CaptureBar'
+import { SpeedChips } from './SpeedChips'
 import { Button } from './ui'
 import { t } from '@shared/i18n'
 
@@ -108,10 +110,14 @@ function RecordingPlayer({
   durationsMs: number[] | null
   clips: Snippet[]
 }) {
-  const player = useAudioPlayer(null)
+  // Frequent position updates, so a part stops close to its end (even at 2x).
+  const player = useAudioPlayer(null, { updateInterval: 100 })
+  const [speed] = usePlaybackSpeed()
   const [playing, setPlaying] = useState<{ part: number; snippet: boolean } | null>(null)
   const current = useRef<number | null>(null)
-  const startedAt = useRef(0)
+  // True once the current file has been seen playing: until then, statuses
+  // (a finish, a position) may still belong to the previous file.
+  const live = useRef(false)
   // Seek once the part has loaded (seeking before that is ignored).
   const pendingSeekMs = useRef(0)
   // Stop here (ms on the whole-recording timeline) - playing the item's parts.
@@ -131,17 +137,23 @@ function RecordingPlayer({
   const play = useCallback(
     (p: number, seekMs = 0, asSnippet = false) => {
       current.current = p
-      startedAt.current = Date.now()
+      live.current = false
       pendingSeekMs.current = seekMs
       player.replace({
         uri: `${API_URL}/api/captures/${captureId}/audio?part=${p}`,
         headers: { Authorization: `Bearer ${getAccessToken() ?? ''}` },
       })
       player.play()
+      player.setPlaybackRate(speed)
       setPlaying({ part: p, snippet: asSnippet })
     },
-    [player, captureId],
+    [player, captureId, speed],
   )
+
+  // A new speed applies at once, also while playing.
+  useEffect(() => {
+    player.setPlaybackRate(speed)
+  }, [player, speed])
 
   const playClip = useCallback(
     (i: number) => {
@@ -156,8 +168,9 @@ function RecordingPlayer({
   )
 
   // Next part when one ends. Events rather than polled status (didJustFinish
-  // lasts one update); replace() re-reports the previous finish, so ignore
-  // finishes right after starting a part.
+  // lasts one update). replace() re-reports the previous file's finish, so
+  // nothing counts until the new file is seen playing - not a fixed delay,
+  // which a short piece at 2x can finish within.
   useEffect(() => {
     const sub = player.addListener('playbackStatusUpdate', (st) => {
       const p = current.current
@@ -167,15 +180,15 @@ function RecordingPlayer({
         pendingSeekMs.current = 0
         return
       }
-      // Right after switching parts the status still carries the previous part's position.
-      const settled = Date.now() - startedAt.current > 400
-      if (stopAtMs.current !== null && settled && st.isLoaded && (starts[p] ?? 0) + st.currentTime * 1000 >= stopAtMs.current) {
+      if (st.isLoaded && st.playing && pendingSeekMs.current === 0) live.current = true
+      if (!live.current) return
+      if (stopAtMs.current !== null && st.isLoaded && (starts[p] ?? 0) + st.currentTime * 1000 >= stopAtMs.current) {
         // End of this part of the item: on to the next one, or stop.
         if (clip.current + 1 < clips.length) playClip(clip.current + 1)
         else stop()
         return
       }
-      if (!st.didJustFinish || Date.now() - startedAt.current < 300) return
+      if (!st.didJustFinish) return
       if (p + 1 < parts) play(p + 1, 0, stopAtMs.current !== null)
       else stop()
     })
@@ -197,6 +210,7 @@ function RecordingPlayer({
         title={playing && !playing.snippet ? stopLabel : canSnip ? `▶ ${t('player.playWhole')}` : wholeLabel}
         onPress={() => (playing ? stop() : play(0))}
       />
+      <SpeedChips />
     </View>
   )
 }

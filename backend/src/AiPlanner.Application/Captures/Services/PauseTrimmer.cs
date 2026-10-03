@@ -3,16 +3,17 @@ using AiPlanner.Application.Ai.Interfaces;
 namespace AiPlanner.Application.Captures.Services;
 
 /// <summary>
-/// "Shorten long pauses": cuts silences longer than <see cref="MaxPauseMs"/>
+/// "Shorten pauses": cuts silences longer than <see cref="MaxPauseMs"/> (the gaps
+/// between sentences and longer)
 /// down to <see cref="KeptPauseMs"/>. The pauses come from the word timings
 /// (not from loudness), so the same cut list moves the timings too and each
 /// item's snippet still lands on its words. Pure - unit tested.
 /// </summary>
 public static class PauseTrimmer
 {
-    public const int MaxPauseMs = 1000;
-    /// <summary>What's left of a long pause - enough to still sound like one.</summary>
-    public const int KeptPauseMs = 400;
+    public const int MaxPauseMs = 300;
+    /// <summary>What's left of a pause - just enough to still hear the break.</summary>
+    public const int KeptPauseMs = 150;
 
     /// <summary>A stretch of the original audio to keep, [StartMs, EndMs).</summary>
     public record Segment(int StartMs, int EndMs)

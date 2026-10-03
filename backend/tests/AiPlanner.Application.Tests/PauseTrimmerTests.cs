@@ -12,11 +12,12 @@ public class PauseTrimmerTests
     [Fact]
     public void Short_pauses_are_left_alone()
     {
-        PauseTrimmer.Plan([W(200, 600), W(900, 1400), W(2000, 2500)], 2800).Should().BeNull();
+        // Gaps of 0.1-0.2 s are ordinary speech, not pauses.
+        PauseTrimmer.Plan([W(100, 600), W(800, 1400), W(1600, 2500)], 2700).Should().BeNull();
     }
 
     [Fact]
-    public void Long_pauses_shrink_to_a_short_gap_and_edges_are_trimmed()
+    public void Pauses_shrink_to_a_short_gap_and_edges_are_trimmed()
     {
         // 3 s of silence before speaking, a 4 s pause, and 2.5 s of silence at the end.
         var words = new[] { W(3000, 3500), W(3600, 4000), W(8000, 8500) };
@@ -24,9 +25,18 @@ public class PauseTrimmerTests
         var keep = PauseTrimmer.Plan(words, 11_000)!;
 
         keep.Should().Equal(
-            new PauseTrimmer.Segment(2600, 4200), // 0.4 s lead-in, then until 0.2 s after "4000"
-            new PauseTrimmer.Segment(7800, 8900)); // from 0.2 s before "8000" to 0.4 s after the end
-        keep.Sum(s => s.Length).Should().Be(2700);
+            new PauseTrimmer.Segment(2850, 4075), // 0.15 s lead-in, then until 0.075 s after "4000"
+            new PauseTrimmer.Segment(7925, 8650)); // from 0.075 s before "8000" to 0.15 s after the end
+        keep.Sum(s => s.Length).Should().Be(1950);
+    }
+
+    [Fact]
+    public void A_pause_between_sentences_is_shortened_too()
+    {
+        // 0.5 s between two sentences: cut to 0.15 s.
+        var keep = PauseTrimmer.Plan([W(0, 900), W(1400, 2000)], 2000)!;
+
+        keep.Sum(s => s.Length).Should().Be(2000 - (500 - PauseTrimmer.KeptPauseMs));
     }
 
     [Fact]
@@ -37,10 +47,10 @@ public class PauseTrimmerTests
 
         var trimmed = PauseTrimmer.Apply(part, keep);
 
-        trimmed.DurationMs.Should().Be(2700);
-        trimmed.Words!.Select(w => (w.StartMs, w.EndMs)).Should().Equal((400, 900), (1000, 1400), (1800, 2300));
-        // The pause between "4000" and "8000" is now 400 ms long.
-        (trimmed.Words![2].StartMs - trimmed.Words[1].EndMs).Should().Be(400);
+        trimmed.DurationMs.Should().Be(1950);
+        trimmed.Words!.Select(w => (w.StartMs, w.EndMs)).Should().Equal((150, 650), (750, 1150), (1300, 1800));
+        // The pause between "4000" and "8000" is now 0.15 s long.
+        (trimmed.Words![2].StartMs - trimmed.Words[1].EndMs).Should().Be(PauseTrimmer.KeptPauseMs);
     }
 
     [Fact]

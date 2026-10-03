@@ -411,12 +411,15 @@ export const en = {
 
   // ---- settings - recordings ----
   'settings.recordings': 'Recordings',
-  'settings.shortenPauses': 'Shorten long pauses',
-  'settings.shortenPausesHint': 'When a recording is saved, pauses longer than a second are cut to a short gap - quicker to listen back and smaller to store. Can’t be undone for that recording.',
+  'settings.shortenPauses': 'Shorten pauses',
+  'settings.shortenPausesHint': 'When a recording is saved, pauses (longer than 0.3 s - between sentences, while thinking) are cut to a short gap: quicker to listen back and smaller to store. Can’t be undone for that recording.',
 
   // ---- feed reminder badge ----
   'feed.reminderAt': 'Reminder: {when}',
 
   // ---- item audio in pieces ----
   'player.playItsParts': { one: 'Play its part ({length})', other: 'Play its {count} parts ({length})' },
+
+  // ---- playback speed ----
+  'player.speed': 'Playback speed',
 } satisfies Record<string, Message>

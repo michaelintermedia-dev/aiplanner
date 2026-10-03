@@ -407,12 +407,15 @@ export const ru: Messages = {
 
   // ---- settings - recordings ----
   'settings.recordings': 'Записи',
-  'settings.shortenPauses': 'Сокращать долгие паузы',
-  'settings.shortenPausesHint': 'При сохранении записи паузы длиннее секунды сокращаются до короткой — быстрее слушать и меньше места. Для сохранённой записи это не отменить.',
+  'settings.shortenPauses': 'Сокращать паузы',
+  'settings.shortenPausesHint': 'При сохранении записи паузы (дольше 0,3 с — между фразами, пока вы думаете) сокращаются до короткой — быстрее слушать и меньше места. Для сохранённой записи это не отменить.',
 
   // ---- feed reminder badge ----
   'feed.reminderAt': 'Напоминание: {when}',
 
   // ---- item audio in pieces ----
   'player.playItsParts': { one: 'Прослушать {count} часть ({length})', few: 'Прослушать {count} части ({length})', many: 'Прослушать {count} частей ({length})', other: 'Прослушать {count} части ({length})' },
+
+  // ---- playback speed ----
+  'player.speed': 'Скорость воспроизведения',
 }

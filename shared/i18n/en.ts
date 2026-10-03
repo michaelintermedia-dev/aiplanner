@@ -435,4 +435,7 @@ export const en = {
   'event.endsNextDay': 'Ends the next day',
   'review.useNewTitle': 'Rename it to “{title}”',
   'review.titleKept': 'The title stays as it is',
+  'review.pendingAddition': 'Unsaved addition to “{title}”',
+  'review.discardAll': { one: 'Discard all', other: 'Discard all {count}' },
+  'review.captureUnrelated': 'Also capture “{text}” as a new entry - it isn’t about this item',
 } satisfies Record<string, Message>

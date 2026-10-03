@@ -431,4 +431,7 @@ export const he: Messages = {
   'event.endsNextDay': 'מסתיים למחרת',
   'review.useNewTitle': 'לשנות את השם ל״{title}״',
   'review.titleKept': 'הכותרת נשארת כפי שהיא',
+  'review.pendingAddition': 'תוספת שלא נשמרה ל״{title}״',
+  'review.discardAll': { one: 'למחוק הכול', two: 'למחוק את שתיהן', other: 'למחוק את כל ה-{count}' },
+  'review.captureUnrelated': 'לשמור גם את ״{text}״ כרשומה חדשה - זה לא קשור לפריט הזה',
 }

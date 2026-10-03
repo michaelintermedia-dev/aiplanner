@@ -219,6 +219,11 @@ export interface CaptureItem {
   /** Where in the recording this item was said (ms on the whole-recording timeline), if known. */
   audioStartMs?: number | null
   audioEndMs?: number | null
+  /** "Add more" on a saved item: which item it belongs to (to resume an unsaved review of it). */
+  continuesItemType?: ItemType | null
+  continuesItemId?: string | null
+  /** "Add more": the words that weren't about the item - offered as a new capture. */
+  unrelated?: string | null
 }
 
 export interface Capture {

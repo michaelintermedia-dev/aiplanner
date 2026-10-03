@@ -149,7 +149,11 @@ export function createApi(request: RequestFn) {
        * Returns the capture with the new items to review.
        */
       continue: (id: string, form: FormData) => request<Capture>('POST', `/captures/${id}/continue`, form),
-      list: (take = 50) => request<CaptureSummary[]>('GET', `/captures?take=${take}`),
+      /** With `pendingDays`: only captures of the last N days with a review left unsaved. */
+      list: (take = 50, pendingDays?: number) =>
+        request<CaptureSummary[]>('GET', `/captures?take=${take}${pendingDays ? `&pendingDays=${pendingDays}` : ''}`),
+      /** Rejects every proposal still waiting for review; returns how many. */
+      discardPending: () => request<number>('POST', '/captures/pending/discard'),
       get: (id: string) => request<Capture>('GET', `/captures/${id}`),
       confirm: (id: string, items: ConfirmCaptureItem[]) =>
         request<Capture>('POST', `/captures/${id}/confirm`, { items }),

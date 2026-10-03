@@ -431,4 +431,7 @@ export const ru: Messages = {
   'event.endsNextDay': 'Заканчивается на следующий день',
   'review.useNewTitle': 'Переименовать в «{title}»',
   'review.titleKept': 'Название останется прежним',
+  'review.pendingAddition': 'Несохранённое дополнение к «{title}»',
+  'review.discardAll': { one: 'Удалить все', few: 'Удалить все {count}', many: 'Удалить все {count}', other: 'Удалить все {count}' },
+  'review.captureUnrelated': 'Записать «{text}» отдельной записью — это не про этот элемент',
 }

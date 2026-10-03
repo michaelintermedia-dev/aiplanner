@@ -23,7 +23,8 @@ public record NormalizedItem(
     string? Clarification,
     double? Confidence,
     bool AddsToCurrent = false,
-    string? SourceText = null); // the user's words it came from - finds its part of a recording
+    string? SourceText = null, // the user's words it came from - finds its part of a recording
+    string? Unrelated = null); // adding to an item: words that weren't about it
 
 public record NormalizedExtraction(string Title, string? Summary, IReadOnlyList<NormalizedItem> Items);
 
@@ -180,7 +181,8 @@ public static class ExtractionNormalizer
             questions.Count > 0 ? Truncate(string.Join(" ", questions.Distinct()), 500) : null,
             raw.Confidence is { } c && double.IsFinite(c) ? Math.Clamp(c, 0, 1) : null,
             raw.AddsToCurrent,
-            Clean(raw.SourceText, 4000));
+            Clean(raw.SourceText, 4000),
+            Clean(raw.Unrelated, 4000));
     }
 
     /// <summary>

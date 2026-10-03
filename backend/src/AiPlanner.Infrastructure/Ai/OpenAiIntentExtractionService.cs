@@ -88,7 +88,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             i.Intent, i.Title, i.Summary, i.Description, i.Date, i.Time, i.EndTime, i.Location,
             i.Priority,
             i.Reminders?.Select(r => new RawReminder(r.Kind, r.MinutesBefore, r.Date, r.Time, r.Days)).ToList(),
-            i.Recurrence, i.Clarification, i.Confidence, i.AddsToCurrent ?? false, i.SourceText)).ToList();
+            i.Recurrence, i.Clarification, i.Confidence, i.AddsToCurrent ?? false, i.SourceText, i.Unrelated)).ToList();
 
         return new RawExtraction(parsed.Title, parsed.Summary, items, content, "OpenAI", completion.Model ?? _options.Model);
     }
@@ -131,10 +131,11 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             - "clarification": a short question for the user when something important is missing or ambiguous (e.g. an appointment with no time); otherwise null.
             - "confidence": 0 to 1, how sure you are that the item is right.
             - "sourceText": the exact words from the input this item came from, copied verbatim (same language, same wording, no paraphrase) - the whole stretch that talks about it. Used to play just that part of a voice recording.
-            - Top-level "title": 2-5 words naming the whole capture. Top-level "summary": 1-2 sentences if the input is longer than one sentence, otherwise null.
+            - Top-level "title": 2-5 words naming the whole capture. Top-level "summary": 1-2 sentences if the input is longer than one sentence, otherwise null. The summary is read by the person who said it: write it as a short note of what's planned ("Batteries tomorrow; dinner with Sara on Friday at 19:00"), never about "the user" and never in the third person.
 
             Only extract what the user actually said. Never invent items, people, places or times.
             - "addsToCurrent": false, unless the "Continuing" section below says otherwise.
+            - "unrelated": null, unless the "UPDATING ONE ITEM" section below says otherwise.
 
             Never return nothing: if the input is a question, an idea, or anything that isn't clearly a task or appointment, return it as a single "note" whose "description" keeps the user's words. The user can change any item's type in the review.
             """ + Continuing(c);
@@ -161,7 +162,8 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
                 Work only on this item. Return exactly ONE item, with "addsToCurrent": true, that is the WHOLE item after the change:
                 - "title": exactly as in the saved item.
                 - "intent": as in the saved item, unless the user explicitly asks to change what it is ("make it an event", "turn this into a note", "it's actually a meeting", "make it a task") - then the new type. A date, time, place or person alone never changes it.
-                - "description": the saved description followed by the new detail in the user's own words (keep everything that was there). Anything in the new input that isn't a field change goes here - never into a separate item.
+                - "description": the saved description (keep everything that was there), then the new information about this item in the user's own words, as its own sentence. Information only: leave out instructions you carried out in the fields ("make it an event", "remind me at 5", "move it to 3pm") - those show as the changed fields.
+                - "unrelated": words from the new input that are not about this item at all (a different errand, e.g. "Also call mom tonight"), copied verbatim; null if everything is about this item. Keep them out of the description - the user is offered to capture them separately. Never return them as a second item.
                 - "date", "time", "endTime", "location", "priority": the saved values, unless the new input changes them.
                 - "reminders": the saved reminders plus any new ones; remove or change one only if the user says so.
                 - "sourceText": the new words.
@@ -218,7 +220,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             ["type"] = "object",
             ["additionalProperties"] = false,
             ["required"] = new JsonArray("intent", "title", "summary", "description", "date", "time", "endTime",
-                "location", "priority", "reminders", "recurrence", "clarification", "confidence", "addsToCurrent", "sourceText"),
+                "location", "priority", "reminders", "recurrence", "clarification", "confidence", "addsToCurrent", "sourceText", "unrelated"),
             ["properties"] = new JsonObject
             {
                 ["intent"] = new JsonObject { ["type"] = "string", ["enum"] = new JsonArray("task", "appointment", "note") },
@@ -236,6 +238,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
                 ["confidence"] = new JsonObject { ["type"] = "number" },
                 ["addsToCurrent"] = new JsonObject { ["type"] = "boolean" },
                 ["sourceText"] = new JsonObject { ["type"] = "string", ["description"] = "Verbatim excerpt of the input this item came from" },
+                ["unrelated"] = Nullable("string", "Updating one item: verbatim words not about it"),
             },
         };
 
@@ -266,7 +269,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
     private sealed record ItemJson(
         string? Intent, string? Title, string? Summary, string? Description,
         string? Date, string? Time, string? EndTime, string? Location, string? Priority,
-        List<ReminderJson>? Reminders, string? Recurrence, string? Clarification, double? Confidence, bool? AddsToCurrent, string? SourceText);
+        List<ReminderJson>? Reminders, string? Recurrence, string? Clarification, double? Confidence, bool? AddsToCurrent, string? SourceText, string? Unrelated);
 
     private sealed record ReminderJson(string? Kind, int? MinutesBefore, string? Date, string? Time, List<string>? Days);
 }

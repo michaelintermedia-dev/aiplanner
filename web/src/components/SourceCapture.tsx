@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import type { AppendTarget } from '@shared/types'
 import { clipsLabel, itemClips, type Snippet } from '@shared/audioSnippet'
 import { useEffect, useRef, useState } from 'react'
-import { IoMicOutline, IoPlay } from 'react-icons/io5'
+import { IoKeypadOutline, IoMicOutline, IoPlay } from 'react-icons/io5'
 import { useNavigate } from 'react-router'
 import { capturesApi } from '../api/endpoints'
 import { itemPath } from '../lib/notifications'
@@ -33,7 +33,10 @@ export function SourceCapture({ captureId, item }: { captureId: string; item?: A
 
   return (
     <section className="card source">
-      <h2>{capture.source === 'Voice' ? `🎤 ${t('source.fromVoice')}` : `⌨ ${t('source.fromTyped')}`}</h2>
+      <h2 className="source-heading">
+        {capture.source === 'Voice' ? <IoMicOutline aria-hidden /> : <IoKeypadOutline aria-hidden />}{' '}
+        {capture.source === 'Voice' ? t('source.fromVoice') : t('source.fromTyped')}
+      </h2>
       <p className="muted">
         “{capture.title}” · {when}
       </p>
@@ -95,6 +98,30 @@ function RecordingPlayer({ captureId, parts, clips }: { captureId: string; parts
   const clip = useRef(0)
   const stopAt = useRef<number | null>(null)
   const seekedTo = useRef<number | null>(null)
+  // timeupdate fires only ~4x a second (half a second of audio at 2x): while a
+  // part plays, its end is also checked every frame, so it stops on time.
+  const frame = useRef<number | null>(null)
+
+  const endOfClip = (a: HTMLAudioElement) => {
+    if (stopAt.current === null || a.currentTime < stopAt.current) return
+    // End of this part: on to the next one, or stop.
+    if (clip.current + 1 < clips.length) playClip(clip.current + 1)
+    else {
+      a.pause()
+      stopAt.current = null
+    }
+  }
+
+  const watch = () => {
+    frame.current = null
+    const a = audio.current
+    if (!a || a.paused || stopAt.current === null) return
+    endOfClip(a)
+    if (!a.paused && stopAt.current !== null) frame.current = requestAnimationFrame(watch)
+  }
+  useEffect(() => () => {
+    if (frame.current !== null) cancelAnimationFrame(frame.current)
+  }, [])
 
   const playClip = (i: number) => {
     const a = audio.current
@@ -140,14 +167,9 @@ function RecordingPlayer({ captureId, parts, clips }: { captureId: string; parts
           controls
           src={url}
           aria-label={clips.length ? t('player.playWhole') : t('source.recording')}
-          onTimeUpdate={(e) => {
-            if (stopAt.current === null || e.currentTarget.currentTime < stopAt.current) return
-            // End of this part: on to the next one, or stop.
-            if (clip.current + 1 < clips.length) playClip(clip.current + 1)
-            else {
-              e.currentTarget.pause()
-              stopAt.current = null
-            }
+          onTimeUpdate={(e) => endOfClip(e.currentTarget)}
+          onPlaying={() => {
+            if (frame.current === null) frame.current = requestAnimationFrame(watch)
           }}
           // Any other pause or a manual seek means the user took over: play on freely.
           onPause={() => (stopAt.current = null)}

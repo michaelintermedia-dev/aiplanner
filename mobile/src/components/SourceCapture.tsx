@@ -37,9 +37,12 @@ export function SourceCapture({ captureId, item }: { captureId: string; item?: A
 
   return (
     <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.border }]}>
-      <Text style={[styles.heading, { color: c.muted }]}>
-        {capture.source === 'Voice' ? `🎤 ${t('source.fromVoice').toUpperCase()}` : `⌨ ${t('source.fromTyped').toUpperCase()}`}
-      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <Ionicons name={capture.source === 'Voice' ? 'mic-outline' : 'keypad-outline'} size={14} color={c.muted} />
+        <Text style={[styles.heading, { color: c.muted }]}>
+          {(capture.source === 'Voice' ? t('source.fromVoice') : t('source.fromTyped')).toUpperCase()}
+        </Text>
+      </View>
       <Text style={{ color: c.muted }}>
         “{capture.title}” · {when}
       </Text>
@@ -123,7 +126,7 @@ function RecordingPlayer({
   clips: Snippet[]
 }) {
   // Frequent position updates, so a part stops close to its end (even at 2x).
-  const player = useAudioPlayer(null, { updateInterval: 100 })
+  const player = useAudioPlayer(null, { updateInterval: 50 })
   const [speed] = usePlaybackSpeed()
   const [playing, setPlaying] = useState<{ part: number; snippet: boolean } | null>(null)
   const current = useRef<number | null>(null)

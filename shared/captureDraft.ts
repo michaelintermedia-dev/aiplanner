@@ -43,6 +43,9 @@ export interface ItemDraft {
   /** Updating the item with a type change: use the AI's new title instead of keeping the item's. */
   useNewTitle?: boolean
   clarification: string | null
+  /** "Add more": words that weren't about the item, and whether to capture them as a new entry after saving. */
+  unrelated: string | null
+  captureUnrelated: boolean
 }
 
 /** `target`: reviewing a continued capture, so "Add to this item" is available. */
@@ -67,6 +70,8 @@ export function toDraft(item: CaptureItem, timeZone: string, target?: AppendTarg
     clarification: item.clarification,
     appendTo: wholeItem,
     wholeItem,
+    unrelated: target ? (item.unrelated ?? null) : null,
+    captureUnrelated: true,
   }
 }
 
@@ -179,3 +184,7 @@ export const suggestedTitle = (d: ItemDraft, target?: AppendTarget) =>
  */
 export const reviewItems = (capture: Capture, target?: AppendTarget) =>
   capture.items.filter((i) => i.status === 'PendingReview' && (!target || i.addsToCurrent))
+
+/** After saving an "Add more" review: the words not about the item, to capture as a new entry (or null). */
+export const followUpText = (drafts: ItemDraft[]) =>
+  drafts.filter((d) => d.include && d.unrelated && d.captureUnrelated).map((d) => d.unrelated!.trim()).join(' ') || null

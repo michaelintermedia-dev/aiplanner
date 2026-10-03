@@ -124,4 +124,17 @@ public class ContinuedItemTests
         kept.Intent.Should().Be(ExtractionIntent.Appointment);
         kept.StartUtc.Should().Be(Friday19);
     }
+
+    [Fact]
+    public void Unrelated_words_stay_out_of_the_details()
+    {
+        var plumber = Item(ExtractionIntent.Task, "Call plumber back", "Leak under the sink", due: Friday19);
+        var update = Item(ExtractionIntent.Task, "Call plumber back", "Leak under the sink", due: Friday19, addsToCurrent: true)
+            with { Unrelated = "Also call mom tonight." };
+
+        var kept = ContinuedItem.Keep([update], plumber, "Ask him about the kitchen tap as well. Also call mom tonight.");
+
+        kept.Description.Should().Be("Leak under the sink" + "\n\n" + "Ask him about the kitchen tap as well.");
+        kept.Unrelated.Should().Be("Also call mom tonight.");
+    }
 }

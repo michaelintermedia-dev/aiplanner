@@ -2162,6 +2162,10 @@ button.kind-icon:hover:not(:disabled) {
   border-radius: var(--radius);
   background: var(--surface);
   font-size: 0.9rem;
+  /* Stays in view under the header even when Back restores a scrolled feed. */
+  position: sticky;
+  top: calc(var(--app-header-height, 56px) + 8px);
+  z-index: 5;
 }
 
 .pending-review span {
@@ -2176,4 +2180,37 @@ button.kind-icon:hover:not(:disabled) {
 
 .hint.warn {
   color: var(--warn);
+}
+
+/* Updating an item: its title is fixed, so it reads as text with a lock, not a field. */
+.review-title.locked {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0;
+}
+
+.review-title.locked svg,
+.badge svg,
+.clarification svg {
+  color: var(--muted);
+  vertical-align: -2px;
+  flex-shrink: 0;
+}
+
+.clarification svg {
+  color: var(--warn);
+}
+
+/* "Also capture “...” as a new entry" under an "Add more" review. */
+.inline-check.unrelated {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.source-heading svg {
+  vertical-align: -3px;
+  color: var(--muted);
 }

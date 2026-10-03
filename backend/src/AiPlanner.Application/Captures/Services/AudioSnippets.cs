@@ -15,7 +15,7 @@ namespace AiPlanner.Application.Captures.Services;
 public static class AudioSnippets
 {
     private const int LeadInMs = 250;
-    private const int TailMs = 450;
+    public const int TailMs = 450;
     private const int MaxQuoteTokens = 400;
 
     /// <summary>
@@ -44,8 +44,11 @@ public static class AudioSnippets
     /// <summary>
     /// Where <paramref name="quote"/> was said, as [start, end) ms on the
     /// timeline, with a little air around it; null if it can't be found.
+    /// Words said twice: an equally good match from <paramref name="notBeforeMs"/>
+    /// on wins (items come in the order they were said, so the previous item's
+    /// end is passed - a repeated phrase then finds its own place, not the first).
     /// </summary>
-    public static (int StartMs, int EndMs)? Find(string? quote, IReadOnlyList<TimedWord> timeline, int totalMs)
+    public static (int StartMs, int EndMs)? Find(string? quote, IReadOnlyList<TimedWord> timeline, int totalMs, int notBeforeMs = 0)
     {
         var q = Tokens(quote).Take(MaxQuoteTokens).ToList();
         if (q.Count == 0 || timeline.Count == 0) return null;
@@ -56,6 +59,7 @@ public static class AudioSnippets
         var score = new int[m + 1, n + 1];
         var start = new int[m + 1, n + 1];
         int best = 0, bestI = 0, bestJ = 0;
+        int later = 0, laterI = 0, laterJ = 0; // the best one starting at notBeforeMs or after
         for (var i = 1; i <= m; i++)
         {
             for (var j = 1; j <= n; j++)
@@ -77,7 +81,16 @@ public static class AudioSnippets
                 {
                     (best, bestI, bestJ) = (s, i, j);
                 }
+                if (s > later && timeline[Math.Clamp(start[i, j], 0, j - 1)].StartMs >= notBeforeMs)
+                {
+                    (later, laterI, laterJ) = (s, i, j);
+                }
             }
+        }
+
+        if (later == best && notBeforeMs > 0)
+        {
+            (bestI, bestJ) = (laterI, laterJ);
         }
 
         // Enough of the quote must be there: worth about half its words.

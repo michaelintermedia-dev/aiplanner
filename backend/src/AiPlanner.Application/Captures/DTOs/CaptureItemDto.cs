@@ -31,4 +31,7 @@ public record CaptureItemDto(
     Guid? ResultingNoteId,
     bool AddsToCurrent = false,
     int? AudioStartMs = null,
-    int? AudioEndMs = null);
+    int? AudioEndMs = null,
+    string? ContinuesItemType = null, // "Add more" on a saved item: which one
+    Guid? ContinuesItemId = null,
+    string? Unrelated = null); // "Add more": words that weren't about the item

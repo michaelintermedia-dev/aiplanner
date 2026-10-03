@@ -33,6 +33,13 @@ public class AIExtractionItem : BaseEntity
     /// </summary>
     public bool AddsToCurrent { get; set; }
 
+    /// <summary>"Add more" on a saved item: which one ("Task"/"Appointment"/"Note" + id) - so an unsaved review of it can be resumed.</summary>
+    public string? ContinuesItemType { get; set; }
+    public Guid? ContinuesItemId { get; set; }
+
+    /// <summary>"Add more": words that weren't about the item, offered as a new capture instead.</summary>
+    public string? Unrelated { get; set; }
+
     /// <summary>
     /// Where in the recording this item was said (ms from the start of the whole
     /// recording, parts back to back), so it can play just its part. Null for

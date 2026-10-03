@@ -26,10 +26,19 @@ public class CapturesController : ControllerBase
         _captures = captures;
     }
 
-    /// <summary>GET /api/captures?take=50 - capture history, newest first.</summary>
+    /// <summary>
+    /// GET /api/captures?take=50 - capture history, newest first.
+    /// &amp;pendingDays=7: only captures from the last 7 days with a review left unsaved.
+    /// </summary>
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<CaptureSummaryDto>>> GetList([FromQuery] int take = 50, CancellationToken ct = default) =>
-        Ok(await _captures.GetListAsync(take, ct));
+    public async Task<ActionResult<IReadOnlyList<CaptureSummaryDto>>> GetList(
+        [FromQuery] int take = 50, [FromQuery] int? pendingDays = null, CancellationToken ct = default) =>
+        Ok(await _captures.GetListAsync(take, ct, pendingDays));
+
+    /// <summary>POST /api/captures/pending/discard - rejects every unsaved proposal; returns how many.</summary>
+    [HttpPost("pending/discard")]
+    public async Task<ActionResult<int>> DiscardPending(CancellationToken ct) =>
+        Ok(await _captures.DiscardPendingAsync(ct));
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<CaptureDto>> GetById(Guid id, CancellationToken ct)

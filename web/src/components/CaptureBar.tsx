@@ -78,6 +78,10 @@ export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {
   const [capture, setCapture] = useState<Capture | null>(null)
   // A review left unfinished earlier (not when adding to an item - that has its own review).
   const pending = usePendingReview(!continueFrom && capture === null)
+  // Resumed from the banner: an unsaved "Add more" review of a saved item.
+  const [resumedTarget, setResumedTarget] = useState<AppendTarget | undefined>()
+  // Reviewing the words an "Add more" wasn't about, captured as a new entry.
+  const [followUp, setFollowUp] = useState(false)
   // Reloading or closing the tab mid-review asks first (it can be resumed, but say so).
   useEffect(() => {
     if (!capture) return
@@ -98,8 +102,10 @@ export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {
     try {
       setCapture(await work())
       setText('')
+      return true
     } catch (err) {
       setError(err instanceof Error ? err.message : t('common.error'))
+      return false
     } finally {
       setBusy(null)
       // A new capture is pending until saved: the "Unsaved review" banner must know it at once.
@@ -170,10 +176,21 @@ export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {
     return (
       <CaptureReview
         capture={capture}
-        appendTarget={continueFrom?.target}
-        onMoved={continueFrom?.onMoved}
-        onDone={(message) => {
+        appendTarget={followUp ? undefined : (continueFrom?.target ?? resumedTarget)}
+        onMoved={followUp ? undefined : continueFrom?.onMoved}
+        onDone={(message, followUpWords) => {
           setCapture(null)
+          setResumedTarget(undefined)
+          if (followUpWords) {
+            // "Also call mom tonight" said while adding to an item: its own review comes next.
+            setFollowUp(true)
+            void run('understanding', () => capturesApi.text(followUpWords)).then((ok) => {
+              if (!ok) setFollowUp(false)
+              setSavedMessage(message)
+            })
+            return
+          }
+          setFollowUp(false)
           if (continueFrom) continueFrom.onClose()
           else setSavedMessage(message)
         }}
@@ -188,15 +205,30 @@ export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {
     {pending.capture && !hasAudio && busy === null && (
       // A review left unfinished earlier: never silently lost.
       <div className="pending-review" role="status">
-        <span>{t('review.pending', { title: pending.capture.title })}</span>
+        <span>
+          {pending.appendTarget
+            ? t('review.pendingAddition', { title: pending.appendTarget.title })
+            : t('review.pending', { title: pending.capture.title })}
+        </span>
         {pending.resumable && (
-          <button type="button" className="link" onClick={() => setCapture(pending.capture)}>
+          <button
+            type="button"
+            className="link"
+            onClick={() => {
+              setResumedTarget(pending.appendTarget)
+              setCapture(pending.capture)
+            }}>
             {t('review.resume')}
           </button>
         )}
         <button type="button" className="link danger" disabled={pending.discard.isPending} onClick={() => pending.discard.mutate(pending.capture!)}>
           {t('capture.discard')}
         </button>
+        {pending.others > 0 && (
+          <button type="button" className="link danger" disabled={pending.discardAll.isPending} onClick={() => pending.discardAll.mutate(undefined)}>
+            {t('review.discardAll', { count: pending.others + 1 })}
+          </button>
+        )}
       </div>
     )}
     <form className="capture" onSubmit={submitText}>

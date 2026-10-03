@@ -17,7 +17,11 @@ public interface ICaptureService
     /// </summary>
     Task<Result<CaptureDto>> CaptureVoiceAsync(IReadOnlyList<AudioSegment> segments, CancellationToken ct = default);
 
-    Task<IReadOnlyList<CaptureSummaryDto>> GetListAsync(int take, CancellationToken ct = default);
+    /// <param name="pendingDays">Only captures from the last N days with proposals still waiting for review.</param>
+    Task<IReadOnlyList<CaptureSummaryDto>> GetListAsync(int take, CancellationToken ct = default, int? pendingDays = null);
+
+    /// <summary>Rejects every proposal still waiting for review (the "Discard all" of unsaved reviews).</summary>
+    Task<int> DiscardPendingAsync(CancellationToken ct = default);
 
     Task<Result<CaptureDto>> GetByIdAsync(Guid id, CancellationToken ct = default);
 

@@ -57,6 +57,10 @@ export function CaptureBar({
   const [capture, setCapture] = useState<Capture | null>(null)
   // A review left unfinished earlier (not when adding to an item - that has its own review).
   const pending = usePendingReview(!continueFrom && capture === null)
+  // Resumed from the banner: an unsaved "Add more" review of a saved item.
+  const [resumedTarget, setResumedTarget] = useState<AppendTarget | undefined>()
+  // Reviewing the words an "Add more" wasn't about, captured as a new entry.
+  const [followUp, setFollowUp] = useState(false)
   const [savedMessage, setSavedMessage] = useState<string | null>(null)
   const [silent, setSilent] = useState(false)
 
@@ -121,10 +125,21 @@ export function CaptureBar({
     return (
       <CaptureReview
         capture={capture}
-        appendTarget={continueFrom?.target}
-        onMoved={continueFrom?.onMoved}
-        onDone={(message) => {
+        appendTarget={followUp ? undefined : (continueFrom?.target ?? resumedTarget)}
+        onMoved={followUp ? undefined : continueFrom?.onMoved}
+        onDone={(message, followUpWords) => {
           setCapture(null)
+          setResumedTarget(undefined)
+          if (followUpWords) {
+            // "Also call mom tonight" said while adding to an item: its own review comes next.
+            setFollowUp(true)
+            void run('understanding', () => capturesApi.text(followUpWords)).then((ok) => {
+              if (!ok) setFollowUp(false)
+              setSavedMessage(message)
+            })
+            return
+          }
+          setFollowUp(false)
           if (continueFrom) continueFrom.onClose()
           else setSavedMessage(message)
         }}
@@ -139,9 +154,30 @@ export function CaptureBar({
       {pending.capture && !hasAudio && busy === null && (
         // A review left unfinished earlier: never silently lost.
         <View style={[styles.pending, { borderColor: c.warn }]} accessibilityRole="alert">
-          <Text style={{ color: c.text, flex: 1 }}>{t('review.pending', { title: pending.capture.title })}</Text>
-          {pending.resumable && <Button title={t('review.resume')} variant="link" onPress={() => setCapture(pending.capture)} />}
+          <Text style={{ color: c.text, flex: 1 }}>
+            {pending.appendTarget
+              ? t('review.pendingAddition', { title: pending.appendTarget.title })
+              : t('review.pending', { title: pending.capture.title })}
+          </Text>
+          {pending.resumable && (
+            <Button
+              title={t('review.resume')}
+              variant="link"
+              onPress={() => {
+                setResumedTarget(pending.appendTarget)
+                setCapture(pending.capture)
+              }}
+            />
+          )}
           <Button title={t('capture.discard')} variant="danger" disabled={pending.discard.isPending} onPress={() => pending.discard.mutate(pending.capture!)} />
+          {pending.others > 0 && (
+            <Button
+              title={t('review.discardAll', { count: pending.others + 1 })}
+              variant="danger"
+              disabled={pending.discardAll.isPending}
+              onPress={() => pending.discardAll.mutate(undefined)}
+            />
+          )}
         </View>
       )}
       {hasAudio ? (

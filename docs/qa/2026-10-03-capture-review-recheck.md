@@ -114,3 +114,9 @@ Not covered: the mobile app on a device (code only), voice recordings (no new vo
 - No new voice capture or voice addition (#6 and #15 checked by code only).
 - One AI-quality observation, not filed: "Remind me about vitamins" (no time) came back as a Note with no reminder and no question in both ru and en (`r3-*.json`). The user is not asked when to be reminded.
 - AI calls: 15 of 20 used.
+
+## Status after fixes (2026-10-03)
+- A1-A5: fixed in 10fa0c1 and verified against the QA API.
+- A6, A7 and the still-open #6, #7, #8, #10-#16: fixed in the next commit and verified on web
+  against the QA API (`tools/qa/out/v1.cjs`-`v7.cjs`). Mobile has the same changes and
+  typechecks, but it wasn't run on a device.

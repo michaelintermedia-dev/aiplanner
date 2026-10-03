@@ -391,6 +391,25 @@ Local dev notes:
   details that lost the old text or the new words get both back. A new
   "Add more" on an item rejects earlier unsaved ones of that capture, and the
   review shows only the item's own proposal (`reviewItems`).
+  Words that aren't about the item come back as `unrelated` (prompt + schema,
+  `AIExtractionItem.Unrelated`) and stay out of its details; the review offers
+  "Also capture “...” as a new entry" (on by default), and after Save the
+  capture bar runs a normal capture of them and shows its review
+  (`followUpText`, `onDone(message, followUp)`). Each "Add more" proposal
+  stores which item it belongs to (`ContinuesItemType/Id`), so an unsaved
+  one can be resumed from the banner ("Unsaved addition to “X”").
+  A voice addition to a typed capture keeps its recording: the capture gets
+  its first VoiceCapture + Transcript (typed words first, then the spoken).
+- **Unsaved reviews are never lost** (2026-10-03, web + mobile): the capture
+  bar's banner (`usePendingReview`, `GET /api/captures?pendingDays=7`) offers
+  the newest one back - Resume / Discard, plus "Discard all N"
+  (`POST /api/captures/pending/discard`) when several wait. Edits made in a
+  review are kept on the device until Save/Cancel (`reviewDrafts`: web
+  localStorage, mobile a JSON file; `restoreDrafts` only reuses them for the
+  same proposals). Web also warns before reload/close mid-review. Save is
+  disabled with nothing ticked and guarded against double clicks; a type
+  change drops the old item's query (`useAction` `forget`) so it isn't
+  refetched (404).
 - **Each item plays its own part of a voice message** (user's request,
   2026-10-03). The AI quotes each item's words verbatim (`sourceText`);
   `OpenAiTranscriptionService` makes a second, parallel call to `TimingModel`
@@ -400,8 +419,10 @@ Local dev notes:
   spelling differences allowed). Stored as `AIExtractionItem.AudioStartMs/
   AudioEndMs` on one timeline with parts back to back, plus
   `VoiceCapture.AudioPartDurationsMs`; continued captures place new parts
-  after the old ones. No audio is cut - clients play a range: web seeks the
-  joined track and pauses at the end; mobile starts in the right part
+  after the old ones. Items are matched in the order they were said: a
+  phrase said twice finds its own place (`Find(..., notBeforeMs)`). No audio
+  is cut - clients play a range: web seeks the joined track and pauses at the
+  end (checked every animation frame, so 2× stops on time); mobile starts in the right part
   (`locateInParts`) and stops across parts. "Play this part (0:02-0:05)" +
   "Whole recording" on the item's source capture (`shared/audioSnippet.ts`).
   An item can have several capture items (its words + each later addition):

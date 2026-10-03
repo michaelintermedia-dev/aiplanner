@@ -1,8 +1,11 @@
-import { draftHasTime, draftProblems, INTENT_OPTIONS, toConfirmItem, movedItem, reviewItems, suggestedTitle, toDraft, typeChange, updatesWholeItem, type ItemDraft } from '@shared/captureDraft'
+import { draftHasTime, draftProblems, followUpText, INTENT_OPTIONS, toConfirmItem, movedItem, reviewItems, suggestedTitle, toDraft, typeChange, updatesWholeItem, type ItemDraft } from '@shared/captureDraft'
 import { endsNextDay } from '@shared/dates'
 import { KIND_LABEL } from '@shared/feed'
 import type { AppendTarget, Capture, TaskPriority, ItemType } from '@shared/types'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { IoHelpCircleOutline, IoLockClosedOutline, IoMicOutline } from 'react-icons/io5'
+import { restoreDrafts } from '@shared/pendingReview'
+import { reviewDrafts } from '../lib/reviewDrafts'
 import { capturesApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { useAction } from '../lib/useAction'
@@ -21,17 +24,25 @@ export function CaptureReview({
   onMoved,
 }: {
   capture: Capture
-  onDone: (message: string | null) => void
+  /** `followUp`: words to capture as a new entry next (said in "Add more" but not about the item). */
+  onDone: (message: string | null, followUp?: string | null) => void
   /** Reviewing a continued capture: offer "Add to this <item>". */
   appendTarget?: AppendTarget
   /** The item's type was changed, so it has a new id. */
   onMoved?: (item: { itemType: ItemType; itemId: string }) => void
 }) {
   const { zone } = useAuth()
-  const confirm = useAction((items: ReturnType<typeof toConfirmItem>[]) => capturesApi.confirm(capture.id, items))
+  const confirm = useAction((items: ReturnType<typeof toConfirmItem>[]) => capturesApi.confirm(capture.id, items), {
+    // A type change replaces the item: drop its page's query instead of refetching a deleted item (404).
+    forget: (items) => (appendTarget && items.some((i) => movesItem(i, appendTarget)) ? [DETAIL_KEY[appendTarget.itemType], appendTarget.itemId] : ['none']),
+  })
+  // Edits are kept on this device until Save / Cancel, so Resume brings them back.
   const [drafts, setDrafts] = useState<ItemDraft[]>(() =>
-    reviewItems(capture, appendTarget).map((i) => toDraft(i, zone.timeZone, appendTarget)),
+    restoreDrafts(reviewDrafts.load(capture.id), reviewItems(capture, appendTarget).map((i) => toDraft(i, zone.timeZone, appendTarget))),
   )
+  useEffect(() => reviewDrafts.save(capture.id, drafts), [capture.id, drafts])
+  // One confirm at a time: a double click must not send a second one before the button disables.
+  const sending = useRef(false)
 
   const update = (id: string, patch: Partial<ItemDraft>) =>
     setDrafts((ds) => ds.map((d) => (d.id === id ? { ...d, ...patch } : d)))
@@ -42,15 +53,20 @@ export function CaptureReview({
   // The awaited result, not a mutate() callback: saving refreshes the item's
   // page, and when its type changed that page unmounts this review first -
   // which drops mutate() callbacks, but never the promise.
-  const save = () =>
+  const save = () => {
+    if (sending.current) return
+    sending.current = true
     confirm
       .mutateAsync(drafts.map((d) => toConfirmItem(d, zone.timeZone, appendTarget)))
       .then((saved) => {
-        onDone(included.length ? t('review.saved', { count: included.length }) : null)
+        reviewDrafts.clear(capture.id)
+        onDone(included.length ? t('review.saved', { count: included.length }) : null, followUpText(drafts))
         const moved = movedItem(drafts, saved, appendTarget)
         if (moved) onMoved?.(moved)
       })
       .catch(() => {}) // shown from confirm.error
+      .finally(() => (sending.current = false))
+  }
 
   // Cancel rejects everything, so the capture doesn't linger as pending.
   const discard = () =>
@@ -58,7 +74,12 @@ export function CaptureReview({
       ? onDone(null)
       : confirm.mutate(
           drafts.map((d) => toConfirmItem({ ...d, include: false }, zone.timeZone)),
-          { onSuccess: () => onDone(null) },
+          {
+            onSuccess: () => {
+              reviewDrafts.clear(capture.id)
+              onDone(null)
+            },
+          },
         )
 
   return (
@@ -73,7 +94,9 @@ export function CaptureReview({
               <p className="muted">{t('review.understood')}</p>
               <h3>{capture.title}</h3>
             </div>
-            <span className="badge">{capture.source === 'Voice' ? `🎤 ${t('capture.voice')}` : t('capture.typed')}</span>
+            <span className="badge">
+              {capture.source === 'Voice' && <IoMicOutline aria-hidden />} {capture.source === 'Voice' ? t('capture.voice') : t('capture.typed')}
+            </span>
           </header>
           {capture.summary && <p className="review-summary">{capture.summary}</p>}
           <details className="transcript">
@@ -98,13 +121,19 @@ export function CaptureReview({
         <button type="button" onClick={discard} disabled={confirm.isPending}>
           {t('common.cancel')}
         </button>
-        <button type="button" className="primary" onClick={save} disabled={confirm.isPending || blocked || drafts.length === 0}>
+        <button type="button" className="primary" onClick={save} disabled={confirm.isPending || blocked || included.length === 0}>
           {included.length === drafts.length ? t('review.saveAll') : t('review.saveSome', { count: included.length })}
         </button>
       </div>
     </section>
   )
 }
+
+const DETAIL_KEY = { Task: 'task', Appointment: 'appointment', Note: 'note' } as const
+
+/** A whole-item update to another type: the item gets a new id and the old one is deleted. */
+const movesItem = (i: ReturnType<typeof toConfirmItem>, target: AppendTarget) =>
+  i.include && i.replacesItem && (i.intent === 'Appointment' ? 'Appointment' : i.intent === 'Note' ? 'Note' : 'Task') !== target.itemType
 
 const ADD_TO = { Task: 'review.addToTask', Appointment: 'review.addToEvent', Note: 'review.addToNote' } as const
 
@@ -130,14 +159,11 @@ function ItemEditor({
           aria-label={d.include ? t('review.include') : t('review.excluded')}
         />
         {updatesWholeItem(d) && appendTarget ? (
-          // Updating the item continued from: its title stays.
-          <input
-            className="review-title"
-            value={d.useNewTitle ? d.title : appendTarget.title}
-            readOnly
-            aria-label={t('item.title')}
-            title={d.useNewTitle ? undefined : t('review.titleKept')}
-          />
+          // Updating the item continued from: its title stays - shown as text, not a field.
+          <span className="review-title locked" title={d.useNewTitle ? undefined : t('review.titleKept')}>
+            {d.useNewTitle ? d.title : appendTarget.title}
+            {!d.useNewTitle && <IoLockClosedOutline aria-label={t('review.titleKept')} />}
+          </span>
         ) : (
           <input
             className="review-title"
@@ -256,7 +282,18 @@ function ItemEditor({
           />
         </label>
       )}
-      {d.include && d.clarification && <p className="clarification">❓ {d.clarification}</p>}
+      {d.include && d.unrelated && (
+        // Words that weren't about this item: offered as a new entry, not dropped.
+        <label className="inline-check unrelated">
+          <input type="checkbox" checked={d.captureUnrelated} onChange={(e) => onChange({ captureUnrelated: e.target.checked })} />
+          <span>{t('review.captureUnrelated', { text: d.unrelated })}</span>
+        </label>
+      )}
+      {d.include && d.clarification && (
+        <p className="clarification">
+          <IoHelpCircleOutline aria-hidden /> {d.clarification}
+        </p>
+      )}
       {problems.length > 0 && <p className="error">{problems.join(' ')}</p>}
     </li>
   )

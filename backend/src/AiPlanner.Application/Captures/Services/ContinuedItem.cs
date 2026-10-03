@@ -100,11 +100,25 @@ public static class ContinuedItem
             if (kept.Location is null && current.Location is not null) kept = kept with { Location = current.Location };
             if (kept.Priority is null && current.Priority is not null) kept = kept with { Priority = current.Priority };
         }
-        if (!MentionsWords(kept.Description, current.Description ?? "") || !MentionsWords(kept.Description, newWords))
+        // Words not about this item are offered as a new capture, not kept here.
+        var about = Without(newWords, kept.Unrelated);
+        if (about.Length == 0)
+        {
+            kept = kept with { Description = current.Description };
+        }
+        else if (!MentionsWords(kept.Description, current.Description ?? "") || !MentionsWords(kept.Description, about))
         {
             // The merge lost the old text or the new words: keep both as written.
-            kept = kept with { Description = JoinDetails(current.Description, newWords) };
+            kept = kept with { Description = JoinDetails(current.Description, about) };
         }
         return kept;
+    }
+
+    /// <summary>The new words minus the unrelated part (if the AI quoted it verbatim).</summary>
+    private static string Without(string newWords, string? unrelated)
+    {
+        if (string.IsNullOrWhiteSpace(unrelated)) return newWords.Trim();
+        var at = newWords.IndexOf(unrelated.Trim(), StringComparison.OrdinalIgnoreCase);
+        return at < 0 ? newWords.Trim() : (newWords[..at] + " " + newWords[(at + unrelated.Trim().Length)..]).Trim();
     }
 }

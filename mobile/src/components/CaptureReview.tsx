@@ -1,9 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { draftHasTime, draftProblems, INTENT_OPTIONS, toConfirmItem, movedItem, reviewItems, suggestedTitle, toDraft, typeChange, updatesWholeItem, type ItemDraft } from '@shared/captureDraft'
+import { draftHasTime, draftProblems, followUpText, INTENT_OPTIONS, toConfirmItem, movedItem, reviewItems, suggestedTitle, toDraft, typeChange, updatesWholeItem, type ItemDraft } from '@shared/captureDraft'
 import { endsNextDay } from '@shared/dates'
 import { KIND_LABEL } from '@shared/feed'
 import type { AppendTarget, Capture, ExtractionIntent, TaskPriority, ItemType } from '@shared/types'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { restoreDrafts } from '@shared/pendingReview'
+import { reviewDrafts } from '@/lib/reviewDrafts'
 import { I18nManager, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native'
 import { capturesApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
@@ -14,6 +16,12 @@ import { ReminderList } from './ReminderList'
 import { Button } from './ui'
 import { t } from '@shared/i18n'
 import { priorityLabel } from '@shared/labels'
+
+const DETAIL_KEY = { Task: 'task', Appointment: 'appointment', Note: 'note' } as const
+
+/** A whole-item update to another type: the item gets a new id and the old one is deleted. */
+const movesItem = (i: ReturnType<typeof toConfirmItem>, target: AppendTarget) =>
+  i.include && i.replacesItem && (i.intent === 'Appointment' ? 'Appointment' : i.intent === 'Note' ? 'Note' : 'Task') !== target.itemType
 
 const PRIORITIES: (TaskPriority | null)[] = [null, 'Low', 'Medium', 'High']
 const ADD_TO = { Task: 'review.addToTask', Appointment: 'review.addToEvent', Note: 'review.addToNote' } as const
@@ -31,7 +39,8 @@ export function CaptureReview({
   onMoved,
 }: {
   capture: Capture
-  onDone: (message: string | null) => void
+  /** `followUp`: words to capture as a new entry next (said in "Add more" but not about the item). */
+  onDone: (message: string | null, followUp?: string | null) => void
   /** Reviewing a continued capture: offer "Add to this <item>". */
   appendTarget?: AppendTarget
   /** The item's type was changed, so it has a new id. */
@@ -39,10 +48,17 @@ export function CaptureReview({
 }) {
   const c = useColors()
   const { zone } = useAuth()
-  const confirm = useAction((items: ReturnType<typeof toConfirmItem>[]) => capturesApi.confirm(capture.id, items))
+  const confirm = useAction((items: ReturnType<typeof toConfirmItem>[]) => capturesApi.confirm(capture.id, items), {
+    // A type change replaces the item: drop its screen's query instead of refetching a deleted item (404).
+    forget: (items) => (appendTarget && items.some((i) => movesItem(i, appendTarget)) ? [DETAIL_KEY[appendTarget.itemType], appendTarget.itemId] : ['none']),
+  })
+  // Edits are kept on the device until Save / Cancel, so Resume brings them back.
   const [drafts, setDrafts] = useState<ItemDraft[]>(() =>
-    reviewItems(capture, appendTarget).map((i) => toDraft(i, zone.timeZone, appendTarget)),
+    restoreDrafts(reviewDrafts.load(capture.id), reviewItems(capture, appendTarget).map((i) => toDraft(i, zone.timeZone, appendTarget))),
   )
+  useEffect(() => reviewDrafts.save(capture.id, drafts), [capture.id, drafts])
+  // One confirm at a time: a double tap must not send a second one before the button disables.
+  const sending = useRef(false)
   const [showTranscript, setShowTranscript] = useState(false)
 
   const update = (id: string, patch: Partial<ItemDraft>) =>
@@ -54,15 +70,20 @@ export function CaptureReview({
   // The awaited result, not a mutate() callback: saving refreshes the item's
   // page, and when its type changed that page unmounts this review first -
   // which drops mutate() callbacks, but never the promise.
-  const save = () =>
+  const save = () => {
+    if (sending.current) return
+    sending.current = true
     confirm
       .mutateAsync(drafts.map((d) => toConfirmItem(d, zone.timeZone, appendTarget)))
       .then((saved) => {
-        onDone(included.length ? t('review.saved', { count: included.length }) : null)
+        reviewDrafts.clear(capture.id)
+        onDone(included.length ? t('review.saved', { count: included.length }) : null, followUpText(drafts))
         const moved = movedItem(drafts, saved, appendTarget)
         if (moved) onMoved?.(moved)
       })
       .catch(() => {}) // shown from confirm.error
+      .finally(() => (sending.current = false))
+  }
 
   // Cancel rejects everything so the capture doesn't linger as pending.
   const discard = () =>
@@ -70,7 +91,12 @@ export function CaptureReview({
       ? onDone(null)
       : confirm.mutate(
           drafts.map((d) => toConfirmItem({ ...d, include: false }, zone.timeZone)),
-          { onSuccess: () => onDone(null) },
+          {
+            onSuccess: () => {
+              reviewDrafts.clear(capture.id)
+              onDone(null)
+            },
+          },
         )
 
   return (
@@ -108,7 +134,7 @@ export function CaptureReview({
           variant="primary"
           onPress={save}
           busy={confirm.isPending}
-          disabled={blocked || drafts.length === 0}
+          disabled={blocked || included.length === 0}
         />
       </View>
     </View>
@@ -138,14 +164,22 @@ function ItemEditor({
           accessibilityLabel={d.include ? t('review.include') : t('review.excluded')}
           trackColor={{ true: c.accent }}
         />
-        <TextInput
-          style={[styles.itemTitle, { color: c.text, borderColor: c.border }, !d.include && styles.struck]}
-          // Updating the item continued from: its title stays.
-          value={updatesWholeItem(d) && appendTarget ? (d.useNewTitle ? d.title : appendTarget.title) : d.title}
-          editable={!updatesWholeItem(d)}
-          onChangeText={(title) => onChange({ title })}
-          accessibilityLabel={t('item.title')}
-        />
+        {updatesWholeItem(d) && appendTarget ? (
+          // Updating the item continued from: its title stays - shown as text, not a field.
+          <View style={styles.lockedTitle} accessibilityLabel={d.useNewTitle ? undefined : t('review.titleKept')}>
+            <Text style={[styles.lockedTitleText, { color: c.text }, !d.include && styles.struck]}>
+              {d.useNewTitle ? d.title : appendTarget.title}
+            </Text>
+            {!d.useNewTitle && <Ionicons name="lock-closed-outline" size={16} color={c.muted} />}
+          </View>
+        ) : (
+          <TextInput
+            style={[styles.itemTitle, { color: c.text, borderColor: c.border }, !d.include && styles.struck]}
+            value={d.title}
+            onChangeText={(title) => onChange({ title })}
+            accessibilityLabel={t('item.title')}
+          />
+        )}
       </View>
 
       {d.include && (
@@ -262,7 +296,23 @@ function ItemEditor({
             onChangeText={(description) => onChange({ description: description || null })}
             accessibilityLabel={d.appendTo && !d.wholeItem ? t('capture.textToAdd') : d.intent === 'Note' ? t('review.noteText') : t('review.details')}
           />
-          {d.clarification && <Text style={{ color: c.warn, fontSize: 14 }}>❓ {d.clarification}</Text>}
+          {d.unrelated && (
+            // Words that weren't about this item: offered as a new entry, not dropped.
+            <Pressable
+              onPress={() => onChange({ captureUnrelated: !d.captureUnrelated })}
+              style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: d.captureUnrelated }}>
+              <Ionicons name={d.captureUnrelated ? 'checkbox' : 'square-outline'} size={20} color={c.accent} />
+              <Text style={{ color: c.text, flex: 1 }}>{t('review.captureUnrelated', { text: d.unrelated })}</Text>
+            </Pressable>
+          )}
+          {d.clarification && (
+            <View style={{ flexDirection: 'row', gap: 6, alignItems: 'flex-start' }}>
+              <Ionicons name="help-circle-outline" size={18} color={c.warn} />
+              <Text style={{ color: c.warn, fontSize: 14, flex: 1 }}>{d.clarification}</Text>
+            </View>
+          )}
         </>
       )}
       {problems.length > 0 && <Text style={{ color: c.danger, fontSize: 13 }}>{problems.join(' ')}</Text>}
@@ -271,6 +321,8 @@ function ItemEditor({
 }
 
 const styles = StyleSheet.create({
+  lockedTitle: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6 },
+  lockedTitleText: { fontSize: 16, fontWeight: '600', flexShrink: 1 },
   card: { borderWidth: 1, borderRadius: 16, padding: 14, gap: 10 },
   title: { fontSize: 20, fontWeight: '700' },
   transcript: { padding: 10, borderRadius: 8, fontSize: 14, lineHeight: 20 },

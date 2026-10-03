@@ -207,12 +207,16 @@ public class CaptureService : ICaptureService
         return Result<CaptureDto>.Success(ToDto(extraction, transcript));
     }
 
-    public async Task<IReadOnlyList<CaptureSummaryDto>> GetListAsync(int take, CancellationToken ct = default)
+    public async Task<IReadOnlyList<CaptureSummaryDto>> GetListAsync(int take, CancellationToken ct = default, int? pendingDays = null)
     {
         var userId = RequireUserId();
-        return await _db.AIExtractions
-            .AsNoTracking()
-            .Where(e => e.UserId == userId)
+        var query = _db.AIExtractions.AsNoTracking().Where(e => e.UserId == userId);
+        if (pendingDays is { } days)
+        {
+            var since = _dateTime.UtcNow.AddDays(-Math.Clamp(days, 1, 365));
+            query = query.Where(e => e.CreatedAtUtc >= since && e.Items.Any(i => i.Status == ExtractionStatus.PendingReview));
+        }
+        return await query
             .OrderByDescending(e => e.CreatedAtUtc)
             .Take(Math.Clamp(take, 1, 100))
             .Select(e => new CaptureSummaryDto(
@@ -224,6 +228,17 @@ public class CaptureService : ICaptureService
                 e.Items.Count,
                 e.Items.Count(i => i.Status == ExtractionStatus.PendingReview)))
             .ToListAsync(ct);
+    }
+
+    public async Task<int> DiscardPendingAsync(CancellationToken ct = default)
+    {
+        var userId = RequireUserId();
+        var pending = await _db.AIExtractionItems
+            .Where(i => i.UserId == userId && i.Status == ExtractionStatus.PendingReview)
+            .ToListAsync(ct);
+        foreach (var item in pending) item.Status = ExtractionStatus.Rejected;
+        await _db.SaveChangesAsync(ct);
+        return pending.Count;
     }
 
     public async Task<Result<CaptureDto>> GetByIdAsync(Guid id, CancellationToken ct = default)
@@ -355,7 +370,7 @@ public class CaptureService : ICaptureService
             ProcessedAtUtc = _dateTime.UtcNow,
             Title = normalized.Title,
             Summary = normalized.Summary,
-            Items = normalized.Items.Select(i => ToItem(userId, i, timeline)).ToList(),
+            Items = ToItems(userId, normalized.Items, timeline),
         };
 
         _db.AIExtractions.Add(extraction);
@@ -388,14 +403,28 @@ public class CaptureService : ICaptureService
         return (raw, normalized);
     }
 
-    private static AIExtractionItem ToItem(Guid userId, NormalizedItem i, IReadOnlyList<TimedWord>? timeline)
+    private static AIExtractionItem ToItem(Guid userId, NormalizedItem i, IReadOnlyList<TimedWord>? timeline, int notBeforeMs = 0)
     {
         var item = ToItem(userId, i);
-        if (timeline is { Count: > 0 } && AudioSnippets.Find(i.SourceText, timeline, timeline[^1].EndMs + 1000) is { } range)
+        if (timeline is { Count: > 0 } && AudioSnippets.Find(i.SourceText, timeline, timeline[^1].EndMs + 1000, notBeforeMs) is { } range)
         {
             (item.AudioStartMs, item.AudioEndMs) = range;
         }
         return item;
+    }
+
+    /// <summary>The proposals in the order they were said: each one's clip is looked for after the previous one's.</summary>
+    private static List<AIExtractionItem> ToItems(Guid userId, IEnumerable<NormalizedItem> items, IReadOnlyList<TimedWord>? timeline)
+    {
+        var result = new List<AIExtractionItem>();
+        var after = 0;
+        foreach (var i in items)
+        {
+            var item = ToItem(userId, i, timeline, after);
+            if (item.AudioEndMs is { } end) after = end - AudioSnippets.TailMs;
+            result.Add(item);
+        }
+        return result;
     }
 
     private static AIExtractionItem ToItem(Guid userId, NormalizedItem i) => new()
@@ -417,6 +446,7 @@ public class CaptureService : ICaptureService
         Confidence = i.Confidence,
         AddsToCurrent = i.AddsToCurrent,
         SourceText = i.SourceText,
+        Unrelated = i.Unrelated,
         ProposedReminders = ReminderPlanner.ToProposed(i.Reminders),
     };
 
@@ -491,8 +521,31 @@ public class CaptureService : ICaptureService
             }
             else
             {
-                // A typed capture has no recording to extend: keep the words only.
-                foreach (var key in keys) await _storage.DeleteAsync(key, ct);
+                // A typed capture gets its first recording: keep it. The typed words
+                // become the start of the transcript; the recording covers the rest.
+                var placed = AudioSnippets.Timeline(parts);
+                newTimeline = placed?.Words;
+                var recording = new VoiceCapture
+                {
+                    UserId = userId,
+                    MimeType = string.IsNullOrWhiteSpace(request.Audio[0].MimeType) ? AudioExtensions[extensions[0]] : request.Audio[0].MimeType,
+                    Status = VoiceCaptureStatus.Analyzed,
+                    AudioPartDurationsMs = placed?.PartDurationsMs ?? [],
+                    AudioStorageKeys = await CompressAsync(keys, ct),
+                };
+                _db.VoiceCaptures.Add(recording);
+                var started = new Transcript
+                {
+                    UserId = userId,
+                    VoiceCaptureId = recording.Id,
+                    Text = extraction.RawInputText ?? "",
+                    LanguageCode = parts.Select(p => p.LanguageCode).FirstOrDefault(l => l is not null),
+                    ProviderName = parts[0].ProviderName,
+                };
+                _db.Transcripts.Add(started);
+                recording.Transcript = started;
+                extraction.TranscriptId = started.Id;
+                extraction.Transcript = started;
             }
             if (spoken.Length > 0) added.Add(spoken);
         }
@@ -532,6 +585,10 @@ public class CaptureService : ICaptureService
         {
             var item = ToItem(userId, proposed, newTimeline);
             item.AiExtractionId = extraction.Id;
+            if (currentItem is not null)
+            {
+                (item.ContinuesItemType, item.ContinuesItemId) = (request.ItemType, request.ItemId);
+            }
             // Explicit Add (attached only via the navigation, EF would UPDATE the pre-keyed
             // row); EF's fix-up then puts it in extraction.Items.
             _db.AIExtractionItems.Add(item);
@@ -965,7 +1022,7 @@ public class CaptureService : ICaptureService
                 i.Priority, ReminderPlanner.FromProposed(i.ProposedReminders), i.RecurrenceFrequency,
                 i.Clarification, i.Confidence,
                 i.ResultingTaskItemId, i.ResultingAppointmentId, i.ResultingNoteId, i.AddsToCurrent,
-                i.AudioStartMs, i.AudioEndMs))
+                i.AudioStartMs, i.AudioEndMs, i.ContinuesItemType, i.ContinuesItemId, i.Unrelated))
             .ToList(),
         transcript?.VoiceCapture is { } v && v.AudioPartDurationsMs.Count == v.AudioStorageKeys.Count && v.AudioStorageKeys.Count > 0
             ? v.AudioPartDurationsMs

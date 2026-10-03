@@ -87,4 +87,15 @@ public class AudioSnippetsTests
 
         AudioSnippets.Timeline(parts).Should().BeNull();
     }
+
+    [Fact]
+    public void A_phrase_said_twice_finds_the_occurrence_after_the_previous_item()
+    {
+        // "call the plumber" (words 0-2), "buy milk" (3-4), "call the plumber" again (5-7).
+        var words = Words("call the plumber buy milk call the plumber");
+
+        AudioSnippets.Find("call the plumber", words, 60_000).Should().Be((0, 2 * 500 + 400 + 450));
+        AudioSnippets.Find("call the plumber", words, 60_000, notBeforeMs: 4 * 500 + 400)
+            .Should().Be((5 * 500 - 250, 7 * 500 + 400 + 450));
+    }
 }

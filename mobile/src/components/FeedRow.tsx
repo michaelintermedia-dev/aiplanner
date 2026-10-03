@@ -1,4 +1,4 @@
-import { feedItemPassed, feedWhen, isDone, KIND_LABEL } from '@shared/feed'
+import { feedItemPassed, feedWhen, isDone, KIND_LABEL, feedReminder } from '@shared/feed'
 import type { FeedItem } from '@shared/types'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { router } from 'expo-router'
@@ -44,6 +44,7 @@ export function FeedRow({
   const done = isDone(item)
   const passed = feedItemPassed(item)
   const when = feedWhen(item, zone)
+  const reminder = feedReminder(item, zone)
   const showStatus = item.status && !['Scheduled', 'Planned', 'Inbox'].includes(item.status)
 
   const selected = selection?.selected ?? false
@@ -97,6 +98,14 @@ export function FeedRow({
         <View style={styles.meta}>
           <Text style={[styles.kind, { color: c.muted }]}>{KIND_LABEL[item.kind].toUpperCase()}</Text>
           {when && <Text style={[styles.metaText, { color: c.muted }]}>{when}</Text>}
+          {reminder && (
+            <View style={styles.reminder} accessible accessibilityLabel={t('feed.reminderAt', { when: reminder.label })}>
+              <Ionicons name={reminder.repeats ? 'repeat' : 'notifications-outline'} size={14} color={reminder.today ? c.accent : c.muted} />
+              <Text style={[styles.metaText, { color: reminder.today ? c.accent : c.muted, fontWeight: reminder.today ? '600' : '400' }]}>
+                {reminder.label}
+              </Text>
+            </View>
+          )}
           {item.location && <Text style={[styles.metaText, { color: c.muted }]}>📍 {item.location}</Text>}
           {passed && <Badge label={t('status.passed')} />}
           {showStatus && <Badge label={statusLabel(item.status!)} color={item.status === 'Completed' ? c.task : item.status === 'Cancelled' ? c.danger : undefined} />}
@@ -127,4 +136,5 @@ const styles = StyleSheet.create({
   meta: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 2 },
   kind: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6 },
   metaText: { fontSize: 13 },
+  reminder: { flexDirection: 'row', alignItems: 'center', gap: 3 },
 })

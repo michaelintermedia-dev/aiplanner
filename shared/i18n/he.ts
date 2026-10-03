@@ -409,4 +409,7 @@ export const he: Messages = {
   'settings.recordings': 'הקלטות',
   'settings.shortenPauses': 'קיצור הפסקות ארוכות',
   'settings.shortenPausesHint': 'כששומרים הקלטה, הפסקות של יותר משנייה מתקצרות להפסקה קצרה - מהיר יותר להאזנה וחוסך מקום. אי אפשר לבטל זאת להקלטה שנשמרה.',
+
+  // ---- feed reminder badge ----
+  'feed.reminderAt': 'תזכורת: {when}',
 }

@@ -282,6 +282,11 @@ Local dev notes:
   with priority first, high-priority tasks group under "High priority". To
   add a criterion (e.g. "Relevant"): FeedSort enum + FeedPager.CompareBy +
   SORT_CRITERIA + an icon in each app's SortChips.
+- **Reminder on feed rows** (2026-10-03, web + mobile): a bell (repeat icon
+  for daily/weekdays/weekly) with the next time it goes off, highlighted when
+  it's today. `FeedItemDto.NextReminderUtc/ReminderRepeats`, worked out per
+  page with `NotificationSchedule.Occurrences` so it matches what will fire;
+  paused/off reminders don't count. Label: `feedReminder()` in shared/feed.ts.
 - **Deleting from the feed** (2026-10-02, web + mobile): "Select" chip (mobile
   also long-press a row) enters select mode - a bar with N selected / Select
   all / Delete; web rows also have a trash button on hover for one item. No

@@ -18,4 +18,6 @@ public record FeedItemDto(
     IReadOnlyList<string> Tags,
     bool FromCapture, // created by the AI from a capture
     DateTime CreatedAtUtc,
-    DateTime UpdatedAtUtc);
+    DateTime UpdatedAtUtc,
+    DateTime? NextReminderUtc = null, // when its next reminder goes off (null = none coming)
+    bool ReminderRepeats = false); // that reminder repeats (daily / weekdays / weekly)

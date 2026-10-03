@@ -1,4 +1,7 @@
 using AiPlanner.Application.Common.Interfaces;
+using AiPlanner.Application.Reminders;
+using AiPlanner.Application.Notifications.Services;
+using AiPlanner.Application.Common.Utils;
 using AiPlanner.Application.Feed.DTOs;
 using AiPlanner.Application.Feed.Interfaces;
 using AiPlanner.Domain.Enums;
@@ -183,9 +186,47 @@ public class FeedService : IFeedService
             }
         }
 
+        // ---- 3. The next reminder of each item on the page (the bell in the row) ----
+        await AddNextRemindersAsync(userId, page.Select(r => r.Id).ToList(), details, now, ct);
+
         // Keep the pager's order; skip anything deleted between the two steps.
         var items = page.Where(r => details.ContainsKey(r.Id)).Select(r => details[r.Id]).ToList();
         return new FeedPageDto(items, nextCursor);
+    }
+
+    /// <summary>
+    /// Fills NextReminderUtc / ReminderRepeats: the soonest time any of the
+    /// item's active reminders goes off, worked out with the notification rules
+    /// (so it matches what will actually be shown). Paused or switched-off
+    /// reminders don't count; a repeating one counts with its next occurrence.
+    /// </summary>
+    private async Task AddNextRemindersAsync(Guid userId, List<Guid> ids, Dictionary<Guid, FeedItemDto> details, DateTime now, CancellationToken ct)
+    {
+        if (ids.Count == 0) return;
+        var reminders = await _db.Reminders.AsNoTracking()
+            .Where(r => r.UserId == userId && !r.IsCancelled
+                && ((r.TaskItemId != null && ids.Contains(r.TaskItemId.Value))
+                    || (r.AppointmentId != null && ids.Contains(r.AppointmentId.Value))
+                    || (r.NoteId != null && ids.Contains(r.NoteId.Value))))
+            .ToListAsync(ct);
+        if (reminders.Count == 0) return;
+
+        var timeZoneId = await _db.Users.Where(u => u.Id == userId).Select(u => u.TimeZoneId).FirstAsync(ct);
+        var zone = UserTimeZoneHelper.ResolveTimeZone(timeZoneId);
+        var horizon = now.AddYears(1);
+        var next = reminders
+            .Select(r => (ItemId: r.TaskItemId ?? r.AppointmentId ?? r.NoteId!.Value, Repeats: ReminderSchedule.Repeats(r.Kind),
+                At: NotificationSchedule.Occurrences(r, now, horizon, zone).Cast<DateTime?>().FirstOrDefault()))
+            .Where(x => x.At is not null)
+            .GroupBy(x => x.ItemId)
+            .Select(g => g.OrderBy(x => x.At).First());
+        foreach (var (itemId, repeats, at) in next)
+        {
+            if (details.TryGetValue(itemId, out var item))
+            {
+                details[itemId] = item with { NextReminderUtc = at, ReminderRepeats = repeats };
+            }
+        }
     }
 
     public async Task<IReadOnlyList<FeedTagDto>> GetTagsAsync(CancellationToken ct = default)

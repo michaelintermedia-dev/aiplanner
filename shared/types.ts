@@ -97,6 +97,10 @@ export type FeedKind = 'Task' | 'Appointment' | 'Note'
 export type FeedSort = 'CreatedDesc' | 'CreatedAsc' | 'UpdatedDesc' | 'DateAsc' | 'PriorityHigh'
 
 export interface FeedItem {
+  /** When its next reminder goes off (null/absent = none coming). */
+  nextReminderUtc?: string | null
+  /** That reminder repeats (daily / weekdays / weekly). */
+  reminderRepeats?: boolean
   id: string
   kind: FeedKind
   title: string

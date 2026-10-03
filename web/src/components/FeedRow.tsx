@@ -1,6 +1,6 @@
-import { feedItemPassed, feedWhen, isDone, KIND_LABEL } from '@shared/feed'
+import { feedItemPassed, feedWhen, isDone, KIND_LABEL, feedReminder } from '@shared/feed'
 import type { FeedItem } from '@shared/types'
-import { IoCheckbox, IoCheckmarkCircle, IoEllipseOutline, IoMicOutline, IoSquareOutline, IoTrashOutline } from 'react-icons/io5'
+import { IoCheckbox, IoCheckmarkCircle, IoEllipseOutline, IoMicOutline, IoNotificationsOutline, IoRepeat, IoSquareOutline, IoTrashOutline } from 'react-icons/io5'
 import { Link } from 'react-router'
 import { tasksApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
@@ -34,6 +34,7 @@ export function FeedRow({
   const passed = feedItemPassed(item)
   const when = feedWhen(item, zone)
   const KindIcon = KIND_ICON[item.kind]
+  const reminder = feedReminder(item, zone)
 
   const content = (
     <>
@@ -42,6 +43,13 @@ export function FeedRow({
       <span className="row-meta">
         <span className="kind-label">{KIND_LABEL[item.kind]}</span>
         {when && <span>{when}</span>}
+        {reminder && (
+          <span className={`reminder-badge${reminder.today ? ' today' : ''}`} title={t('feed.reminderAt', { when: reminder.label })}>
+            {reminder.repeats ? <IoRepeat aria-hidden /> : <IoNotificationsOutline aria-hidden />}
+            <span className="visually-hidden">{t('feed.reminderAt', { when: reminder.label })}</span>
+            <span aria-hidden>{reminder.label}</span>
+          </span>
+        )}
         {item.location && <span>📍 {item.location}</span>}
         {passed && <span className="badge status-passed">{t('status.passed')}</span>}
         {item.status && item.status !== 'Scheduled' && item.status !== 'Planned' && item.status !== 'Inbox' && (

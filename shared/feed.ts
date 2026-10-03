@@ -107,3 +107,16 @@ const DELETED_KEY = { Task: 'feed.deleted.task', Appointment: 'feed.deleted.even
 
 /** How long the undo toast stays after a delete. */
 export const UNDO_MS = 8000
+
+/**
+ * The bell on a row: the item's next reminder - "Today 6:00 PM", whether it's
+ * today (shown highlighted) and whether it repeats (repeat icon). Null = none coming.
+ */
+export function feedReminder(item: FeedItem, zone: ZoneContext): { label: string; today: boolean; repeats: boolean } | null {
+  if (!item.nextReminderUtc) return null
+  return {
+    label: formatDue(item.nextReminderUtc, true, zone),
+    today: dateKey(item.nextReminderUtc, zone.timeZone) === todayKey(zone.timeZone),
+    repeats: !!item.reminderRepeats,
+  }
+}

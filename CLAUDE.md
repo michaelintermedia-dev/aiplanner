@@ -502,6 +502,16 @@ Client-side (web and mobile - keep them consistent):
   `{ uri, name, type }` FormData parts ("Unsupported FormDataPart
   implementation").
 
+## QA agent
+
+`.claude/agents/qa-explorer.md` - exploratory QA, report only (never edits code).
+Runs against a separate API copy on :58600 (`tools/qa/start-api.ps1`) and the QA
+account `feedtest@test.local` (`tools/qa/seed.cjs` resets + seeds it), drives Chrome
+via `tools/qa/lib.cjs` (`openApp`), fake voice via `tools/qa/say.ps1`, an OpenAI
+budget per run (`QA_AI_BUDGET`). Reports: `docs/qa/<date>-<area>.md`. Turn
+confirmed findings into regression tests. Local-only (gitignored):
+`tools/qa/.local/conn.txt` (dev DB connection string), optional `ffmpeg.exe`.
+
 ## What NOT to do
 
 - Don't reintroduce `docker-compose.yml` for local dev — Aspire replaced it.

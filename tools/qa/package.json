@@ -1,0 +1,13 @@
+{
+  "name": "aiplanner-qa",
+  "private": true,
+  "description": "Toolkit for the qa-explorer agent: a test API, seed data, a browser helper, fake voice.",
+  "type": "commonjs",
+  "scripts": {
+    "seed": "node seed.cjs",
+    "reset": "node seed.cjs --reset-only"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.55.0"
+  }
+}

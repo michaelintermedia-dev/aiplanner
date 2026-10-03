@@ -1,0 +1,4 @@
+node_modules/
+# Local only: the dev DB connection string (has the sa password), the API build, run output.
+.local/
+out/

@@ -390,6 +390,11 @@ Local dev notes:
   item from it is left (or none was saved) and nothing about it changed for a
   day - Undo and same-day changes still find it; the transcript stays.
   `Recordings:CleanupDryRun=true` only logs what it would delete.
+  After transcription, WAV parts (from the web) are re-encoded to AAC .m4a
+  (mono 32 kbit/s, ~9x smaller; same length, so snippet timings still fit) by
+  `FfmpegAudioCompressor` behind `IAudioCompressor` - only if ffmpeg is found
+  (`Recordings:FfmpegPath` or PATH; otherwise WAV is kept). The phone already
+  uploads .m4a. Install locally with `winget install Gyan.FFmpeg`.
 - **UI languages: English, Russian, Hebrew; Hebrew is right-to-left**
   (2026-10-02, web + mobile). All UI text goes through `t('key', vars)` from
   `shared/i18n` - never write user-visible English in a component. `en.ts`

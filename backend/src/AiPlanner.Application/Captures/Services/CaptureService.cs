@@ -47,6 +47,7 @@ public class CaptureService : ICaptureService
     private readonly ITaskService _tasks;
     private readonly IAppointmentService _appointments;
     private readonly INoteService _notes;
+    private readonly IAudioCompressor _compressor;
     private readonly IValidator<CreateTaskRequest> _taskValidator;
     private readonly IValidator<CreateAppointmentRequest> _appointmentValidator;
     private readonly ILogger<CaptureService> _logger;
@@ -62,6 +63,7 @@ public class CaptureService : ICaptureService
         ITaskService tasks,
         IAppointmentService appointments,
         INoteService notes,
+        IAudioCompressor compressor,
         IValidator<CreateTaskRequest> taskValidator,
         IValidator<CreateAppointmentRequest> appointmentValidator,
         ReminderPlanner reminders,
@@ -77,6 +79,7 @@ public class CaptureService : ICaptureService
         _tasks = tasks;
         _appointments = appointments;
         _notes = notes;
+        _compressor = compressor;
         _taskValidator = taskValidator;
         _appointmentValidator = appointmentValidator;
         _logger = logger;
@@ -155,6 +158,8 @@ public class CaptureService : ICaptureService
         // When each word was said, so every item can play just its part.
         var timeline = AudioSnippets.Timeline(parts);
         voice.AudioPartDurationsMs = timeline?.PartDurationsMs ?? [];
+        // Transcribed: now keep it small (WAV -> compressed; same length, so the timings still fit).
+        voice.AudioStorageKeys = await CompressAsync(voice.AudioStorageKeys, ct);
 
         var text = transcription.Text.Trim();
         if (text.Length == 0)
@@ -474,7 +479,7 @@ public class CaptureService : ICaptureService
                 newTimeline = placed?.Words;
                 // Assign new lists (not Add) so EF sees the JSON column change.
                 voice.AudioPartDurationsMs = placed is null ? [] : [.. voice.AudioPartDurationsMs, .. placed.Value.PartDurationsMs];
-                voice.AudioStorageKeys = [.. voice.AudioStorageKeys, .. keys];
+                voice.AudioStorageKeys = [.. voice.AudioStorageKeys, .. await CompressAsync(keys, ct)];
             }
             else
             {
@@ -589,6 +594,41 @@ public class CaptureService : ICaptureService
                 return null;
             }
         }
+    }
+
+    /// <summary>
+    /// Replaces uncompressed parts with compressed copies; returns the keys to
+    /// keep (in order). Best effort: any part that can't be compressed stays.
+    /// </summary>
+    private async Task<List<string>> CompressAsync(IReadOnlyList<string> keys, CancellationToken ct)
+    {
+        var result = new List<string>(keys.Count);
+        foreach (var key in keys)
+        {
+            try
+            {
+                (byte[] Audio, string Extension)? compressed;
+                await using (var original = await _storage.OpenReadAsync(key, ct))
+                {
+                    compressed = original is null ? null : await _compressor.CompressAsync(original, Path.GetExtension(key), ct);
+                }
+                if (compressed is { } c)
+                {
+                    var newKey = Path.ChangeExtension(key, c.Extension);
+                    using var content = new MemoryStream(c.Audio);
+                    await _storage.SaveAsync(newKey, content, ct);
+                    await _storage.DeleteAsync(key, ct);
+                    result.Add(newKey);
+                    continue;
+                }
+            }
+            catch (Exception ex) when (ex is IOException or InvalidOperationException or UnauthorizedAccessException)
+            {
+                _logger.LogWarning("Keeping a recording part uncompressed ({Error})", ex.GetType().Name);
+            }
+            result.Add(key);
+        }
+        return result;
     }
 
     /// <summary>What was said about one saved item in this capture (its quoted words, oldest first), or null.</summary>

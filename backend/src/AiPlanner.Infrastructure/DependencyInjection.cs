@@ -1,3 +1,4 @@
+using AiPlanner.Infrastructure.Audio;
 using AiPlanner.Infrastructure.Jobs;
 using System.Net.Http.Headers;
 using AiPlanner.Application.Ai.Interfaces;
@@ -34,6 +35,8 @@ public static class DependencyInjection
         services.AddSingleton<IFileStorageService, LocalFileStorageService>();
         // Deletes recordings no item uses any more (see RecordingCleanup).
         services.AddHostedService<RecordingCleanupWorker>();
+        // Stored recordings: WAV -> AAC when ffmpeg is available.
+        services.AddSingleton<IAudioCompressor, FfmpegAudioCompressor>();
 
         // AI provider (spec section 16). Swapping providers means new implementations
         // of these two interfaces - nothing above Infrastructure changes.

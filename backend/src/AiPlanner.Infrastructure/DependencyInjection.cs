@@ -1,3 +1,4 @@
+using AiPlanner.Infrastructure.Jobs;
 using System.Net.Http.Headers;
 using AiPlanner.Application.Ai.Interfaces;
 using AiPlanner.Application.Auth.Interfaces;
@@ -31,6 +32,8 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
 
         services.AddSingleton<IFileStorageService, LocalFileStorageService>();
+        // Deletes recordings no item uses any more (see RecordingCleanup).
+        services.AddHostedService<RecordingCleanupWorker>();
 
         // AI provider (spec section 16). Swapping providers means new implementations
         // of these two interfaces - nothing above Infrastructure changes.

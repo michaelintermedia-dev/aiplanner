@@ -37,6 +37,7 @@ public static class DependencyInjection
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IItemConversionService, ItemConversionService>();
         services.AddScoped<IItemDeletionService, ItemDeletionService>();
+        services.AddScoped<RecordingCleanup>();
         services.AddScoped<IUserProfileService, UserProfileService>();
         services.AddScoped<ICalendarService, CalendarService>();
         services.AddScoped<ICaptureService, CaptureService>();

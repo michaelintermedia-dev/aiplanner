@@ -385,6 +385,11 @@ Local dev notes:
   (`locateInParts`) and stops across parts. "Play this part (0:02-0:05)" +
   "Whole recording" on the item's source capture (`shared/audioSnippet.ts`).
   If timings fail, items just have no snippet (whole recording).
+  Audio is stored once per message (never per item). `RecordingCleanup`
+  (run by `RecordingCleanupWorker`, every 6 h) deletes a recording when no
+  item from it is left (or none was saved) and nothing about it changed for a
+  day - Undo and same-day changes still find it; the transcript stays.
+  `Recordings:CleanupDryRun=true` only logs what it would delete.
 - **UI languages: English, Russian, Hebrew; Hebrew is right-to-left**
   (2026-10-02, web + mobile). All UI text goes through `t('key', vars)` from
   `shared/i18n` - never write user-visible English in a component. `en.ts`

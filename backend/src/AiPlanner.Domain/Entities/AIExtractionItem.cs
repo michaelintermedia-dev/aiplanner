@@ -41,6 +41,19 @@ public class AIExtractionItem : BaseEntity
     public string? Unrelated { get; set; }
 
     /// <summary>
+    /// Made in an item's Edit form: held there until Save (linked) or Cancel
+    /// (rejected, and what it added to the capture removed again) - never
+    /// offered as an unsaved review elsewhere.
+    /// </summary>
+    public bool HeldByEditForm { get; set; }
+
+    /// <summary>What this addition appended to the capture (its words, its recording parts), so Cancel can take it back.</summary>
+    public string? AddedText { get; set; }
+    public List<string> AddedAudioKeys { get; set; } = [];
+    /// <summary>The addition gave a typed capture its first recording (Cancel removes the recording and transcript).</summary>
+    public bool AddedRecording { get; set; }
+
+    /// <summary>
     /// Where in the recording this item was said (ms from the start of the whole
     /// recording, parts back to back), so it can play just its part. Null for
     /// typed captures or when it couldn't be placed - then the whole recording.

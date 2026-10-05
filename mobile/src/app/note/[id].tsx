@@ -10,8 +10,8 @@ import { Alert, Text, View } from 'react-native'
 import { notesApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
 import { detailStyles as s } from '@/components/detail'
-import { EditButtons, FollowUpReview, useEditMode } from '@/components/ItemEditMode'
-import { ItemEditor } from '@/components/ItemEditor'
+import { DraftNotice, EditButtons, FollowUpReview, useEditMode } from '@/components/ItemEditMode'
+import { hasEditDraft, ItemEditor } from '@/components/ItemEditor'
 import { Screen } from '@/components/Screen'
 import { SourceCapture } from '@/components/SourceCapture'
 import { Button } from '@/components/ui'
@@ -53,6 +53,7 @@ export default function NoteDetailScreen() {
     <Screen>
       <Stack.Screen options={{ title: edit.editing ? t('common.edit') : t('kind.note') }} />
       {edit.followUp && <FollowUpReview text={edit.followUp} onDone={edit.clearFollowUp} />}
+      <DraftNotice show={!edit.editing && hasEditDraft(note.id, formFromNote(note))} onContinue={edit.edit} />
       {edit.editing ? (
         <ItemEditor
           item={{ itemType: 'Note', id: note.id, title: noteName(note) }}

@@ -150,4 +150,17 @@ public class ContinuedItemTests
         kept.Description.Should().Be("Leak under the sink");
         kept.Priority.Should().Be(TaskPriority.High);
     }
+
+    [Fact]
+    public void A_date_it_is_asking_about_is_not_applied()
+    {
+        var dinner = Item(ExtractionIntent.Appointment, "Dinner", null, start: Friday19);
+        var unsure = Item(ExtractionIntent.Appointment, "Dinner", null, start: new DateTime(2026, 10, 5, 7, 0, 0, DateTimeKind.Utc), addsToCurrent: true)
+            with { Clarification = "February has no 31st - which date did you mean?" };
+
+        var kept = ContinuedItem.Keep([unsure], dinner, "Move it to the 31st of February.");
+
+        kept.StartUtc.Should().Be(Friday19);
+        kept.Clarification.Should().NotBeNull();
+    }
 }

@@ -119,6 +119,7 @@ public class CapturesController : ControllerBase
         [FromForm] string? itemType,
         [FromForm] Guid? itemId,
         [FromForm] bool keepEarlier,
+        [FromForm] string? itemState,
         CancellationToken ct)
     {
         var files = (audio ?? []).Where(f => f.Length > 0).ToList();
@@ -139,7 +140,7 @@ public class CapturesController : ControllerBase
         try
         {
             var segments = files.Select((f, i) => new AudioSegment(streams[i], f.FileName, f.ContentType)).ToList();
-            var result = await _captures.ContinueAsync(id, new ContinueCaptureRequest(text, segments, itemType, itemId, keepEarlier), ct);
+            var result = await _captures.ContinueAsync(id, new ContinueCaptureRequest(text, segments, itemType, itemId, keepEarlier, itemState), ct);
             if (result.Succeeded) return Ok(result.Value);
             return result.Errors.Contains("Capture not found.") ? NotFound(new { errors = result.Errors }) : BadRequest(new { errors = result.Errors });
         }

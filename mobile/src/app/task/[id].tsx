@@ -8,8 +8,8 @@ import { Alert, Text, View } from 'react-native'
 import { tasksApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
 import { detailStyles as s, Facts, TextBlock } from '@/components/detail'
-import { EditButtons, FollowUpReview, useEditMode } from '@/components/ItemEditMode'
-import { ItemEditor } from '@/components/ItemEditor'
+import { DraftNotice, EditButtons, FollowUpReview, useEditMode } from '@/components/ItemEditMode'
+import { hasEditDraft, ItemEditor } from '@/components/ItemEditor'
 import { Screen } from '@/components/Screen'
 import { SourceCapture } from '@/components/SourceCapture'
 import { Badge, Button } from '@/components/ui'
@@ -57,6 +57,7 @@ export default function TaskDetailScreen() {
     <Screen>
       <Stack.Screen options={{ title: edit.editing ? t('common.edit') : t('kind.task') }} />
       {edit.followUp && <FollowUpReview text={edit.followUp} onDone={edit.clearFollowUp} />}
+      <DraftNotice show={!edit.editing && hasEditDraft(task.id, formFromTask(task, zone.timeZone))} onContinue={edit.edit} />
       {edit.editing ? (
         <ItemEditor
           item={{ itemType: 'Task', id: task.id, title: task.title }}

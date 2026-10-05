@@ -399,4 +399,15 @@ public class ExtractionNormalizerTests
         result.Title.Should().Be("Item 1");
         result.Items.Should().HaveCount(ExtractionNormalizer.MaxItems);
     }
+
+    [Fact]
+    public void An_unusable_date_is_not_replaced_by_today()
+    {
+        var bad = Normalize(Item(intent: "appointment", date: "2026-02-31", time: "09:00"));
+        var asked = Normalize(Item(intent: "appointment", time: "09:00", clarification: "February has no 31st - which date?"));
+
+        bad.StartUtc.Should().BeNull();
+        bad.Clarification.Should().NotBeNull();
+        asked.StartUtc.Should().BeNull();
+    }
 }

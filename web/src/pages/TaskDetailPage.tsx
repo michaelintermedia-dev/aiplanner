@@ -5,8 +5,8 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { tasksApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
-import { EditButtons, FollowUpReview, useEditMode } from '../components/ItemEditMode'
-import { ItemEditor } from '../components/ItemEditor'
+import { DraftNotice, EditButtons, FollowUpReview, useEditMode } from '../components/ItemEditMode'
+import { hasEditDraft, ItemEditor } from '../components/ItemEditor'
 import { SourceCapture } from '../components/SourceCapture'
 import { describeReminder } from '@shared/reminders'
 import { useAction } from '../lib/useAction'
@@ -39,6 +39,7 @@ export function TaskDetailPage() {
     <div className="page detail">
 
       {edit.followUp && <FollowUpReview text={edit.followUp} onDone={edit.clearFollowUp} />}
+      <DraftNotice show={!edit.mode && hasEditDraft(task.id, formFromTask(task, zone.timeZone))} onContinue={edit.edit} />
       {edit.mode ? (
         <ItemEditor
           item={{ itemType: 'Task', id: task.id, title: task.title }}

@@ -1,6 +1,7 @@
 import { toDraft } from './captureDraft'
 import type { createApi } from './endpoints'
 import { addDays, dateKey, endsNextDay, timeKey, zonedToUtc } from './dates'
+import { noteName } from './feed'
 import { t } from './i18n'
 import { remindersProblem } from './reminders'
 import type { Appointment, CaptureItem, ConfirmCaptureItem, ExtractionIntent, ItemType, Note, Reminder, Task, TaskPriority } from './types'
@@ -94,13 +95,19 @@ export const formFromNote = (n: Note): ItemForm => ({
 export const formHasTime = (f: ItemForm) => f.type !== 'Note' && !(f.type === 'Task' && f.ongoing) && !!f.date && !!f.time
 
 /** What still has to be filled in before Save (empty = ready). */
+/** The longest title the server takes. */
+export const MAX_TITLE = 300
+
 export function formProblems(f: ItemForm): string[] {
   const problems: string[] = []
   if (f.type !== 'Note' && !f.title.trim()) problems.push(t('draft.problem.title'))
+  if (f.title.trim().length > MAX_TITLE) problems.push(t('form.titleTooLong', { max: MAX_TITLE }))
   if (f.type === 'Note' && !f.details.trim() && !f.title.trim()) problems.push(t('form.noteEmpty'))
   if (f.type === 'Appointment' && (!f.date || !f.time)) problems.push(t('draft.problem.eventTime'))
   if (f.type === 'Task' && !f.ongoing && f.time && !f.date) problems.push(t('draft.problem.dateForTime'))
-  const reminder = remindersProblem(f.reminders, { itemHasTime: formHasTime(f), isNote: f.type === 'Note' })
+  // An ongoing task has no time: "before" reminders can't work - say that, not "add a time".
+  const ongoingBefore = f.type === 'Task' && f.ongoing && f.reminders.some((r) => r.kind === 'Before')
+  const reminder = ongoingBefore ? t('form.ongoingBefore') : remindersProblem(f.reminders, { itemHasTime: formHasTime(f), isNote: f.type === 'Note' })
   if (reminder) problems.push(reminder)
   return problems
 }
@@ -159,12 +166,25 @@ export async function saveItemForm(
   {
     item,
     form,
+    saved,
+    force,
     tz,
     proposals,
     deleteRecordingOf,
-  }: { item: { itemType: ItemType; id: string }; form: ItemForm; tz: string; proposals: MergedProposal[]; deleteRecordingOf?: string | null },
+  }: {
+    item: { itemType: ItemType; id: string }
+    form: ItemForm
+    /** The item as it was when editing started: if it changed since, Save stops (SaveConflict) unless `force`. */
+    saved: ItemForm
+    force?: boolean
+    tz: string
+    proposals: MergedProposal[]
+    deleteRecordingOf?: string | null
+  },
 ): Promise<{ itemType: ItemType; id: string }> {
   let { itemType, id } = item
+  if (!force && JSON.stringify(await currentForm(api, item, tz)) !== JSON.stringify(saved)) throw new SaveConflict()
+
   if (form.type !== itemType) {
     const times = form.type === 'Appointment' ? eventTimes(form, tz) : null
     const due = form.type === 'Task' ? taskDue(form, tz) : null
@@ -180,6 +200,43 @@ export async function saveItemForm(
     ;({ itemType, id } = converted)
   }
 
+  try {
+    await writeFields(api, itemType, id, form, tz)
+  } catch (err) {
+    // The type change went through (the old item is gone): the form carries on with the new one.
+    if (id !== item.id) throw Object.assign(err instanceof Error ? err : new Error(String(err)), { moved: { itemType, id } })
+    throw err
+  }
+
+  // What was said or typed about it belongs to it now (its words and audio clip).
+  const byCapture = new Map<string, MergedProposal[]>()
+  for (const p of proposals) byCapture.set(p.captureId, [...(byCapture.get(p.captureId) ?? []), p])
+  for (const [captureId, ps] of byCapture) {
+    await api.captures.confirm(
+      captureId,
+      ps.map((p) => ({ ...confirmEntry(p, true), intent: INTENT[itemType], appendToType: itemType, appendToId: id, linkOnly: true })),
+    )
+  }
+
+  if (deleteRecordingOf) await api.captures.deleteAudio(deleteRecordingOf)
+  return { itemType, id }
+}
+
+/** Save stopped: the item was changed somewhere else after this form was opened. */
+export class SaveConflict extends Error {
+  constructor() {
+    super(t('form.conflict'))
+  }
+}
+
+/** The item as it is on the server now, as a form. */
+async function currentForm(api: Api, item: { itemType: ItemType; id: string }, tz: string): Promise<ItemForm> {
+  if (item.itemType === 'Task') return formFromTask(await api.tasks.get(item.id), tz)
+  if (item.itemType === 'Appointment') return formFromAppointment(await api.appointments.get(item.id), tz)
+  return formFromNote(await api.notes.get(item.id))
+}
+
+async function writeFields(api: Api, itemType: ItemType, id: string, form: ItemForm, tz: string) {
   if (itemType === 'Task') {
     const due = taskDue(form, tz)
     await api.tasks.update(id, {
@@ -210,19 +267,6 @@ export async function saveItemForm(
       reminders: form.reminders,
     })
   }
-
-  // What was said or typed about it belongs to it now (its words and audio clip).
-  const byCapture = new Map<string, MergedProposal[]>()
-  for (const p of proposals) byCapture.set(p.captureId, [...(byCapture.get(p.captureId) ?? []), p])
-  for (const [captureId, ps] of byCapture) {
-    await api.captures.confirm(
-      captureId,
-      ps.map((p) => ({ ...confirmEntry(p, true), intent: INTENT[itemType], appendToType: itemType, appendToId: id, linkOnly: true })),
-    )
-  }
-
-  if (deleteRecordingOf) await api.captures.deleteAudio(deleteRecordingOf)
-  return { itemType, id }
 }
 
 /** Cancel: the proposals merged into the form are rejected, so nothing is left pending. */
@@ -234,12 +278,19 @@ export async function discardProposals(api: Api, proposals: MergedProposal[]) {
   }
 }
 
-const sameReminder = (a: Reminder, b: Reminder) => JSON.stringify(a) === JSON.stringify(b)
+/** The same reminder - what it is, not when it next goes off (only saved ones know that). */
+const sameReminder = (a: Reminder, b: Reminder) =>
+  a.kind === b.kind &&
+  (a.atUtc ?? null) === (b.atUtc ?? null) &&
+  (a.minutesBefore ?? null) === (b.minutesBefore ?? null) &&
+  (a.time ?? null) === (b.time ?? null) &&
+  (a.days ?? []).join() === (b.days ?? []).join()
 
 /**
- * "Add by voice or text": the AI returns the saved item whole, updated with
- * what was said. Only what it changed compared to the saved item is applied
- * to the form - so a second addition, or the user's own edits, are kept.
+ * "Change it by voice or text": the AI gets the form as it was when the words
+ * were sent (`sent`, see formAsAiItem) and returns it whole, updated. Only what
+ * it changed compared to `sent` is applied to the form - so edits made while it
+ * was thinking are kept, and a second addition can correct the first.
  * Returns the new form and the fields that changed (to mark them).
  */
 export function applyProposal(form: ItemForm, saved: ItemForm, item: CaptureItem, tz: string): { form: ItemForm; changed: FormField[] } {
@@ -269,7 +320,8 @@ export function applyProposal(form: ItemForm, saved: ItemForm, item: CaptureItem
 
   // Details: the saved text plus what was added - add only the new part.
   const text = (d.description ?? '').trim()
-  const added = text.startsWith(saved.details.trim()) ? text.slice(saved.details.trim().length).trim() : text
+  // The new part, without the AI's joining punctuation (". The code is 1234").
+  const added = (text.startsWith(saved.details.trim()) ? text.slice(saved.details.trim().length) : text).replace(/^[\s.,;:!?\-–—]+/, '').trim()
   if (added && !next.details.includes(added)) {
     set('details', next.details.trim() === saved.details.trim() && !text.startsWith(saved.details.trim()) ? text : join(next.details, added))
   }
@@ -291,6 +343,14 @@ const join = (existing: string, addition: string) => (existing.trim() ? `${exist
  * dropped when the item has no time to count back from).
  */
 export function switchType(f: ItemForm, type: ItemType, tz: string): ItemForm {
+  // Only an event has a place and people: going elsewhere, they're kept in the text.
+  if (f.type === 'Appointment' && type !== 'Appointment' && (f.location.trim() || f.people.trim())) {
+    const lines = [
+      f.location.trim() && `${t('event.location')}: ${f.location.trim()}`,
+      f.people.trim() && `${t('event.with')}: ${f.people.trim()}`,
+    ].filter(Boolean)
+    f = { ...f, details: join(f.details, lines.join('\n')), location: '', people: '' }
+  }
   if (type !== 'Note' || !f.reminders.some((r) => r.kind === 'Before')) return { ...f, type }
   const at = formHasTime(f) ? new Date(zonedToUtc(f.date, f.time, tz)).getTime() : null
   return {
@@ -300,4 +360,30 @@ export function switchType(f: ItemForm, type: ItemType, tz: string): ItemForm {
       r.kind !== 'Before' ? [r] : at === null ? [] : [{ kind: 'At', atUtc: new Date(at - (r.minutesBefore ?? 0) * 60e3).toISOString() }],
     ),
   }
+}
+
+const AI_INTENT: Record<ItemType, string> = { Task: 'task', Appointment: 'appointment', Note: 'note' }
+
+/**
+ * The form as the AI's item (its answer shape, local times) - sent with each
+ * "change it by voice or text", so the AI works on what's in the form now.
+ */
+export function formAsAiItem(f: ItemForm, tz: string): string {
+  return JSON.stringify({
+    intent: AI_INTENT[f.type],
+    title: f.title.trim() || noteName({ title: null, content: f.details }) || '-',
+    description: f.details.trim() || null,
+    date: f.type === 'Note' || (f.type === 'Task' && f.ongoing) ? null : f.date || null,
+    time: f.type === 'Note' || (f.type === 'Task' && f.ongoing) ? null : f.time || null,
+    endTime: f.type === 'Appointment' ? f.endTime || null : null,
+    location: f.type === 'Appointment' ? f.location.trim() || null : null,
+    priority: f.type === 'Task' && f.priority !== 'None' ? f.priority.toLowerCase() : null,
+    reminders: f.reminders.map((r) => ({
+      kind: r.kind.toLowerCase(),
+      minutesBefore: r.kind === 'Before' ? (r.minutesBefore ?? 0) : null,
+      date: r.kind === 'At' && r.atUtc ? dateKey(r.atUtc, tz) : null,
+      time: r.kind === 'At' && r.atUtc ? timeKey(r.atUtc, tz) : (r.time ?? null),
+      days: r.kind === 'Weekly' ? (r.days ?? []) : null,
+    })),
+  })
 }

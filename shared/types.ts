@@ -224,6 +224,8 @@ export interface CaptureItem {
   continuesItemId?: string | null
   /** "Add more": the words that weren't about the item - offered as a new capture. */
   unrelated?: string | null
+  /** Made in an item's Edit form: held there until Save / Cancel - never an unsaved review elsewhere. */
+  heldByEditForm?: boolean
 }
 
 export interface Capture {

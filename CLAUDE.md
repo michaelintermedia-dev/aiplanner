@@ -324,7 +324,20 @@ Local dev notes:
   unsaved additions in the same form stay pending. Items made by hand get a
   capture on first use (`POST /api/captures/for-item`); an empty one isn't
   shown. Unsaved edits are kept on the device (web localStorage, mobile
-  `editDrafts`) and restored if the item didn't change meanwhile.
+  `editDrafts`) and restored if the item didn't change meanwhile; the view
+  says so ("You have unsaved changes" · Continue editing).
+  Since the QA run of 2026-10-05: each addition sends the form's current
+  state (`itemState`, `formAsAiItem`) - the AI and `ContinuedItem.Keep` work on
+  that, so one addition can correct another. The form's proposals are
+  `HeldByEditForm`: never in the unsaved-review banner / Discard all, and a
+  `linkOnly` for one already decided is skipped. Cancel takes an addition back
+  out of the capture (its words, its recording parts - `AddedText`,
+  `AddedAudioKeys`, `AddedRecording`). Save first checks the item didn't
+  change elsewhere since the form opened (`SaveConflict` -> "Save mine
+  anyway" / "Discard my changes"); if the type change went through but the
+  rest failed, the form carries on with the new item. Leaving Event folds
+  place and people into the text (`switchType`). A date the AI asks about
+  isn't applied.
 - **Saved items can change type too** (2026-10-02): the Type chips in the
   Edit page call `POST /api/items/convert` (on Save).
   `ItemConversionService` creates the new item through the normal services

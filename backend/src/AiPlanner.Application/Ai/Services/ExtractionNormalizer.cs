@@ -102,8 +102,11 @@ public static class ExtractionNormalizer
         var time = ParseTime(raw.Time);
         var endTime = ParseTime(raw.EndTime);
 
-        // "At 3pm" with no date means the next 3pm.
-        if (date is null && time is not null && intent != ExtractionIntent.Note)
+        // "At 3pm" with no date means the next 3pm - but not when a date was given and
+        // couldn't be used ("the 31st of February") or the AI is asking about it:
+        // then it stays open (an item being edited keeps its own date).
+        var dateUnusable = !string.IsNullOrWhiteSpace(raw.Date) || !string.IsNullOrWhiteSpace(raw.Clarification);
+        if (date is null && time is not null && intent != ExtractionIntent.Note && !dateUnusable)
         {
             var today = DateOnly.FromDateTime(localNow);
             date = today.ToDateTime(time.Value) > localNow ? today : today.AddDays(1);

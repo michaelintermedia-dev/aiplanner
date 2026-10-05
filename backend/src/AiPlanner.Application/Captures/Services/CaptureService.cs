@@ -1,3 +1,4 @@
+using System.Text.Json;
 using AiPlanner.Application.Ai.Interfaces;
 using AiPlanner.Application.Ai.Services;
 using AiPlanner.Application.Appointments.DTOs;
@@ -214,7 +215,7 @@ public class CaptureService : ICaptureService
         if (pendingDays is { } days)
         {
             var since = _dateTime.UtcNow.AddDays(-Math.Clamp(days, 1, 365));
-            query = query.Where(e => e.CreatedAtUtc >= since && e.Items.Any(i => i.Status == ExtractionStatus.PendingReview));
+            query = query.Where(e => e.CreatedAtUtc >= since && e.Items.Any(i => i.Status == ExtractionStatus.PendingReview && !i.HeldByEditForm));
         }
         return await query
             .OrderByDescending(e => e.CreatedAtUtc)
@@ -226,7 +227,7 @@ public class CaptureService : ICaptureService
                 e.Summary,
                 e.CreatedAtUtc,
                 e.Items.Count,
-                e.Items.Count(i => i.Status == ExtractionStatus.PendingReview)))
+                e.Items.Count(i => i.Status == ExtractionStatus.PendingReview && !i.HeldByEditForm)))
             .ToListAsync(ct);
     }
 
@@ -234,7 +235,7 @@ public class CaptureService : ICaptureService
     {
         var userId = RequireUserId();
         var pending = await _db.AIExtractionItems
-            .Where(i => i.UserId == userId && i.Status == ExtractionStatus.PendingReview)
+            .Where(i => i.UserId == userId && i.Status == ExtractionStatus.PendingReview && !i.HeldByEditForm)
             .ToListAsync(ct);
         foreach (var item in pending) item.Status = ExtractionStatus.Rejected;
         await _db.SaveChangesAsync(ct);
@@ -263,6 +264,16 @@ public class CaptureService : ICaptureService
         {
             return Result<CaptureDto>.Failure($"Unknown item(s): {string.Join(", ", unknown)}.");
         }
+        // Linking an Edit form's proposal that was already decided is a no-op (the
+        // form's fields were saved on their own) - never a reason to fail Save.
+        request = request with
+        {
+            Items = request.Items.Where(i => !(i.LinkOnly && itemsById[i.Id].Status != ExtractionStatus.PendingReview)).ToList(),
+        };
+        if (request.Items.Count == 0)
+        {
+            return Result<CaptureDto>.Success(ToDto(extraction, extraction.Transcript));
+        }
         var alreadyDecided = request.Items.Where(i => itemsById[i.Id].Status != ExtractionStatus.PendingReview).ToList();
         if (alreadyDecided.Count > 0)
         {
@@ -286,6 +297,7 @@ public class CaptureService : ICaptureService
                     if (!decision.Include)
                     {
                         item.Status = ExtractionStatus.Rejected;
+                        if (item.HeldByEditForm) await TakeBackAsync(extraction, item, innerCt);
                         continue;
                     }
 
@@ -475,8 +487,14 @@ public class CaptureService : ICaptureService
             return Result<CaptureDto>.Failure($"Unsupported audio format '{unsupported}'.");
         }
 
-        // The saved item the user continues from, whole - the AI returns it updated.
-        var currentItem = request.ItemId is { } itemId ? await DescribeItemAsync(userId, request.ItemType, itemId, ct) : null;
+        // The item the user continues from, whole - the AI returns it updated. From
+        // the Edit form: as it is in the form right now (unsaved changes included).
+        var formState = request.ItemId is not null && request.ItemState is { } state ? await FormStateAsync(userId, state, ct) : null;
+        var currentItem = formState is { } fs
+            ? ContinuedItem.Describe(fs, await _reminders.ZoneAsync(userId, ct))
+            : request.ItemId is { } itemId ? await DescribeItemAsync(userId, request.ItemType, itemId, ct) : null;
+        var addedKeys = new List<string>();
+        var addedRecording = false;
 
         // Adding to one saved item is scoped to it: the AI sees only that item and
         // what was said about it - not the rest of the message.
@@ -517,7 +535,9 @@ public class CaptureService : ICaptureService
                 newTimeline = placed?.Words;
                 // Assign new lists (not Add) so EF sees the JSON column change.
                 voice.AudioPartDurationsMs = placed is null ? [] : [.. voice.AudioPartDurationsMs, .. placed.Value.PartDurationsMs];
-                voice.AudioStorageKeys = [.. voice.AudioStorageKeys, .. await CompressAsync(keys, ct)];
+                var compressed = await CompressAsync(keys, ct);
+                voice.AudioStorageKeys = [.. voice.AudioStorageKeys, .. compressed];
+                addedKeys.AddRange(compressed);
             }
             else
             {
@@ -533,6 +553,8 @@ public class CaptureService : ICaptureService
                     AudioPartDurationsMs = placed?.PartDurationsMs ?? [],
                     AudioStorageKeys = await CompressAsync(keys, ct),
                 };
+                addedKeys.AddRange(recording.AudioStorageKeys);
+                addedRecording = true;
                 _db.VoiceCaptures.Add(recording);
                 var started = new Transcript
                 {
@@ -571,7 +593,7 @@ public class CaptureService : ICaptureService
         var (_, normalized) = await ProposeAsync(userId, newText, previousText, currentItem, ct);
         // For one item, exactly one proposal comes back: that item, updated.
         var proposals = normalized.Items;
-        if (currentItem is not null && await CurrentProposalAsync(userId, request.ItemType, request.ItemId!.Value, ct) is { } current)
+        if (currentItem is not null && (formState ?? await CurrentProposalAsync(userId, request.ItemType, request.ItemId!.Value, ct)) is { } current)
         {
             proposals = [ContinuedItem.Keep(normalized.Items, current, newText)];
             // An earlier "Add more" review left unsaved is superseded by this one -
@@ -589,6 +611,14 @@ public class CaptureService : ICaptureService
             if (currentItem is not null)
             {
                 (item.ContinuesItemType, item.ContinuesItemId) = (request.ItemType, request.ItemId);
+            }
+            if (request.KeepEarlier)
+            {
+                // The Edit form's: held there until Save or Cancel (which takes this back out).
+                item.HeldByEditForm = true;
+                item.AddedText = newText;
+                item.AddedAudioKeys = addedKeys;
+                item.AddedRecording = addedRecording;
             }
             // Explicit Add (attached only via the navigation, EF would UPDATE the pre-keyed
             // row); EF's fix-up then puts it in extraction.Items.
@@ -772,6 +802,64 @@ public class CaptureService : ICaptureService
             .Select(i => i.SourceText!)
             .ToListAsync(ct);
         return words.Count > 0 ? string.Join("\n\n", words) : null;
+    }
+
+    /// <summary>The Edit form's current state (the AI's item shape, local times), validated like any AI answer.</summary>
+    private async Task<NormalizedItem?> FormStateAsync(Guid userId, string json, CancellationToken ct)
+    {
+        RawExtractedItem? raw;
+        try
+        {
+            raw = json.Length <= 20_000 ? JsonSerializer.Deserialize<RawExtractedItem>(json, FormJson) : null;
+        }
+        catch (JsonException)
+        {
+            raw = null;
+        }
+        if (raw is null) return null;
+        var zone = await _reminders.ZoneAsync(userId, ct);
+        return ExtractionNormalizer.NormalizeItem(raw, TimeZoneInfo.ConvertTimeFromUtc(_dateTime.UtcNow, zone), zone);
+    }
+
+    private static readonly JsonSerializerOptions FormJson = new() { PropertyNameCaseInsensitive = true };
+
+    /// <summary>
+    /// Cancel in the Edit form: the addition's words come out of the transcript
+    /// and its recording parts out of the recording - as if it was never said.
+    /// </summary>
+    private async Task TakeBackAsync(AIExtraction extraction, AIExtractionItem item, CancellationToken ct)
+    {
+        if (!string.IsNullOrEmpty(item.AddedText))
+        {
+            static string? Without(string? text, string added)
+            {
+                if (text is null) return null;
+                var at = text.LastIndexOf(added, StringComparison.Ordinal);
+                return at < 0 ? text : (text[..at].TrimEnd() + text[(at + added.Length)..]).Trim();
+            }
+            if (extraction.Transcript is { } transcript) transcript.Text = Without(transcript.Text, item.AddedText) ?? "";
+            else extraction.RawInputText = Without(extraction.RawInputText, item.AddedText);
+        }
+
+        var voice = extraction.Transcript?.VoiceCapture;
+        if (voice is not null && item.AddedAudioKeys.Count > 0)
+        {
+            var keep = voice.AudioStorageKeys.Select((key, i) => (key, i)).Where(p => !item.AddedAudioKeys.Contains(p.key)).ToList();
+            var durationsKnown = voice.AudioPartDurationsMs.Count == voice.AudioStorageKeys.Count;
+            voice.AudioPartDurationsMs = durationsKnown ? keep.Select(p => voice.AudioPartDurationsMs[p.i]).ToList() : [];
+            voice.AudioStorageKeys = keep.Select(p => p.key).ToList();
+            foreach (var key in item.AddedAudioKeys) await _storage.DeleteAsync(key, ct);
+        }
+        if (item.AddedRecording && extraction.Transcript is { } added)
+        {
+            // It was a typed capture: back to that.
+            added.IsDeleted = true;
+            if (added.VoiceCapture is { } recording) recording.IsDeleted = true;
+            extraction.TranscriptId = null;
+            extraction.Transcript = null;
+        }
+        item.AddedText = null;
+        item.AddedAudioKeys = [];
     }
 
     /// <summary>The item continued from, as a proposal of itself (null if it's gone).</summary>
@@ -1090,7 +1178,7 @@ public class CaptureService : ICaptureService
                 i.Priority, ReminderPlanner.FromProposed(i.ProposedReminders), i.RecurrenceFrequency,
                 i.Clarification, i.Confidence,
                 i.ResultingTaskItemId, i.ResultingAppointmentId, i.ResultingNoteId, i.AddsToCurrent,
-                i.AudioStartMs, i.AudioEndMs, i.ContinuesItemType, i.ContinuesItemId, i.Unrelated))
+                i.AudioStartMs, i.AudioEndMs, i.ContinuesItemType, i.ContinuesItemId, i.Unrelated, i.HeldByEditForm))
             .ToList(),
         transcript?.VoiceCapture is { } v && v.AudioPartDurationsMs.Count == v.AudioStorageKeys.Count && v.AudioStorageKeys.Count > 0
             ? v.AudioPartDurationsMs

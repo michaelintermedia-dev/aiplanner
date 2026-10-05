@@ -1,7 +1,6 @@
 import { t } from '@shared/i18n'
-import type { ItemType } from '@shared/types'
-import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import type { Capture, ItemType } from '@shared/types'
+import { useEffect, useRef, useState } from 'react'
 import { IoCreateOutline, IoMicOutline } from 'react-icons/io5'
 import { useLocation, useNavigate, useSearchParams } from 'react-router'
 import { capturesApi } from '../api/endpoints'
@@ -45,9 +44,30 @@ export function EditButtons({ onEdit, onTalk, disabled }: { onEdit: () => void; 
 
 /** Words said while editing an item that weren't about it: captured as a new entry, reviewed here. */
 export function FollowUpReview({ text, onDone }: { text: string; onDone: () => void }) {
-  // A query, not an effect: it runs once even when React renders twice.
-  const capture = useQuery({ queryKey: ['follow-up', text], queryFn: () => capturesApi.text(text), staleTime: Infinity, retry: false })
-  if (capture.isPending) return <p className="muted">{t('capture.understanding')}</p>
-  if (capture.error) return <p className="error">{capture.error.message}</p>
-  return <CaptureReview capture={capture.data} onDone={onDone} />
+  const [capture, setCapture] = useState<Capture | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  // Captured exactly once - not a query: saving the review refreshes every query,
+  // which would capture the same words again.
+  const started = useRef(false)
+  useEffect(() => {
+    if (started.current) return
+    started.current = true
+    capturesApi.text(text).then(setCapture, (err: unknown) => setError(err instanceof Error ? err.message : t('common.error')))
+  }, [text])
+  if (error) return <p className="error">{error}</p>
+  if (!capture) return <p className="muted">{t('capture.understanding')}</p>
+  return <CaptureReview capture={capture} onDone={onDone} />
+}
+
+/** The view says when there are unsaved changes in Edit (leaving Edit keeps them on this device). */
+export function DraftNotice({ show, onContinue }: { show: boolean; onContinue: () => void }) {
+  if (!show) return null
+  return (
+    <div className="pending-review" role="status">
+      <span>{t('form.draftNotice')}</span>
+      <button type="button" className="link" onClick={onContinue}>
+        {t('form.continueEditing')}
+      </button>
+    </div>
+  )
 }

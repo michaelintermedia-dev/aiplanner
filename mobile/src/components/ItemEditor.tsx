@@ -10,6 +10,8 @@ import {
   formChanged,
   formHasTime,
   formProblems,
+  formAsAiItem,
+  SaveConflict,
   saveItemForm,
   switchType,
   type FormField,
@@ -36,6 +38,9 @@ import { Button } from './ui'
 const TYPES: ItemType[] = ['Task', 'Appointment', 'Note']
 const PRIORITIES: TaskPriority[] = ['None', 'Low', 'Medium', 'High']
 const DETAIL_KEY = { Task: 'task', Appointment: 'appointment', Note: 'note' } as const
+
+/** Whether there are unsaved changes to this item (the view says so). */
+export const hasEditDraft = (id: string, saved: ItemForm) => !!loadDraft(id, saved)
 
 /** What the form keeps on the device while editing (closing the app and coming back restores it). */
 interface Draft {
@@ -88,6 +93,12 @@ export function ItemEditor({
   const [error, setError] = useState<string | null>(null)
   const [clarifications, setClarifications] = useState<string[]>([])
   const resolvedCapture = useRef<string | null>(captureId)
+  // A type change went through but the rest of Save failed: Save carries on with the new item.
+  const [current, setCurrent] = useState(item)
+  // The form as it was when the last words were sent - what the AI's answer is compared with.
+  const sent = useRef<ItemForm | null>(null)
+  // Save stopped: the item was changed somewhere else meanwhile.
+  const [conflict, setConflict] = useState(false)
   const capture = useQuery({ queryKey: ['capture', captureId], queryFn: () => capturesApi.get(captureId!), enabled: !!captureId })
 
   const dirty = formChanged(form, saved) || proposals.length > 0 || deleteRecording
@@ -104,7 +115,7 @@ export function ItemEditor({
       let next = d.form
       const marks = new Set(d.changed)
       for (const proposal of fresh) {
-        const applied = applyProposal(next, d.saved, proposal, zone.timeZone)
+        const applied = applyProposal(next, sent.current ?? d.form, proposal, zone.timeZone)
         next = applied.form
         applied.changed.forEach((k) => marks.add(k))
       }
@@ -121,27 +132,40 @@ export function ItemEditor({
   }
 
   const problems = formProblems(form)
-  const save = async () => {
+  const save = async (force = false) => {
     if (busy || problems.length) return
     setBusy(true)
     setError(null)
+    setConflict(false)
     try {
       const result = await saveItemForm(api, {
-        item: { itemType: item.itemType, id: item.id },
+        item: { itemType: current.itemType, id: current.id },
         form,
+        // As it was when editing started (the page's copy refreshes under the form).
+        saved: draft.saved,
+        // After a half-done type change the item is new (and differs from `saved` by design).
+        force: force || current.id !== item.id,
         tz: zone.timeZone,
         proposals,
         deleteRecordingOf: deleteRecording ? captureId : null,
       })
       editDrafts.clear(item.id)
+      // The recording is gone: don't let the item's page fetch it from the stale capture (404s).
+      if (deleteRecording && captureId) queryClient.setQueryData<Capture>(['capture', captureId], (c) => c && { ...c, audioParts: 0 })
       // The old item is gone after a type change: refresh everything but it (it would 404).
       const gone = result.id !== item.id ? [DETAIL_KEY[item.itemType], item.id] : null
       void queryClient.invalidateQueries({ predicate: (q) => !gone || q.queryKey[0] !== gone[0] || q.queryKey[1] !== gone[1] })
       const followUp = unrelated.filter((u) => u.capture).map((u) => u.text).join(' ') || undefined
       onDone({ moved: result.id !== item.id ? result : undefined, followUp })
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error'))
       setBusy(false)
+      if (err instanceof SaveConflict) {
+        setConflict(true)
+        return
+      }
+      const moved = (err as { moved?: { itemType: ItemType; id: string } }).moved
+      if (moved) setCurrent({ ...moved, title: item.title })
+      setError(err instanceof Error ? err.message : t('common.error'))
     }
   }
 
@@ -174,6 +198,10 @@ export function ItemEditor({
               (async () => resolvedCapture.current ?? (resolvedCapture.current = (await capturesApi.forItem(item.itemType, item.id)).id)),
             target: { itemType: item.itemType, itemId: item.id, title: item.title },
             onResult,
+            itemState: () => {
+              sent.current = form
+              return formAsAiItem(form, zone.timeZone)
+            },
             talkSignal,
           }}
         />
@@ -335,6 +363,15 @@ export function ItemEditor({
       )}
 
       {problems.length > 0 && dirty && <Text style={{ color: c.danger }}>{problems.join(' ')}</Text>}
+      {conflict && (
+        <View style={[styles.section, { borderTopColor: c.warn }]} accessibilityRole="alert">
+          <Text style={{ color: c.warn }}>{t('form.conflict')}</Text>
+          <View style={s.actions}>
+            <Button title={t('form.saveAnyway')} variant="primary" onPress={() => void save(true)} />
+            <Button title={t('form.discardMine')} onPress={() => void cancel()} />
+          </View>
+        </View>
+      )}
       {error && <Text style={{ color: c.danger }}>{error}</Text>}
       <View style={s.actions}>
         <Button title={t('common.cancel')} disabled={busy} onPress={() => void cancel()} />

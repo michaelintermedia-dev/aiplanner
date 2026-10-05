@@ -48,10 +48,11 @@ function usePreview(state: RecorderState, pauseCount: number, snapshot: () => Pr
 /** The form for a continue request, naming the item continued from. */
 const captureIdOf = async ({ captureId }: ContinueFrom) => (typeof captureId === 'string' ? captureId : captureId())
 
-function continueForm({ target, onResult }: ContinueFrom) {
+function continueForm({ target, onResult, itemState }: ContinueFrom) {
   const form = new FormData()
   // The Edit form collects several additions before Save: keep the earlier ones pending.
   if (onResult) form.append('keepEarlier', 'true')
+  if (itemState) form.append('itemState', itemState())
   form.append('itemType', target.itemType)
   form.append('itemId', target.itemId)
   return form
@@ -69,6 +70,8 @@ export interface ContinueFrom {
   onResult?: (capture: Capture) => void
   /** Start recording at once (the mic shortcut on an item's page). */
   autoStart?: boolean
+  /** The Edit form's current state (the AI's item shape), read when the words are sent: the AI works on that. */
+  itemState?: () => string
   /** Saving changed the item's type, so it has a new id: show that one. */
   onMoved?: (item: { itemType: ItemType; itemId: string }) => void
 }

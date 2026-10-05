@@ -6,8 +6,8 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { appointmentsApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
-import { EditButtons, FollowUpReview, useEditMode } from '../components/ItemEditMode'
-import { ItemEditor } from '../components/ItemEditor'
+import { DraftNotice, EditButtons, FollowUpReview, useEditMode } from '../components/ItemEditMode'
+import { hasEditDraft, ItemEditor } from '../components/ItemEditor'
 import { SourceCapture } from '../components/SourceCapture'
 import { describeReminder } from '@shared/reminders'
 import { useAction } from '../lib/useAction'
@@ -42,6 +42,7 @@ export function AppointmentDetailPage() {
     <div className="page detail">
 
       {edit.followUp && <FollowUpReview text={edit.followUp} onDone={edit.clearFollowUp} />}
+      <DraftNotice show={!edit.mode && hasEditDraft(appt.id, formFromAppointment(appt, zone.timeZone))} onContinue={edit.edit} />
       {edit.mode ? (
         <ItemEditor
           item={{ itemType: 'Appointment', id: appt.id, title: appt.title }}

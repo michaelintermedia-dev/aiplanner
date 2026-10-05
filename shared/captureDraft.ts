@@ -183,7 +183,7 @@ export const suggestedTitle = (d: ItemDraft, target?: AppendTarget) =>
  * (the server already set aside any earlier unsaved one, this makes sure).
  */
 export const reviewItems = (capture: Capture, target?: AppendTarget) =>
-  capture.items.filter((i) => i.status === 'PendingReview' && (!target || i.addsToCurrent))
+  capture.items.filter((i) => i.status === 'PendingReview' && (target ? i.addsToCurrent : !i.heldByEditForm))
 
 /** After saving an "Add more" review: the words not about the item, to capture as a new entry (or null). */
 export const followUpText = (drafts: ItemDraft[]) =>

@@ -34,4 +34,5 @@ public record CaptureItemDto(
     int? AudioEndMs = null,
     string? ContinuesItemType = null, // "Add more" on a saved item: which one
     Guid? ContinuesItemId = null,
-    string? Unrelated = null); // "Add more": words that weren't about the item
+    string? Unrelated = null, // "Add more": words that weren't about the item
+    bool HeldByEditForm = false); // made in an item's Edit form - not an unsaved review elsewhere

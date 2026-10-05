@@ -8,8 +8,8 @@ import { IoNotificationsOutline, IoRepeat } from 'react-icons/io5'
 import { Link, useNavigate, useParams } from 'react-router'
 import { notesApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
-import { EditButtons, FollowUpReview, useEditMode } from '../components/ItemEditMode'
-import { ItemEditor } from '../components/ItemEditor'
+import { DraftNotice, EditButtons, FollowUpReview, useEditMode } from '../components/ItemEditMode'
+import { hasEditDraft, ItemEditor } from '../components/ItemEditor'
 import { SourceCapture } from '../components/SourceCapture'
 import { useAction } from '../lib/useAction'
 import { t } from '@shared/i18n'
@@ -35,6 +35,7 @@ export function NoteDetailPage() {
     <div className="page detail">
 
       {edit.followUp && <FollowUpReview text={edit.followUp} onDone={edit.clearFollowUp} />}
+      <DraftNotice show={!edit.mode && hasEditDraft(note.id, formFromNote(note))} onContinue={edit.edit} />
       {edit.mode ? (
         <ItemEditor
           item={{ itemType: 'Note', id: note.id, title: noteName(note) }}

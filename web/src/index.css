@@ -2284,3 +2284,20 @@ button.kind-icon:hover:not(:disabled) {
   border-bottom: 1px solid var(--border);
   padding-bottom: 12px;
 }
+
+/* Save stopped: changed somewhere else meanwhile - save mine anyway, or drop it. */
+.conflict {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--warn);
+  border-radius: var(--radius);
+}
+
+.conflict p {
+  flex: 1 1 100%;
+  margin: 0;
+  color: var(--warn);
+}

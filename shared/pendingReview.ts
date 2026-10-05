@@ -28,15 +28,18 @@ export function pendingCaptures(list: CaptureSummary[] | undefined, now = Date.n
  * that item (its title, and that it still exists).
  */
 export function pendingTarget(capture: Capture): { itemType: ItemType; itemId: string } | null {
-  const item = capture.items.find((i) => i.status === 'PendingReview' && i.continuesItemType && i.continuesItemId)
+  const item = capture.items.find((i) => i.status === 'PendingReview' && !i.heldByEditForm && i.continuesItemType && i.continuesItemId)
   return item ? { itemType: item.continuesItemType!, itemId: item.continuesItemId! } : null
 }
 
 /** Discard: reject every pending proposal, so the capture stops being pending. */
 export const rejectPending = (capture: Capture, timeZone: string): ConfirmCaptureItem[] =>
   capture.items
-    .filter((i) => i.status === 'PendingReview')
+    .filter((i) => i.status === 'PendingReview' && !i.heldByEditForm) // an open Edit form's own stay
     .map((i) => toConfirmItem({ ...toDraft(i, timeZone), include: false }, timeZone))
+
+/** Whether the capture still has a review waiting (an Edit form's own proposals don't count). */
+export const hasPendingReview = (capture: Capture) => capture.items.some((i) => i.status === 'PendingReview' && !i.heldByEditForm)
 
 /**
  * Edits made in a review are kept on the device until Save / Cancel, so

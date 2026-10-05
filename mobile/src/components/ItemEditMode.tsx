@@ -1,10 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { t } from '@shared/i18n'
-import type { ItemType } from '@shared/types'
-import { useQuery } from '@tanstack/react-query'
+import type { Capture, ItemType } from '@shared/types'
 import { router, useLocalSearchParams } from 'expo-router'
-import { useState } from 'react'
-import { Pressable, Text } from 'react-native'
+import { useEffect, useRef, useState } from 'react'
+import { Pressable, Text, View } from 'react-native'
 import { capturesApi } from '@/api/endpoints'
 import { useHideDock } from '@/lib/dockTarget'
 import { useColors } from '@/theme'
@@ -67,9 +66,31 @@ export function EditButtons({ onEdit, onTalk, disabled }: { onEdit: () => void; 
 /** Words said while editing an item that weren't about it: captured as a new entry, reviewed here. */
 export function FollowUpReview({ text, onDone }: { text: string; onDone: () => void }) {
   const c = useColors()
-  // A query, not an effect: it runs once even when React renders twice.
-  const capture = useQuery({ queryKey: ['follow-up', text], queryFn: () => capturesApi.text(text), staleTime: Infinity, retry: false })
-  if (capture.isPending) return <Text style={{ color: c.muted }}>{t('capture.understanding')}</Text>
-  if (capture.error) return <Text style={{ color: c.danger }}>{capture.error.message}</Text>
-  return <CaptureReview capture={capture.data} onDone={onDone} />
+  const [capture, setCapture] = useState<Capture | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  // Captured exactly once - not a query: saving the review refreshes every query,
+  // which would capture the same words again.
+  const started = useRef(false)
+  useEffect(() => {
+    if (started.current) return
+    started.current = true
+    capturesApi.text(text).then(setCapture, (err: unknown) => setError(err instanceof Error ? err.message : t('common.error')))
+  }, [text])
+  if (error) return <Text style={{ color: c.danger }}>{error}</Text>
+  if (!capture) return <Text style={{ color: c.muted }}>{t('capture.understanding')}</Text>
+  return <CaptureReview capture={capture} onDone={onDone} />
+}
+
+/** The view says when there are unsaved changes in Edit (leaving Edit keeps them on the device). */
+export function DraftNotice({ show, onContinue }: { show: boolean; onContinue: () => void }) {
+  const c = useColors()
+  if (!show) return null
+  return (
+    <View
+      style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: c.warn, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 }}
+      accessibilityRole="alert">
+      <Text style={{ color: c.text, flex: 1 }}>{t('form.draftNotice')}</Text>
+      <Button title={t('form.continueEditing')} variant="link" onPress={onContinue} />
+    </View>
+  )
 }

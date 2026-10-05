@@ -44,6 +44,11 @@ public static class ContinuedItem
         return JsonSerializer.Serialize(item, Json);
     }
 
+    /// <summary>An item (e.g. the Edit form's current state) in the same shape.</summary>
+    public static string Describe(NormalizedItem item, TimeZoneInfo zone) => Describe(
+        item.Intent switch { ExtractionIntent.Appointment => "appointment", ExtractionIntent.Note => "note", _ => "task" },
+        item.Title, item.Description, item.StartUtc ?? item.DueUtc, item.HasTime, item.EndUtc, item.Location, item.Priority, item.Reminders, zone);
+
     /// <summary>
     /// Whether the merged details carry the user's new words (at least a third
     /// of the longer ones) - if not, they'd be lost, so they get added as-is.
@@ -96,6 +101,12 @@ public static class ContinuedItem
             if (kept.Intent == ExtractionIntent.Appointment && kept.StartUtc is null && current.StartUtc is not null)
             {
                 kept = kept with { StartUtc = current.StartUtc, EndUtc = current.EndUtc, HasTime = current.HasTime, Clarification = null };
+            }
+            // A question about it ("February has no 31st - which date?") means the AI isn't
+            // sure: the item keeps its own date and time until the user says.
+            if (kept.Clarification is not null && (kept.StartUtc != current.StartUtc || kept.DueUtc != current.DueUtc))
+            {
+                kept = kept with { StartUtc = current.StartUtc, EndUtc = current.EndUtc, DueUtc = current.DueUtc, HasTime = current.HasTime };
             }
             if (kept.Location is null && current.Location is not null) kept = kept with { Location = current.Location };
             if (kept.Priority is null && current.Priority is not null) kept = kept with { Priority = current.Priority };

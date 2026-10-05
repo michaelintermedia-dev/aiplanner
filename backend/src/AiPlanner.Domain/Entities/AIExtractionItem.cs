@@ -32,6 +32,9 @@ public class AIExtractionItem : BaseEntity
     /// continued from, so the review offers "Add to this item" first.
     /// </summary>
     public bool AddsToCurrent { get; set; }
+    /// <summary>With RecurrenceFrequency: every N, and Weekly's days (bit mask, Sunday = bit 0).</summary>
+    public int RecurrenceInterval { get; set; } = 1;
+    public int RecurrenceDays { get; set; }
 
     /// <summary>"Add more" on a saved item: which one ("Task"/"Appointment"/"Note" + id) - so an unsaved review of it can be resumed.</summary>
     public string? ContinuesItemType { get; set; }

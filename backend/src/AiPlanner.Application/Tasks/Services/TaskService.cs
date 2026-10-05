@@ -1,3 +1,5 @@
+using AiPlanner.Application.Common.Utils;
+using AiPlanner.Application.Recurrence;
 using AiPlanner.Application.Common.Interfaces;
 using AiPlanner.Application.Common.Models;
 using AiPlanner.Application.Reminders;
@@ -36,6 +38,7 @@ public class TaskService : ITaskService
         var q = _db.TaskItems
             .AsNoTracking()
             .Include(t => t.TaskTags).ThenInclude(tt => tt.Tag)
+            .Include(t => t.RecurrenceRule)
             .Where(t => t.UserId == userId);
 
         if (query.Status.HasValue)
@@ -103,7 +106,9 @@ public class TaskService : ITaskService
 
         await ApplyTagsAsync(task, request.Tags, ct);
 
-        SetReminders(task, request.Reminders, await _reminders.ZoneAsync(userId, ct));
+        var zone = await _reminders.ZoneAsync(userId, ct);
+        SetReminders(task, request.Reminders, zone);
+        SetRecurrence(task, request.Recurrence, zone);
 
         _db.TaskItems.Add(task);
         await _db.SaveChangesAsync(ct);
@@ -138,7 +143,9 @@ public class TaskService : ITaskService
         await ApplyTagsAsync(task, request.Tags, ct);
 
         // Re-set even if unchanged: a "before" reminder follows the due date.
-        SetReminders(task, request.Reminders, await _reminders.ZoneAsync(task.UserId, ct));
+        var zone = await _reminders.ZoneAsync(task.UserId, ct);
+        SetReminders(task, request.Reminders, zone);
+        SetRecurrence(task, request.Recurrence, zone);
 
         await _db.SaveChangesAsync(ct);
 
@@ -151,6 +158,18 @@ public class TaskService : ITaskService
         if (task is null)
         {
             return Result<TaskItemDto>.Failure("Task not found.");
+        }
+
+        // A repeating task moves on to its next date and stays open (done once more).
+        if (await NextOccurrenceAsync(task, ct) is { } next)
+        {
+            task.CompletedAtUtc = _dateTime.UtcNow; // when it was last done
+            task.DueDateUtc = next;
+            if (task.RecurrenceRule!.MaxOccurrences is { } left) task.RecurrenceRule.MaxOccurrences = left - 1;
+            // Its reminders follow it ("30 minutes before" the new date).
+            SetReminders(task, ReminderPlanner.ToDtos(task.Reminders), await _reminders.ZoneAsync(task.UserId, ct));
+            await _db.SaveChangesAsync(ct);
+            return Result<TaskItemDto>.Success(ToDto(task));
         }
 
         task.Status = TaskItemStatus.Completed;
@@ -224,6 +243,7 @@ public class TaskService : ITaskService
         var q = _db.TaskItems
             .Include(t => t.TaskTags).ThenInclude(tt => tt.Tag)
             .Include(t => t.Reminders)
+            .Include(t => t.RecurrenceRule)
             .Where(t => t.Id == id && t.UserId == userId);
 
         if (!track)
@@ -292,6 +312,31 @@ public class TaskService : ITaskService
     /// <summary>What a "before" reminder counts back from: the due time (not a date-only due).</summary>
     private static DateTime? ReminderTime(TaskItem task) => task.HasDueTime ? task.DueDateUtc : null;
 
+    private void SetRecurrence(TaskItem task, RecurrenceDto? spec, TimeZoneInfo zone)
+    {
+        // Only a task with a date (and not ongoing) can repeat.
+        var wanted = task.DueDateUtc is null || task.Status == TaskItemStatus.Ongoing ? null : RecurrencePlanner.Pin(spec, task.DueDateUtc, zone);
+        task.RecurrenceRule = RecurrencePlanner.Apply(_db, task.RecurrenceRule, wanted, task.UserId);
+        task.RecurrenceRuleId = task.RecurrenceRule?.Id;
+    }
+
+    /// <summary>
+    /// Where a repeating task goes when it's done: its next date after the current
+    /// one - or, if that's already past (done late), the first one from today on.
+    /// Null: it doesn't repeat, or the series is over.
+    /// </summary>
+    private async Task<DateTime?> NextOccurrenceAsync(TaskItem task, CancellationToken ct)
+    {
+        if (RecurrencePlanner.ToDto(task.RecurrenceRule) is not { } rule || task.DueDateUtc is not { } due) return null;
+        if (rule.Count is <= 1) return null; // this was the last time
+        var zone = await _reminders.ZoneAsync(task.UserId, ct);
+        var counted = rule with { Count = null }; // the stored count is what's left, from this date on
+        var next = RecurrenceSchedule.Next(counted, due, zone, due);
+        var todayStart = UserTimeZoneHelper.LocalDateStartToUtc(DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(_dateTime.UtcNow, zone)), zone);
+        if (next is { } n && n < todayStart) next = RecurrenceSchedule.Next(counted, due, zone, todayStart.AddTicks(-1));
+        return next;
+    }
+
     private static TaskItemDto ToDto(TaskItem t) => new(
         t.Id,
         t.Title,
@@ -308,5 +353,6 @@ public class TaskService : ITaskService
         t.CreatedAtUtc,
         t.UpdatedAtUtc,
         ReminderPlanner.ToDtos(t.Reminders),
-        t.SourceAiExtractionId);
+        t.SourceAiExtractionId,
+        RecurrencePlanner.ToDto(t.RecurrenceRule));
 }

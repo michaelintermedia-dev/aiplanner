@@ -1,3 +1,4 @@
+using AiPlanner.Application.Recurrence;
 using AiPlanner.Application.Reminders;
 using AiPlanner.Domain.Enums;
 
@@ -13,4 +14,5 @@ public record UpdateTaskRequest(
     TaskPriority Priority,
     bool IsOngoing,
     IReadOnlyList<ReminderDto>? Reminders,
-    IReadOnlyList<string>? Tags);
+    IReadOnlyList<string>? Tags,
+    RecurrenceDto? Recurrence = null);

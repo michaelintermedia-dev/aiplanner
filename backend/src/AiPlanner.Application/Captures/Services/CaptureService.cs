@@ -1,3 +1,4 @@
+using AiPlanner.Application.Recurrence;
 using System.Text.Json;
 using AiPlanner.Application.Ai.Interfaces;
 using AiPlanner.Application.Ai.Services;
@@ -453,7 +454,9 @@ public class CaptureService : ICaptureService
         HasTime = i.HasTime,
         Location = i.Location,
         Priority = i.Priority,
-        RecurrenceFrequency = i.Recurrence,
+        RecurrenceFrequency = i.RecurrenceRule?.Frequency ?? i.Recurrence,
+        RecurrenceInterval = i.RecurrenceRule?.Interval ?? 1,
+        RecurrenceDays = ReminderSchedule.DaysMask(i.RecurrenceRule?.Days),
         Clarification = i.Clarification,
         Confidence = i.Confidence,
         AddsToCurrent = i.AddsToCurrent,
@@ -871,12 +874,13 @@ public class CaptureService : ICaptureService
                 var task = await _tasks.GetByIdAsync(id, ct);
                 return task.Value is not { } t ? null : new NormalizedItem(
                     ExtractionIntent.Task, t.Title, null, t.Description, null, null, t.DueDateUtc, t.HasDueTime, null,
-                    t.Priority == TaskPriority.None ? null : t.Priority, t.Reminders ?? [], null, null, null);
+                    t.Priority == TaskPriority.None ? null : t.Priority, t.Reminders ?? [], t.Recurrence?.Frequency, null, null,
+                    RecurrenceRule: t.Recurrence);
             case "Appointment":
                 var appointment = await _appointments.GetByIdAsync(id, ct);
                 return appointment.Value is not { } a ? null : new NormalizedItem(
                     ExtractionIntent.Appointment, a.Title, null, a.Description, a.StartUtc, a.EndUtc, null, true, a.Location,
-                    null, a.Reminders ?? [], null, null, null);
+                    null, a.Reminders ?? [], a.Recurrence?.Frequency, null, null, RecurrenceRule: a.Recurrence);
             case "Note":
                 var note = await _db.Notes.AsNoTracking().Include(n => n.Reminders).FirstOrDefaultAsync(n => n.Id == id && n.UserId == userId, ct);
                 return note is null ? null : new NormalizedItem(
@@ -896,11 +900,11 @@ public class CaptureService : ICaptureService
             case "Task":
                 var task = await _tasks.GetByIdAsync(id, ct);
                 return task.Value is not { } t ? null : ContinuedItem.Describe(
-                    "task", t.Title, t.Description, t.DueDateUtc, t.HasDueTime, null, null, t.Priority, t.Reminders ?? [], zone);
+                    "task", t.Title, t.Description, t.DueDateUtc, t.HasDueTime, null, null, t.Priority, t.Reminders ?? [], zone, t.Recurrence);
             case "Appointment":
                 var appointment = await _appointments.GetByIdAsync(id, ct);
                 return appointment.Value is not { } a ? null : ContinuedItem.Describe(
-                    "appointment", a.Title, a.Description, a.StartUtc, true, a.EndUtc, a.Location, null, a.Reminders ?? [], zone);
+                    "appointment", a.Title, a.Description, a.StartUtc, true, a.EndUtc, a.Location, null, a.Reminders ?? [], zone, a.Recurrence);
             case "Note":
                 var note = await _db.Notes.AsNoTracking().Include(n => n.Reminders).FirstOrDefaultAsync(n => n.Id == id && n.UserId == userId, ct);
                 return note is null ? null : ContinuedItem.Describe(
@@ -947,7 +951,7 @@ public class CaptureService : ICaptureService
                     TitleOr(decision, t.Title), decision.Description ?? t.Description, t.Notes, t.StartDateUtc,
                     decision.DueUtc, decision.DueUtc is not null && decision.HasTime,
                     decision.Priority ?? TaskPriority.None, t.Status == TaskItemStatus.Ongoing && decision.DueUtc is null,
-                    decision.Reminders ?? [], t.Tags), ct);
+                    decision.Reminders ?? [], t.Tags, decision.DueUtc is null ? null : decision.Recurrence ?? t.Recurrence), ct);
                 if (!updated.Succeeded) return string.Join(" ", updated.Errors);
                 item.ResultingTaskItemId = targetId;
                 return null;
@@ -959,7 +963,8 @@ public class CaptureService : ICaptureService
                 var end = decision.EndUtc is { } e && e > start ? e : start + (a.EndUtc - a.StartUtc);
                 var updated = await _appointments.UpdateAsync(targetId, new UpdateAppointmentRequest(
                     TitleOr(decision, a.Title), decision.Description ?? a.Description, a.Notes, start, end,
-                    decision.Location ?? a.Location, a.Participants.Select(p => p.Name).ToList(), decision.Reminders ?? []), ct);
+                    decision.Location ?? a.Location, a.Participants.Select(p => p.Name).ToList(), decision.Reminders ?? [],
+                    decision.Recurrence ?? a.Recurrence), ct);
                 if (!updated.Succeeded) return string.Join(" ", updated.Errors);
                 item.ResultingAppointmentId = targetId;
                 return null;
@@ -1087,6 +1092,13 @@ public class CaptureService : ICaptureService
         }
     }
 
+    /// <summary>A capture item's proposed repeat rule (null: it doesn't repeat).</summary>
+    private static RecurrenceDto? RuleOf(AIExtractionItem i) =>
+        i.RecurrenceFrequency is RecurrenceFrequency.Daily or RecurrenceFrequency.Weekdays or RecurrenceFrequency.Weekly or RecurrenceFrequency.Monthly
+            ? new RecurrenceDto(i.RecurrenceFrequency.Value, Math.Max(1, i.RecurrenceInterval),
+                i.RecurrenceFrequency == RecurrenceFrequency.Weekly && i.RecurrenceDays != 0 ? ReminderSchedule.DaysFromMask(i.RecurrenceDays) : null)
+            : null;
+
     private static CreateTaskRequest ToTaskRequest(ConfirmCaptureItem i) => new(
         Title: i.Title.Trim(),
         Description: i.Description,
@@ -1100,7 +1112,8 @@ public class CaptureService : ICaptureService
         Reminders: i.Reminders is { Count: > 0 } given
             ? given
             : i.Intent == ExtractionIntent.Reminder ? [new ReminderDto(ReminderKind.Before, MinutesBefore: 0)] : null,
-        Tags: null);
+        Tags: null,
+        Recurrence: i.DueUtc is null ? null : i.Recurrence);
 
     private static CreateAppointmentRequest ToAppointmentRequest(ConfirmCaptureItem i) => new(
         Title: i.Title.Trim(),
@@ -1110,7 +1123,8 @@ public class CaptureService : ICaptureService
         EndUtc: i.EndUtc ?? default,
         Location: i.Location,
         ParticipantNames: null,
-        Reminders: i.Reminders);
+        Reminders: i.Reminders,
+        Recurrence: i.Recurrence);
 
     private static bool IsEdited(AIExtractionItem item, ConfirmCaptureItem d) =>
         item.Intent != d.Intent
@@ -1178,7 +1192,8 @@ public class CaptureService : ICaptureService
                 i.Priority, ReminderPlanner.FromProposed(i.ProposedReminders), i.RecurrenceFrequency,
                 i.Clarification, i.Confidence,
                 i.ResultingTaskItemId, i.ResultingAppointmentId, i.ResultingNoteId, i.AddsToCurrent,
-                i.AudioStartMs, i.AudioEndMs, i.ContinuesItemType, i.ContinuesItemId, i.Unrelated, i.HeldByEditForm))
+                i.AudioStartMs, i.AudioEndMs, i.ContinuesItemType, i.ContinuesItemId, i.Unrelated, i.HeldByEditForm,
+                RuleOf(i)))
             .ToList(),
         transcript?.VoiceCapture is { } v && v.AudioPartDurationsMs.Count == v.AudioStorageKeys.Count && v.AudioStorageKeys.Count > 0
             ? v.AudioPartDurationsMs

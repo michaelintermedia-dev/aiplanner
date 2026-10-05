@@ -1,3 +1,4 @@
+using AiPlanner.Application.Recurrence;
 using AiPlanner.Application.Appointments.DTOs;
 using AiPlanner.Application.Common.Interfaces;
 using AiPlanner.Application.Common.Utils;
@@ -40,15 +41,25 @@ public class TodayService : ITodayService
         var dayStartUtc = UserTimeZoneHelper.LocalDateStartToUtc(targetDate, timeZone);
         var dayEndUtc = UserTimeZoneHelper.LocalDateEndToUtc(targetDate, timeZone);
 
-        var appointmentsToday = await _db.Appointments
+        var appointmentsToday = (await _db.Appointments
             .AsNoTracking()
             .Include(a => a.Participants)
+            .Include(a => a.RecurrenceRule)
             .Where(a => a.UserId == userId
                         && a.Status != AppointmentStatus.Cancelled
                         && a.StartUtc < dayEndUtc
-                        && a.EndUtc >= dayStartUtc)
+                        && (a.EndUtc >= dayStartUtc || a.RecurrenceRuleId != null))
+            .ToListAsync(ct))
+            // A repeating event shows as today's occurrence (its own times).
+            .SelectMany(a => EventOccurrences.In(a, timeZone, dayStartUtc, dayEndUtc).Select(o => ToAppointmentDto(a) with
+            {
+                StartUtc = o.Start,
+                EndUtc = o.End,
+                Recurrence = RecurrencePlanner.ToDto(a.RecurrenceRule),
+                IsOccurrence = a.RecurrenceRule is not null,
+            }))
             .OrderBy(a => a.StartUtc)
-            .ToListAsync(ct);
+            .ToList();
 
         var openTaskStatuses = new[] { TaskItemStatus.Inbox, TaskItemStatus.Planned, TaskItemStatus.InProgress };
 
@@ -91,7 +102,7 @@ public class TodayService : ITodayService
 
         return new TodayDto(
             targetDate,
-            appointmentsToday.Select(ToAppointmentDto).ToList(),
+            appointmentsToday,
             tasksDueToday.Select(ToTaskDto).ToList(),
             ongoingTasks.Select(ToTaskDto).ToList(),
             overdueTasks.Select(ToTaskDto).ToList(),

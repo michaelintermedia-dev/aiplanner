@@ -17,6 +17,9 @@ public class Appointment : BaseEntity
     public Guid? RecurrenceRuleId { get; set; }
     public RecurrenceRule? RecurrenceRule { get; set; }
 
+    /// <summary>A repeating event's occurrences the user skipped ("not this week"), by their start time.</summary>
+    public List<DateTime> SkippedOccurrencesUtc { get; set; } = [];
+
     public Guid? SourceAiExtractionId { get; set; }
     public AIExtraction? SourceAiExtraction { get; set; }
 

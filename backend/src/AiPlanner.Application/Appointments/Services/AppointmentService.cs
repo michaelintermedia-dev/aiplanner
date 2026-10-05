@@ -1,3 +1,4 @@
+using AiPlanner.Application.Recurrence;
 using AiPlanner.Application.Appointments.DTOs;
 using AiPlanner.Application.Appointments.Interfaces;
 using AiPlanner.Application.Common.Interfaces;
@@ -31,6 +32,7 @@ public class AppointmentService : IAppointmentService
         var q = _db.Appointments
             .AsNoTracking()
             .Include(a => a.Participants)
+            .Include(a => a.RecurrenceRule)
             .Where(a => a.UserId == userId);
 
         if (query.FromUtc.HasValue)
@@ -77,7 +79,9 @@ public class AppointmentService : IAppointmentService
         };
 
         ApplyParticipants(appointment, request.ParticipantNames);
-        SetReminders(appointment, request.Reminders, await _reminders.ZoneAsync(userId, ct));
+        var zone = await _reminders.ZoneAsync(userId, ct);
+        SetRecurrence(appointment, request.Recurrence, zone);
+        SetReminders(appointment, request.Reminders, zone);
 
         _db.Appointments.Add(appointment);
         await _db.SaveChangesAsync(ct);
@@ -103,8 +107,33 @@ public class AppointmentService : IAppointmentService
         ApplyParticipants(appointment, request.ParticipantNames);
 
         // Re-set even if unchanged: a "before" reminder follows the start time.
-        SetReminders(appointment, request.Reminders, await _reminders.ZoneAsync(appointment.UserId, ct));
+        var zone = await _reminders.ZoneAsync(appointment.UserId, ct);
+        SetRecurrence(appointment, request.Recurrence, zone);
+        SetReminders(appointment, request.Reminders, zone);
 
+        await _db.SaveChangesAsync(ct);
+        return Result<AppointmentDto>.Success(ToDto(appointment));
+    }
+
+    public async Task<Result<AppointmentDto>> SkipOccurrenceAsync(Guid id, DateTime occurrenceStartUtc, bool skip, CancellationToken ct = default)
+    {
+        var appointment = await FindOwnedAsync(id, track: true, ct);
+        if (appointment is null)
+        {
+            return Result<AppointmentDto>.Failure("Appointment not found.");
+        }
+        var zone = await _reminders.ZoneAsync(appointment.UserId, ct);
+        var start = DateTime.SpecifyKind(occurrenceStartUtc, DateTimeKind.Utc);
+        if (appointment.RecurrenceRule is null || !EventOccurrences.IsOccurrence(appointment, zone, start))
+        {
+            return Result<AppointmentDto>.Failure("That isn't one of this event's dates.");
+        }
+        // Assign a new list (not Add/Remove) so EF sees the JSON column change.
+        appointment.SkippedOccurrencesUtc = skip
+            ? [.. appointment.SkippedOccurrencesUtc.Where(s => s != start), start]
+            : [.. appointment.SkippedOccurrencesUtc.Where(s => s != start)];
+        // "Before" reminders follow the next occurrence that still happens.
+        SetReminders(appointment, ReminderPlanner.ToDtos(appointment.Reminders), zone);
         await _db.SaveChangesAsync(ct);
         return Result<AppointmentDto>.Success(ToDto(appointment));
     }
@@ -175,7 +204,8 @@ public class AppointmentService : IAppointmentService
         }
 
         appointment.Status = AppointmentStatus.Scheduled;
-        _reminders.Restore(appointment.Reminders, appointment.StartUtc, await _reminders.ZoneAsync(appointment.UserId, ct), appointment.UserId, r => r.AppointmentId = appointment.Id);
+        var reopenZone = await _reminders.ZoneAsync(appointment.UserId, ct);
+        _reminders.Restore(appointment.Reminders, ReminderTime(appointment, reopenZone), reopenZone, appointment.UserId, r => r.AppointmentId = appointment.Id);
 
         await _db.SaveChangesAsync(ct);
         return Result<AppointmentDto>.Success(ToDto(appointment));
@@ -208,6 +238,7 @@ public class AppointmentService : IAppointmentService
         var q = _db.Appointments
             .Include(a => a.Participants)
             .Include(a => a.Reminders)
+            .Include(a => a.RecurrenceRule)
             .Where(a => a.Id == id && a.UserId == userId);
 
         if (!track)
@@ -244,8 +275,22 @@ public class AppointmentService : IAppointmentService
 
 
 
+    /// <summary>
+    /// "Before" reminders count back from the item's time - for a repeating event,
+    /// its next occurrence (notifications expand every occurrence themselves).
+    /// </summary>
     private void SetReminders(Appointment appointment, IReadOnlyList<ReminderDto>? reminders, TimeZoneInfo zone) =>
-        _reminders.Set(appointment.Reminders, reminders, appointment.StartUtc, zone, appointment.UserId, r => r.AppointmentId = appointment.Id);
+        _reminders.Set(appointment.Reminders, reminders, ReminderTime(appointment, zone), zone, appointment.UserId, r => r.AppointmentId = appointment.Id);
+
+    private DateTime ReminderTime(Appointment a, TimeZoneInfo zone) =>
+        a.RecurrenceRule is null ? a.StartUtc : EventOccurrences.Next(a, zone, _dateTime.UtcNow)?.Start ?? a.StartUtc;
+
+    private void SetRecurrence(Appointment appointment, RecurrenceDto? spec, TimeZoneInfo zone)
+    {
+        appointment.RecurrenceRule = RecurrencePlanner.Apply(_db, appointment.RecurrenceRule, RecurrencePlanner.Pin(spec, appointment.StartUtc, zone), appointment.UserId);
+        appointment.RecurrenceRuleId = appointment.RecurrenceRule?.Id;
+        if (appointment.RecurrenceRule is null) appointment.SkippedOccurrencesUtc = [];
+    }
 
     private static AppointmentDto ToDto(Appointment a) => new(
         a.Id,
@@ -261,5 +306,7 @@ public class AppointmentService : IAppointmentService
         a.CreatedAtUtc,
         a.UpdatedAtUtc,
         ReminderPlanner.ToDtos(a.Reminders),
-        a.SourceAiExtractionId);
+        a.SourceAiExtractionId,
+        RecurrencePlanner.ToDto(a.RecurrenceRule),
+        a.RecurrenceRule is null ? null : a.SkippedOccurrencesUtc);
 }

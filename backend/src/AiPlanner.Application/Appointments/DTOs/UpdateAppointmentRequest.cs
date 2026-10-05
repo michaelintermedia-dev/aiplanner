@@ -1,3 +1,4 @@
+using AiPlanner.Application.Recurrence;
 using AiPlanner.Application.Reminders;
 
 namespace AiPlanner.Application.Appointments.DTOs;
@@ -10,4 +11,5 @@ public record UpdateAppointmentRequest(
     DateTime EndUtc,
     string? Location,
     IReadOnlyList<string>? ParticipantNames,
-    IReadOnlyList<ReminderDto>? Reminders);
+    IReadOnlyList<ReminderDto>? Reminders,
+    RecurrenceDto? Recurrence = null);

@@ -1,3 +1,4 @@
+using AiPlanner.Application.Recurrence;
 using AiPlanner.Application.Common.Interfaces;
 using AiPlanner.Application.Reminders;
 using AiPlanner.Application.Notifications.Services;
@@ -95,17 +96,34 @@ public class FeedService : IFeedService
                 FeedReminderFilter.Without => q.Where(a => !a.Reminders.Any(r => !r.IsCancelled)),
                 _ => q,
             };
-            // A scheduled event that has ended counts as done ("passed").
+            // A scheduled event that has ended counts as done ("passed"); a repeating one
+            // is open while it has occurrences ahead (checked below, with its rule).
             q = f.Status switch
             {
-                FeedStatusFilter.Open => q.Where(a => a.Status == AppointmentStatus.Scheduled && a.EndUtc >= now),
+                FeedStatusFilter.Open => q.Where(a => a.Status == AppointmentStatus.Scheduled && (a.EndUtc >= now || a.RecurrenceRuleId != null)),
                 FeedStatusFilter.Done => q.Where(a => a.Status != AppointmentStatus.Scheduled || a.EndUtc < now),
                 _ => q,
             };
-            if (f.DateFromUtc is { } dFrom) q = q.Where(a => a.StartUtc >= dFrom);
+            if (f.DateFromUtc is { } dFrom) q = q.Where(a => a.StartUtc >= dFrom || a.RecurrenceRuleId != null);
             if (f.DateToUtc is { } dTo) q = q.Where(a => a.StartUtc < dTo);
             if (f.FromVoice) q = q.Where(a => a.SourceAiExtraction != null && a.SourceAiExtraction.TranscriptId != null);
-            keys.AddRange(await q.Select(a => new FeedKeyRow(a.Id, FeedKind.Appointment, a.CreatedAtUtc, a.UpdatedAtUtc, (DateTime?)a.StartUtc)).ToListAsync(ct));
+            var rows = await q.Select(a => new { a.Id, a.CreatedAtUtc, a.UpdatedAtUtc, a.StartUtc, Repeats = a.RecurrenceRuleId != null }).ToListAsync(ct);
+
+            // A repeating event is dated by its next occurrence (sorting, "Today", date filters).
+            var next = await NextOccurrencesAsync(userId, rows.Where(r => r.Repeats).Select(r => r.Id).ToList(), now, ct);
+            foreach (var r in rows)
+            {
+                var date = r.Repeats && next.TryGetValue(r.Id, out var n) ? n?.Start ?? r.StartUtc : r.StartUtc;
+                if (r.Repeats)
+                {
+                    var over = next.TryGetValue(r.Id, out var o) && o is null;
+                    if (f.Status == FeedStatusFilter.Open && over) continue;
+                    if (f.Status == FeedStatusFilter.Done && !over) continue;
+                    if (f.DateFromUtc is { } from && date < from) continue;
+                    if (f.DateToUtc is { } to && date >= to) continue;
+                }
+                keys.Add(new FeedKeyRow(r.Id, FeedKind.Appointment, r.CreatedAtUtc, r.UpdatedAtUtc, date));
+            }
         }
         if (Wants(FeedKind.Note))
         {
@@ -139,6 +157,7 @@ public class FeedService : IFeedService
                 .Select(t => new
                 {
                     t.Id, t.Title, t.Description, t.Status, t.DueDateUtc, t.HasDueTime, t.Priority,
+                    Repeats = t.RecurrenceRuleId != null,
                     Tags = t.TaskTags.Select(tt => tt.Tag.Name).ToList(),
                     t.SourceAiExtractionId, t.CreatedAtUtc, t.UpdatedAtUtc,
                 })
@@ -149,7 +168,8 @@ public class FeedService : IFeedService
                     t.Id, FeedKind.Task, t.Title, Snippet(t.Description), t.Status.ToString(), t.DueDateUtc, null,
                     t.DueDateUtc is not null && t.HasDueTime,
                     t.Priority == Domain.Enums.TaskPriority.None ? null : t.Priority.ToString(), null,
-                    t.Tags.OrderBy(n => n).ToList(), t.SourceAiExtractionId is not null, t.CreatedAtUtc, t.UpdatedAtUtc);
+                    t.Tags.OrderBy(n => n).ToList(), t.SourceAiExtractionId is not null, t.CreatedAtUtc, t.UpdatedAtUtc,
+                    Repeats: t.Repeats);
             }
         }
 
@@ -158,13 +178,17 @@ public class FeedService : IFeedService
         {
             var appointments = await _db.Appointments.AsNoTracking()
                 .Where(a => a.UserId == userId && appointmentIds.Contains(a.Id))
-                .Select(a => new { a.Id, a.Title, a.Description, a.Status, a.StartUtc, a.EndUtc, a.Location, a.SourceAiExtractionId, a.CreatedAtUtc, a.UpdatedAtUtc })
+                .Select(a => new { a.Id, a.Title, a.Description, a.Status, a.StartUtc, a.EndUtc, a.Location, a.SourceAiExtractionId, a.CreatedAtUtc, a.UpdatedAtUtc, Repeats = a.RecurrenceRuleId != null })
                 .ToListAsync(ct);
+            var nextOnPage = await NextOccurrencesAsync(userId, appointments.Where(a => a.Repeats).Select(a => a.Id).ToList(), now, ct);
             foreach (var a in appointments)
             {
+                // A repeating event shows its next occurrence (or its first, once it's all over).
+                var (start, end) = a.Repeats && nextOnPage.TryGetValue(a.Id, out var n) && n is { } o ? (o.Start, o.End) : (a.StartUtc, a.EndUtc);
                 details[a.Id] = new FeedItemDto(
-                    a.Id, FeedKind.Appointment, a.Title, Snippet(a.Description), a.Status.ToString(), a.StartUtc, a.EndUtc,
-                    true, null, a.Location, [], a.SourceAiExtractionId is not null, a.CreatedAtUtc, a.UpdatedAtUtc);
+                    a.Id, FeedKind.Appointment, a.Title, Snippet(a.Description), a.Status.ToString(), start, end,
+                    true, null, a.Location, [], a.SourceAiExtractionId is not null, a.CreatedAtUtc, a.UpdatedAtUtc,
+                    Repeats: a.Repeats);
             }
         }
 
@@ -192,6 +216,19 @@ public class FeedService : IFeedService
         // Keep the pager's order; skip anything deleted between the two steps.
         var items = page.Where(r => details.ContainsKey(r.Id)).Select(r => details[r.Id]).ToList();
         return new FeedPageDto(items, nextCursor);
+    }
+
+    /// <summary>
+    /// Repeating events' next occurrences (null: the series is over), by event id.
+    /// </summary>
+    private async Task<Dictionary<Guid, (DateTime Start, DateTime End)?>> NextOccurrencesAsync(Guid userId, List<Guid> ids, DateTime now, CancellationToken ct)
+    {
+        if (ids.Count == 0) return [];
+        var zone = UserTimeZoneHelper.ResolveTimeZone(await _db.Users.Where(u => u.Id == userId).Select(u => u.TimeZoneId).FirstOrDefaultAsync(ct));
+        var events = await _db.Appointments.AsNoTracking().Include(a => a.RecurrenceRule)
+            .Where(a => a.UserId == userId && ids.Contains(a.Id))
+            .ToListAsync(ct);
+        return events.ToDictionary(a => a.Id, a => EventOccurrences.Next(a, zone, now));
     }
 
     /// <summary>

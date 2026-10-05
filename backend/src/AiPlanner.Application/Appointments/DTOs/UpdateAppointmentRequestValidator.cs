@@ -1,3 +1,4 @@
+using AiPlanner.Application.Recurrence;
 using AiPlanner.Application.Reminders;
 using FluentValidation;
 
@@ -13,6 +14,7 @@ public class UpdateAppointmentRequestValidator : AbstractValidator<UpdateAppoint
         RuleFor(x => x.Reminders).Must(r => r is null || r.Count <= ReminderPlanner.MaxPerItem)
             .WithMessage($"At most {ReminderPlanner.MaxPerItem} reminders.");
         RuleForEach(x => x.Reminders).SetValidator(new ReminderDtoValidator());
+        RuleFor(x => x.Recurrence!).SetValidator(new RecurrenceDtoValidator()).When(x => x.Recurrence is not null);
         RuleForEach(x => x.ParticipantNames).NotEmpty().MaximumLength(200).When(x => x.ParticipantNames is not null);
     }
 }

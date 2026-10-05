@@ -1,3 +1,4 @@
+using AiPlanner.Application.Recurrence;
 using AiPlanner.Application.Reminders;
 using AiPlanner.Domain.Enums;
 
@@ -21,4 +22,6 @@ public record TaskItemDto(
     // Filled on single-item reads (detail view); null in lists.
     IReadOnlyList<ReminderDto>? Reminders = null,
     // The capture this task was created from (open it to see the transcript/recording).
-    Guid? SourceCaptureId = null);
+    Guid? SourceCaptureId = null,
+    // How it repeats (null: it doesn't). Completing a repeating task moves it to its next date.
+    RecurrenceDto? Recurrence = null);

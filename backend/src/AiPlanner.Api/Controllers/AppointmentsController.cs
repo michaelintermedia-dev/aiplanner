@@ -74,6 +74,21 @@ public class AppointmentsController : ControllerBase
         return result.Succeeded ? Ok(result.Value) : NotFound(new { errors = result.Errors });
     }
 
+    /// <summary>POST /api/appointments/{id}/skip?at=... - a repeating event: skip that occurrence.</summary>
+    [HttpPost("{id:guid}/skip")]
+    public Task<ActionResult<AppointmentDto>> Skip(Guid id, [FromQuery] DateTime at, CancellationToken ct) => SkipOrRestore(id, at, skip: true, ct);
+
+    /// <summary>DELETE /api/appointments/{id}/skip?at=... - bring a skipped occurrence back.</summary>
+    [HttpDelete("{id:guid}/skip")]
+    public Task<ActionResult<AppointmentDto>> Unskip(Guid id, [FromQuery] DateTime at, CancellationToken ct) => SkipOrRestore(id, at, skip: false, ct);
+
+    private async Task<ActionResult<AppointmentDto>> SkipOrRestore(Guid id, DateTime at, bool skip, CancellationToken ct)
+    {
+        var result = await _appointmentService.SkipOccurrenceAsync(id, at.ToUniversalTime(), skip, ct);
+        if (result.Succeeded) return Ok(result.Value);
+        return result.Errors.Contains("Appointment not found.") ? NotFound(new { errors = result.Errors }) : BadRequest(new { errors = result.Errors });
+    }
+
     /// <summary>Completed/cancelled -> scheduled again (its reminder is restored if still ahead).</summary>
     [HttpPatch("{id:guid}/reopen")]
     public async Task<ActionResult<AppointmentDto>> Reopen(Guid id, CancellationToken ct)

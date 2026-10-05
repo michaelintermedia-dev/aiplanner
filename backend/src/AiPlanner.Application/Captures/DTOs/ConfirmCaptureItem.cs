@@ -1,3 +1,4 @@
+using AiPlanner.Application.Recurrence;
 using AiPlanner.Application.Reminders;
 using AiPlanner.Domain.Enums;
 
@@ -28,4 +29,5 @@ public record ConfirmCaptureItem(
     string? AppendToType = null, // "Task" | "Appointment" | "Note"
     Guid? AppendToId = null,
     bool ReplacesItem = false,
-    bool LinkOnly = false);
+    bool LinkOnly = false,
+    RecurrenceDto? Recurrence = null); // tasks (with a date) and events only

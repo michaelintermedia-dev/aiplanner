@@ -1,3 +1,4 @@
+using AiPlanner.Application.Recurrence;
 using AiPlanner.Application.Reminders;
 using AiPlanner.Domain.Enums;
 
@@ -19,4 +20,6 @@ public record CreateTaskRequest(
     bool IsOngoing,
     /// <summary>The task's reminders (a "before" one needs DueDateUtc with a time).</summary>
     IReadOnlyList<ReminderDto>? Reminders,
-    IReadOnlyList<string>? Tags);
+    IReadOnlyList<string>? Tags,
+    /// <summary>How it repeats (needs a due date). Completing it moves it to the next date.</summary>
+    RecurrenceDto? Recurrence = null);

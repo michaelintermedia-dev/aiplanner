@@ -1,3 +1,4 @@
+using AiPlanner.Application.Recurrence;
 using System.Globalization;
 using System.Text.Json;
 using AiPlanner.Application.Ai.Services;
@@ -17,7 +18,7 @@ public static class ContinuedItem
 
     public static string Describe(
         string intent, string title, string? description, DateTime? whenUtc, bool hasTime, DateTime? endUtc,
-        string? location, TaskPriority? priority, IEnumerable<ReminderDto> reminders, TimeZoneInfo zone)
+        string? location, TaskPriority? priority, IEnumerable<ReminderDto> reminders, TimeZoneInfo zone, RecurrenceDto? recurrence = null)
     {
         string? Date(DateTime? utc) => utc is { } u ? TimeZoneInfo.ConvertTimeFromUtc(u, zone).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : null;
         string? Time(DateTime? utc) => utc is { } u ? TimeZoneInfo.ConvertTimeFromUtc(u, zone).ToString("HH:mm", CultureInfo.InvariantCulture) : null;
@@ -40,6 +41,9 @@ public static class ContinuedItem
                 time = r.Kind == ReminderKind.At ? Time(r.AtUtc) : r.Time,
                 days = r.Kind == ReminderKind.Weekly ? r.Days?.Select(d => d.ToString()).ToList() : null,
             }).ToList(),
+            recurrence = recurrence?.Frequency.ToString().ToLowerInvariant(),
+            recurrenceDays = recurrence?.Days?.Select(d => d.ToString()).ToList(),
+            recurrenceInterval = recurrence is { Interval: > 1 } ? recurrence.Interval : (int?)null,
         };
         return JsonSerializer.Serialize(item, Json);
     }
@@ -47,7 +51,8 @@ public static class ContinuedItem
     /// <summary>An item (e.g. the Edit form's current state) in the same shape.</summary>
     public static string Describe(NormalizedItem item, TimeZoneInfo zone) => Describe(
         item.Intent switch { ExtractionIntent.Appointment => "appointment", ExtractionIntent.Note => "note", _ => "task" },
-        item.Title, item.Description, item.StartUtc ?? item.DueUtc, item.HasTime, item.EndUtc, item.Location, item.Priority, item.Reminders, zone);
+        item.Title, item.Description, item.StartUtc ?? item.DueUtc, item.HasTime, item.EndUtc, item.Location, item.Priority, item.Reminders, zone,
+        item.RecurrenceRule);
 
     /// <summary>
     /// Whether the merged details carry the user's new words (at least a third
@@ -110,6 +115,7 @@ public static class ContinuedItem
             }
             if (kept.Location is null && current.Location is not null) kept = kept with { Location = current.Location };
             if (kept.Priority is null && current.Priority is not null) kept = kept with { Priority = current.Priority };
+            if (kept.RecurrenceRule is null && current.RecurrenceRule is not null) kept = kept with { RecurrenceRule = current.RecurrenceRule };
         }
         // Words not about this item are offered as a new capture, not kept here.
         var about = Without(newWords, kept.Unrelated);

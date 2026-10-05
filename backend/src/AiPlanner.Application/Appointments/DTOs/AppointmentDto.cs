@@ -1,3 +1,4 @@
+using AiPlanner.Application.Recurrence;
 using AiPlanner.Application.Reminders;
 using AiPlanner.Domain.Enums;
 
@@ -21,4 +22,10 @@ public record AppointmentDto(
     // Filled on single-item reads (detail view); null in lists.
     IReadOnlyList<ReminderDto>? Reminders = null,
     // The capture this appointment was created from.
-    Guid? SourceCaptureId = null);
+    Guid? SourceCaptureId = null,
+    // How it repeats (null: it doesn't); StartUtc/EndUtc are the first occurrence.
+    RecurrenceDto? Recurrence = null,
+    // Occurrences the user skipped (their start times).
+    IReadOnlyList<DateTime>? SkippedUtc = null,
+    // In Calendar/Today: this row is one occurrence of a repeating event (StartUtc/EndUtc are its times).
+    bool IsOccurrence = false);

@@ -21,4 +21,7 @@ public interface IAppointmentService
     Task<Result<AppointmentDto>> ReopenAsync(Guid id, CancellationToken ct = default);
 
     Task<Result> DeleteAsync(Guid id, CancellationToken ct = default);
+
+    /// <summary>A repeating event: skip one occurrence ("not this week"), or bring it back.</summary>
+    Task<Result<AppointmentDto>> SkipOccurrenceAsync(Guid id, DateTime occurrenceStartUtc, bool skip, CancellationToken ct = default);
 }

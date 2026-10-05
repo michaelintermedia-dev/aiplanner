@@ -53,7 +53,9 @@ public record RawExtractedItem(
     double? Confidence,
     bool AddsToCurrent = false,
     string? SourceText = null, // the user's words this item came from, verbatim
-    string? Unrelated = null); // adding to an item: the words that weren't about it
+    string? Unrelated = null, // adding to an item: the words that weren't about it
+    IReadOnlyList<string>? RecurrenceDays = null, // weekly: English weekday names
+    int? RecurrenceInterval = null); // every N days/weeks/months
 
 /// <summary>
 /// A requested reminder: Kind is at/before/daily/weekdays/weekly. Date/Time are

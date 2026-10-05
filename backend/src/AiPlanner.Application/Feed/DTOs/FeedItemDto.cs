@@ -20,4 +20,5 @@ public record FeedItemDto(
     DateTime CreatedAtUtc,
     DateTime UpdatedAtUtc,
     DateTime? NextReminderUtc = null, // when its next reminder goes off (null = none coming)
-    bool ReminderRepeats = false); // that reminder repeats (daily / weekdays / weekly)
+    bool ReminderRepeats = false, // that reminder repeats (daily / weekdays / weekly)
+    bool Repeats = false); // a repeating task or event (DateUtc/EndUtc: its current / next date)

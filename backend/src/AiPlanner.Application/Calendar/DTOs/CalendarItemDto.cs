@@ -14,4 +14,6 @@ public record CalendarItemDto(
     bool HasTime,
     string Status,
     string? Priority,
-    string? Location);
+    string? Location,
+    // One of the dates of a repeating task or event (the item's id is the same for all).
+    bool Repeats = false);

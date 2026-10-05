@@ -88,7 +88,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             i.Intent, i.Title, i.Summary, i.Description, i.Date, i.Time, i.EndTime, i.Location,
             i.Priority,
             i.Reminders?.Select(r => new RawReminder(r.Kind, r.MinutesBefore, r.Date, r.Time, r.Days)).ToList(),
-            i.Recurrence, i.Clarification, i.Confidence, i.AddsToCurrent ?? false, i.SourceText, i.Unrelated)).ToList();
+            i.Recurrence, i.Clarification, i.Confidence, i.AddsToCurrent ?? false, i.SourceText, i.Unrelated, i.RecurrenceDays, i.RecurrenceInterval)).ToList();
 
         return new RawExtraction(parsed.Title, parsed.Summary, items, content, "OpenAI", completion.Model ?? _options.Model);
     }
@@ -126,7 +126,9 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
               - "daily" / "weekdays": repeats every day / Monday-Friday at the reminder's "time" ("every day at 8" = daily, 08:00).
               - "weekly": repeats on "days" (English weekday names, e.g. ["Monday","Thursday"]) at "time".
               Unused reminder fields are null.
-            - "recurrence": "daily", "weekdays", "weekly" or "monthly" only if the user says it repeats; otherwise null.
+            - "recurrence": "daily", "weekdays", "weekly" or "monthly" only if the user says it repeats; otherwise null. The item's own "date"/"time" is the first time it happens ("every Monday at 9" -> the next Monday, 09:00; "pay rent on the 1st of every month" -> the next 1st).
+            - "recurrenceDays": for "weekly", the weekdays it falls on as English names (["Monday","Thursday"]); otherwise null.
+            - "recurrenceInterval": every N days/weeks/months ("every 2 weeks" = 2); null for 1.
             - "location": only if a place is mentioned.
             - "clarification": a short question for the user when something important is missing or ambiguous (e.g. an appointment with no time); otherwise null.
             - "confidence": 0 to 1, how sure you are that the item is right.
@@ -220,7 +222,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             ["type"] = "object",
             ["additionalProperties"] = false,
             ["required"] = new JsonArray("intent", "title", "summary", "description", "date", "time", "endTime",
-                "location", "priority", "reminders", "recurrence", "clarification", "confidence", "addsToCurrent", "sourceText", "unrelated"),
+                "location", "priority", "reminders", "recurrence", "recurrenceDays", "recurrenceInterval", "clarification", "confidence", "addsToCurrent", "sourceText", "unrelated"),
             ["properties"] = new JsonObject
             {
                 ["intent"] = new JsonObject { ["type"] = "string", ["enum"] = new JsonArray("task", "appointment", "note") },
@@ -234,6 +236,16 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
                 ["priority"] = Nullable("string", values: new JsonArray("low", "medium", "high", null)),
                 ["reminders"] = new JsonObject { ["type"] = "array", ["items"] = ReminderSchema() },
                 ["recurrence"] = Nullable("string", values: new JsonArray("daily", "weekdays", "weekly", "monthly", null)),
+                ["recurrenceDays"] = new JsonObject
+                {
+                    ["type"] = new JsonArray("array", "null"),
+                    ["items"] = new JsonObject
+                    {
+                        ["type"] = "string",
+                        ["enum"] = new JsonArray("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"),
+                    },
+                },
+                ["recurrenceInterval"] = new JsonObject { ["type"] = new JsonArray("integer", "null") },
                 ["clarification"] = Nullable("string"),
                 ["confidence"] = new JsonObject { ["type"] = "number" },
                 ["addsToCurrent"] = new JsonObject { ["type"] = "boolean" },
@@ -269,7 +281,8 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
     private sealed record ItemJson(
         string? Intent, string? Title, string? Summary, string? Description,
         string? Date, string? Time, string? EndTime, string? Location, string? Priority,
-        List<ReminderJson>? Reminders, string? Recurrence, string? Clarification, double? Confidence, bool? AddsToCurrent, string? SourceText, string? Unrelated);
+        List<ReminderJson>? Reminders, string? Recurrence, string? Clarification, double? Confidence, bool? AddsToCurrent, string? SourceText, string? Unrelated,
+        List<string>? RecurrenceDays, int? RecurrenceInterval);
 
     private sealed record ReminderJson(string? Kind, int? MinutesBefore, string? Date, string? Time, List<string>? Days);
 }

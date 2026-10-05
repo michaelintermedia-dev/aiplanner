@@ -1,3 +1,4 @@
+using AiPlanner.Application.Recurrence;
 using AiPlanner.Application.Common.Interfaces;
 using AiPlanner.Application.Common.Models;
 using AiPlanner.Application.Common.Utils;
@@ -52,11 +53,13 @@ public class NotificationService : INotificationService
         var reminders = await _db.Reminders
             .AsNoTracking()
             .Include(r => r.TaskItem)
-            .Include(r => r.Appointment)
+            .Include(r => r.Appointment).ThenInclude(a => a!.RecurrenceRule)
             .Include(r => r.Note)
             .Where(r => r.UserId == userId && !r.IsCancelled
                         && (r.Kind == ReminderKind.Daily || r.Kind == ReminderKind.Weekdays || r.Kind == ReminderKind.Weekly
-                            || (r.TriggerAtUtc >= from && r.TriggerAtUtc < to)))
+                            || (r.TriggerAtUtc >= from && r.TriggerAtUtc < to)
+                            // A repeating event's "before" reminder goes off before every occurrence.
+                            || (r.Kind == ReminderKind.Before && r.Appointment != null && r.Appointment.RecurrenceRuleId != null)))
             .ToListAsync(ct);
 
         foreach (var r in reminders)
@@ -76,11 +79,11 @@ public class NotificationService : INotificationService
                 continue;
             }
 
-            foreach (var at in NotificationSchedule.Occurrences(r, from, to, zone))
+            foreach (var (at, occurrenceTime) in WhenItGoesOff(r, from, to, zone, itemTime))
             {
                 var body = itemType == "Note" && r.Note is { } note && note.Title is not null
                     ? NotificationSchedule.Snippet(note.Content)
-                    : NotificationSchedule.ReminderBody(r, itemType, itemTime, at, zone, texts);
+                    : NotificationSchedule.ReminderBody(r, itemType, occurrenceTime, at, zone, texts);
                 result.Add(new UpcomingNotificationDto(
                     $"r:{r.Id:N}:{at.Ticks}", "Reminder", at, title, body, itemType, itemId, CanComplete: itemType == "Task"));
             }
@@ -169,6 +172,21 @@ public class NotificationService : INotificationService
 
     // ---- helpers ----
 
+    /// <summary>
+    /// Every time the reminder goes off in [from, to), with the item time it's about.
+    /// A "before" reminder on a repeating event: before each occurrence (not skipped).
+    /// </summary>
+    private static IEnumerable<(DateTime At, DateTime? ItemTime)> WhenItGoesOff(Reminder r, DateTime from, DateTime to, TimeZoneInfo zone, DateTime? itemTime)
+    {
+        if (r is { Kind: ReminderKind.Before, MinutesBefore: { } minutes, Appointment: { RecurrenceRule: not null } a })
+        {
+            return EventOccurrences.In(a, zone, from.AddMinutes(minutes), to.AddMinutes(minutes))
+                .Select(o => (At: o.Start.AddMinutes(-minutes), ItemTime: (DateTime?)o.Start))
+                .Where(x => x.At >= from && x.At < to);
+        }
+        return NotificationSchedule.Occurrences(r, from, to, zone).Select(at => (at, itemTime));
+    }
+
     private async Task<IEnumerable<UpcomingNotificationDto>> DailySummariesAsync(
         Guid userId, TimeOnly time, DateTime from, DateTime to, TimeZoneInfo zone, NotificationTexts texts, CancellationToken ct)
     {
@@ -178,11 +196,15 @@ public class NotificationService : INotificationService
                         && t.Status != TaskItemStatus.Completed && t.Status != TaskItemStatus.Cancelled)
             .Select(t => new { t.DueDateUtc, t.Priority })
             .ToListAsync(ct);
-        var events = await _db.Appointments
+        // Every occurrence of a repeating event counts on its own day.
+        var events = (await _db.Appointments
             .AsNoTracking()
-            .Where(a => a.UserId == userId && a.Status == AppointmentStatus.Scheduled && a.StartUtc >= from.AddDays(-1) && a.StartUtc < to.AddDays(1))
-            .Select(a => a.StartUtc)
-            .ToListAsync(ct);
+            .Include(a => a.RecurrenceRule)
+            .Where(a => a.UserId == userId && a.Status == AppointmentStatus.Scheduled && a.StartUtc < to.AddDays(1)
+                        && (a.StartUtc >= from.AddDays(-1) || a.RecurrenceRuleId != null))
+            .ToListAsync(ct))
+            .SelectMany(a => EventOccurrences.In(a, zone, from.AddDays(-1), to.AddDays(1)).Select(o => o.Start))
+            .ToList();
 
         var summaries = new List<UpcomingNotificationDto>();
         var day = UserTimeZoneHelper.TodayInTimeZone(zone, from);

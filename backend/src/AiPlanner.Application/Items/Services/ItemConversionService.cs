@@ -1,3 +1,4 @@
+using AiPlanner.Application.Recurrence;
 using AiPlanner.Application.Appointments.DTOs;
 using AiPlanner.Application.Appointments.Interfaces;
 using AiPlanner.Application.Common.Interfaces;
@@ -111,7 +112,7 @@ public class ItemConversionService : IItemConversionService
                 var details = JoinText(s.Details, s.Location is null ? null : $"Location: {s.Location}");
                 var created = await _tasks.CreateAsync(new CreateTaskRequest(
                     s.Title, details, s.Notes, StartDateUtc: null, due, hasTime, TaskPriority.None, IsOngoing: false,
-                    Reminders(s, targetHasTime: due is not null && hasTime), Tags: null), ct);
+                    Reminders(s, targetHasTime: due is not null && hasTime), Tags: null, Recurrence: due is null ? null : s.Recurrence), ct);
                 return (created.Succeeded ? Result<Guid>.Success(created.Value!.Id) : Result<Guid>.Failure(created.Errors.ToArray()), false);
             }
             case "Appointment":
@@ -125,7 +126,7 @@ public class ItemConversionService : IItemConversionService
                 var end = r.EndUtc ?? (s.EndUtc is { } e && e > start ? e : start.Value + DefaultEventLength);
                 var created = await _appointments.CreateAsync(new CreateAppointmentRequest(
                     s.Title, s.Details, s.Notes, start.Value, end, s.Location, ParticipantNames: null,
-                    Reminders(s, targetHasTime: true)), ct);
+                    Reminders(s, targetHasTime: true), s.Recurrence), ct);
                 return (created.Succeeded ? Result<Guid>.Success(created.Value!.Id) : Result<Guid>.Failure(created.Errors.ToArray()), guessed);
             }
             default:
@@ -156,7 +157,8 @@ public class ItemConversionService : IItemConversionService
     /// <summary>The fields every type can give, plus how to delete it.</summary>
     private sealed record Source(
         Guid Id, string Title, string? Details, string? Notes, DateTime? WhenUtc, bool HasTime, DateTime? EndUtc,
-        string? Location, Guid? SourceCaptureId, DateTime CreatedAtUtc, IReadOnlyList<ReminderDto> Reminders, Action Delete);
+        string? Location, Guid? SourceCaptureId, DateTime CreatedAtUtc, IReadOnlyList<ReminderDto> Reminders, Action Delete,
+        RecurrenceDto? Recurrence = null);
 
     private async Task<Source?> LoadAsync(Guid userId, string type, Guid id, CancellationToken ct)
     {
@@ -164,17 +166,19 @@ public class ItemConversionService : IItemConversionService
         {
             case "Task":
             {
-                var t = await _db.TaskItems.Include(x => x.Reminders).FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId, ct);
+                var t = await _db.TaskItems.Include(x => x.Reminders).Include(x => x.RecurrenceRule).FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId, ct);
                 return t is null ? null : new Source(
                     t.Id, t.Title, t.Description, t.Notes, t.DueDateUtc, t.HasDueTime, null, null, t.SourceAiExtractionId, t.CreatedAtUtc,
-                    ReminderPlanner.ToDtos(t.Reminders), () => { t.IsDeleted = true; ReminderPlanner.TurnOff(t.Reminders); });
+                    ReminderPlanner.ToDtos(t.Reminders), () => { t.IsDeleted = true; ReminderPlanner.TurnOff(t.Reminders); },
+                    RecurrencePlanner.ToDto(t.RecurrenceRule));
             }
             case "Appointment":
             {
-                var a = await _db.Appointments.Include(x => x.Reminders).FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId, ct);
+                var a = await _db.Appointments.Include(x => x.Reminders).Include(x => x.RecurrenceRule).FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId, ct);
                 return a is null ? null : new Source(
                     a.Id, a.Title, a.Description, a.Notes, a.StartUtc, true, a.EndUtc, a.Location, a.SourceAiExtractionId, a.CreatedAtUtc,
-                    ReminderPlanner.ToDtos(a.Reminders), () => { a.IsDeleted = true; ReminderPlanner.TurnOff(a.Reminders); });
+                    ReminderPlanner.ToDtos(a.Reminders), () => { a.IsDeleted = true; ReminderPlanner.TurnOff(a.Reminders); },
+                    RecurrencePlanner.ToDto(a.RecurrenceRule));
             }
             default:
             {

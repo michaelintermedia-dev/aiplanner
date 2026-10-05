@@ -1,3 +1,4 @@
+using AiPlanner.Application.Recurrence;
 using AiPlanner.Application.Calendar.DTOs;
 using AiPlanner.Application.Calendar.Interfaces;
 using AiPlanner.Application.Common.Interfaces;
@@ -27,22 +28,27 @@ public class CalendarService : ICalendarService
         var userId = _currentUser.UserId ?? throw new UnauthorizedAccessException("No authenticated user.");
 
         var (fromUtc, toUtc) = await ResolveRangeAsync(userId, query, ct);
+        var zone = UserTimeZoneHelper.ResolveTimeZone(
+            await _db.Users.Where(u => u.Id == userId).Select(u => u.TimeZoneId).FirstOrDefaultAsync(ct));
 
+        // Repeating events can fall in the range even when their first date is long before it.
         var appointments = await _db.Appointments
             .AsNoTracking()
+            .Include(a => a.RecurrenceRule)
             .Where(a => a.UserId == userId
                         && a.Status != AppointmentStatus.Cancelled
                         && a.StartUtc < toUtc
-                        && a.EndUtc >= fromUtc)
+                        && (a.EndUtc >= fromUtc || a.RecurrenceRuleId != null))
             .ToListAsync(ct);
 
         var tasksInRange = await _db.TaskItems
             .AsNoTracking()
+            .Include(t => t.RecurrenceRule)
             .Where(t => t.UserId == userId
                         && t.Status != TaskItemStatus.Cancelled
                         && t.DueDateUtc != null
-                        && t.DueDateUtc >= fromUtc
-                        && t.DueDateUtc < toUtc)
+                        && t.DueDateUtc < toUtc
+                        && (t.DueDateUtc >= fromUtc || (t.RecurrenceRuleId != null && t.Status != TaskItemStatus.Completed)))
             .ToListAsync(ct);
 
         var ongoingTasks = await _db.TaskItems
@@ -53,11 +59,22 @@ public class CalendarService : ICalendarService
 
         var items = new List<CalendarItemDto>();
 
-        items.AddRange(appointments.Select(a => new CalendarItemDto(
-            a.Id, "Appointment", a.Title, a.StartUtc, a.EndUtc, true, a.Status.ToString(), null, a.Location)));
+        foreach (var a in appointments)
+        {
+            var repeats = a.RecurrenceRule is not null;
+            items.AddRange(EventOccurrences.In(a, zone, fromUtc, toUtc).Select(o => new CalendarItemDto(
+                a.Id, "Appointment", a.Title, o.Start, o.End, true, a.Status.ToString(), null, a.Location, repeats)));
+        }
 
-        items.AddRange(tasksInRange.Select(t => new CalendarItemDto(
-            t.Id, "Task", t.Title, t.DueDateUtc!.Value, null, t.HasDueTime, t.Status.ToString(), t.Priority.ToString(), null)));
+        foreach (var t in tasksInRange)
+        {
+            // A repeating task is one task at its current date; its later dates show too, for planning.
+            var dates = RecurrencePlanner.ToDto(t.RecurrenceRule) is { } rule && t.Status != TaskItemStatus.Completed
+                ? RecurrenceSchedule.Occurrences(rule, t.DueDateUtc!.Value, zone, fromUtc, toUtc).Take(62)
+                : t.DueDateUtc >= fromUtc ? [t.DueDateUtc!.Value] : [];
+            items.AddRange(dates.Select(due => new CalendarItemDto(
+                t.Id, "Task", t.Title, due, null, t.HasDueTime, t.Status.ToString(), t.Priority.ToString(), null, t.RecurrenceRule is not null)));
+        }
 
         return new CalendarRangeDto(
             fromUtc,

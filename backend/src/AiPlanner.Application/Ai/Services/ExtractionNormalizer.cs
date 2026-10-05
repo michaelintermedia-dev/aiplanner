@@ -1,3 +1,4 @@
+using AiPlanner.Application.Recurrence;
 using System.Globalization;
 using AiPlanner.Application.Ai.Interfaces;
 using AiPlanner.Application.Reminders;
@@ -24,7 +25,8 @@ public record NormalizedItem(
     double? Confidence,
     bool AddsToCurrent = false,
     string? SourceText = null, // the user's words it came from - finds its part of a recording
-    string? Unrelated = null); // adding to an item: words that weren't about it
+    string? Unrelated = null, // adding to an item: words that weren't about it
+    RecurrenceDto? RecurrenceRule = null); // how it repeats (Recurrence + its days and interval)
 
 public record NormalizedExtraction(string Title, string? Summary, IReadOnlyList<NormalizedItem> Items);
 
@@ -185,7 +187,8 @@ public static class ExtractionNormalizer
             raw.Confidence is { } c && double.IsFinite(c) ? Math.Clamp(c, 0, 1) : null,
             raw.AddsToCurrent,
             Clean(raw.SourceText, 4000),
-            Clean(raw.Unrelated, 4000));
+            Clean(raw.Unrelated, 4000),
+            intent == ExtractionIntent.Note ? null : ParseRule(ParseRecurrence(raw.Recurrence), raw.RecurrenceDays, raw.RecurrenceInterval));
     }
 
     /// <summary>
@@ -293,6 +296,16 @@ public static class ExtractionNormalizer
         Enum.TryParse<TaskPriority>(value?.Trim(), ignoreCase: true, out var p) && Enum.IsDefined(p) && p != TaskPriority.None
             ? p
             : null;
+
+    /// <summary>A repeat rule from the AI's answer (days only for weekly, interval 1-99).</summary>
+    private static RecurrenceDto? ParseRule(RecurrenceFrequency? frequency, IReadOnlyList<string>? days, int? interval)
+    {
+        if (frequency is not (RecurrenceFrequency.Daily or RecurrenceFrequency.Weekdays or RecurrenceFrequency.Weekly or RecurrenceFrequency.Monthly) ) return null;
+        var weekdays = frequency == RecurrenceFrequency.Weekly
+            ? (days ?? []).Select(d => Enum.TryParse<DayOfWeek>(d, ignoreCase: true, out var day) ? day : (DayOfWeek?)null).OfType<DayOfWeek>().Distinct().ToList()
+            : [];
+        return new RecurrenceDto(frequency.Value, Math.Clamp(interval ?? 1, 1, 99), weekdays.Count > 0 ? weekdays : null);
+    }
 
     private static RecurrenceFrequency? ParseRecurrence(string? value) =>
         Enum.TryParse<RecurrenceFrequency>(value?.Trim(), ignoreCase: true, out var r) && Enum.IsDefined(r) && r != RecurrenceFrequency.None

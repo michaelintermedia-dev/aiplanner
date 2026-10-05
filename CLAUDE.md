@@ -374,12 +374,11 @@ Local dev notes:
   Expo's dev-tools bubble); a tap reopens it. Collapsing shrinks the toolbar into the button and opening grows it back out of it (Animated, native driver; the button's drag and its pop are two layers, since one view can't mix JS- and native-driven transforms; Reduce motion skips it). It sits above the tab bar on tab
   screens and lifts above the keyboard (edge-to-edge Android doesn't resize). It never collapses while recording/processing/reviewing
   (`CaptureBar onEngagedChange`), and typed text survives collapsing.
-  The button depends on the screen (2026-10-05): on an item's screen it means
-  "talk about this item" - the focused screen registers in `lib/dockTarget`
-  (`useDockTarget`, via `useEditMode`), the toolbar collapses there, the
-  button wears a pencil badge, and a tap opens that item's Edit recording (or
-  starts recording if Edit is open); "New entry instead" in Edit opens the
-  toolbar. Everywhere else it's a new entry.
+  It steps aside on an item's screen (user's call, 2026-10-05 - one mic at a
+  time keeps it simple): the item screen has its own mic next to Edit ("talk
+  about this item"), registers in `lib/dockTarget` while focused
+  (`useHideDock`, via `useEditMode`), and the dock hides - unless a recording
+  is going on in it. It stays mounted, so coming back it's as it was.
 - **A capture can be continued after saving** (user's request, 2026-10-02;
   since 2026-10-05 from the item's Edit page, see above) - the capture bar
   in continue mode (`CaptureBar continueFrom`, web + mobile).

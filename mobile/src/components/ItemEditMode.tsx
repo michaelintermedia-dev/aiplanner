@@ -6,7 +6,7 @@ import { router, useLocalSearchParams } from 'expo-router'
 import { useState } from 'react'
 import { Pressable, Text } from 'react-native'
 import { capturesApi } from '@/api/endpoints'
-import { useDockTarget } from '@/lib/dockTarget'
+import { useHideDock } from '@/lib/dockTarget'
 import { useColors } from '@/theme'
 import { CaptureReview } from './CaptureReview'
 import { Button } from './ui'
@@ -15,8 +15,8 @@ const PATH = { Task: '/task/[id]', Appointment: '/appointment/[id]', Note: '/not
 
 /**
  * An item screen's view / Edit switch. `edit=1` opens Edit, `talk=1` opens it
- * recording. While the screen is focused the floating mic means "talk about
- * this item": it opens Edit recording (or starts recording if Edit is open).
+ * recording. The floating dock is hidden while the screen is focused - the
+ * mic next to Edit does "talk about this item".
  * After Save: a type change opens the new item; words that weren't about the
  * item are captured and their review shown (FollowUpReview).
  */
@@ -31,7 +31,8 @@ export function useEditMode() {
     setEditing(true)
     setTalkSignal((n) => n + 1)
   }
-  useDockTarget({ label: t('form.talk'), onTalk: talk })
+  // This screen has its own mic (next to Edit): the floating dock steps aside.
+  useHideDock()
 
   const done = (result: { moved?: { itemType: ItemType; id: string }; followUp?: string } | null) => {
     setEditing(false)

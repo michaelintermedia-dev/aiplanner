@@ -23,7 +23,6 @@ import { useEffect, useRef, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { api, capturesApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
-import { openDock } from '@/lib/dockTarget'
 import { editDrafts } from '@/lib/reviewDrafts'
 import { useColors } from '@/theme'
 import { CaptureBar } from './CaptureBar'
@@ -166,7 +165,6 @@ export function ItemEditor({
         <View style={styles.sectionHead}>
           <Ionicons name="mic-outline" size={18} color={c.text} />
           <Text style={{ color: c.text, fontWeight: '600', flex: 1 }}>{t('form.addByVoice')}</Text>
-          <Button title={t('form.newEntryInstead')} variant="link" onPress={openDock} />
         </View>
         <Text style={{ color: c.muted, fontSize: 13 }}>{t('form.addHint')}</Text>
         <CaptureBar

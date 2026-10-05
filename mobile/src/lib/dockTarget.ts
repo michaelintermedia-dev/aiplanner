@@ -1,20 +1,14 @@
 import { useFocusEffect } from 'expo-router'
-import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
 
 /**
- * What the floating mic does depends on the screen (user's call, 2026-10-05):
- * on an item's screen it means "talk about this item" - the screen registers
- * itself here while it's focused, and the dock calls `onTalk` instead of
- * opening the new-entry toolbar. Everywhere else it's a new entry.
+ * The floating new-entry dock steps aside on an item's screen (user's call,
+ * 2026-10-05): that screen has its own mic next to Edit ("talk about this
+ * item"), and two mics at once is too much. The screen registers here while
+ * it's focused; the dock hides while any is (unless a recording is going on).
  */
-export interface DockTarget {
-  /** What tapping does, for screen readers ("Talk about it"). */
-  label: string
-  onTalk: () => void
-}
 
-let current: DockTarget | null = null
-let opener: (() => void) | null = null
+let focused = 0
 const listeners = new Set<() => void>()
 const emit = () => listeners.forEach((l) => l())
 const subscribe = (l: () => void) => {
@@ -24,39 +18,19 @@ const subscribe = (l: () => void) => {
   }
 }
 
-/** The item screen's registration: active while the screen is focused. */
-export function useDockTarget(target: DockTarget | null) {
-  // The latest callback, without re-registering on every render.
-  const latest = useRef(target)
-  useEffect(() => {
-    latest.current = target
-  })
-  const label = target?.label ?? null
+/** An item screen: the dock hides while it's focused. */
+export function useHideDock() {
   useFocusEffect(
     useCallback(() => {
-      if (!label) return
-      const mine: DockTarget = { label, onTalk: () => latest.current?.onTalk() }
-      current = mine
+      focused++
       emit()
       return () => {
-        if (current === mine) current = null
+        focused--
         emit()
       }
-    }, [label]),
+    }, []),
   )
 }
 
-/** Called whenever an item screen comes into view or leaves (the dock collapses for one). */
-export function onDockTargetChange(listener: (target: DockTarget | null) => void) {
-  return subscribe(() => listener(current))
-}
-
-/** The dock's side: what the floating mic does right now (null = new entry). */
-export const useCurrentDockTarget = () => useSyncExternalStore(subscribe, () => current)
-
-/** The dock registers how to open its new-entry toolbar ("New entry instead"). */
-export function setDockOpener(open: (() => void) | null) {
-  opener = open
-}
-
-export const openDock = () => opener?.()
+/** The dock's side: whether an item screen is in view. */
+export const useDockHidden = () => useSyncExternalStore(subscribe, () => focused > 0)

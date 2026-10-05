@@ -449,5 +449,4 @@ export const en = {
   'form.recordingWillBeDeleted': 'The recording will be deleted when you save.',
   'form.talk': 'Talk about it',
   'form.talkHint': 'Opens Edit and starts recording',
-  'form.newEntryInstead': 'New entry instead',
 } satisfies Record<string, Message>

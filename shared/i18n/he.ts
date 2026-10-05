@@ -445,5 +445,4 @@ export const he: Messages = {
   'form.recordingWillBeDeleted': 'ההקלטה תימחק בשמירה.',
   'form.talk': 'לדבר על זה',
   'form.talkHint': 'פותח עריכה ומתחיל להקליט',
-  'form.newEntryInstead': 'רשומה חדשה במקום',
 }

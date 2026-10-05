@@ -445,5 +445,4 @@ export const ru: Messages = {
   'form.recordingWillBeDeleted': 'Запись будет удалена при сохранении.',
   'form.talk': 'Сказать об этом',
   'form.talkHint': 'Открывает редактирование и начинает запись',
-  'form.newEntryInstead': 'Новая запись вместо этого',
 }

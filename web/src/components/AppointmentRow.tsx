@@ -1,3 +1,4 @@
+import { IoRepeat } from 'react-icons/io5'
 import { Link } from 'react-router'
 import { appointmentsApi } from '../api/endpoints'
 import type { Appointment } from '@shared/types'
@@ -23,7 +24,10 @@ export function AppointmentRow({ appointment: a }: { appointment: Appointment })
         <small>{formatTime(a.endUtc, zone)}</small>
       </span>
       <div className="row-main">
-        <Link className="row-title" to={`/appointments/${a.id}`}>{a.title}</Link>
+        <Link className="row-title" to={`/appointments/${a.id}${a.isOccurrence ? `?at=${encodeURIComponent(a.startUtc)}` : ''}`}>
+          {a.title}
+        </Link>
+        {(a.recurrence || a.isOccurrence) && <IoRepeat className="repeat-icon" title={t('repeat.repeats')} aria-label={t('repeat.repeats')} />}
         <span className="row-meta">
           {a.location && <span>{a.location}</span>}
           {done && <span className="badge">{statusLabel(a.status)}</span>}

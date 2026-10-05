@@ -130,7 +130,13 @@ export default function CalendarScreen() {
             {selectedItems.map((item, i) => (
               <Pressable
                 key={item.id}
-                onPress={() => router.push({ pathname: item.itemType === 'Task' ? '/task/[id]' : '/appointment/[id]', params: { id: item.id } })}
+                onPress={() =>
+                  router.push({
+                    pathname: item.itemType === 'Task' ? '/task/[id]' : '/appointment/[id]',
+                    // One date of a repeating event: open it at that date (Skip is there).
+                    params: item.repeats && item.itemType === 'Appointment' ? { id: item.id, at: item.startUtc } : { id: item.id },
+                  })
+                }
                 accessibilityRole="button">
                 <Row last={i === selectedItems.length - 1}>
                   <Ionicons
@@ -144,6 +150,7 @@ export default function CalendarScreen() {
                     numberOfLines={1}>
                     {item.title}
                   </Text>
+                  {item.repeats && <Ionicons name="repeat" size={14} color={c.muted} accessibilityLabel={t('repeat.repeats')} />}
                 </Row>
               </Pressable>
             ))}

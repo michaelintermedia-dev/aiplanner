@@ -2,10 +2,11 @@ import { useState, type FormEvent } from 'react'
 import { appointmentsApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { addDays, todayKey, zonedToUtc, endsNextDay } from '@shared/dates'
-import type { Reminder } from '@shared/types'
+import type { Recurrence, Reminder } from '@shared/types'
 import { remindersProblem } from '@shared/reminders'
 import { useAction } from '../lib/useAction'
 import { ReminderList } from './ReminderList'
+import { RecurrencePicker } from './RecurrencePicker'
 import { t } from '@shared/i18n'
 
 export function AppointmentForm({ initialDate, onDone }: { initialDate?: string; onDone: () => void }) {
@@ -18,6 +19,7 @@ export function AppointmentForm({ initialDate, onDone }: { initialDate?: string;
   const [location, setLocation] = useState('')
   // Events default to a reminder 30 minutes before; change or remove it below.
   const [reminders, setReminders] = useState<Reminder[]>([{ kind: 'Before', minutesBefore: 30 }])
+  const [recurrence, setRecurrence] = useState<Recurrence | null>(null)
   const reminderIssue = remindersProblem(reminders, { itemHasTime: true, isNote: false })
 
   const submit = (e: FormEvent) => {
@@ -30,6 +32,7 @@ export function AppointmentForm({ initialDate, onDone }: { initialDate?: string;
         endUtc: zonedToUtc(endsNextDay(start, end) ? addDays(date, 1) : date, end, zone.timeZone), // after midnight: next day
         location: location.trim() || null,
         reminders,
+        recurrence,
       },
       { onSuccess: onDone },
     )
@@ -63,6 +66,7 @@ export function AppointmentForm({ initialDate, onDone }: { initialDate?: string;
           <input value={location} onChange={(e) => setLocation(e.target.value)} />
         </label>
       </div>
+      <RecurrencePicker value={recurrence} onChange={setRecurrence} date={date} />
       <div className="field">
         <span>{t('item.reminder')}</span>
         <ReminderList value={reminders} onChange={setReminders} itemHasTime />

@@ -168,10 +168,9 @@ Local dev notes:
   Groundwork already in place: `BaseEntity.IsDeleted` (soft delete) +
   `RowVersion` (optimistic concurrency, surfaces as HTTP 409) on every
   owned entity.
-- ⬜ **Phase 6 — Advanced**: recurring task/appointment *instance generation*
-  (the `RecurrenceRule` entity and FK already exist in the schema from
-  Phase 1, but nothing generates occurrences from it yet), search, voice
-  history, widgets, calendar integrations, analytics.
+- 🟡 **Phase 6 — Advanced**: repeating tasks and events done (2026-10-05,
+  see "Repeating tasks and events" below). Not yet: search, voice history,
+  widgets, calendar integrations, analytics.
 - 🟡 **Web (React)**: sign in/up, Today with AI quick capture (text box +
   mic via MediaRecorder → review screen where every item is editable →
   Save/Cancel), Tasks (manual quick add, complete/cancel/reopen/delete),
@@ -352,6 +351,33 @@ Local dev notes:
   plain edit (PUT) never changes the id or created date. An event needs a time: if it had to guess one
   (09:00), `needsDetails` is true and the client opens the new item in edit
   mode (`?edit=1` / `edit: '1'`).
+- **Repeating tasks and events** (2026-10-05, web + mobile; spec section 24).
+  The rule (`RecurrenceDto` / shared `Recurrence`: Daily, Weekdays, Weekly on
+  days, Monthly on a day; every N; until a date or N times) lives in the
+  existing `RecurrenceRule` row (`RecurrencePlanner` maps it; Until is a
+  local date in `EndsOnUtc`, days in `ByDay`). The item's own date/time is
+  the first occurrence. Occurrences: `RecurrenceSchedule` (pure, unit-tested,
+  user's wall clock) and its TS twin `occurrences()` in `shared/recurrence.ts`
+  (keep the two the same).
+  Tasks work like Todoist: one task, one due date; Complete moves it to the
+  next date (from today if done late; `CompletedAtUtc` = last done) and its
+  reminders follow; "N times" counts down (`MaxOccurrences` = what's left);
+  the weekly days / monthly day are pinned when saved (`Pin`) so they don't
+  drift as the date moves. Needs a due date, not ongoing.
+  Events work like a calendar: one event; Calendar, Today, notifications (a
+  "before" reminder before every occurrence), the daily summary and the feed
+  (dated by the next occurrence, `FeedItemDto.Repeats`) expand it through
+  `EventOccurrences`. One occurrence can be skipped
+  (`Appointment.SkippedOccurrencesUtc`, `POST/DELETE
+  /api/appointments/{id}/skip?at=`); editing changes the whole series; a
+  repeating event has no Done (dates pass on their own), Cancel ends it.
+  Calendar also shows a repeating task's later dates (`CalendarItemDto.Repeats`).
+  AI: `recurrence` + `recurrenceDays` + `recurrenceInterval`; capture items
+  carry it (`RecurrenceRule`), the review, Edit form (incl. by voice) and type
+  changes keep it. Clients: `RecurrencePicker` (presets from the item's date
+  + Custom), `EventDates` (next dates, Skip / Bring back; `?at=` from a
+  calendar entry marks that date), a repeat icon on feed rows, calendar and
+  Today entries (the reminder badge is always a bell now).
 - **A reminder is not a type; every type can carry one** (user's rule,
   2026-10-01). A reminder is a schedule on an item, on until turned off:
   `At` (once at a moment - "in 1 hour", "tomorrow 9:00"), `Before` (N minutes

@@ -47,10 +47,14 @@ export function FeedRow({
       {item.snippet && <span className="feed-snippet">{item.snippet}</span>}
       <span className="row-meta">
         <span className="kind-label">{KIND_LABEL[item.kind]}</span>
-        {when && <span>{when}</span>}
+        {when && (
+          <span>
+            {item.repeats && <IoRepeat className="repeat-icon" title={t('repeat.repeats')} aria-label={t('repeat.repeats')} />} {when}
+          </span>
+        )}
         {reminder && (
           <span className={`reminder-badge${reminder.today ? ' today' : ''}`} title={t('feed.reminderAt', { when: reminder.label })}>
-            {reminder.repeats ? <IoRepeat aria-hidden /> : <IoNotificationsOutline aria-hidden />}
+            <IoNotificationsOutline aria-hidden />
             <span className="visually-hidden">{t('feed.reminderAt', { when: reminder.label })}</span>
             <span aria-hidden>{reminder.label}</span>
           </span>

@@ -2483,3 +2483,74 @@ button.kind-icon:hover:not(:disabled) {
 .toast {
   z-index: 35;
 }
+
+/* Repeat picker (tasks and events). */
+.recurrence-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recurrence-picker > label > span svg {
+  vertical-align: -2px;
+}
+
+.recurrence-custom {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.recurrence-custom input[type='number'] {
+  width: 5.5em;
+}
+
+.day-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.day-chips .chip.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* A repeating item's mark in rows and calendar entries. */
+.repeat-icon {
+  vertical-align: -2px;
+  color: var(--muted);
+}
+
+/* A repeating event's next dates (Skip / Bring back). */
+.event-dates ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.event-dates li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.event-dates li.this-date {
+  border-color: var(--accent);
+}
+
+.event-dates li.skipped {
+  color: var(--muted);
+}

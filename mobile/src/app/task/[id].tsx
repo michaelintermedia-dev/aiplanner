@@ -1,3 +1,4 @@
+import { describeRecurrence } from '@shared/recurrence'
 import { dateKey, formatDateKey, formatDue, formatTime } from '@shared/dates'
 import { formFromTask } from '@shared/itemForm'
 import { describeReminder } from '@shared/reminders'
@@ -89,7 +90,11 @@ export default function TaskDetailScreen() {
             rows={[
               [t('task.due'), task.dueDateUtc ? formatDue(task.dueDateUtc, task.hasDueTime, zone) : task.status === 'Ongoing' ? t('task.ongoingNoDeadline') : t('task.noDueDate')],
               [t('filter.reminders'), task.reminders?.length ? task.reminders.map((r) => describeReminder(r, zone)).join(' · ') : t('item.none')],
-              ...(task.completedAtUtc ? [[t('status.Completed'), formatDue(task.completedAtUtc, true, zone)] as [string, string]] : []),
+              ...(task.recurrence ? [[t('repeat.repeats'), describeRecurrence(task.recurrence, zone)] as [string, string]] : []),
+              // A repeating task stays open: this is when it was last done.
+              ...(task.completedAtUtc
+                ? [[task.recurrence && task.status !== 'Completed' ? t('repeat.lastDone') : t('status.Completed'), formatDue(task.completedAtUtc, true, zone)] as [string, string]]
+                : []),
               [t('filter.created'), `${formatDateKey(dateKey(task.createdAtUtc, zone.timeZone), zone.locale, { month: 'short', day: 'numeric' })}, ${formatTime(task.createdAtUtc, zone)}`],
             ]}
           />

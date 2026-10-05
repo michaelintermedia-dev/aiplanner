@@ -1,3 +1,4 @@
+import { RecurrencePicker } from './RecurrencePicker'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { draftHasTime, draftProblems, followUpText, INTENT_OPTIONS, toConfirmItem, movedItem, reviewItems, suggestedTitle, toDraft, typeChange, updatesWholeItem, type ItemDraft } from '@shared/captureDraft'
 import { endsNextDay } from '@shared/dates'
@@ -276,6 +277,9 @@ function ItemEditor({
                     </Text>
                   </Pressable>
                 </View>
+              )}
+              {d.intent !== 'Note' && (
+                <RecurrencePicker value={d.recurrence} onChange={(recurrence) => onChange({ recurrence })} date={d.date} />
               )}
               <ReminderList
                 value={d.reminders}

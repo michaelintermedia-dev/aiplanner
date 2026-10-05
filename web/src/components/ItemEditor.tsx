@@ -27,6 +27,7 @@ import { useAuth } from '../auth/useAuth'
 import { CaptureBar } from './CaptureBar'
 import { KIND_ICON } from './kindIcons'
 import { ReminderList } from './ReminderList'
+import { RecurrencePicker } from './RecurrencePicker'
 import { RecordingPlayer } from './SourceCapture'
 
 const TYPES: ItemType[] = ['Task', 'Appointment', 'Note']
@@ -331,6 +332,17 @@ export function ItemEditor({
             <input value={form.people} onChange={(e) => set({ people: e.target.value })} />
           </Field>
         </>
+      )}
+
+      {form.type !== 'Note' && (
+        <div className={`field${mark('recurrence')}`} title={changed.includes('recurrence') ? t('form.changedByAi') : undefined}>
+          <RecurrencePicker
+            value={form.recurrence}
+            onChange={(recurrence) => set({ recurrence })}
+            date={form.date || null}
+            disabled={form.type === 'Task' && form.ongoing}
+          />
+        </div>
       )}
 
       <div className={`field${mark('reminders')}`}>

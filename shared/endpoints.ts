@@ -79,6 +79,9 @@ export function createApi(request: RequestFn) {
       cancel: (id: string) => request<Appointment>('PATCH', `/appointments/${id}/cancel`),
       reopen: (id: string) => request<Appointment>('PATCH', `/appointments/${id}/reopen`),
       remove: (id: string) => request<void>('DELETE', `/appointments/${id}`),
+      /** A repeating event: skip one occurrence (its start), or bring it back. */
+      skip: (id: string, atUtc: string) => request<Appointment>('POST', `/appointments/${id}/skip?at=${encodeURIComponent(atUtc)}`),
+      unskip: (id: string, atUtc: string) => request<Appointment>('DELETE', `/appointments/${id}/skip?at=${encodeURIComponent(atUtc)}`),
     },
     feed: {
       /** One page of the unified feed. `kinds` empty/omitted = everything. */

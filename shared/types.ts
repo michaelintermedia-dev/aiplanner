@@ -43,6 +43,8 @@ export interface Task {
   reminders?: Reminder[]
   /** The capture this task came from (transcript/recording). */
   sourceCaptureId?: string | null
+  /** How it repeats (null: it doesn't). Completing it moves it to its next date. */
+  recurrence?: Recurrence | null
 }
 
 export interface SaveTaskRequest {
@@ -56,6 +58,8 @@ export interface SaveTaskRequest {
   isOngoing?: boolean
   reminders?: Reminder[]
   tags?: string[] | null
+  /** Needs a due date; not for an ongoing task. */
+  recurrence?: Recurrence | null
 }
 
 export interface Appointment {
@@ -76,6 +80,12 @@ export interface Appointment {
   reminders?: Reminder[]
   /** The capture this appointment came from (transcript/recording). */
   sourceCaptureId?: string | null
+  /** How it repeats (null: it doesn't); startUtc/endUtc are the first occurrence. */
+  recurrence?: Recurrence | null
+  /** Occurrences the user skipped (their start times). */
+  skippedUtc?: string[] | null
+  /** In Today: this is one occurrence of a repeating event (startUtc/endUtc are its times). */
+  isOccurrence?: boolean
 }
 
 /** Also the PUT body: an update replaces all fields. */
@@ -88,6 +98,8 @@ export interface CreateAppointmentRequest {
   location?: string | null
   participantNames?: string[] | null
   reminders?: Reminder[]
+  /** startUtc/endUtc are the first occurrence. */
+  recurrence?: Recurrence | null
 }
 
 // ---- Unified feed ------------------------------------------------------------
@@ -101,6 +113,8 @@ export interface FeedItem {
   nextReminderUtc?: string | null
   /** That reminder repeats (daily / weekdays / weekly). */
   reminderRepeats?: boolean
+  /** A repeating task or event (dateUtc/endUtc: its current / next date). */
+  repeats?: boolean
   id: string
   kind: FeedKind
   title: string
@@ -175,6 +189,8 @@ export interface CalendarItem {
   status: string
   priority: string | null
   location: string | null
+  /** One of the dates of a repeating task or event (same id for all of them). */
+  repeats?: boolean
 }
 
 export interface CalendarRange {
@@ -226,6 +242,8 @@ export interface CaptureItem {
   unrelated?: string | null
   /** Made in an item's Edit form: held there until Save / Cancel - never an unsaved review elsewhere. */
   heldByEditForm?: boolean
+  /** How it repeats, as the AI understood it (null: it doesn't). */
+  recurrenceRule?: Recurrence | null
 }
 
 export interface Capture {
@@ -281,6 +299,8 @@ export interface ConfirmCaptureItem {
   replacesItem?: boolean
   /** The item was saved by its own Edit form: only record this proposal as part of it. */
   linkOnly?: boolean
+  /** Tasks (with a date) and events only. */
+  recurrence?: Recurrence | null
 }
 
 /** The saved item a capture is continued from ("Add to this task"). */
@@ -292,6 +312,22 @@ export interface AppendTarget {
 
 export type ReminderKind = 'At' | 'Before' | 'Daily' | 'Weekdays' | 'Weekly'
 export type Weekday = 'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday'
+
+
+/**
+ * How a task or event repeats (see shared/recurrence.ts). The item's own
+ * date/time is the first occurrence. days: Weekly's days (default: the item's
+ * weekday); monthDay: Monthly's day (31 = the last day in shorter months);
+ * until ("yyyy-MM-dd", inclusive) or count (times in all) end it.
+ */
+export interface Recurrence {
+  frequency: Exclude<RecurrenceFrequency, 'Custom'>
+  interval: number
+  days?: Weekday[] | null
+  monthDay?: number | null
+  until?: string | null
+  count?: number | null
+}
 
 /**
  * A reminder on any item - the same shape everywhere. Which fields matter

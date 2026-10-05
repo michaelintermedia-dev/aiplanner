@@ -1,3 +1,6 @@
+import { useNow } from '@/lib/useNow'
+import { EventDates } from '@/components/EventDates'
+import { describeRecurrence, occurrences } from '@shared/recurrence'
 import { dateKey, formatDateKey, formatTime } from '@shared/dates'
 import { eventPassed } from '@shared/feed'
 import { formFromAppointment } from '@shared/itemForm'
@@ -33,6 +36,7 @@ export default function AppointmentDetailScreen() {
   const cancel = useAction(appointmentsApi.cancel)
   const reopen = useAction(appointmentsApi.reopen)
   const remove = useAction(appointmentsApi.remove)
+  const now = useNow().getTime()
   const busy = complete.isPending || cancel.isPending || reopen.isPending || remove.isPending
   const actionError = complete.error ?? cancel.error ?? reopen.error ?? remove.error
 
@@ -40,7 +44,17 @@ export default function AppointmentDetailScreen() {
   if (error || !appt) return <Screen><Text style={{ color: c.danger }}>{error?.message ?? t('event.notFound')}</Text></Screen>
 
   const closed = appt.status !== 'Scheduled'
-  const passed = eventPassed(appt)
+  // A repeating event: shown at its next date; "passed" once the whole series is over.
+  const next = appt.recurrence
+    ? occurrences(appt.recurrence, appt.startUtc, zone.timeZone, {
+        fromUtc: new Date(now - (Date.parse(appt.endUtc) - Date.parse(appt.startUtc))).toISOString(),
+        max: 1,
+        skipped: appt.skippedUtc ?? [],
+      })[0]
+    : undefined
+  const shownStart = next ?? appt.startUtc
+  const shownEnd = next ? new Date(Date.parse(next) + Date.parse(appt.endUtc) - Date.parse(appt.startUtc)).toISOString() : appt.endUtc
+  const passed = appt.recurrence ? !next : eventPassed(appt)
 
   const confirmDelete = () =>
     Alert.alert(t('event.confirmDelete'), appt.title, [
@@ -84,7 +98,8 @@ export default function AppointmentDetailScreen() {
 
           <Facts
             rows={[
-              [t('event.when'), `${formatDateKey(dateKey(appt.startUtc, zone.timeZone), zone.locale, { weekday: 'long', month: 'long', day: 'numeric' })}\n${formatTime(appt.startUtc, zone)} – ${formatTime(appt.endUtc, zone)}`],
+              [t('event.when'), `${formatDateKey(dateKey(shownStart, zone.timeZone), zone.locale, { weekday: 'long', month: 'long', day: 'numeric' })}\n${formatTime(shownStart, zone)} – ${formatTime(shownEnd, zone)}`],
+              ...(appt.recurrence ? [[t('repeat.repeats'), describeRecurrence(appt.recurrence, zone)] as [string, string]] : []),
               ...(appt.location ? [[t('event.where'), appt.location] as [string, string]] : []),
               ...(appt.participants.length ? [[t('event.with'), appt.participants.map((p) => p.name).join(', ')] as [string, string]] : []),
               [t('filter.reminders'), appt.reminders?.length ? appt.reminders.map((r) => describeReminder(r, zone)).join(' · ') : t('item.none')],
@@ -94,13 +109,18 @@ export default function AppointmentDetailScreen() {
           <TextBlock title={t('item.description')} text={appt.description} />
           <TextBlock title={t('item.notes')} text={appt.notes} />
 
+          {!closed && <EventDates appt={appt} />}
+
           {actionError && <Text style={{ color: c.danger }}>{actionError.message}</Text>}
           <View style={s.actions}>
             {closed ? (
               <Button title={`↺ ${t('item.reopen')}`} variant="primary" busy={reopen.isPending} disabled={busy} onPress={() => reopen.mutate(appt.id)} />
             ) : (
               <>
-                <Button title={`✓ ${t('common.done')}`} variant="primary" busy={complete.isPending} disabled={busy} onPress={() => complete.mutate(appt.id)} />
+                {/* Each date of a repeating event passes on its own - no Done for the series. */}
+                {!appt.recurrence && (
+                  <Button title={`✓ ${t('common.done')}`} variant="primary" busy={complete.isPending} disabled={busy} onPress={() => complete.mutate(appt.id)} />
+                )}
                 <Button title={t('event.cancel')} disabled={busy} onPress={() => cancel.mutate(appt.id)} />
               </>
             )}

@@ -1,7 +1,8 @@
 import { addDays, dateKey, timeKey, zonedToUtc } from './dates'
 import { t } from './i18n'
+import { recurrenceProblem } from './recurrence'
 import { remindersProblem } from './reminders'
-import type { AppendTarget, Capture, CaptureItem, ConfirmCaptureItem, ExtractionIntent, ItemType, Reminder, TaskPriority } from './types'
+import type { AppendTarget, Capture, CaptureItem, ConfirmCaptureItem, ExtractionIntent, ItemType, Recurrence, Reminder, TaskPriority } from './types'
 
 /**
  * Every item can become any type in the review (user's rule); "Appointment" is
@@ -43,6 +44,8 @@ export interface ItemDraft {
   /** Updating the item with a type change: use the AI's new title instead of keeping the item's. */
   useNewTitle?: boolean
   clarification: string | null
+  /** How it repeats (tasks with a date, events); null: it doesn't. */
+  recurrence: Recurrence | null
   /** "Add more": words that weren't about the item, and whether to capture them as a new entry after saving. */
   unrelated: string | null
   captureUnrelated: boolean
@@ -68,6 +71,7 @@ export function toDraft(item: CaptureItem, timeZone: string, target?: AppendTarg
     priority: item.priority,
     reminders: item.reminders.length || !legacyReminder ? item.reminders : [{ kind: 'Before', minutesBefore: 0 }],
     clarification: item.clarification,
+    recurrence: item.recurrenceRule ?? null,
     appendTo: wholeItem,
     wholeItem,
     unrelated: target ? (item.unrelated ?? null) : null,
@@ -92,6 +96,8 @@ export function draftProblems(d: ItemDraft): string[] {
   if (d.intent === 'Task' && d.time && !d.date) problems.push(t('draft.problem.dateForTime'))
   const reminder = remindersProblem(d.reminders, { itemHasTime: draftHasTime(d), isNote: d.intent === 'Note' })
   if (reminder) problems.push(reminder)
+  const repeat = d.intent === 'Note' ? null : recurrenceProblem(d.recurrence, { hasDate: !!d.date })
+  if (repeat) problems.push(repeat)
   return problems
 }
 
@@ -139,6 +145,7 @@ export function toConfirmItem(d: ItemDraft, timeZone: string, target?: AppendTar
     location: null as string | null,
     priority: d.priority,
     reminders: d.reminders,
+    recurrence: d.intent === 'Note' ? null : d.recurrence,
   }
 
   if (d.intent === 'Appointment' && d.date && d.time) {

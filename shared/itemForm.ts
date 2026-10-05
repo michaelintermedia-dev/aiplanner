@@ -3,8 +3,9 @@ import type { createApi } from './endpoints'
 import { addDays, dateKey, endsNextDay, timeKey, zonedToUtc } from './dates'
 import { noteName } from './feed'
 import { t } from './i18n'
+import { recurrenceProblem, sameRecurrence } from './recurrence'
 import { remindersProblem } from './reminders'
-import type { Appointment, CaptureItem, ConfirmCaptureItem, ExtractionIntent, ItemType, Note, Reminder, Task, TaskPriority } from './types'
+import type { Appointment, CaptureItem, ConfirmCaptureItem, ExtractionIntent, ItemType, Note, Recurrence, Reminder, Task, TaskPriority } from './types'
 
 /**
  * An item's Edit page: one form for every type, so the Type chips can switch
@@ -35,6 +36,8 @@ export interface ItemForm {
   /** Task/event description, note text. */
   details: string
   notes: string
+  /** How it repeats (tasks with a date, events); null: it doesn't. Kept when switching to a note, not saved there. */
+  recurrence: Recurrence | null
 }
 
 export type FormField = keyof ItemForm
@@ -53,6 +56,7 @@ const BLANK: ItemForm = {
   reminders: [],
   details: '',
   notes: '',
+  recurrence: null,
 }
 
 export const formFromTask = (task: Task, tz: string): ItemForm => ({
@@ -67,6 +71,7 @@ export const formFromTask = (task: Task, tz: string): ItemForm => ({
   reminders: task.reminders ?? [],
   details: task.description ?? '',
   notes: task.notes ?? '',
+  recurrence: task.recurrence ?? null,
 })
 
 export const formFromAppointment = (a: Appointment, tz: string): ItemForm => ({
@@ -81,6 +86,7 @@ export const formFromAppointment = (a: Appointment, tz: string): ItemForm => ({
   reminders: a.reminders ?? [],
   details: a.description ?? '',
   notes: a.notes ?? '',
+  recurrence: a.recurrence ?? null,
 })
 
 export const formFromNote = (n: Note): ItemForm => ({
@@ -109,6 +115,8 @@ export function formProblems(f: ItemForm): string[] {
   const ongoingBefore = f.type === 'Task' && f.ongoing && f.reminders.some((r) => r.kind === 'Before')
   const reminder = ongoingBefore ? t('form.ongoingBefore') : remindersProblem(f.reminders, { itemHasTime: formHasTime(f), isNote: f.type === 'Note' })
   if (reminder) problems.push(reminder)
+  const repeat = f.type === 'Note' ? null : recurrenceProblem(f.recurrence, { hasDate: !!f.date, ongoing: f.type === 'Task' && f.ongoing })
+  if (repeat) problems.push(repeat)
   return problems
 }
 
@@ -249,6 +257,7 @@ async function writeFields(api: Api, itemType: ItemType, id: string, form: ItemF
       isOngoing: form.ongoing,
       reminders: form.reminders,
       tags: list(form.tags),
+      recurrence: due && !form.ongoing ? form.recurrence : null,
     })
   } else if (itemType === 'Appointment') {
     await api.appointments.update(id, {
@@ -259,6 +268,7 @@ async function writeFields(api: Api, itemType: ItemType, id: string, form: ItemF
       location: form.location.trim() || null,
       participantNames: list(form.people),
       reminders: form.reminders,
+      recurrence: form.recurrence,
     })
   } else {
     await api.notes.update(id, {
@@ -316,6 +326,15 @@ export function applyProposal(form: ItemForm, saved: ItemForm, item: CaptureItem
     // A note has no date: becoming one doesn't clear the form's (switching back keeps it).
     if (type === 'Note' && (key === 'date' || key === 'time' || key === 'endTime')) continue
     if (proposed[key] !== saved[key]) set(key, proposed[key] as never)
+  }
+
+  // The repeat rule: only if the AI changed it (it can't say "until"; keep the form's end).
+  if (type !== 'Note' && item.recurrenceRule !== undefined) {
+    const proposedRule = item.recurrenceRule
+      ? { ...item.recurrenceRule, until: next.recurrence?.until ?? null, count: next.recurrence?.count ?? null, monthDay: item.recurrenceRule.monthDay ?? next.recurrence?.monthDay ?? null }
+      : null
+    if (!sameRecurrence(item.recurrenceRule ?? null, saved.recurrence ? { ...saved.recurrence, until: null, count: null } : null)
+      && !sameRecurrence(proposedRule, next.recurrence)) set('recurrence', proposedRule)
   }
 
   // Details: the saved text plus what was added - add only the new part.
@@ -387,6 +406,9 @@ export function formAsAiItem(f: ItemForm, tz: string): string {
       time: r.kind === 'At' && r.atUtc ? timeKey(r.atUtc, tz) : (r.time ?? null),
       days: r.kind === 'Weekly' ? (r.days ?? []) : null,
     })),
+    recurrence: f.type !== 'Note' && f.recurrence ? f.recurrence.frequency.toLowerCase() : null,
+    recurrenceDays: f.type !== 'Note' && f.recurrence?.frequency === 'Weekly' ? (f.recurrence.days ?? null) : null,
+    recurrenceInterval: f.type !== 'Note' && f.recurrence && f.recurrence.interval > 1 ? f.recurrence.interval : null,
   })
 }
 

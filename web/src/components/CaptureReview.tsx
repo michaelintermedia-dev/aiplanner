@@ -10,6 +10,7 @@ import { capturesApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { useAction } from '../lib/useAction'
 import { ReminderList } from './ReminderList'
+import { RecurrencePicker } from './RecurrencePicker'
 import { t } from '@shared/i18n'
 import { priorityLabel } from '@shared/labels'
 
@@ -262,13 +263,18 @@ function ItemEditor({
       )}
 
       {d.include && (!d.appendTo || d.wholeItem) && (
-        <ReminderList
+        <>
+          {d.intent !== 'Note' && (
+            <RecurrencePicker value={d.recurrence} onChange={(recurrence) => onChange({ recurrence })} date={d.date} />
+          )}
+          <ReminderList
           value={d.reminders}
           onChange={(reminders) => onChange({ reminders })}
           itemHasTime={draftHasTime(d)}
           isNote={isNote}
           showProblem={false}
         />
+        </>
       )}
 
       {d.include && (

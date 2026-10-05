@@ -1,3 +1,4 @@
+import { RecurrencePicker } from './RecurrencePicker'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { itemClips } from '@shared/audioSnippet'
 import { reviewItems } from '@shared/captureDraft'
@@ -335,6 +336,16 @@ export function ItemEditor({
         </>
       )}
 
+      {form.type !== 'Note' && (
+        <View style={ring('recurrence')}>
+          <RecurrencePicker
+            value={form.recurrence}
+            onChange={(recurrence) => set({ recurrence })}
+            date={form.date || null}
+            disabled={form.type === 'Task' && form.ongoing}
+          />
+        </View>
+      )}
       <View style={ring('reminders')}>
         <ReminderList value={form.reminders} onChange={(reminders) => set({ reminders })} itemHasTime={formHasTime(form)} isNote={isNote} />
       </View>

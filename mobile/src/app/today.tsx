@@ -1,6 +1,6 @@
+import { useNow } from '@/lib/useNow'
 import { formatDateKey, formatDue, formatTime } from '@shared/dates'
 import { useQuery } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { todayApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
@@ -12,14 +12,6 @@ import { Row, Section } from '@/components/ui'
 import { useColors } from '@/theme'
 import { t } from '@shared/i18n'
 
-function useNow(intervalMs = 30_000) {
-  const [now, setNow] = useState(() => new Date())
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), intervalMs)
-    return () => clearInterval(id)
-  }, [intervalMs])
-  return now
-}
 
 export default function TodayScreen() {
   const c = useColors()

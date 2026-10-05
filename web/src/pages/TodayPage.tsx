@@ -1,5 +1,6 @@
+import { useNow } from '../lib/useNow'
 import { useQuery } from '@tanstack/react-query'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { todayApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
@@ -11,14 +12,6 @@ import { TaskRow } from '../components/TaskRow'
 import { formatDateKey, formatDue, formatTime } from '@shared/dates'
 import { t } from '@shared/i18n'
 
-function useNow(intervalMs = 30_000) {
-  const [now, setNow] = useState(() => new Date())
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), intervalMs)
-    return () => clearInterval(id)
-  }, [intervalMs])
-  return now
-}
 
 export function TodayPage() {
   const isPhone = useIsPhone()

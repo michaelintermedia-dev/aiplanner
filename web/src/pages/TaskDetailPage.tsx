@@ -1,3 +1,5 @@
+import { IoRepeat } from 'react-icons/io5'
+import { describeRecurrence } from '@shared/recurrence'
 import { dateKey, formatDateKey, formatDue, formatTime } from '@shared/dates'
 import { formFromTask } from '@shared/itemForm'
 import { useQuery } from '@tanstack/react-query'
@@ -65,11 +67,20 @@ export function TaskDetailPage() {
           <dl className="facts">
             <dt>{t('task.due')}</dt>
             <dd>{task.dueDateUtc ? formatDue(task.dueDateUtc, task.hasDueTime, zone) : task.status === 'Ongoing' ? t('task.ongoingNoDeadline') : t('task.noDueDate')}</dd>
+            {task.recurrence && (
+              <>
+                <dt>{t('repeat.repeats')}</dt>
+                <dd>
+                  <IoRepeat className="repeat-icon" aria-hidden /> {describeRecurrence(task.recurrence, zone)}
+                </dd>
+              </>
+            )}
             <dt>{t('item.reminder')}</dt>
             <dd>{task.reminders?.length ? task.reminders.map((r) => describeReminder(r, zone)).join(' · ') : t('item.none')}</dd>
             {task.completedAtUtc && (
               <>
-                <dt>{t('status.Completed')}</dt>
+                {/* A repeating task stays open: this is when it was last done. */}
+                <dt>{task.recurrence && task.status !== 'Completed' ? t('repeat.lastDone') : t('status.Completed')}</dt>
                 <dd>{formatDue(task.completedAtUtc, true, zone)}</dd>
               </>
             )}

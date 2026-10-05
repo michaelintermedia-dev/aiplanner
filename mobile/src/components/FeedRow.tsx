@@ -97,10 +97,15 @@ export function FeedRow({
         )}
         <View style={styles.meta}>
           <Text style={[styles.kind, { color: c.muted }]}>{KIND_LABEL[item.kind].toUpperCase()}</Text>
-          {when && <Text style={[styles.metaText, { color: c.muted }]}>{when}</Text>}
+          {when && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+              {item.repeats && <Ionicons name="repeat" size={14} color={c.muted} accessibilityLabel={t('repeat.repeats')} />}
+              <Text style={[styles.metaText, { color: c.muted }]}>{when}</Text>
+            </View>
+          )}
           {reminder && (
             <View style={styles.reminder} accessible accessibilityLabel={t('feed.reminderAt', { when: reminder.label })}>
-              <Ionicons name={reminder.repeats ? 'repeat' : 'notifications-outline'} size={14} color={reminder.today ? c.accent : c.muted} />
+              <Ionicons name="notifications-outline" size={14} color={reminder.today ? c.accent : c.muted} />
               <Text style={[styles.metaText, { color: reminder.today ? c.accent : c.muted, fontWeight: reminder.today ? '600' : '400' }]}>
                 {reminder.label}
               </Text>

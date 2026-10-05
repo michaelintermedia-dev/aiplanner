@@ -1,3 +1,4 @@
+import { IoRepeat } from 'react-icons/io5'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
@@ -74,7 +75,13 @@ export function CalendarPage() {
                 <li key={item.id} className={`cal-item ${item.itemType.toLowerCase()} status-${item.status.toLowerCase()}${item.itemType === 'Appointment' && eventPassed(item) ? ' passed' : ''}`}>
                   <KindIcon kind={item.itemType} className="cal-icon" />
                   {item.hasTime && <span className="cal-time">{formatTime(item.startUtc, zone)}</span>}
-                  <Link className="cal-title" to={`/${item.itemType === 'Task' ? 'tasks' : 'appointments'}/${item.id}`}>{item.title}</Link>
+                  <Link
+                    className="cal-title"
+                    // One date of a repeating event: open it at that date (Skip is there).
+                    to={`/${item.itemType === 'Task' ? 'tasks' : 'appointments'}/${item.id}${item.repeats && item.itemType === 'Appointment' ? `?at=${encodeURIComponent(item.startUtc)}` : ''}`}>
+                    {item.title}
+                  </Link>
+                  {item.repeats && <IoRepeat className="repeat-icon" title={t('repeat.repeats')} aria-label={t('repeat.repeats')} />}
                 </li>
               ))}
             </ul>

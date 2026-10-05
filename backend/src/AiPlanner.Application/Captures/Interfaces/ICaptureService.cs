@@ -25,6 +25,9 @@ public interface ICaptureService
 
     Task<Result<CaptureDto>> GetByIdAsync(Guid id, CancellationToken ct = default);
 
+    /// <summary>The capture to add voice or text to for an item: its source, or a new empty one for an item made by hand.</summary>
+    Task<Result<CaptureDto>> ForItemAsync(string itemType, Guid itemId, CancellationToken ct = default);
+
     /// <summary>Creates the accepted items as real tasks/appointments/notes, all in one transaction.</summary>
     /// <summary>
     /// Adds to a capture after the fact ("continue talking"): new audio parts are

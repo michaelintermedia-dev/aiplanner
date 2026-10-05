@@ -24,10 +24,14 @@ public class ConfirmCaptureRequestValidator : AbstractValidator<ConfirmCaptureRe
 
             // A text-only addition to an existing item only contributes text.
             item.RuleFor(i => i.Description).MaximumLength(4000)
-                .When(i => i.Include && i.AppendToId is not null && !i.ReplacesItem);
+                .When(i => i.Include && i.AppendToId is not null && !i.ReplacesItem && !i.LinkOnly);
 
             // New items, and whole-item updates (ReplacesItem: the fields ARE the item after the change).
-            item.When(i => i.Include && (i.AppendToId is null || i.ReplacesItem), () =>
+            // Linking needs the item it belongs to (the fields were saved by its own form).
+            item.RuleFor(i => i.AppendToId).NotNull().When(i => i.Include && i.LinkOnly)
+                .WithMessage("LinkOnly needs AppendToType and AppendToId.");
+
+            item.When(i => i.Include && !i.LinkOnly && (i.AppendToId is null || i.ReplacesItem), () =>
             {
                 item.RuleFor(i => i.Title).NotEmpty().MaximumLength(ExtractionNormalizer.MaxTitleLength);
                 item.RuleFor(i => i.Description).MaximumLength(4000);

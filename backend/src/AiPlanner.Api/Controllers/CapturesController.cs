@@ -40,6 +40,14 @@ public class CapturesController : ControllerBase
     public async Task<ActionResult<int>> DiscardPending(CancellationToken ct) =>
         Ok(await _captures.DiscardPendingAsync(ct));
 
+    /// <summary>POST /api/captures/for-item - the capture an item's voice/text additions go into (made if it has none).</summary>
+    [HttpPost("for-item")]
+    public async Task<ActionResult<CaptureDto>> ForItem(CaptureForItemRequest request, CancellationToken ct)
+    {
+        var result = await _captures.ForItemAsync(request.ItemType, request.ItemId, ct);
+        return result.Succeeded ? Ok(result.Value) : NotFound(new { errors = result.Errors });
+    }
+
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<CaptureDto>> GetById(Guid id, CancellationToken ct)
     {
@@ -110,6 +118,7 @@ public class CapturesController : ControllerBase
         [FromForm] string? text,
         [FromForm] string? itemType,
         [FromForm] Guid? itemId,
+        [FromForm] bool keepEarlier,
         CancellationToken ct)
     {
         var files = (audio ?? []).Where(f => f.Length > 0).ToList();
@@ -130,7 +139,7 @@ public class CapturesController : ControllerBase
         try
         {
             var segments = files.Select((f, i) => new AudioSegment(streams[i], f.FileName, f.ContentType)).ToList();
-            var result = await _captures.ContinueAsync(id, new ContinueCaptureRequest(text, segments, itemType, itemId), ct);
+            var result = await _captures.ContinueAsync(id, new ContinueCaptureRequest(text, segments, itemType, itemId, keepEarlier), ct);
             if (result.Succeeded) return Ok(result.Value);
             return result.Errors.Contains("Capture not found.") ? NotFound(new { errors = result.Errors }) : BadRequest(new { errors = result.Errors });
         }

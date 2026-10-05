@@ -15,6 +15,7 @@ import {
   View,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { onDockTargetChange, setDockOpener, useCurrentDockTarget } from '@/lib/dockTarget'
 import { useColors } from '@/theme'
 import { CaptureBar } from './CaptureBar'
 import { t } from '@shared/i18n'
@@ -29,6 +30,10 @@ import { t } from '@shared/i18n'
  * like Expo's dev-tools bubble) and opens it again on a tap. It stays open
  * while recording, processing or reviewing, and the bar stays mounted when
  * collapsed, so typed text survives.
+ *
+ * On an item's screen the button means "talk about this item" (lib/dockTarget):
+ * a tap opens that item's Edit with recording on, and it wears a pencil badge.
+ * The toolbar collapses there so the button is what you see.
  *
  * Collapsing shrinks the toolbar into the mic button and opening grows it back
  * out of it, wherever the button was dragged (skipped with Reduce motion).
@@ -89,6 +94,21 @@ export function CaptureDock({ children }: { children: ReactNode }) {
     animate(true, () => setMicShown(false))
   }
 
+  // On an item's screen the button talks about that item (not a new entry).
+  const target = useCurrentDockTarget()
+  const collapseNow = useRef(collapse)
+  useEffect(() => {
+    collapseNow.current = collapse
+  })
+  useEffect(() => onDockTargetChange((next) => next && collapseNow.current()), [])
+  // "New entry instead" (in an item's Edit) opens the toolbar.
+  useEffect(() => {
+    setDockOpener(() => {
+      if (!open) expand()
+    })
+    return () => setDockOpener(null)
+  })
+
   const onMicRest = useCallback((at: { x: number; y: number }) => {
     micAt.current = at
   }, [])
@@ -138,7 +158,8 @@ export function CaptureDock({ children }: { children: ReactNode }) {
         visible={micShown}
         interactive={!open}
         progress={progress}
-        onOpen={expand}
+        onOpen={target ? target.onTalk : expand}
+        talkLabel={target?.label}
         onRest={onMicRest}
       />
     </View>
@@ -187,6 +208,7 @@ function DraggableMic({
   progress,
   onOpen,
   onRest,
+  talkLabel,
 }: {
   visible: boolean
   /** False while the toolbar is open (the button is only fading out). */
@@ -196,6 +218,8 @@ function DraggableMic({
   onOpen: () => void
   /** Where the button rests (top-left, in the dock) - the toolbar grows out of it. */
   onRest: (at: { x: number; y: number }) => void
+  /** On an item's screen: what a tap does instead of a new entry (shown as a pencil badge). */
+  talkLabel?: string
 }) {
   const c = useColors()
   const insets = useSafeAreaInsets()
@@ -246,7 +270,7 @@ function DraggableMic({
       style={[styles.fabSpot, !visible && styles.hidden, { transform: position.getTranslateTransform() }]}
       accessible
       accessibilityRole="button"
-      accessibilityLabel={t('dock.newEntry')}
+      accessibilityLabel={talkLabel ?? t('dock.newEntry')}
       accessibilityHint={t('dock.dragHint')}
       onAccessibilityTap={onOpen}>
       <Animated.View
@@ -259,6 +283,11 @@ function DraggableMic({
           },
         ]}>
         <Ionicons name="mic" size={26} color="#fff" />
+        {talkLabel && (
+          <View style={[styles.badge, { backgroundColor: c.surface, borderColor: c.accent }]}>
+            <Ionicons name="pencil" size={11} color={c.accent} />
+          </View>
+        )}
       </Animated.View>
     </Animated.View>
   )
@@ -287,6 +316,17 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
     borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },

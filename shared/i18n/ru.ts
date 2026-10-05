@@ -434,4 +434,16 @@ export const ru: Messages = {
   'review.pendingAddition': 'Несохранённое дополнение к «{title}»',
   'review.discardAll': { one: 'Удалить все', few: 'Удалить все {count}', many: 'Удалить все {count}', other: 'Удалить все {count}' },
   'review.captureUnrelated': 'Записать «{text}» отдельной записью — это не про этот элемент',
+
+  // ---- item edit page ----
+  'form.noteEmpty': 'Напишите что-нибудь в заметке.',
+  'form.addByVoice': 'Изменить голосом или текстом',
+  'form.addHint': 'Скажите или напишите, что изменить, — поля ниже заполнятся сами. Ничего не сохранится до «Сохранить».',
+  'form.aiFilled': 'Заполнено по вашим словам — проверьте отмеченные поля.',
+  'form.changedByAi': 'Изменено по вашим словам',
+  'form.recording': 'Запись',
+  'form.recordingWillBeDeleted': 'Запись будет удалена при сохранении.',
+  'form.talk': 'Сказать об этом',
+  'form.talkHint': 'Открывает редактирование и начинает запись',
+  'form.newEntryInstead': 'Новая запись вместо этого',
 }

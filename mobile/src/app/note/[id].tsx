@@ -1,17 +1,17 @@
 import { noteName } from '@shared/feed'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { dateKey, formatDateKey, formatTime } from '@shared/dates'
-import { describeReminder, remindersProblem, repeats } from '@shared/reminders'
-import type { Reminder, SaveNoteRequest } from '@shared/types'
+import { formFromNote } from '@shared/itemForm'
+import { describeReminder, repeats } from '@shared/reminders'
 import { useQuery } from '@tanstack/react-query'
 import { router, Stack, useLocalSearchParams } from 'expo-router'
 import { useState } from 'react'
 import { Alert, Text, View } from 'react-native'
 import { notesApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
-import { detailStyles as s, Field } from '@/components/detail'
-import { ReminderList } from '@/components/ReminderList'
-import { ChangeType } from '@/components/ChangeType'
+import { detailStyles as s } from '@/components/detail'
+import { EditButtons, FollowUpReview, useEditMode } from '@/components/ItemEditMode'
+import { ItemEditor } from '@/components/ItemEditor'
 import { Screen } from '@/components/Screen'
 import { SourceCapture } from '@/components/SourceCapture'
 import { Button } from '@/components/ui'
@@ -23,34 +23,18 @@ export default function NoteDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const c = useColors()
   const { zone } = useAuth()
-  const [editing, setEditing] = useState(false)
+  // Everything that changes the note happens in Edit (`edit=1` / `talk=1` open it; so does the floating mic).
+  const edit = useEditMode()
   // Once a delete starts, stop (re)fetching this item - it's about to 404.
   const [deleting, setDeleting] = useState(false)
   const { data: note, isPending, error } = useQuery({ queryKey: ['note', id], queryFn: () => notesApi.get(id), enabled: !deleting })
-  const update = useAction((body: SaveNoteRequest) => notesApi.update(id, body))
   const remove = useAction(notesApi.remove)
-  const [title, setTitle] = useState('')
-  const [content, setContent] = useState('')
-  const [reminders, setReminders] = useState<Reminder[]>([])
 
   if (isPending) return <Screen><Text style={{ color: c.muted }}>{t('common.loading')}</Text></Screen>
   if (error || !note) return <Screen><Text style={{ color: c.danger }}>{error?.message ?? t('note.notFound')}</Text></Screen>
 
   const when = (utc: string) =>
     `${formatDateKey(dateKey(utc, zone.timeZone), zone.locale, { month: 'short', day: 'numeric' })}, ${formatTime(utc, zone)}`
-
-  const reminderIssue = remindersProblem(reminders, { itemHasTime: false, isNote: true })
-
-  // PUT replaces the note, so the reminder is always sent (null = none).
-  const save = () =>
-    update.mutate(
-      {
-        title: title.trim() || null,
-        content: content.trim(),
-        reminders,
-      },
-      { onSuccess: () => setEditing(false) },
-    )
 
   const confirmDelete = () =>
     Alert.alert(t('note.confirmDelete'), undefined, [
@@ -67,31 +51,22 @@ export default function NoteDetailScreen() {
 
   return (
     <Screen>
-      <Stack.Screen options={{ title: editing ? t('note.edit') : t('kind.note') }} />
-      {editing ? (
-        <View style={s.form}>
-          <Field label={`${t('item.title')} ${t('item.optional')}`} value={title} onChangeText={setTitle} />
-          <Field label={t('kind.note')} value={content} onChangeText={setContent} multiline />
-          <ReminderList value={reminders} onChange={setReminders} itemHasTime={false} isNote />
-          {update.error && <Text style={{ color: c.danger }}>{update.error.message}</Text>}
-          <View style={s.actions}>
-            <Button title={t('common.cancel')} onPress={() => setEditing(false)} />
-            <Button
-              title={t('item.saveChanges')}
-              variant="primary"
-              busy={update.isPending}
-              disabled={!content.trim() || !!reminderIssue}
-              onPress={save}
-            />
-          </View>
-        </View>
+      <Stack.Screen options={{ title: edit.editing ? t('common.edit') : t('kind.note') }} />
+      {edit.followUp && <FollowUpReview text={edit.followUp} onDone={edit.clearFollowUp} />}
+      {edit.editing ? (
+        <ItemEditor
+          item={{ itemType: 'Note', id: note.id, title: noteName(note) }}
+          saved={formFromNote(note)}
+          captureId={note.sourceCaptureId}
+          talkSignal={edit.talkSignal}
+          onDone={edit.done}
+        />
       ) : (
         <>
           <View style={{ gap: 8 }}>
             <Text style={[s.kind, { color: c.muted, borderLeftColor: c.warn }]}>{t('kind.note').toUpperCase()}</Text>
             {note.title && note.title !== note.content && <Text style={[s.title, { color: c.text }]}>{note.title}</Text>}
           </View>
-          <ChangeType itemType="Note" id={note.id} />
           <Text style={{ color: c.text, fontSize: 17, lineHeight: 25 }} selectable>
             {note.content}
           </Text>
@@ -107,22 +82,13 @@ export default function NoteDetailScreen() {
           </Text>
           {remove.error && <Text style={{ color: c.danger }}>{remove.error.message}</Text>}
           <View style={s.actions}>
-            <Button
-              title={t('common.edit')}
-              variant="primary"
-              onPress={() => {
-                setTitle(note.title ?? '')
-                setContent(note.content)
-                setReminders(note.reminders)
-                setEditing(true)
-              }}
-            />
+            <EditButtons onEdit={edit.edit} onTalk={edit.talk} />
             <Button title={t('common.delete')} variant="danger" disabled={remove.isPending} onPress={confirmDelete} />
           </View>
         </>
       )}
 
-      {note.sourceCaptureId && <SourceCapture captureId={note.sourceCaptureId} item={{ itemType: 'Note', itemId: note.id, title: noteName(note) }} />}
+      {!edit.editing && note.sourceCaptureId && <SourceCapture captureId={note.sourceCaptureId} item={{ itemType: 'Note', itemId: note.id, title: noteName(note) }} />}
     </Screen>
   )
 }

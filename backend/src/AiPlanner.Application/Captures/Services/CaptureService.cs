@@ -270,7 +270,7 @@ public class CaptureService : ICaptureService
             return Result<CaptureDto>.Failure("Some items were already saved or rejected. Reload the capture.");
         }
 
-        var errors = await ValidateAsync(request.Items.Where(i => i.Include && (i.AppendToId is null || i.ReplacesItem)), ct);
+        var errors = await ValidateAsync(request.Items.Where(i => i.Include && !i.LinkOnly && (i.AppendToId is null || i.ReplacesItem)), ct);
         if (errors.Count > 0)
         {
             return Result<CaptureDto>.Failure(errors.ToArray());
@@ -576,7 +576,8 @@ public class CaptureService : ICaptureService
             proposals = [ContinuedItem.Keep(normalized.Items, current, newText)];
             // An earlier "Add more" review left unsaved is superseded by this one -
             // otherwise it would show up in this review as a change to this item.
-            foreach (var leftover in extraction.Items.Where(i => i.Status == ExtractionStatus.PendingReview))
+            // (The Edit form keeps its own earlier additions until Save.)
+            foreach (var leftover in extraction.Items.Where(i => i.Status == ExtractionStatus.PendingReview && !request.KeepEarlier))
             {
                 leftover.Status = ExtractionStatus.Rejected;
             }
@@ -624,6 +625,10 @@ public class CaptureService : ICaptureService
     /// <summary>Creates the real item; returns an error message instead of throwing for expected failures.</summary>
     private async Task<string?> SaveItemAsync(AIExtraction extraction, AIExtractionItem item, ConfirmCaptureItem decision, CancellationToken ct)
     {
+        if (decision.LinkOnly)
+        {
+            return await LinkToItemAsync(extraction.UserId, item, decision.AppendToType!, decision.AppendToId!.Value, ct);
+        }
         if (decision.AppendToId is { } targetId)
         {
             return decision.ReplacesItem
@@ -896,6 +901,69 @@ public class CaptureService : ICaptureService
         string.IsNullOrWhiteSpace(decision.Title) ? current : decision.Title.Trim();
 
     /// <summary>Old "add text only" path, kept for confirm requests without the item's fields.</summary>
+    /// <summary>
+    /// The item's Edit page saved the fields itself: record the proposal as part
+    /// of that item (so its words and audio clip belong to it), nothing more.
+    /// </summary>
+    private async Task<string?> LinkToItemAsync(Guid userId, AIExtractionItem item, string type, Guid targetId, CancellationToken ct)
+    {
+        switch (type)
+        {
+            case "Task":
+                if (!await _db.TaskItems.AnyAsync(t => t.Id == targetId && t.UserId == userId, ct)) return "The task was not found.";
+                item.ResultingTaskItemId = targetId;
+                return null;
+            case "Appointment":
+                if (!await _db.Appointments.AnyAsync(a => a.Id == targetId && a.UserId == userId, ct)) return "The event was not found.";
+                item.ResultingAppointmentId = targetId;
+                return null;
+            case "Note":
+                if (!await _db.Notes.AnyAsync(n => n.Id == targetId && n.UserId == userId, ct)) return "The note was not found.";
+                item.ResultingNoteId = targetId;
+                return null;
+            default:
+                return "Unknown item type.";
+        }
+    }
+
+    public async Task<Result<CaptureDto>> ForItemAsync(string itemType, Guid itemId, CancellationToken ct = default)
+    {
+        var userId = RequireUserId();
+        (Guid? Source, string Title, Action<Guid> Link)? found = itemType switch
+        {
+            "Task" => await _db.TaskItems.FirstOrDefaultAsync(t => t.Id == itemId && t.UserId == userId, ct) is { } t
+                ? (t.SourceAiExtractionId, t.Title, id => t.SourceAiExtractionId = id) : null,
+            "Appointment" => await _db.Appointments.FirstOrDefaultAsync(a => a.Id == itemId && a.UserId == userId, ct) is { } a
+                ? (a.SourceAiExtractionId, a.Title, id => a.SourceAiExtractionId = id) : null,
+            "Note" => await _db.Notes.FirstOrDefaultAsync(n => n.Id == itemId && n.UserId == userId, ct) is { } n
+                ? (n.SourceAiExtractionId, n.Title ?? "Note", id => n.SourceAiExtractionId = id) : null,
+            _ => null,
+        };
+        if (found is not { } item)
+        {
+            return Result<CaptureDto>.Failure("Item not found.");
+        }
+        if (item.Source is { } existing && await FindOwnedAsync(existing, track: false, ct) is { } source)
+        {
+            return Result<CaptureDto>.Success(ToDto(source, source.Transcript));
+        }
+
+        // Made by hand: an empty capture of its own, so voice or text can be added to it.
+        var extraction = new AIExtraction
+        {
+            UserId = userId,
+            RawInputText = "",
+            RawResponseJson = "{}",
+            Title = item.Title.Length > ExtractionNormalizer.MaxTitleLength ? item.Title[..ExtractionNormalizer.MaxTitleLength] : item.Title,
+            ProcessedAtUtc = _dateTime.UtcNow,
+            ProviderName = null,
+        };
+        _db.AIExtractions.Add(extraction);
+        item.Link(extraction.Id);
+        await _db.SaveChangesAsync(ct);
+        return Result<CaptureDto>.Success(ToDto(extraction, null));
+    }
+
     private async Task<string?> AppendToItemAsync(
         Guid userId, AIExtractionItem item, string type, Guid targetId, ConfirmCaptureItem decision, CancellationToken ct)
     {

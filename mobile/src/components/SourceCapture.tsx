@@ -4,34 +4,32 @@ import { dateKey, formatDateKey, formatTime } from '@shared/dates'
 import type { AppendTarget } from '@shared/types'
 import { useQuery } from '@tanstack/react-query'
 import { useAudioPlayer } from 'expo-audio'
-import { router } from 'expo-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Alert, Pressable, StyleSheet, Text, View, I18nManager } from 'react-native'
+import { Pressable, StyleSheet, Text, View, I18nManager } from 'react-native'
 import { API_URL, getAccessToken } from '@/api/client'
 import { capturesApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
 import { usePlaybackSpeed } from '@/lib/playbackSpeed'
-import { useAction } from '@/lib/useAction'
 import { useColors } from '@/theme'
-import { CaptureBar } from './CaptureBar'
 import { SpeedChips } from './SpeedChips'
 import { Button } from './ui'
 import { t } from '@shared/i18n'
 
 /**
  * "Where this came from": the capture an item was created from, with the
- * original words and the recording (spec section 21).
+ * original words and the recording (spec section 21). Read and listen only -
+ * adding to the item and deleting the recording are in its Edit screen.
  */
 export function SourceCapture({ captureId, item }: { captureId: string; item?: AppendTarget }) {
   const c = useColors()
-  const [continuing, setContinuing] = useState(false)
   const { zone } = useAuth()
   const { data: capture, error } = useQuery({ queryKey: ['capture', captureId], queryFn: () => capturesApi.get(captureId) })
-  const deleteAudio = useAction(() => capturesApi.deleteAudio(captureId))
   const [showText, setShowText] = useState(true)
 
   if (error) return null
   if (!capture) return <Text style={{ color: c.muted }}>{t('source.loading')}</Text>
+  // Made for an item created by hand, and nothing was said yet: nothing to show.
+  if (!capture.inputText.trim() && capture.audioParts === 0) return null
 
   const when = `${formatDateKey(dateKey(capture.createdAtUtc, zone.timeZone), zone.locale, { month: 'short', day: 'numeric' })}, ${formatTime(capture.createdAtUtc, zone)}`
 
@@ -54,31 +52,6 @@ export function SourceCapture({ captureId, item }: { captureId: string; item?: A
       </Pressable>
       {showText && <Text style={[styles.text, { color: c.text, backgroundColor: c.surface2 }]}>{capture.inputText}</Text>}
 
-      {item &&
-        (continuing ? (
-          <CaptureBar
-            continueFrom={{
-              captureId,
-              target: item,
-              onClose: () => setContinuing(false),
-              onMoved: (moved) =>
-                router.replace({
-                  pathname: moved.itemType === 'Task' ? '/task/[id]' : moved.itemType === 'Appointment' ? '/appointment/[id]' : '/note/[id]',
-                  params: { id: moved.itemId },
-                }),
-            }}
-          />
-        ) : (
-          // Complete an unfinished thought or add an insight, even after saving.
-          <Pressable
-            onPress={() => setContinuing(true)}
-            style={[styles.continue, { borderColor: c.border }]}
-            accessibilityRole="button">
-            <Ionicons name="mic-outline" size={18} color={c.text} />
-            <Text style={{ color: c.text }}>{t('source.addMore')}</Text>
-          </Pressable>
-        ))}
-
       {capture.source === 'Voice' &&
         (capture.audioParts > 0 ? (
           <View style={styles.audio}>
@@ -87,17 +60,6 @@ export function SourceCapture({ captureId, item }: { captureId: string; item?: A
               parts={capture.audioParts}
               durationsMs={capture.audioPartDurationsMs ?? null}
               clips={itemClips(capture, item)}
-            />
-            <Button
-              title={t('source.deleteAudio')}
-              variant="danger"
-              disabled={deleteAudio.isPending}
-              onPress={() =>
-                Alert.alert(t('source.confirmDeleteAudioTitle'), t('source.transcriptionKept'), [
-                  { text: t('changeType.keep'), style: 'cancel' },
-                  { text: t('common.delete'), style: 'destructive', onPress: () => deleteAudio.mutate(undefined) },
-                ])
-              }
             />
           </View>
         ) : (
@@ -114,7 +76,7 @@ export function SourceCapture({ captureId, item }: { captureId: string; item?: A
  * plays them in order - starting in the right file at the right moment and
  * stopping at each one's end, even across files.
  */
-function RecordingPlayer({
+export function RecordingPlayer({
   captureId,
   parts,
   durationsMs,

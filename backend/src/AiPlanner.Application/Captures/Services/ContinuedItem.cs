@@ -102,13 +102,21 @@ public static class ContinuedItem
         }
         // Words not about this item are offered as a new capture, not kept here.
         var about = Without(newWords, kept.Unrelated);
+        var lostOldText = !MentionsWords(kept.Description, current.Description ?? "");
         if (about.Length == 0)
         {
             kept = kept with { Description = current.Description };
         }
-        else if (!MentionsWords(kept.Description, current.Description ?? "") || !MentionsWords(kept.Description, about))
+        else if (ChangesFields(kept, current))
         {
-            // The merge lost the old text or the new words: keep both as written.
+            // The words were (at least partly) instructions it carried out - "make it
+            // high priority", "remind me at 5": those show as changed fields, so the
+            // details are trusted, only never losing what was there.
+            if (lostOldText) kept = kept with { Description = JoinDetails(current.Description, kept.Description ?? "").Trim() };
+        }
+        else if (lostOldText || !MentionsWords(kept.Description, about))
+        {
+            // Nothing else changed, so the words were information - keep them as said.
             kept = kept with { Description = JoinDetails(current.Description, about) };
         }
         return kept;
@@ -121,4 +129,18 @@ public static class ContinuedItem
         var at = newWords.IndexOf(unrelated.Trim(), StringComparison.OrdinalIgnoreCase);
         return at < 0 ? newWords.Trim() : (newWords[..at] + " " + newWords[(at + unrelated.Trim().Length)..]).Trim();
     }
+
+    /// <summary>Whether the update changed anything besides the details (type, time, place, priority, reminders).</summary>
+    private static bool ChangesFields(NormalizedItem kept, NormalizedItem current) =>
+        kept.Intent != current.Intent
+        || kept.StartUtc != current.StartUtc || kept.EndUtc != current.EndUtc
+        || kept.DueUtc != current.DueUtc || kept.HasTime != current.HasTime
+        || kept.Location != current.Location || kept.Priority != current.Priority
+        || kept.Reminders.Count != current.Reminders.Count
+        || kept.Reminders.Zip(current.Reminders).Any(p => !SameReminder(p.First, p.Second));
+
+    /// <summary>The same reminder (what it is, not its next time).</summary>
+    private static bool SameReminder(ReminderDto a, ReminderDto b) =>
+        a.Kind == b.Kind && a.AtUtc == b.AtUtc && a.MinutesBefore == b.MinutesBefore && a.Time == b.Time
+        && (a.Days ?? []).SequenceEqual(b.Days ?? []);
 }

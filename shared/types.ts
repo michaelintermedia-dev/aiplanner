@@ -277,6 +277,8 @@ export interface ConfirmCaptureItem {
   appendToId?: string | null
   /** The fields are the whole item after the addition: update it in place (title and created date kept). */
   replacesItem?: boolean
+  /** The item was saved by its own Edit form: only record this proposal as part of it. */
+  linkOnly?: boolean
 }
 
 /** The saved item a capture is continued from ("Add to this task"). */

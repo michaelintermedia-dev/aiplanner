@@ -1,7 +1,8 @@
 import { createApi } from '@shared/endpoints'
 import { request } from './client'
 
-const api = createApi(request)
+/** The whole API (for shared helpers that take it, e.g. saveItemForm). */
+export const api = createApi(request)
 
 export const authApi = api.auth
 export const tasksApi = api.tasks

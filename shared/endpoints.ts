@@ -4,6 +4,7 @@ import type {
   CalendarRange,
   CalendarView,
   Capture,
+  ItemType,
   CaptureSummary,
   ConfirmCaptureItem,
   ConvertedItem,
@@ -160,6 +161,8 @@ export function createApi(request: RequestFn) {
       /** Part `part` (0-based, < Capture.audioParts) of the original recording. */
       audio: (id: string, part = 0) => request<Blob>('GET', `/captures/${id}/audio?part=${part}`, undefined, { as: 'blob' }),
       deleteAudio: (id: string) => request<void>('DELETE', `/captures/${id}/audio`),
+      /** The capture an item's voice/text additions go into (made for an item created by hand). */
+      forItem: (itemType: ItemType, itemId: string) => request<Capture>('POST', '/captures/for-item', { itemType, itemId }),
     },
   }
 }

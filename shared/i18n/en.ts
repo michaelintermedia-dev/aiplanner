@@ -438,4 +438,16 @@ export const en = {
   'review.pendingAddition': 'Unsaved addition to “{title}”',
   'review.discardAll': { one: 'Discard all', other: 'Discard all {count}' },
   'review.captureUnrelated': 'Also capture “{text}” as a new entry - it isn’t about this item',
+
+  // ---- item edit page ----
+  'form.noteEmpty': 'Write something in the note.',
+  'form.addByVoice': 'Change it by voice or text',
+  'form.addHint': 'Say or type what to change - the fields below are filled in for you. Nothing is saved until Save.',
+  'form.aiFilled': 'Filled in from what you said - check the marked fields.',
+  'form.changedByAi': 'Changed from what you said',
+  'form.recording': 'Recording',
+  'form.recordingWillBeDeleted': 'The recording will be deleted when you save.',
+  'form.talk': 'Talk about it',
+  'form.talkHint': 'Opens Edit and starts recording',
+  'form.newEntryInstead': 'New entry instead',
 } satisfies Record<string, Message>

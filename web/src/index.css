@@ -2214,3 +2214,73 @@ button.kind-icon:hover:not(:disabled) {
   vertical-align: -3px;
   color: var(--muted);
 }
+
+/* ---- Item Edit page -------------------------------------------------- */
+
+/* A field the AI just filled in from what was said: marked until it's edited. */
+.item-editor .changed > input,
+.item-editor .changed > select,
+.item-editor .changed > textarea,
+.item-editor .field.changed,
+.item-editor .intent-chips.changed {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius);
+}
+
+.item-editor .changed {
+  color: var(--accent);
+}
+
+.edit-voice,
+.edit-recording {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.edit-voice h4,
+.edit-recording h4 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-filled {
+  color: var(--accent);
+  font-size: 0.9rem;
+}
+
+.ai-filled svg {
+  vertical-align: -2px;
+}
+
+/* The mic shortcut next to Edit: Edit with recording already on. */
+.talk-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  padding: 0;
+  font-size: 1.2rem;
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.detail-actions button svg {
+  vertical-align: -2px;
+}
+
+/* The voice/text box opens the Edit form (talking is what you came for when you tap the mic). */
+.edit-voice.first {
+  border-top: none;
+  padding-top: 0;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+}

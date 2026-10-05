@@ -1,16 +1,15 @@
-import { dateKey, formatDateKey, formatDue, formatTime, timeKey, zonedToUtc } from '@shared/dates'
-import { describeReminder, remindersProblem } from '@shared/reminders'
-import type { Reminder, Task, TaskPriority } from '@shared/types'
+import { dateKey, formatDateKey, formatDue, formatTime } from '@shared/dates'
+import { formFromTask } from '@shared/itemForm'
+import { describeReminder } from '@shared/reminders'
 import { useQuery } from '@tanstack/react-query'
 import { router, Stack, useLocalSearchParams } from 'expo-router'
 import { useState } from 'react'
 import { Alert, Text, View } from 'react-native'
 import { tasksApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
-import { DateTimeField } from '@/components/DateTimeField'
-import { CycleChip, detailStyles as s, Facts, Field, TextBlock } from '@/components/detail'
-import { ReminderList } from '@/components/ReminderList'
-import { ChangeType } from '@/components/ChangeType'
+import { detailStyles as s, Facts, TextBlock } from '@/components/detail'
+import { EditButtons, FollowUpReview, useEditMode } from '@/components/ItemEditMode'
+import { ItemEditor } from '@/components/ItemEditor'
 import { Screen } from '@/components/Screen'
 import { SourceCapture } from '@/components/SourceCapture'
 import { Badge, Button } from '@/components/ui'
@@ -19,14 +18,12 @@ import { useColors } from '@/theme'
 import { t } from '@shared/i18n'
 import { priorityLabel, statusLabel } from '@shared/labels'
 
-const PRIORITIES: TaskPriority[] = ['None', 'Low', 'Medium', 'High']
-
 export default function TaskDetailScreen() {
-  const { id, edit } = useLocalSearchParams<{ id: string; edit?: string }>()
+  const { id } = useLocalSearchParams<{ id: string }>()
   const c = useColors()
   const { zone } = useAuth()
-  // `edit=1`: just changed into a task and something needs checking.
-  const [editing, setEditing] = useState(edit === '1')
+  // Everything that changes the task happens in Edit (`edit=1` / `talk=1` open it; so does the floating mic).
+  const edit = useEditMode()
   // Once a delete starts, stop (re)fetching this item - it's about to 404.
   const [deleting, setDeleting] = useState(false)
   const { data: task, isPending, error } = useQuery({ queryKey: ['task', id], queryFn: () => tasksApi.get(id), enabled: !deleting })
@@ -58,9 +55,16 @@ export default function TaskDetailScreen() {
 
   return (
     <Screen>
-      <Stack.Screen options={{ title: editing ? t('task.edit') : t('kind.task') }} />
-      {editing ? (
-        <TaskEditForm task={task} onDone={() => setEditing(false)} />
+      <Stack.Screen options={{ title: edit.editing ? t('common.edit') : t('kind.task') }} />
+      {edit.followUp && <FollowUpReview text={edit.followUp} onDone={edit.clearFollowUp} />}
+      {edit.editing ? (
+        <ItemEditor
+          item={{ itemType: 'Task', id: task.id, title: task.title }}
+          saved={formFromTask(task, zone.timeZone)}
+          captureId={task.sourceCaptureId ?? null}
+          talkSignal={edit.talkSignal}
+          onDone={edit.done}
+        />
       ) : (
         <>
           <View style={{ gap: 8 }}>
@@ -79,7 +83,6 @@ export default function TaskDetailScreen() {
               ))}
             </View>
           </View>
-          <ChangeType itemType="Task" id={task.id} />
 
           <Facts
             rows={[
@@ -104,76 +107,13 @@ export default function TaskDetailScreen() {
                 <Button title={t('task.cancel')} disabled={busy} onPress={() => cancel.mutate(task.id)} />
               </>
             )}
-            <Button title={t('common.edit')} disabled={busy} onPress={() => setEditing(true)} />
+            <EditButtons onEdit={edit.edit} onTalk={edit.talk} disabled={busy} />
             <Button title={t('common.delete')} variant="danger" disabled={busy} onPress={confirmDelete} />
           </View>
         </>
       )}
 
-      {task.sourceCaptureId && <SourceCapture captureId={task.sourceCaptureId} item={{ itemType: 'Task', itemId: task.id, title: task.title }} />}
+      {!edit.editing && task.sourceCaptureId && <SourceCapture captureId={task.sourceCaptureId} item={{ itemType: 'Task', itemId: task.id, title: task.title }} />}
     </Screen>
-  )
-}
-
-function TaskEditForm({ task, onDone }: { task: Task; onDone: () => void }) {
-  const c = useColors()
-  const { zone } = useAuth()
-  const update = useAction((body: Parameters<typeof tasksApi.update>[1]) => tasksApi.update(task.id, body))
-  const [title, setTitle] = useState(task.title)
-  const [description, setDescription] = useState(task.description ?? '')
-  const [notes, setNotes] = useState(task.notes ?? '')
-  const [date, setDate] = useState<string | null>(task.dueDateUtc ? dateKey(task.dueDateUtc, zone.timeZone) : null)
-  const [time, setTime] = useState<string | null>(task.dueDateUtc && task.hasDueTime ? timeKey(task.dueDateUtc, zone.timeZone) : null)
-  const [priority, setPriority] = useState<TaskPriority>(task.priority)
-  const [ongoing, setOngoing] = useState(task.status === 'Ongoing')
-  const [reminders, setReminders] = useState<Reminder[]>(task.reminders ?? [])
-  const reminderIssue = remindersProblem(reminders, { itemHasTime: !ongoing && !!date && !!time, isNote: false })
-  const [tags, setTags] = useState(task.tags.join(', '))
-
-  const save = () => {
-    const dueDateUtc = !ongoing && date ? zonedToUtc(date, time, zone.timeZone) : null
-    update.mutate(
-      {
-        title: title.trim(),
-        description: description.trim() || null,
-        notes: notes.trim() || null,
-        dueDateUtc,
-        hasDueTime: !!dueDateUtc && !!time,
-        priority,
-        isOngoing: ongoing,
-        reminders,
-        tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
-      },
-      { onSuccess: onDone },
-    )
-  }
-
-  return (
-    <View style={s.form}>
-      <Field label={t('item.title')} value={title} onChangeText={setTitle} />
-      <View style={s.chips}>
-        <DateTimeField mode="date" value={date} onChange={setDate} placeholder={t('task.dueDate')} disabled={ongoing} />
-        <DateTimeField mode="time" value={time} onChange={setTime} placeholder={t('item.time')} date={date} disabled={ongoing || !date} />
-      </View>
-      <View style={s.chips}>
-        <CycleChip
-          values={PRIORITIES}
-          value={priority}
-          onChange={setPriority}
-          label={(p) => (p === 'None' ? t('task.noPriority') : t('task.priorityBadge', { priority: priorityLabel(p) }))}
-          highlight={(p) => p !== 'None'}
-        />
-        <CycleChip values={[false, true]} value={ongoing} onChange={setOngoing} label={(o) => (o ? `${t('today.ongoing')} ✓` : t('today.ongoing'))} highlight={(o) => o} />
-      </View>
-      <ReminderList value={reminders} onChange={setReminders} itemHasTime={!ongoing && !!date && !!time} />
-      <Field label={`${t('task.tags')} ${t('item.commaSeparated')}`} value={tags} onChangeText={setTags} autoCapitalize="none" />
-      <Field label={t('item.description')} value={description} onChangeText={setDescription} multiline />
-      <Field label={t('item.notes')} value={notes} onChangeText={setNotes} multiline />
-      {update.error && <Text style={{ color: c.danger }}>{update.error.message}</Text>}
-      <View style={s.actions}>
-        <Button title={t('common.cancel')} onPress={onDone} />
-        <Button title={t('item.saveChanges')} variant="primary" busy={update.isPending} disabled={!title.trim() || !!reminderIssue} onPress={save} />
-      </View>
-    </View>
   )
 }

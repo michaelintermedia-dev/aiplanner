@@ -434,4 +434,16 @@ export const he: Messages = {
   'review.pendingAddition': 'תוספת שלא נשמרה ל״{title}״',
   'review.discardAll': { one: 'למחוק הכול', two: 'למחוק את שתיהן', other: 'למחוק את כל ה-{count}' },
   'review.captureUnrelated': 'לשמור גם את ״{text}״ כרשומה חדשה - זה לא קשור לפריט הזה',
+
+  // ---- item edit page ----
+  'form.noteEmpty': 'כתבו משהו בפתק.',
+  'form.addByVoice': 'שינוי בקול או בטקסט',
+  'form.addHint': 'אמרו או כתבו מה לשנות - השדות למטה יתמלאו בשבילכם. שום דבר לא נשמר עד ״שמירה״.',
+  'form.aiFilled': 'מולא לפי מה שאמרתם - בדקו את השדות המסומנים.',
+  'form.changedByAi': 'שונה לפי מה שאמרתם',
+  'form.recording': 'הקלטה',
+  'form.recordingWillBeDeleted': 'ההקלטה תימחק בשמירה.',
+  'form.talk': 'לדבר על זה',
+  'form.talkHint': 'פותח עריכה ומתחיל להקליט',
+  'form.newEntryInstead': 'רשומה חדשה במקום',
 }

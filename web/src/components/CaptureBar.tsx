@@ -1,6 +1,6 @@
 import type { AppendTarget, Capture, ItemType } from '@shared/types'
 import { useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { IoArrowUp } from 'react-icons/io5'
 import { capturesApi } from '../api/endpoints'
 import { toWav } from '../lib/toWav'
@@ -46,8 +46,12 @@ function usePreview(state: RecorderState, pauseCount: number, snapshot: () => Pr
 }
 
 /** The form for a continue request, naming the item continued from. */
-function continueForm({ target }: ContinueFrom) {
+const captureIdOf = async ({ captureId }: ContinueFrom) => (typeof captureId === 'string' ? captureId : captureId())
+
+function continueForm({ target, onResult }: ContinueFrom) {
   const form = new FormData()
+  // The Edit form collects several additions before Save: keep the earlier ones pending.
+  if (onResult) form.append('keepEarlier', 'true')
   form.append('itemType', target.itemType)
   form.append('itemId', target.itemId)
   return form
@@ -57,9 +61,14 @@ const formatDuration = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).pa
 
 /** Adding to an existing capture from an item's page ("continue talking"). */
 export interface ContinueFrom {
-  captureId: string
+  /** Or a function that gets it when first needed (an item made by hand gets one then). */
+  captureId: string | (() => Promise<string>)
   target: AppendTarget
-  onClose: () => void
+  onClose?: () => void
+  /** The item's Edit form: it takes the AI's answer itself (fills its fields) - no review here. */
+  onResult?: (capture: Capture) => void
+  /** Start recording at once (the mic shortcut on an item's page). */
+  autoStart?: boolean
   /** Saving changed the item's type, so it has a new id: show that one. */
   onMoved?: (item: { itemType: ItemType; itemId: string }) => void
 }
@@ -100,7 +109,9 @@ export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {
     setError(null)
     setSavedMessage(null)
     try {
-      setCapture(await work())
+      const result = await work()
+      if (continueFrom?.onResult) continueFrom.onResult(result)
+      else setCapture(result)
       setText('')
       return true
     } catch (err) {
@@ -116,11 +127,11 @@ export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {
   const submitText = (e?: FormEvent) => {
     e?.preventDefault()
     if (!text.trim()) return
-    void run('understanding', () => {
+    void run('understanding', async () => {
       if (!continueFrom) return capturesApi.text(text.trim())
       const form = continueForm(continueFrom)
       form.append('text', text.trim())
-      return capturesApi.continue(continueFrom.captureId, form)
+      return capturesApi.continue(await captureIdOf(continueFrom), form)
     })
   }
 
@@ -135,7 +146,7 @@ export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {
       // Upload WAV, not the recorder's WebM - see toWav for why.
       const form = continueFrom ? continueForm(continueFrom) : new FormData()
       form.append('audio', await toWav(recording.blob), 'recording.wav')
-      return continueFrom ? capturesApi.continue(continueFrom.captureId, form) : capturesApi.voice(form)
+      return continueFrom ? capturesApi.continue(await captureIdOf(continueFrom), form) : capturesApi.voice(form)
     })
   }
 
@@ -161,6 +172,15 @@ export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {
     await recorder.record(deviceId)
     mics.refresh() // device names become visible once permission is granted
   }
+
+  // The mic shortcut on an item's page: recording starts as the form opens (once - not again on a re-render).
+  const autoStarted = useRef(false)
+  useEffect(() => {
+    if (!continueFrom?.autoStart || autoStarted.current) return
+    autoStarted.current = true
+    void startRecording().catch(onMicError)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the form opens
+  }, [])
 
   // Switching input mid-recording restarts it on the new mic: the old take is
   // usually the silent one the user is trying to fix.
@@ -191,7 +211,7 @@ export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {
             return
           }
           setFollowUp(false)
-          if (continueFrom) continueFrom.onClose()
+          if (continueFrom) continueFrom.onClose?.()
           else setSavedMessage(message)
         }}
       />
@@ -300,7 +320,7 @@ export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {
             {t('capture.discard')}
           </button>
         )}
-        {continueFrom && !hasAudio && !busy && (
+        {continueFrom?.onClose && !hasAudio && !busy && (
           <button type="button" className="link" onClick={continueFrom.onClose}>
             {t('common.cancel')}
           </button>

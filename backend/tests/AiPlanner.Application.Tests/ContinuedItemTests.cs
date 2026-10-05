@@ -137,4 +137,17 @@ public class ContinuedItemTests
         kept.Description.Should().Be("Leak under the sink" + "\n\n" + "Ask him about the kitchen tap as well.");
         kept.Unrelated.Should().Be("Also call mom tonight.");
     }
+
+    [Fact]
+    public void Instructions_it_carried_out_are_not_copied_into_the_details()
+    {
+        var plumber = Item(ExtractionIntent.Task, "Call plumber back", "Leak under the sink", due: Friday19);
+        var update = Item(ExtractionIntent.Task, "Call plumber back", "Leak under the sink", due: Friday19, addsToCurrent: true)
+            with { Priority = TaskPriority.High, Reminders = [new ReminderDto(ReminderKind.Before, MinutesBefore: 30)] };
+
+        var kept = ContinuedItem.Keep([update], plumber, "Make it high priority and remind me 30 minutes before.");
+
+        kept.Description.Should().Be("Leak under the sink");
+        kept.Priority.Should().Be(TaskPriority.High);
+    }
 }

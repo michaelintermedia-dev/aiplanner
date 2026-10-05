@@ -4,30 +4,27 @@ import type { AppendTarget } from '@shared/types'
 import { clipsLabel, itemClips, type Snippet } from '@shared/audioSnippet'
 import { useEffect, useRef, useState } from 'react'
 import { IoKeypadOutline, IoMicOutline, IoPlay } from 'react-icons/io5'
-import { useNavigate } from 'react-router'
 import { capturesApi } from '../api/endpoints'
-import { itemPath } from '../lib/notifications'
 import { useAuth } from '../auth/useAuth'
-import { CaptureBar } from './CaptureBar'
 import { toWav } from '../lib/toWav'
 import { speedRef, usePlaybackSpeed } from '../lib/playbackSpeed'
-import { useAction } from '../lib/useAction'
 import { SpeedChips } from './SpeedChips'
 import { t } from '@shared/i18n'
 
 /**
  * "Where this came from": the capture an item was created from, with the
  * original words and the recording (spec section 21 - voice capture history).
+ * Read and listen only - adding to the item and deleting the recording are in
+ * its Edit page.
  */
 export function SourceCapture({ captureId, item }: { captureId: string; item?: AppendTarget }) {
   const { zone } = useAuth()
-  const [continuing, setContinuing] = useState(false)
-  const navigate = useNavigate()
   const { data: capture, error } = useQuery({ queryKey: ['capture', captureId], queryFn: () => capturesApi.get(captureId) })
-  const deleteAudio = useAction(() => capturesApi.deleteAudio(captureId))
 
   if (error) return null // The capture may have been removed; the item still stands on its own.
   if (!capture) return <p className="muted">{t('source.loading')}</p>
+  // Made for an item created by hand, and nothing was said yet: nothing to show.
+  if (!capture.inputText.trim() && capture.audioParts === 0) return null
 
   const when = `${formatDateKey(dateKey(capture.createdAtUtc, zone.timeZone), zone.locale, { month: 'short', day: 'numeric' })}, ${formatTime(capture.createdAtUtc, zone)}`
 
@@ -45,33 +42,10 @@ export function SourceCapture({ captureId, item }: { captureId: string; item?: A
         <summary>{capture.source === 'Voice' ? t('capture.fullTranscription') : t('capture.whatYouTyped')}</summary>
         <p className="source-text">{capture.inputText}</p>
       </details>
-      {item &&
-        (continuing ? (
-          <CaptureBar
-            continueFrom={{
-              captureId,
-              target: item,
-              onClose: () => setContinuing(false),
-              onMoved: (moved) => navigate(itemPath(moved), { replace: true }),
-            }}
-          />
-        ) : (
-          // Complete an unfinished thought or add an insight, even after saving.
-          <button type="button" className="continue-button" onClick={() => setContinuing(true)}>
-            <IoMicOutline aria-hidden /> {t('source.addMore')}
-          </button>
-        ))}
-
       {capture.source === 'Voice' &&
         (capture.audioParts > 0 ? (
           <div className="source-audio">
             <RecordingPlayer captureId={captureId} parts={capture.audioParts} clips={itemClips(capture, item)} />
-            <button
-              className="link danger"
-              disabled={deleteAudio.isPending}
-              onClick={() => window.confirm(t('source.confirmDeleteAudio')) && deleteAudio.mutate(undefined)}>
-              {t('source.deleteAudio')}
-            </button>
           </div>
         ) : (
           <p className="muted">{t('source.audioDeleted')}</p>
@@ -88,7 +62,7 @@ export function SourceCapture({ captureId, item }: { captureId: string; item?: A
  * words, plus anything spoken when adding to it): "Play this part" plays just
  * those, one after another, and the full player is still there.
  */
-function RecordingPlayer({ captureId, parts, clips }: { captureId: string; parts: number; clips: Snippet[] }) {
+export function RecordingPlayer({ captureId, parts, clips }: { captureId: string; parts: number; clips: Snippet[] }) {
   const [url, setUrl] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
   const audio = useRef<HTMLAudioElement>(null)

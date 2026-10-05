@@ -29,15 +29,21 @@ export function TextBlock({ title, text }: { title: string; text: string | null 
   )
 }
 
-export function Field({ label, ...props }: TextInputProps & { label: string }) {
+/** A labelled text field; `changed` marks one the AI just filled in from what was said. */
+export function Field({ label, changed, ...props }: TextInputProps & { label: string; changed?: boolean }) {
   const c = useColors()
   return (
     <View style={{ gap: 4 }}>
-      <Text style={{ color: c.muted, fontSize: 13 }}>{label}</Text>
+      <Text style={{ color: changed ? c.accent : c.muted, fontSize: 13 }}>{label}</Text>
       <TextInput
         placeholderTextColor={c.muted}
         {...props}
-        style={[styles.input, props.multiline && styles.multiline, { color: c.text, borderColor: c.border, backgroundColor: c.surface }]}
+        style={[
+          styles.input,
+          props.multiline && styles.multiline,
+          { color: c.text, borderColor: changed ? c.accent : c.border, backgroundColor: c.surface },
+          changed && { borderWidth: 2 },
+        ]}
       />
     </View>
   )

@@ -1,14 +1,14 @@
-import { dateKey, formatDateKey, formatDue, formatTime, timeKey, zonedToUtc } from '@shared/dates'
-import type { Reminder, Task, TaskPriority } from '@shared/types'
+import { dateKey, formatDateKey, formatDue, formatTime } from '@shared/dates'
+import { formFromTask } from '@shared/itemForm'
 import { useQuery } from '@tanstack/react-query'
-import { useState, type FormEvent } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
+import { useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router'
 import { tasksApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
-import { ReminderList } from '../components/ReminderList'
-import { ChangeType } from '../components/ChangeType'
+import { EditButtons, FollowUpReview, useEditMode } from '../components/ItemEditMode'
+import { ItemEditor } from '../components/ItemEditor'
 import { SourceCapture } from '../components/SourceCapture'
-import { describeReminder, remindersProblem } from '@shared/reminders'
+import { describeReminder } from '@shared/reminders'
 import { useAction } from '../lib/useAction'
 import { t } from '@shared/i18n'
 import { priorityLabel, statusLabel } from '@shared/labels'
@@ -17,8 +17,8 @@ export function TaskDetailPage() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
   const { zone } = useAuth()
-  // ?edit=1: just converted and something was guessed - start in the edit form.
-  const [editing, setEditing] = useState(useSearchParams()[0].get('edit') === '1')
+  // Everything that changes the task happens in Edit (?edit=1 / ?talk=1 open it).
+  const edit = useEditMode()
   // Once a delete starts, stop (re)fetching this item - it's about to 404.
   const [deleting, setDeleting] = useState(false)
   const { data: task, isPending, error } = useQuery({ queryKey: ['task', id], queryFn: () => tasksApi.get(id), enabled: !deleting })
@@ -38,8 +38,15 @@ export function TaskDetailPage() {
   return (
     <div className="page detail">
 
-      {editing ? (
-        <TaskEditForm task={task} onDone={() => setEditing(false)} />
+      {edit.followUp && <FollowUpReview text={edit.followUp} onDone={edit.clearFollowUp} />}
+      {edit.mode ? (
+        <ItemEditor
+          item={{ itemType: 'Task', id: task.id, title: task.title }}
+          saved={formFromTask(task, zone.timeZone)}
+          captureId={task.sourceCaptureId ?? null}
+          talk={edit.mode === 'talk'}
+          onDone={edit.done}
+        />
       ) : (
         <>
           <header className="detail-header">
@@ -53,7 +60,6 @@ export function TaskDetailPage() {
               ))}
             </div>
           </header>
-          <ChangeType itemType="Task" id={task.id} />
 
           <dl className="facts">
             <dt>{t('task.due')}</dt>
@@ -92,9 +98,7 @@ export function TaskDetailPage() {
                 </button>
               </>
             )}
-            <button disabled={busy} onClick={() => setEditing(true)}>
-              {t('common.edit')}
-            </button>
+            <EditButtons onEdit={edit.edit} onTalk={edit.talk} disabled={busy} />
             <button
               className="link danger"
               disabled={busy}
@@ -107,7 +111,7 @@ export function TaskDetailPage() {
         </>
       )}
 
-      {task.sourceCaptureId && <SourceCapture captureId={task.sourceCaptureId} item={{ itemType: 'Task', itemId: task.id, title: task.title }} />}
+      {!edit.mode && task.sourceCaptureId && <SourceCapture captureId={task.sourceCaptureId} item={{ itemType: 'Task', itemId: task.id, title: task.title }} />}
     </div>
   )
 }
@@ -118,100 +122,5 @@ function TextBlock({ title, text }: { title: string; text: string }) {
       <h2>{title}</h2>
       <p>{text}</p>
     </section>
-  )
-}
-
-function TaskEditForm({ task, onDone }: { task: Task; onDone: () => void }) {
-  const { zone } = useAuth()
-  const update = useAction((body: Parameters<typeof tasksApi.update>[1]) => tasksApi.update(task.id, body))
-  const [title, setTitle] = useState(task.title)
-  const [description, setDescription] = useState(task.description ?? '')
-  const [notes, setNotes] = useState(task.notes ?? '')
-  const [date, setDate] = useState(task.dueDateUtc ? dateKey(task.dueDateUtc, zone.timeZone) : '')
-  const [time, setTime] = useState(task.dueDateUtc && task.hasDueTime ? timeKey(task.dueDateUtc, zone.timeZone) : '')
-  const [priority, setPriority] = useState<TaskPriority>(task.priority)
-  const [ongoing, setOngoing] = useState(task.status === 'Ongoing')
-  const [reminders, setReminders] = useState<Reminder[]>(task.reminders ?? [])
-  const [tags, setTags] = useState(task.tags.join(', '))
-
-  const reminderIssue = remindersProblem(reminders, { itemHasTime: !ongoing && !!date && !!time, isNote: false })
-
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
-    if (reminderIssue) return
-    const dueDateUtc = !ongoing && date ? zonedToUtc(date, time || null, zone.timeZone) : null
-    update.mutate(
-      {
-        title: title.trim(),
-        description: description.trim() || null,
-        notes: notes.trim() || null,
-        dueDateUtc,
-        hasDueTime: !!dueDateUtc && !!time,
-        priority,
-        isOngoing: ongoing,
-        reminders,
-        tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
-      },
-      { onSuccess: onDone },
-    )
-  }
-
-  return (
-    <form className="card form" onSubmit={submit}>
-      <h3>{t('task.edit')}</h3>
-      <label>
-        {t('item.title')}
-        <input value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus />
-      </label>
-      <div className="form-row">
-        <label>
-          {t('task.dueDate')}
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} disabled={ongoing} />
-        </label>
-        <label>
-          {t('item.time')}
-          <input type="time" value={time} onChange={(e) => setTime(e.target.value)} disabled={ongoing || !date} />
-        </label>
-        <label>
-          {t('task.priority')}
-          <select value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)}>
-            {['None', 'Low', 'Medium', 'High'].map((p) => (
-              <option key={p} value={p}>
-                {priorityLabel(p)}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <div className="field">
-        <span>{t('item.reminder')}</span>
-        <ReminderList value={reminders} onChange={setReminders} itemHasTime={!ongoing && !!date && !!time} />
-      </div>
-      <label className="inline-check">
-        <input type="checkbox" checked={ongoing} onChange={(e) => setOngoing(e.target.checked)} />
-        {t('task.ongoingCheck')}
-      </label>
-      <label>
-        {t('task.tags')} <span className="muted">{t('item.commaSeparated')}</span>
-        <input value={tags} onChange={(e) => setTags(e.target.value)} />
-      </label>
-      <label>
-        {t('item.description')}
-        <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
-      </label>
-      <label>
-        {t('item.notes')}
-        <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
-      </label>
-      {update.error && <p className="error">{update.error.message}</p>}
-      <div className="form-actions">
-        <button type="button" onClick={onDone}>
-          {t('common.cancel')}
-        </button>
-        <button type="submit" className="primary" disabled={!title.trim() || !!reminderIssue || update.isPending}>
-          {t('item.saveChanges')}
-        </button>
-      </div>
-    </form>
   )
 }

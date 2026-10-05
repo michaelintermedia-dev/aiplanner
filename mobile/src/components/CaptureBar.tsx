@@ -21,16 +21,25 @@ const formatDuration = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).pa
 
 /** Adding to an existing capture from an item's screen ("continue talking"). */
 export interface ContinueFrom {
-  captureId: string
+  /** Or a function that gets it when first needed (an item made by hand gets one then). */
+  captureId: string | (() => Promise<string>)
   target: AppendTarget
-  onClose: () => void
+  onClose?: () => void
+  /** The item's Edit form: it takes the AI's answer itself (fills its fields) - no review here. */
+  onResult?: (capture: Capture) => void
+  /** Each new value starts recording (the floating mic tapped on the item's page). */
+  talkSignal?: number
   /** Saving changed the item's type, so it has a new id: show that one. */
   onMoved?: (item: { itemType: ItemType; itemId: string }) => void
 }
 
 /** The form for a continue request, naming the item continued from. */
-function continueForm({ target }: ContinueFrom) {
+const captureIdOf = async ({ captureId }: ContinueFrom) => (typeof captureId === 'string' ? captureId : captureId())
+
+function continueForm({ target, onResult }: ContinueFrom) {
   const form = new FormData()
+  // The Edit form collects several additions before Save: keep the earlier ones pending.
+  if (onResult) form.append('keepEarlier', 'true')
   form.append('itemType', target.itemType)
   form.append('itemId', target.itemId)
   return form
@@ -79,7 +88,9 @@ export function CaptureBar({
     setError(null)
     setSavedMessage(null)
     try {
-      setCapture(await work())
+      const result = await work()
+      if (continueFrom?.onResult) continueFrom.onResult(result)
+      else setCapture(result)
       setText('')
       return true
     } catch (err) {
@@ -94,11 +105,11 @@ export function CaptureBar({
 
   const submitText = () => {
     if (!text.trim()) return
-    void run('understanding', () => {
+    void run('understanding', async () => {
       if (!continueFrom) return capturesApi.text(text.trim())
       const form = continueForm(continueFrom)
       form.append('text', text.trim())
-      return capturesApi.continue(continueFrom.captureId, form)
+      return capturesApi.continue(await captureIdOf(continueFrom), form)
     })
   }
 
@@ -108,18 +119,33 @@ export function CaptureBar({
       setError(t('mic.error.nothing'))
       return
     }
-    const sent = await run('transcribing', () => {
+    const sent = await run('transcribing', async () => {
       const form = continueFrom ? continueForm(continueFrom) : new FormData()
       // Expo's fetch (the global fetch since SDK 52) doesn't accept React
       // Native's { uri, name, type } parts; an expo-file-system File is a Blob.
       segments.forEach((s, i) => form.append('audio', new File(s.uri), `part-${i + 1}.m4a`))
-      return continueFrom ? capturesApi.continue(continueFrom.captureId, form) : capturesApi.voice(form)
+      return continueFrom ? capturesApi.continue(await captureIdOf(continueFrom), form) : capturesApi.voice(form)
     })
     // On failure the recording stays (paused) so the user can retry Send.
     if (sent) recorder.clear()
   }
 
   const onMicError = (err: unknown) => setError(err instanceof Error ? err.message : t('mic.error.couldNotUse'))
+
+  const startRecording = async () => {
+    setError(null)
+    setSavedMessage(null)
+    setSilent(false)
+    await recorder.record()
+  }
+
+  // The floating mic tapped on the item's page: start (or go on) recording here.
+  const talkSignal = continueFrom?.talkSignal ?? 0
+  useEffect(() => {
+    if (!talkSignal || recorder.state === 'recording' || busy !== null) return
+    queueMicrotask(() => startRecording().catch(onMicError))
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the signal changes
+  }, [talkSignal])
 
   if (capture) {
     return (
@@ -140,7 +166,7 @@ export function CaptureBar({
             return
           }
           setFollowUp(false)
-          if (continueFrom) continueFrom.onClose()
+          if (continueFrom) continueFrom.onClose?.()
           else setSavedMessage(message)
         }}
       />
@@ -237,7 +263,7 @@ export function CaptureBar({
             </>
           ) : (
             <>
-              {continueFrom && busy === null && <Button title={t('common.cancel')} variant="link" onPress={continueFrom.onClose} />}
+              {continueFrom?.onClose && busy === null && <Button title={t('common.cancel')} variant="link" onPress={continueFrom.onClose} />}
               {/* One send arrow for typed text and recordings; it only shows when there's something to send. */}
               {text.trim() !== '' && <SendButton label={t('capture.send')} onPress={submitText} disabled={busy !== null} />}
             </>
@@ -246,12 +272,7 @@ export function CaptureBar({
         {/* Fixed position on the right, so hold-to-talk always hits it. */}
         <MicButton
           state={recorder.state}
-          record={async () => {
-            setError(null)
-            setSavedMessage(null)
-            setSilent(false)
-            await recorder.record()
-          }}
+          record={startRecording}
           pause={recorder.pause}
           disabled={busy !== null}
           onError={onMicError}

@@ -305,8 +305,28 @@ Local dev notes:
   `INTENT_OPTIONS` in `shared/captureDraft.ts`) plus editable dates,
   time, priority, reminder and details, so the user can turn anything into
   anything and fill in what's missing before saving.
-- **Saved items can change type too** (2026-10-02): the "Type" chips on every
-  detail view (`ChangeType` on web and mobile) call `POST /api/items/convert`.
+- **Everything that changes an item happens in its Edit page** (user's call,
+  2026-10-05, web + mobile; replaced the view's Type chips, "Add more" and
+  "Delete recording"). The view is read / listen / Complete-Cancel-Reopen,
+  plus Edit and a mic shortcut (Edit with recording on; `?edit=1` / `?talk=1`).
+  `ItemEditor` (one form for every type, `shared/itemForm.ts`): Type chips
+  (`switchType`; a note's "before" reminders become one-off ones), fields,
+  reminders, details, and on top "Change it by voice or text" - a
+  `CaptureBar` with `continueFrom.onResult`: the AI's whole-item proposal is
+  merged into the form (`applyProposal`: only what it changed vs the saved
+  item, so several additions and hand edits combine) and the changed fields
+  are marked; unrelated words become "Also capture ... as a new entry"
+  (captured after Save, reviewed on the page - `FollowUpReview`). Nothing is
+  saved until Save (`saveItemForm`: convert if the type changed, the normal
+  PUT, then confirm the proposals with `linkOnly` so their words/audio clip
+  belong to the item, then delete the recording if asked); Cancel rejects the
+  proposals (`discardProposals`). Continue calls send `keepEarlier` so earlier
+  unsaved additions in the same form stay pending. Items made by hand get a
+  capture on first use (`POST /api/captures/for-item`); an empty one isn't
+  shown. Unsaved edits are kept on the device (web localStorage, mobile
+  `editDrafts`) and restored if the item didn't change meanwhile.
+- **Saved items can change type too** (2026-10-02): the Type chips in the
+  Edit page call `POST /api/items/convert` (on Save).
   `ItemConversionService` creates the new item through the normal services
   and soft-deletes the old one in one transaction, carrying over title, text,
   date, reminders and the capture link (location goes into the text where the
@@ -354,9 +374,15 @@ Local dev notes:
   Expo's dev-tools bubble); a tap reopens it. Collapsing shrinks the toolbar into the button and opening grows it back out of it (Animated, native driver; the button's drag and its pop are two layers, since one view can't mix JS- and native-driven transforms; Reduce motion skips it). It sits above the tab bar on tab
   screens and lifts above the keyboard (edge-to-edge Android doesn't resize). It never collapses while recording/processing/reviewing
   (`CaptureBar onEngagedChange`), and typed text survives collapsing.
-- **A capture can be continued after saving** (user's request, 2026-10-02):
-  "Add more - keep talking" on an item's source capture opens the capture
-  bar in continue mode (`CaptureBar continueFrom`, web + mobile).
+  The button depends on the screen (2026-10-05): on an item's screen it means
+  "talk about this item" - the focused screen registers in `lib/dockTarget`
+  (`useDockTarget`, via `useEditMode`), the toolbar collapses there, the
+  button wears a pencil badge, and a tap opens that item's Edit recording (or
+  starts recording if Edit is open); "New entry instead" in Edit opens the
+  toolbar. Everywhere else it's a new entry.
+- **A capture can be continued after saving** (user's request, 2026-10-02;
+  since 2026-10-05 from the item's Edit page, see above) - the capture bar
+  in continue mode (`CaptureBar continueFrom`, web + mobile).
   `POST /api/captures/{id}/continue` (audio parts and/or text + the item)
   appends the audio to the same recording (one track), the words to the
   transcript, and asks the AI about the new words only, with the earlier text

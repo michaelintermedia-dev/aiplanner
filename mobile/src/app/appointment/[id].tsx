@@ -1,17 +1,16 @@
-import { addDays, dateKey, formatDateKey, formatTime, timeKey, zonedToUtc, endsNextDay } from '@shared/dates'
+import { dateKey, formatDateKey, formatTime } from '@shared/dates'
 import { eventPassed } from '@shared/feed'
-import { describeReminder, remindersProblem } from '@shared/reminders'
-import type { Appointment, Reminder } from '@shared/types'
+import { formFromAppointment } from '@shared/itemForm'
+import { describeReminder } from '@shared/reminders'
 import { useQuery } from '@tanstack/react-query'
 import { router, Stack, useLocalSearchParams } from 'expo-router'
 import { useState } from 'react'
 import { Alert, Text, View } from 'react-native'
 import { appointmentsApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
-import { DateTimeField } from '@/components/DateTimeField'
-import { detailStyles as s, Facts, Field, TextBlock } from '@/components/detail'
-import { ReminderList } from '@/components/ReminderList'
-import { ChangeType } from '@/components/ChangeType'
+import { detailStyles as s, Facts, TextBlock } from '@/components/detail'
+import { EditButtons, FollowUpReview, useEditMode } from '@/components/ItemEditMode'
+import { ItemEditor } from '@/components/ItemEditor'
 import { Screen } from '@/components/Screen'
 import { SourceCapture } from '@/components/SourceCapture'
 import { Badge, Button } from '@/components/ui'
@@ -21,11 +20,11 @@ import { t } from '@shared/i18n'
 import { statusLabel } from '@shared/labels'
 
 export default function AppointmentDetailScreen() {
-  const { id, edit } = useLocalSearchParams<{ id: string; edit?: string }>()
+  const { id } = useLocalSearchParams<{ id: string }>()
   const c = useColors()
   const { zone } = useAuth()
-  // `edit=1`: just changed into an event and its time was guessed - check it.
-  const [editing, setEditing] = useState(edit === '1')
+  // Everything that changes the event happens in Edit (`edit=1` / `talk=1` open it; so does the floating mic).
+  const edit = useEditMode()
   // Once a delete starts, stop (re)fetching this item - it's about to 404.
   const [deleting, setDeleting] = useState(false)
   const { data: appt, isPending, error } = useQuery({ queryKey: ['appointment', id], queryFn: () => appointmentsApi.get(id), enabled: !deleting })
@@ -58,9 +57,16 @@ export default function AppointmentDetailScreen() {
 
   return (
     <Screen>
-      <Stack.Screen options={{ title: editing ? t('event.edit') : t('kind.event') }} />
-      {editing ? (
-        <AppointmentEditForm appt={appt} onDone={() => setEditing(false)} />
+      <Stack.Screen options={{ title: edit.editing ? t('common.edit') : t('kind.event') }} />
+      {edit.followUp && <FollowUpReview text={edit.followUp} onDone={edit.clearFollowUp} />}
+      {edit.editing ? (
+        <ItemEditor
+          item={{ itemType: 'Appointment', id: appt.id, title: appt.title }}
+          saved={formFromAppointment(appt, zone.timeZone)}
+          captureId={appt.sourceCaptureId ?? null}
+          talkSignal={edit.talkSignal}
+          onDone={edit.done}
+        />
       ) : (
         <>
           <View style={{ gap: 8 }}>
@@ -74,7 +80,6 @@ export default function AppointmentDetailScreen() {
               )}
             </View>
           </View>
-          <ChangeType itemType="Appointment" id={appt.id} />
 
           <Facts
             rows={[
@@ -98,71 +103,13 @@ export default function AppointmentDetailScreen() {
                 <Button title={t('event.cancel')} disabled={busy} onPress={() => cancel.mutate(appt.id)} />
               </>
             )}
-            <Button title={t('event.editReschedule')} disabled={busy} onPress={() => setEditing(true)} />
+            <EditButtons onEdit={edit.edit} onTalk={edit.talk} disabled={busy} />
             <Button title={t('common.delete')} variant="danger" disabled={busy} onPress={confirmDelete} />
           </View>
         </>
       )}
 
-      {appt.sourceCaptureId && <SourceCapture captureId={appt.sourceCaptureId} item={{ itemType: 'Appointment', itemId: appt.id, title: appt.title }} />}
+      {!edit.editing && appt.sourceCaptureId && <SourceCapture captureId={appt.sourceCaptureId} item={{ itemType: 'Appointment', itemId: appt.id, title: appt.title }} />}
     </Screen>
-  )
-}
-
-function AppointmentEditForm({ appt, onDone }: { appt: Appointment; onDone: () => void }) {
-  const c = useColors()
-  const { zone } = useAuth()
-  const update = useAction((body: Parameters<typeof appointmentsApi.update>[1]) => appointmentsApi.update(appt.id, body))
-  const [title, setTitle] = useState(appt.title)
-  const [date, setDate] = useState<string | null>(dateKey(appt.startUtc, zone.timeZone))
-  const [start, setStart] = useState<string | null>(timeKey(appt.startUtc, zone.timeZone))
-  const [end, setEnd] = useState<string | null>(timeKey(appt.endUtc, zone.timeZone))
-  const [location, setLocation] = useState(appt.location ?? '')
-  const [people, setPeople] = useState(appt.participants.map((p) => p.name).join(', '))
-  const [reminders, setReminders] = useState<Reminder[]>(appt.reminders ?? [])
-  const reminderIssue = remindersProblem(reminders, { itemHasTime: true, isNote: false })
-  const [description, setDescription] = useState(appt.description ?? '')
-  const [notes, setNotes] = useState(appt.notes ?? '')
-
-  const save = () => {
-    if (!date || !start || !end) return
-    const startUtc = zonedToUtc(date, start, zone.timeZone)
-    let endUtc = zonedToUtc(date, end, zone.timeZone)
-    if (endUtc <= startUtc) endUtc = zonedToUtc(addDays(date, 1), end, zone.timeZone) // ends after midnight
-    update.mutate(
-      {
-        title: title.trim(),
-        description: description.trim() || null,
-        notes: notes.trim() || null,
-        startUtc,
-        endUtc,
-        location: location.trim() || null,
-        participantNames: people.split(',').map((p) => p.trim()).filter(Boolean),
-        reminders,
-      },
-      { onSuccess: onDone },
-    )
-  }
-
-  return (
-    <View style={s.form}>
-      <Field label={t('item.title')} value={title} onChangeText={setTitle} />
-      <View style={s.chips}>
-        <DateTimeField mode="date" value={date} onChange={setDate} placeholder={t('item.date')} />
-        <DateTimeField mode="time" value={start} onChange={setStart} placeholder={t('event.start')} date={date} />
-        <DateTimeField mode="time" value={end} onChange={setEnd} placeholder={t('event.end')} date={date} prefix={t('event.until')} />
-      </View>
-      {endsNextDay(start, end) && <Text style={{ color: c.warn, fontSize: 13 }}>{t('event.endsNextDay')}</Text>}
-      <ReminderList value={reminders} onChange={setReminders} itemHasTime />
-      <Field label={t('event.location')} value={location} onChangeText={setLocation} />
-      <Field label={`${t('event.with')} ${t('item.commaSeparated')}`} value={people} onChangeText={setPeople} />
-      <Field label={t('item.description')} value={description} onChangeText={setDescription} multiline />
-      <Field label={t('item.notes')} value={notes} onChangeText={setNotes} multiline />
-      {update.error && <Text style={{ color: c.danger }}>{update.error.message}</Text>}
-      <View style={s.actions}>
-        <Button title={t('common.cancel')} onPress={onDone} />
-        <Button title={t('item.saveChanges')} variant="primary" busy={update.isPending} disabled={!title.trim() || !date || !start || !end || !!reminderIssue} onPress={save} />
-      </View>
-    </View>
   )
 }

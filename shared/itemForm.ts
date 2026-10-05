@@ -351,6 +351,8 @@ export function switchType(f: ItemForm, type: ItemType, tz: string): ItemForm {
     ].filter(Boolean)
     f = { ...f, details: join(f.details, lines.join('\n')), location: '', people: '' }
   }
+  // ...and back to an event: lines folded that way go back into their fields.
+  if (type === 'Appointment' && f.type !== 'Appointment' && !f.location.trim() && !f.people.trim()) f = unfold(f)
   if (type !== 'Note' || !f.reminders.some((r) => r.kind === 'Before')) return { ...f, type }
   const at = formHasTime(f) ? new Date(zonedToUtc(f.date, f.time, tz)).getTime() : null
   return {
@@ -386,4 +388,21 @@ export function formAsAiItem(f: ItemForm, tz: string): string {
       days: r.kind === 'Weekly' ? (r.days ?? []) : null,
     })),
   })
+}
+
+/** "Location: …" / "With: …" lines at the end of the text (as switchType writes them) back into the fields. */
+function unfold(f: ItemForm): ItemForm {
+  const lines = f.details.split('\n')
+  let location = ''
+  let people = ''
+  while (lines.length) {
+    const last = lines[lines.length - 1].trim()
+    const where = `${t('event.location')}: `
+    const who = `${t('event.with')}: `
+    if (!location && last.startsWith(where)) location = last.slice(where.length)
+    else if (!people && last.startsWith(who)) people = last.slice(who.length)
+    else break
+    lines.pop()
+  }
+  return location || people ? { ...f, details: lines.join('\n').trim(), location, people } : f
 }

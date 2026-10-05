@@ -335,9 +335,12 @@ Local dev notes:
   `AddedAudioKeys`, `AddedRecording`). Save first checks the item didn't
   change elsewhere since the form opened (`SaveConflict` -> "Save mine
   anyway" / "Discard my changes"); if the type change went through but the
-  rest failed, the form carries on with the new item. Leaving Event folds
-  place and people into the text (`switchType`). A date the AI asks about
-  isn't applied.
+  rest failed, the form carries on with the new item (Cancel then opens the
+  new item too). Cancel always reloads the item. Leaving Event folds place
+  and people into the text (`switchType`), coming back unfolds them. A date
+  the AI asks about isn't applied, and those words don't become details.
+  Opening Edit without a stored draft rejects the item's held proposals left
+  by a lost draft.
 - **Saved items can change type too** (2026-10-02): the Type chips in the
   Edit page call `POST /api/items/convert` (on Save).
   `ItemConversionService` creates the new item through the normal services

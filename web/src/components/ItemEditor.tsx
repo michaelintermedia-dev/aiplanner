@@ -110,6 +110,19 @@ export function ItemEditor({
   })
 
   const dirty = formChanged(form, saved) || proposals.length > 0 || deleteRecording
+
+  // Opened without a stored draft: additions from a draft that was lost (another
+  // browser's storage cleared, app reinstalled) would stay pending for ever - drop them.
+  const cleared = useRef(false)
+  useEffect(() => {
+    if (cleared.current || !capture.data) return
+    cleared.current = true
+    const mine = new Set(draft.proposals.map((p) => p.item.id))
+    const lost = capture.data.items.filter(
+      (i) => i.status === 'PendingReview' && i.heldByEditForm && i.continuesItemId === item.id && !mine.has(i.id),
+    )
+    if (lost.length) void discardProposals(api, lost.map((i) => ({ captureId: capture.data!.id, item: i }))).catch(() => {})
+  }, [capture.data, draft.proposals, item.id])
   useEffect(() => storeDraft(item.id, dirty ? draft : null), [item.id, draft, dirty])
   // Reloading or closing the tab with unsaved changes asks first.
   useEffect(() => {
@@ -186,10 +199,13 @@ export function ItemEditor({
 
   const cancel = async () => {
     setBusy(true)
-    await discardProposals(api, proposals).catch(() => {}) // left pending at worst - the banner offers it
+    await discardProposals(api, proposals).catch(() => {}) // left pending at worst - cleared next time Edit opens
     storeDraft(item.id, null)
-    if (proposals.length) await queryClient.invalidateQueries()
-    onDone(null)
+    // Reload the item (after "Discard my changes" the page's copy is stale).
+    const gone = current.id !== item.id ? [DETAIL_KEY[item.itemType], item.id] : null
+    await queryClient.invalidateQueries({ predicate: (q) => !gone || q.queryKey[0] !== gone[0] || q.queryKey[1] !== gone[1] })
+    // A type change already went through: the item is the new one now.
+    onDone(current.id !== item.id ? { moved: { itemType: current.itemType, id: current.id } } : null)
   }
 
   const mark = (key: FormField) => (changed.includes(key) ? ' changed' : '')

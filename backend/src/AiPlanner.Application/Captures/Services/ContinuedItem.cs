@@ -118,6 +118,12 @@ public static class ContinuedItem
         {
             kept = kept with { Description = current.Description };
         }
+        else if (kept.Clarification is not null && !ChangesFields(kept, current))
+        {
+            // It asked about what was said ("which date?") instead of doing it: the
+            // words were an instruction it couldn't carry out, not details to keep.
+            if (lostOldText) kept = kept with { Description = current.Description };
+        }
         else if (ChangesFields(kept, current))
         {
             // The words were (at least partly) instructions it carried out - "make it

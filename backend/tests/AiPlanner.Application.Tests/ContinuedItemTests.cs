@@ -162,5 +162,6 @@ public class ContinuedItemTests
 
         kept.StartUtc.Should().Be(Friday19);
         kept.Clarification.Should().NotBeNull();
+        kept.Description.Should().BeNull(); // the instruction it couldn't carry out isn't kept as details
     }
 }

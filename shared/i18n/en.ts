@@ -449,6 +449,8 @@ export const en = {
   'form.recordingWillBeDeleted': 'The recording will be deleted when you save.',
   'form.talk': 'Talk about it',
   'form.talkHint': 'Opens Edit and starts recording',
+  'pull.pull': 'Pull to refresh',
+  'pull.release': 'Release to refresh',
   'form.titleTooLong': 'The title is too long (at most {max} characters).',
   'form.ongoingBefore': 'An ongoing task has no time, so a “before” reminder can’t work - pick a different reminder.',
   'form.conflict': 'This item was changed somewhere else after you opened it.',

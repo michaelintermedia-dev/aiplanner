@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react'
 import { IoArrowBack, IoCalendarOutline, IoPersonCircleOutline, IoSunnyOutline } from 'react-icons/io5'
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router'
 import { useAuth } from './auth/useAuth'
+import { CaptureDock } from './components/CaptureDock'
+import { PullToRefresh } from './components/PullToRefresh'
 import { AppointmentDetailPage } from './pages/AppointmentDetailPage'
 import { AuthPage } from './pages/AuthPage'
 import { CalendarPage } from './pages/CalendarPage'
@@ -60,8 +62,11 @@ function Layout() {
         </div>
       </header>
       <main className="content">
+        <PullToRefresh />
         <Outlet />
       </main>
+      {/* Phone width: new entries float over every page (desktop: inline on Feed / Today). */}
+      <CaptureDock />
     </div>
   )
 }

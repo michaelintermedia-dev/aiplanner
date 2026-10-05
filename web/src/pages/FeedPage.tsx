@@ -10,6 +10,7 @@ import { feedApi } from '../api/endpoints'
 import { useDebounced } from '../lib/useDebounced'
 import { useItemDeletion } from '../lib/useItemDeletion'
 import { useAuth } from '../auth/useAuth'
+import { useIsPhone } from '../lib/useIsPhone'
 import { CaptureBar } from '../components/CaptureBar'
 import { FeedFilterBar } from '../components/FeedFilterBar'
 import { FeedRow } from '../components/FeedRow'
@@ -31,6 +32,7 @@ const EMPTY_KEYS = ['feed.empty.all', 'feed.empty.tasks', 'feed.empty.events', '
  * just that one. Either way an Undo toast follows (same as mobile).
  */
 export function FeedPage() {
+  const isPhone = useIsPhone()
   const { zone } = useAuth()
   const [params, setParams] = useSearchParams()
   const showIndex = Math.max(0, SHOW.indexOf((params.get('show') ?? 'all') as (typeof SHOW)[number]))
@@ -105,7 +107,8 @@ export function FeedPage() {
 
   return (
     <div className="page feed-page">
-      <CaptureBar />
+      {/* Phone width: the floating dock (App) has it. */}
+      {!isPhone && <CaptureBar />}
       {selected ? (
         <div className="selection-bar" role="toolbar" aria-label={t('select.bar')}>
           <button type="button" className="icon-button" onClick={() => setSelected(null)} aria-label={t('select.stop')}>
@@ -159,6 +162,7 @@ export function FeedPage() {
                 item={item}
                 selection={selected ? { selected: selected.has(feedItemKey(item)), onToggle: () => toggle(item) } : undefined}
                 onDelete={() => deletion.deleteItems([item])}
+                onLongPress={selected ? undefined : () => setSelected(new Map([[feedItemKey(item), item]]))}
               />
             ))}
           </ul>

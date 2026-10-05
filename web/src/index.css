@@ -2301,3 +2301,185 @@ button.kind-icon:hover:not(:disabled) {
   margin: 0;
   color: var(--warn);
 }
+
+/* ---- Phone-width web: the floating capture dock (same as the mobile app) ---- */
+
+.dock-panel {
+  position: fixed;
+  inset-inline: 12px;
+  z-index: 30;
+  max-height: 72dvh;
+  overflow-y: auto;
+  border-radius: 16px;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.18);
+  background: var(--surface);
+  transition:
+    transform 260ms cubic-bezier(0.34, 1.25, 0.64, 1),
+    opacity 220ms ease,
+    visibility 0s linear 0s;
+}
+
+.dock-panel[aria-hidden='true'] {
+  transition:
+    transform 260ms cubic-bezier(0.65, 0, 0.35, 1),
+    opacity 220ms ease,
+    visibility 0s linear 260ms;
+}
+
+.dock-panel > .capture,
+.dock-panel > .pending-review,
+.dock-panel > .card {
+  margin: 0;
+}
+
+.dock-close {
+  position: absolute;
+  top: 6px;
+  inset-inline-end: 6px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface2, var(--surface));
+  border: 1px solid var(--border);
+  color: var(--muted);
+  z-index: 1;
+}
+
+.dock-bubble {
+  position: fixed;
+  z-index: 30;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  color: #fff;
+  background: var(--accent);
+  box-shadow: 0 3px 10px rgb(0 0 0 / 0.25);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  opacity: 0;
+  transform: scale(0.4);
+  pointer-events: none;
+  transition:
+    opacity 220ms ease,
+    transform 260ms ease,
+    left 250ms cubic-bezier(0.34, 1.25, 0.64, 1),
+    top 250ms cubic-bezier(0.34, 1.25, 0.64, 1);
+}
+
+.dock-bubble.shown {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.dock-bubble.dragging {
+  transition:
+    opacity 220ms ease,
+    transform 260ms ease;
+}
+
+/* An item's page has its own mic: the dock steps aside (it stays mounted). */
+.dock-hidden {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dock-panel,
+  .dock-panel[aria-hidden='true'],
+  .dock-bubble {
+    transition: none;
+  }
+}
+
+/* Hold-to-talk: no long-press menu, no text selection, no scrolling under the finger. */
+.mic {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none;
+}
+
+@media (max-width: 700px) {
+  /* Room under the last rows so they scroll clear of the dock. */
+  .content {
+    padding-bottom: calc(220px + env(safe-area-inset-bottom));
+  }
+
+  /* The app's own pull to refresh, not the browser's reload. */
+  html,
+  body {
+    overscroll-behavior-y: contain;
+  }
+}
+
+/* Notch / home bar (viewport-fit=cover). */
+.app-header {
+  padding-top: env(safe-area-inset-top);
+}
+
+.app {
+  min-height: 100dvh;
+}
+
+/* Pull to refresh (phone-width web, touch). */
+.pull-refresh {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 8px);
+  left: 50%;
+  margin-left: -20px;
+  margin-top: -40px;
+  z-index: 25;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  color: var(--accent);
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.18);
+}
+
+.pull-refresh .spinning {
+  animation: spin 0.8s linear infinite;
+}
+
+.row-place svg {
+  vertical-align: -2px;
+}
+
+/* In the dock the banner is part of the toolbar, not stuck under the page header. */
+.dock-panel .pending-review {
+  position: static;
+}
+
+@media (max-width: 700px) {
+  /* Like the mobile app: long-press a row to select and delete, no per-row trash. */
+  .row-delete {
+    display: none;
+  }
+}
+
+/* Room for the dock's close button in its top corner. */
+.dock-panel > .pending-review,
+.dock-panel > form.capture:first-child textarea {
+  padding-inline-end: 44px;
+}
+
+/* The Undo toast stays above the floating dock. */
+.toast {
+  z-index: 35;
+}

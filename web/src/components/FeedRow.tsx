@@ -1,9 +1,10 @@
 import { feedItemPassed, feedWhen, isDone, KIND_LABEL, feedReminder } from '@shared/feed'
 import type { FeedItem } from '@shared/types'
-import { IoCheckbox, IoCheckmarkCircle, IoEllipseOutline, IoMicOutline, IoNotificationsOutline, IoRepeat, IoSquareOutline, IoTrashOutline } from 'react-icons/io5'
+import { IoCheckbox, IoCheckmarkCircle, IoEllipseOutline, IoLocationOutline, IoMicOutline, IoNotificationsOutline, IoRepeat, IoSquareOutline, IoTrashOutline } from 'react-icons/io5'
 import { Link } from 'react-router'
 import { tasksApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
+import { useLongPress } from '../lib/useLongPress'
 import { useAction } from '../lib/useAction'
 import { KIND_ICON } from './kindIcons'
 import { t } from '@shared/i18n'
@@ -22,11 +23,15 @@ export function FeedRow({
   item,
   selection,
   onDelete,
+  onLongPress,
 }: {
   item: FeedItem
   selection?: { selected: boolean; onToggle: () => void }
   onDelete?: () => void
+  /** Touch: a long-press starts selecting (with this row), like the mobile app. */
+  onLongPress?: () => void
 }) {
+  const longPress = useLongPress(onLongPress)
   const { zone } = useAuth()
   const complete = useAction(tasksApi.complete)
   const reopen = useAction(tasksApi.reopen)
@@ -50,7 +55,11 @@ export function FeedRow({
             <span aria-hidden>{reminder.label}</span>
           </span>
         )}
-        {item.location && <span>📍 {item.location}</span>}
+        {item.location && (
+          <span className="row-place">
+            <IoLocationOutline aria-hidden /> {item.location}
+          </span>
+        )}
         {passed && <span className="badge status-passed">{t('status.passed')}</span>}
         {item.status && item.status !== 'Scheduled' && item.status !== 'Planned' && item.status !== 'Inbox' && (
           <span className={`badge status-${item.status.toLowerCase()}`}>{statusLabel(item.status)}</span>
@@ -86,7 +95,7 @@ export function FeedRow({
   }
 
   return (
-    <li className={classes}>
+    <li className={classes} {...longPress}>
       {item.kind === 'Task' ? (
         <button
           className="kind-icon"

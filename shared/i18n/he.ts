@@ -445,6 +445,8 @@ export const he: Messages = {
   'form.recordingWillBeDeleted': 'ההקלטה תימחק בשמירה.',
   'form.talk': 'לדבר על זה',
   'form.talkHint': 'פותח עריכה ומתחיל להקליט',
+  'pull.pull': 'משכו כדי לרענן',
+  'pull.release': 'שחררו כדי לרענן',
   'form.titleTooLong': 'הכותרת ארוכה מדי (עד {max} תווים).',
   'form.ongoingBefore': 'למשימה מתמשכת אין שעה, ולכן תזכורת ״לפני״ לא תעבוד - בחרו תזכורת אחרת.',
   'form.conflict': 'הפריט שונה במקום אחר אחרי שפתחתם אותו.',

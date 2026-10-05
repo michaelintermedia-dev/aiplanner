@@ -106,7 +106,12 @@ export function FeedRow({
               </Text>
             </View>
           )}
-          {item.location && <Text style={[styles.metaText, { color: c.muted }]}>📍 {item.location}</Text>}
+          {item.location && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+              <Ionicons name="location-outline" size={13} color={c.muted} />
+              <Text style={[styles.metaText, { color: c.muted }]}>{item.location}</Text>
+            </View>
+          )}
           {passed && <Badge label={t('status.passed')} />}
           {showStatus && <Badge label={statusLabel(item.status!)} color={item.status === 'Completed' ? c.task : item.status === 'Cancelled' ? c.danger : undefined} />}
           {item.priority && <Badge label={priorityLabel(item.priority)} color={item.priority === 'High' ? c.danger : item.priority === 'Medium' ? c.warn : undefined} />}

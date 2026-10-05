@@ -5,6 +5,7 @@ import { todayApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { AppointmentForm } from '../components/AppointmentForm'
 import { AppointmentRow } from '../components/AppointmentRow'
+import { useIsPhone } from '../lib/useIsPhone'
 import { CaptureBar } from '../components/CaptureBar'
 import { TaskRow } from '../components/TaskRow'
 import { formatDateKey, formatDue, formatTime } from '@shared/dates'
@@ -20,6 +21,7 @@ function useNow(intervalMs = 30_000) {
 }
 
 export function TodayPage() {
+  const isPhone = useIsPhone()
   const { user, zone } = useAuth()
   const now = useNow()
   const [addingAppointment, setAddingAppointment] = useState(false)
@@ -39,7 +41,8 @@ export function TodayPage() {
       </header>
 
       {addingAppointment && <AppointmentForm initialDate={data?.date} onDone={() => setAddingAppointment(false)} />}
-      <CaptureBar />
+      {/* Phone width: the floating dock (App) has it. */}
+      {!isPhone && <CaptureBar />}
 
       {isPending && <p className="muted">{t('common.loading')}</p>}
       {error && <p className="error">{error.message}</p>}

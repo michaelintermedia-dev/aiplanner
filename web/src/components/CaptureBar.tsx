@@ -81,13 +81,22 @@ export interface ContinueFrom {
  * user reviews them. Nothing is saved until "Save" on the review.
  * With `continueFrom` the same bar adds to an existing capture instead.
  */
-export function CaptureBar({ continueFrom }: { continueFrom?: ContinueFrom } = {}) {
+export function CaptureBar({
+  continueFrom,
+  onEngagedChange,
+}: {
+  continueFrom?: ContinueFrom
+  /** Recording, sending or reviewing: the floating dock must not collapse or hide meanwhile. */
+  onEngagedChange?: (engaged: boolean) => void
+} = {}) {
   const recorder = useAudioRecorder()
   const [speed] = usePlaybackSpeed()
   const [text, setText] = useState('')
   const [busy, setBusy] = useState<Busy>(null)
   const [error, setError] = useState<string | null>(null)
   const [capture, setCapture] = useState<Capture | null>(null)
+  const engaged = recorder.state === 'recording' || recorder.state === 'paused' || busy !== null || capture !== null
+  useEffect(() => onEngagedChange?.(engaged), [engaged, onEngagedChange])
   // A review left unfinished earlier (not when adding to an item - that has its own review).
   const pending = usePendingReview(!continueFrom && capture === null)
   // Resumed from the banner: an unsaved "Add more" review of a saved item.

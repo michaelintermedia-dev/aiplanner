@@ -381,9 +381,10 @@ Local dev notes:
   reminders inexactly (up to an hour late). See mobile/README.md.
   `src/lib/expoNotifications.ts` imports only the local-notification parts of
   expo-notifications so the app still loads in Expo Go (without notifications).
-- **Mobile only: the new-entry controls are a floating toolbar** (user's
-  request, 2026-10-02 - a deliberate exception to keeping web and mobile the
-  same). `CaptureDock` wraps the whole signed-in app (root layout), so it
+- **The new-entry controls are a floating toolbar on phones** (user's
+  request, 2026-10-02 for the app; since 2026-10-05 also web at phone width,
+  `web/src/components/CaptureDock.tsx` - keep the two the same; desktop web
+  keeps the inline bar on Feed / Today). `CaptureDock` wraps the whole signed-in app (root layout), so it
   floats over every screen and a recording survives navigation. Open by
   default; the X or a touch anywhere behind it collapses it to a round mic
   button that can be dragged anywhere and snaps to the nearest side (like
@@ -395,6 +396,13 @@ Local dev notes:
   about this item"), registers in `lib/dockTarget` while focused
   (`useHideDock`, via `useEditMode`), and the dock hides - unless a recording
   is going on in it. It stays mounted, so coming back it's as it was.
+  **Phone-width web = the mobile app** (2026-10-05): at `max-width: 700px`
+  (`useIsPhone`, by width not device) the web gets the same dock (drag/snap,
+  animation, hidden on item pages, lifted above the keyboard via
+  visualViewport), long-press a feed row to select (`useLongPress`; the
+  per-row trash is hidden), pull to refresh (`PullToRefresh`; the browser's
+  own is off via overscroll-behavior), a hold-to-talk mic without the
+  long-press menu, and `viewport-fit=cover` safe areas.
 - **A capture can be continued after saving** (user's request, 2026-10-02;
   since 2026-10-05 from the item's Edit page, see above) - the capture bar
   in continue mode (`CaptureBar continueFrom`, web + mobile).

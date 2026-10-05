@@ -406,7 +406,7 @@ Local dev notes:
   The web app can be added to the home screen (PWA, 2026-10-05):
   `web/public/manifest.webmanifest` (standalone, start `/feed`), icons made
   from `public/icon.svg` / `icon-maskable.svg` (PNG sizes rendered by
-  `tools/qa/out/icons.cjs`, also the favicon and apple-touch-icon), iOS tags
+  `tools/qa/icons.cjs`, also the favicon and apple-touch-icon), iOS tags
   in index.html. No service worker yet - add one with web push (sending
   notifications when the app is closed is still not built).
 - **A capture can be continued after saving** (user's request, 2026-10-02;

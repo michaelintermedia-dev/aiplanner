@@ -13,7 +13,8 @@ public class User
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime? LastLoginAtUtc { get; set; }
     public bool IsDeleted { get; set; }
-    public byte[]? RowVersion { get; set; }
+    /// <summary>Optimistic concurrency: PostgreSQL's xmin (changes on every update).</summary>
+    public uint RowVersion { get; set; }
 
     public UserSettings? Settings { get; set; }
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();

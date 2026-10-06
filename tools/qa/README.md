@@ -11,8 +11,8 @@ cd tools/qa && npm install
 ```
 
 Put the dev database connection string in `tools/qa/.local/conn.txt` (gitignored - it
-holds the SQL `sa` password). Find it in the Aspire dashboard (the `sql` resource), or
-build it: `Server=127.0.0.1,<port from: docker port <sql-container> 1433>;User ID=sa;Password=<AppHost secret Parameters:sql-password>;Database=aiplannerdb;TrustServerCertificate=true`.
+holds the `postgres` password). Find it in the Aspire dashboard (the `aiplannerdb`
+resource), or build it: `Host=127.0.0.1;Port=<the postgres container's host port>;Username=postgres;Password=<AppHost secret Parameters:postgres-password>;Database=aiplannerdb`.
 
 Optional: copy `ffmpeg.exe` to `tools/qa/.local/` to test audio compression / pause trimming.
 

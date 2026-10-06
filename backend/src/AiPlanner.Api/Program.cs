@@ -26,14 +26,14 @@ builder.Services
 // through Aspire, or read from ConnectionStrings:aiplannerdb in appsettings.json
 // when run directly.
 //
-// Registered with plain AddDbContext (not Aspire's AddSqlServerDbContext, which
+// Registered with plain AddDbContext (not Aspire's AddNpgsqlDbContext, which
 // pools contexts): ApplicationDbContext depends on the scoped ICurrentUserService,
 // and a pooled context would be created from the root provider and could carry
-// one request's user into another. EnrichSqlServerDbContext then layers on
+// one request's user into another. EnrichNpgsqlDbContext then layers on
 // Aspire's retry-on-failure, health checks, and OTel instrumentation.
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("aiplannerdb")));
-builder.EnrichSqlServerDbContext<ApplicationDbContext>();
+    options.UseNpgsql(builder.Configuration.GetConnectionString("aiplannerdb")));
+builder.EnrichNpgsqlDbContext<ApplicationDbContext>();
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);

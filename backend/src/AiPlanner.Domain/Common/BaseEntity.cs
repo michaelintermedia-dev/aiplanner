@@ -7,5 +7,6 @@ public abstract class BaseEntity
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
     public bool IsDeleted { get; set; }
-    public byte[]? RowVersion { get; set; }
+    /// <summary>Optimistic concurrency: PostgreSQL's xmin (changes on every update).</summary>
+    public uint RowVersion { get; set; }
 }

@@ -36,7 +36,8 @@ public class FeedService : IFeedService
     {
         var userId = _currentUser.UserId ?? throw new UnauthorizedAccessException("No authenticated user.");
         var f = query.Filter ?? FeedFilter.None;
-        var text = string.IsNullOrWhiteSpace(f.Text) ? null : f.Text.Trim();
+        // Lower-cased on both sides: search ignores case whatever the database does.
+        var text = string.IsNullOrWhiteSpace(f.Text) ? null : f.Text.Trim().ToLower();
         var now = _clock.UtcNow;
         var dated = f.DateFromUtc is not null || f.DateToUtc is not null;
         var tags = f.Tags?.Select(t => t.Trim()).Where(t => t.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList() ?? [];
@@ -52,8 +53,8 @@ public class FeedService : IFeedService
             var q = _db.TaskItems.AsNoTracking().Where(t => t.UserId == userId);
             if (text is not null)
             {
-                q = q.Where(t => t.Title.Contains(text) || (t.Description != null && t.Description.Contains(text))
-                    || (t.Notes != null && t.Notes.Contains(text)) || t.TaskTags.Any(tt => tt.Tag.Name.Contains(text)));
+                q = q.Where(t => t.Title.ToLower().Contains(text) || (t.Description != null && t.Description.ToLower().Contains(text))
+                    || (t.Notes != null && t.Notes.ToLower().Contains(text)) || t.TaskTags.Any(tt => tt.Tag.Name.ToLower().Contains(text)));
             }
             if (f.CreatedFromUtc is { } cFrom) q = q.Where(t => t.CreatedAtUtc >= cFrom);
             if (f.CreatedToUtc is { } cTo) q = q.Where(t => t.CreatedAtUtc < cTo);
@@ -83,8 +84,8 @@ public class FeedService : IFeedService
             var q = _db.Appointments.AsNoTracking().Where(a => a.UserId == userId);
             if (text is not null)
             {
-                q = q.Where(a => a.Title.Contains(text) || (a.Description != null && a.Description.Contains(text))
-                    || (a.Notes != null && a.Notes.Contains(text)) || (a.Location != null && a.Location.Contains(text)));
+                q = q.Where(a => a.Title.ToLower().Contains(text) || (a.Description != null && a.Description.ToLower().Contains(text))
+                    || (a.Notes != null && a.Notes.ToLower().Contains(text)) || (a.Location != null && a.Location.ToLower().Contains(text)));
             }
             if (f.CreatedFromUtc is { } cFrom) q = q.Where(a => a.CreatedAtUtc >= cFrom);
             if (f.CreatedToUtc is { } cTo) q = q.Where(a => a.CreatedAtUtc < cTo);
@@ -128,7 +129,7 @@ public class FeedService : IFeedService
         if (Wants(FeedKind.Note))
         {
             var q = _db.Notes.AsNoTracking().Where(n => n.UserId == userId);
-            if (text is not null) q = q.Where(n => (n.Title != null && n.Title.Contains(text)) || n.Content.Contains(text));
+            if (text is not null) q = q.Where(n => (n.Title != null && n.Title.ToLower().Contains(text)) || n.Content.ToLower().Contains(text));
             if (f.CreatedFromUtc is { } cFrom) q = q.Where(n => n.CreatedAtUtc >= cFrom);
             if (f.CreatedToUtc is { } cTo) q = q.Where(n => n.CreatedAtUtc < cTo);
             q = f.Reminders switch

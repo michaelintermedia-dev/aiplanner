@@ -42,6 +42,8 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // Case-insensitive text for the few columns that need it (tag names).
+        modelBuilder.HasPostgresExtension("citext");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
@@ -60,9 +62,8 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
-        // Every DateTime in this model is UTC, but SQL Server's datetime2 doesn't
-        // store a Kind, so values would come back as Unspecified and serialize
-        // without the trailing "Z" - clients would then read them as local time.
+        // Every DateTime in this model is UTC: written as UTC (timestamptz requires
+        // it) and read back marked UTC, so it serializes with the trailing "Z".
         configurationBuilder.Properties<DateTime>().HaveConversion<UtcDateTimeConverter>();
         configurationBuilder.Properties<DateTime?>().HaveConversion<UtcDateTimeConverter>();
     }

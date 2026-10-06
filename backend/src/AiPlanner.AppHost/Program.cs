@@ -1,11 +1,10 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-var sql = builder.AddSqlServer("sql")
-    .WithEnvironment("MSSQL_PID", "Express")
-    .WithDataVolume("aiplanner-sql-data")
+var postgres = builder.AddPostgres("postgres")
+    .WithDataVolume("aiplanner-postgres-data")
     .WithLifetime(ContainerLifetime.Persistent);
 
-var aiPlannerDb = sql.AddDatabase("aiplannerdb");
+var aiPlannerDb = postgres.AddDatabase("aiplannerdb");
 
 var api = builder.AddProject<Projects.AiPlanner_Api>("api")
     .WithReference(aiPlannerDb)

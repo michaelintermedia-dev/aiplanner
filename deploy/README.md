@@ -84,10 +84,18 @@ way (`docker run ... alpine cp`).
 
 The phone app needs the server's address at build time:
 
-```bash
-cd mobile
-EXPO_PUBLIC_API_URL=https://planner.example.com npx expo run:android --variant release
+```powershell
+cd mobile\android
+$env:EXPO_PUBLIC_API_URL = 'https://planner.example.com'; $env:NODE_ENV = 'production'
+.\gradlew.bat assembleRelease "-Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g" -PreactNativeArchitectures=arm64-v8a
+# -> android\app\build\outputs\apk\release\app-release.apk (~47 MB)
 ```
+
+The default 2 GB Gradle heap runs out while packaging (`OutOfMemoryError` in
+mergeDexRelease); arm64 only covers every phone from the last ~8 years and
+builds much faster. The APK is signed with the debug key - fine for
+installing it yourself, and it installs over the development build (same
+package and key). Google Play would need a real upload key.
 
 The web app needs nothing - it calls `/api` on its own address. It can be
 installed to the home screen from the browser (PWA).

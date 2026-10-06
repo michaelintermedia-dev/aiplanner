@@ -619,6 +619,26 @@ Client-side (web and mobile - keep them consistent):
   `{ uri, name, type }` FormData parts ("Unsupported FormDataPart
   implementation").
 
+## Production (2026-10-06)
+
+One server (target: Oracle Cloud Always Free, Ampere ARM), Docker Compose in
+`deploy/` - production only; local dev stays on Aspire. Services: postgres:18,
+api (`deploy/api.Dockerfile`: aspnet + ffmpeg, non-root, recordings in the
+`/data` volume), web (`deploy/web.Dockerfile`: the Vite build served by Caddy,
+which also does HTTPS and proxies `/api/*` to api:8080 - same origin, so no
+CORS), backup (nightly pg_dump + recordings tar, 14 days). Settings come from
+`deploy/.env` (never committed). How-to: `deploy/README.md`.
+Server-side switches for it (all off/empty in local dev):
+- `Auth:AllowedEmails` - sign-up allow-list (`IRegistrationPolicy`); empty = anyone.
+- Rate limits (`RateLimits:*`): `[EnableRateLimiting("auth")]` 20/min per IP on
+  register/login/refresh; `"ai"` 30 per 10 min per user on capture endpoints,
+  plus a daily cap (`AiPerDay`) in the GlobalLimiter that counts only "ai"
+  endpoints. Put the attribute on any new endpoint that calls OpenAI.
+- `Database:MigrateOnStartup`, `Hosting:BehindProxy` (no HTTPS redirect -
+  Caddy does it), forwarded headers, `/health` outside Development.
+Verified 2026-10-06 by running the whole compose stack locally (migrations,
+SPA routes, allow-list, rate limit, ffmpeg, backup).
+
 ## QA agent
 
 `.claude/agents/qa-explorer.md` - exploratory QA, report only (never edits code).

@@ -16,14 +16,17 @@ public class AuthService : IAuthService
     private readonly ITokenService _tokenService;
     private readonly IDateTime _dateTime;
     private readonly RefreshTokenOptions _refreshOptions;
+    private readonly IRegistrationPolicy _registration;
 
     public AuthService(
         IApplicationDbContext db,
         IPasswordHasher passwordHasher,
         ITokenService tokenService,
         IDateTime dateTime,
-        IOptions<RefreshTokenOptions> refreshOptions)
+        IOptions<RefreshTokenOptions> refreshOptions,
+        IRegistrationPolicy registration)
     {
+        _registration = registration;
         _db = db;
         _passwordHasher = passwordHasher;
         _tokenService = tokenService;
@@ -34,6 +37,10 @@ public class AuthService : IAuthService
     public async Task<Result<AuthResponse>> RegisterAsync(RegisterRequest request, CancellationToken ct = default)
     {
         var email = request.Email.Trim().ToLowerInvariant();
+        if (!_registration.IsAllowed(email))
+        {
+            return Result<AuthResponse>.Failure("Sign-up is by invitation only.");
+        }
 
         var exists = await _db.Users.AnyAsync(u => u.Email == email, ct);
         if (exists)

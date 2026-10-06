@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.RateLimiting;
 using AiPlanner.Application.Captures.DTOs;
 using AiPlanner.Application.Captures.Interfaces;
 using AiPlanner.Application.Captures.Services;
@@ -57,6 +58,7 @@ public class CapturesController : ControllerBase
 
     /// <summary>POST /api/captures/text - analyze typed text. Nothing is saved as a task/appointment yet.</summary>
     [HttpPost("text")]
+    [EnableRateLimiting("ai")] // costs OpenAI calls
     public async Task<ActionResult<CaptureDto>> CaptureText(CaptureTextRequest request, CancellationToken ct)
     {
         var result = await _captures.CaptureTextAsync(request, ct);
@@ -69,6 +71,7 @@ public class CapturesController : ControllerBase
     /// mobile app sends one per recorded segment).
     /// </summary>
     [HttpPost("voice")]
+    [EnableRateLimiting("ai")] // costs OpenAI calls
     [RequestSizeLimit(MaxTotalBytes + 256 * 1024)]
     [RequestFormLimits(MultipartBodyLengthLimit = MaxAudioBytes + 64 * 1024)]
     public async Task<ActionResult<CaptureDto>> CaptureVoice([FromForm] List<IFormFile> audio, CancellationToken ct)
@@ -110,6 +113,7 @@ public class CapturesController : ControllerBase
     /// of the saved item being continued. Returns the capture with new items to review.
     /// </summary>
     [HttpPost("{id:guid}/continue")]
+    [EnableRateLimiting("ai")] // costs OpenAI calls
     [RequestSizeLimit(MaxTotalBytes + 256 * 1024)]
     [RequestFormLimits(MultipartBodyLengthLimit = MaxAudioBytes + 64 * 1024)]
     public async Task<ActionResult<CaptureDto>> Continue(

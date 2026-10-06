@@ -1,0 +1,92 @@
+# Production on one server (see deploy/README.md). Local development is Aspire
+# (dotnet run --project backend/src/AiPlanner.AppHost) - this file is only for
+# the server.
+#
+#   cd deploy && cp .env.example .env   # fill it in
+#   docker compose up -d --build
+name: aiplanner
+
+services:
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: aiplannerdb
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d aiplannerdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/api.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__aiplannerdb: Host=postgres;Database=aiplannerdb;Username=postgres;Password=${POSTGRES_PASSWORD}
+      Jwt__Secret: ${JWT_SECRET:?set JWT_SECRET in .env}
+      AiProvider__ApiKey: ${OPENAI_API_KEY:?set OPENAI_API_KEY in .env}
+      Auth__AllowedEmails: ${ALLOWED_EMAILS:-}
+      RateLimits__AiPerDay: ${AI_PER_DAY:-200}
+    volumes:
+      - recordings:/data
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/web.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
+  # Every night: a database dump and an archive of the recordings, kept 14 days
+  # (in the "backups" volume - copy them off the server too, see README).
+  backup:
+    image: postgres:18
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - backups:/backups
+      - recordings:/recordings:ro
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        while true; do
+          sleep 3600
+          day=$$(date +%F)
+          pg_dump -h postgres -U postgres -d aiplannerdb -f /tmp/db.sql \
+            && gzip -c /tmp/db.sql > /backups/db-$$day.sql.gz \
+            || echo "backup: pg_dump failed"
+          rm -f /tmp/db.sql
+          tar czf /backups/recordings-$$day.tgz -C /recordings .
+          find /backups -type f -mtime +14 -delete
+          sleep 82800
+        done
+
+volumes:
+  pgdata:
+  recordings:
+  caddy_data:
+  caddy_config:
+  backups:

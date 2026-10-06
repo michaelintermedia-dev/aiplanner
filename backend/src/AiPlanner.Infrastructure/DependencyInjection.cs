@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddSingleton<IDateTime, DateTimeService>();
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<ITokenService, TokenService>();
+        services.AddSingleton<IRegistrationPolicy, ConfigRegistrationPolicy>();
 
         services.AddScoped<IAuthService, AuthService>();
 

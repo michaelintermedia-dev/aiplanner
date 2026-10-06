@@ -2,3 +2,6 @@
 ai-planner-backend-phase1/
 ai-planner-backend-phase2/
 
+
+# Production secrets (deploy/README.md)
+deploy/.env

@@ -1,0 +1,14 @@
+**/node_modules
+**/bin
+**/obj
+**/dist
+**/.vs
+**/.vscode
+**/App_Data
+**/.env
+.git
+mobile
+docs
+tools
+ai-planner-backend-phase1
+ai-planner-backend-phase2

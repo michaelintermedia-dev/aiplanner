@@ -1,0 +1,28 @@
+# One address for everything: the web app, and the API under /api.
+# Caddy gets and renews the HTTPS certificate for {$DOMAIN} by itself.
+{$DOMAIN} {
+	encode zstd gzip
+
+	# Voice uploads (the API's own limit is 50 MB per request).
+	request_body {
+		max_size 60MB
+	}
+
+	handle /api/* {
+		reverse_proxy api:8080
+	}
+
+	# The React app: unknown paths are its routes (/feed, /tasks/...).
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+}

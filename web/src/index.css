@@ -2554,3 +2554,252 @@ button.kind-icon:hover:not(:disabled) {
 .event-dates li.skipped {
   color: var(--muted);
 }
+
+/* ---- Media: an item's photos and documents ------------------------- */
+
+.media {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.media h2 {
+  margin: 0;
+}
+
+.edit-media {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.edit-media h4 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 6px;
+}
+
+.media-thumb {
+  position: relative;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+div.media-thumb {
+  cursor: default;
+}
+
+.media-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.media-thumb.pending {
+  border: 2px dashed var(--accent);
+}
+
+.media-thumb.removed img {
+  opacity: 0.3;
+}
+
+.media-loading {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--surface-2), var(--border), var(--surface-2));
+  background-size: 200% 100%;
+  animation: media-shimmer 1.2s linear infinite;
+}
+
+@keyframes media-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .media-loading {
+    animation: none;
+  }
+}
+
+.media-missing {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  padding: 4px;
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.media-thumb .media-remove {
+  position: absolute;
+  top: 4px;
+  inset-inline-end: 4px;
+}
+
+.media-remove {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.55);
+  color: #fff;
+  font-size: 1.05rem;
+  cursor: pointer;
+  flex: none;
+}
+
+.media-files {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.media-files li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.media-files .media-remove {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.media-file {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: start;
+}
+
+button.media-file {
+  cursor: pointer;
+}
+
+.media-file svg {
+  flex: none;
+  font-size: 1.2rem;
+  color: var(--muted);
+}
+
+.media-file-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.media-files li.pending .media-file {
+  border: 2px dashed var(--accent);
+}
+
+.media-files li.removed .media-file-name {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.media-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.media-add svg {
+  vertical-align: -2px;
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 0.9);
+}
+
+.lightbox-image {
+  max-width: 100vw;
+  max-height: 100dvh;
+}
+
+.lightbox-image img {
+  display: block;
+  max-width: 100vw;
+  max-height: 100dvh;
+  object-fit: contain;
+}
+
+.lightbox button {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.15);
+  color: #fff;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.lightbox-close {
+  top: calc(12px + env(safe-area-inset-top));
+  inset-inline-end: 12px;
+}
+
+.lightbox-prev,
+.lightbox-next {
+  top: 50%;
+  translate: 0 -50%;
+}
+
+.lightbox-prev {
+  inset-inline-start: 12px;
+}
+
+.lightbox-next {
+  inset-inline-end: 12px;
+}
+
+.lightbox-count {
+  position: absolute;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  color: #fff;
+  font-size: 0.9rem;
+}

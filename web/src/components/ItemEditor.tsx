@@ -23,8 +23,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { IoMicOutline, IoSparkles } from 'react-icons/io5'
 import { api, capturesApi } from '../api/endpoints'
+import { applyMedia, type PendingMedia } from '../lib/media'
 import { useAuth } from '../auth/useAuth'
 import { CaptureBar } from './CaptureBar'
+import { MediaEditor } from './ItemMedia'
 import { KIND_ICON } from './kindIcons'
 import { ReminderList } from './ReminderList'
 import { RecurrencePicker } from './RecurrencePicker'
@@ -43,6 +45,8 @@ interface Draft {
   proposals: MergedProposal[]
   unrelated: { text: string; capture: boolean }[]
   deleteRecording: boolean
+  /** Attachments to remove on Save (picked files can't be kept here - they're in memory only). */
+  removeMedia?: string[]
 }
 
 const draftKey = (id: string) => `item-edit:${id}`
@@ -94,6 +98,9 @@ export function ItemEditor({
     () => loadDraft(item.id, saved) ?? { saved, form: saved, changed: [], proposals: [], unrelated: [], deleteRecording: false },
   )
   const { form, changed, proposals, unrelated, deleteRecording } = draft
+  const removeMedia = draft.removeMedia ?? []
+  // Photos/documents picked here: uploaded on Save (not kept if the page is left).
+  const [pendingMedia, setPendingMedia] = useState<PendingMedia[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [clarifications, setClarifications] = useState<string[]>([])
@@ -110,7 +117,7 @@ export function ItemEditor({
     enabled: !!captureId,
   })
 
-  const dirty = formChanged(form, saved) || proposals.length > 0 || deleteRecording
+  const dirty = formChanged(form, saved) || proposals.length > 0 || deleteRecording || removeMedia.length > 0 || pendingMedia.length > 0
 
   // Opened without a stored draft: additions from a draft that was lost (another
   // browser's storage cleared, app reinstalled) would stay pending for ever - drop them.
@@ -177,6 +184,14 @@ export function ItemEditor({
         tz: zone.timeZone,
         proposals,
         deleteRecordingOf: deleteRecording ? captureId : null,
+        media:
+          pendingMedia.length || removeMedia.length
+            ? (target) =>
+                applyMedia(target, pendingMedia, removeMedia, {
+                  removed: () => setDraft((d) => ({ ...d, removeMedia: [] })),
+                  uploaded: (key) => setPendingMedia((p) => p.filter((x) => x.key !== key)),
+                })
+            : undefined,
       })
       storeDraft(item.id, null)
       // The recording is gone: don't let the item's page fetch it from the stale capture (404s).
@@ -201,6 +216,7 @@ export function ItemEditor({
   const cancel = async () => {
     setBusy(true)
     await discardProposals(api, proposals).catch(() => {}) // left pending at worst - cleared next time Edit opens
+    pendingMedia.forEach((p) => p.preview && URL.revokeObjectURL(p.preview))
     storeDraft(item.id, null)
     // Reload the item (after "Discard my changes" the page's copy is stale).
     const gone = current.id !== item.id ? [DETAIL_KEY[item.itemType], item.id] : null
@@ -358,6 +374,15 @@ export function ItemEditor({
           <textarea rows={2} value={form.notes} onChange={(e) => set({ notes: e.target.value })} />
         </Field>
       )}
+
+      <MediaEditor
+        itemType={current.itemType}
+        id={current.id}
+        pending={pendingMedia}
+        onPending={setPendingMedia}
+        removed={removeMedia}
+        onRemoved={(ids) => setDraft((d) => ({ ...d, removeMedia: ids }))}
+      />
 
       {recording && captureId && (
         <section className="edit-recording">

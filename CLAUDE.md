@@ -540,6 +540,30 @@ Local dev notes:
   each app) on every player, remembered per device; mobile max is 2×. Mobile
   players count a file's "finished" only once that file was seen playing (a
   fixed delay broke short pieces at 2×) and report position every 100 ms.
+- **Media: photos and documents on items** (user's idea, 2026-10-06, web +
+  mobile; step 1 of 3 - next: keeping voice clips as media with a "Keep the
+  recording" choice, then the AI reading photos/documents). `Attachment` rows
+  (ItemType/ItemId, Kind Image/File/Audio, name, server-decided content type,
+  size, StorageKey) - files in `IFileStorageService` (`{user}/attachments/`),
+  never SQL. `AttachmentRules` (pure, tested): extension allow-list only
+  (no HTML/SVG/scripts; the client's Content-Type is ignored), 20 MB a file,
+  50 an item, 1 GB a user. API: `GET/POST /api/items/{type}/{id}/attachments`
+  (form field "file"), `GET /api/attachments/{id}/content` (pictures inline,
+  everything else as a download; CSP sandbox, nosniff), `DELETE
+  /api/attachments/{id}`. A type change moves them to the new item.
+  Clients: the item view shows a Media card (thumbnail grid -> full-screen
+  viewer, document rows -> download / share sheet "Open with"); all changes
+  are in the Edit page (`MediaEditor`: Take photo [phone], Add image, Attach
+  file, remove) and happen on Save, before anything else
+  (`saveItemForm({ media })`; picked files stay in memory, not in the draft).
+  Photos are shrunk on the device to 2000 px JPEG q0.8 (`shared/media.ts`
+  limits; web canvas `shrinkImage`, mobile expo-image-manipulator). Web reads
+  picked files into memory at once (a cleared picker can empty them) and
+  caches picture blobs per session outside React Query (every save
+  invalidates all queries). Mobile: expo-image-picker / document-picker /
+  sharing; pictures load with the auth header via expo-image. The
+  image-picker plugin's `microphonePermission: false` would REMOVE
+  RECORD_AUDIO - never set it; CAMERA is declared in app.json.
 - **UI languages: English, Russian, Hebrew; Hebrew is right-to-left**
   (2026-10-02, web + mobile). All UI text goes through `t('key', vars)` from
   `shared/i18n` - never write user-visible English in a component. `en.ts`

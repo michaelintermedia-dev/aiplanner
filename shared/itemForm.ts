@@ -163,8 +163,8 @@ const confirmEntry = (p: MergedProposal, include: boolean): ConfirmCaptureItem =
 })
 
 /**
- * Save: change the type first if asked (same created date, reminders and
- * capture link), then write every field through the item's own update, then
+ * Save: add/remove photos and documents, change the type if asked (same
+ * created date, reminders, media and capture link), then write every field through the item's own update, then
  * record what was added by voice/text as part of the item (its words and audio
  * clip), then delete the recording if that was asked. Returns the item (a new
  * id when the type changed).
@@ -179,6 +179,7 @@ export async function saveItemForm(
     tz,
     proposals,
     deleteRecordingOf,
+    media,
   }: {
     item: { itemType: ItemType; id: string }
     form: ItemForm
@@ -188,10 +189,17 @@ export async function saveItemForm(
     tz: string
     proposals: MergedProposal[]
     deleteRecordingOf?: string | null
+    /**
+     * Photos/documents added or removed in the form: done first (after the
+     * freshness check), on the item as it is - a type change then takes them
+     * along. If it fails, nothing else has been saved.
+     */
+    media?: (item: { itemType: ItemType; id: string }) => Promise<void>
   },
 ): Promise<{ itemType: ItemType; id: string }> {
   let { itemType, id } = item
   if (!force && JSON.stringify(await currentForm(api, item, tz)) !== JSON.stringify(saved)) throw new SaveConflict()
+  if (media) await media(item)
 
   if (form.type !== itemType) {
     const times = form.type === 'Appointment' ? eventTimes(form, tz) : null

@@ -1,4 +1,6 @@
 using AiPlanner.Application.Appointments.Interfaces;
+using AiPlanner.Application.Attachments.Interfaces;
+using AiPlanner.Application.Attachments.Services;
 using AiPlanner.Application.Appointments.Services;
 using AiPlanner.Application.Calendar.Interfaces;
 using AiPlanner.Application.Calendar.Services;
@@ -45,6 +47,7 @@ public static class DependencyInjection
         services.AddScoped<ICaptureService, CaptureService>();
         services.AddScoped<INoteService, NoteService>();
         services.AddScoped<IFeedService, FeedService>();
+        services.AddScoped<IAttachmentService, AttachmentService>();
 
         return services;
     }

@@ -15,6 +15,7 @@ import { detailStyles as s, Facts, TextBlock } from '@/components/detail'
 import { DraftNotice, EditButtons, FollowUpReview, useEditMode } from '@/components/ItemEditMode'
 import { hasEditDraft, ItemEditor } from '@/components/ItemEditor'
 import { Screen } from '@/components/Screen'
+import { ItemMedia } from '@/components/ItemMedia'
 import { SourceCapture } from '@/components/SourceCapture'
 import { Badge, Button } from '@/components/ui'
 import { useAction } from '@/lib/useAction'
@@ -129,6 +130,8 @@ export default function AppointmentDetailScreen() {
           </View>
         </>
       )}
+
+      {!edit.editing && <ItemMedia itemType="Appointment" id={appt.id} />}
 
       {!edit.editing && appt.sourceCaptureId && <SourceCapture captureId={appt.sourceCaptureId} item={{ itemType: 'Appointment', itemId: appt.id, title: appt.title }} />}
     </Screen>

@@ -13,6 +13,7 @@ import { detailStyles as s } from '@/components/detail'
 import { DraftNotice, EditButtons, FollowUpReview, useEditMode } from '@/components/ItemEditMode'
 import { hasEditDraft, ItemEditor } from '@/components/ItemEditor'
 import { Screen } from '@/components/Screen'
+import { ItemMedia } from '@/components/ItemMedia'
 import { SourceCapture } from '@/components/SourceCapture'
 import { Button } from '@/components/ui'
 import { useAction } from '@/lib/useAction'
@@ -88,6 +89,8 @@ export default function NoteDetailScreen() {
           </View>
         </>
       )}
+
+      {!edit.editing && <ItemMedia itemType="Note" id={note.id} />}
 
       {!edit.editing && note.sourceCaptureId && <SourceCapture captureId={note.sourceCaptureId} item={{ itemType: 'Note', itemId: note.id, title: noteName(note) }} />}
     </Screen>

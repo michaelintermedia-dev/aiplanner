@@ -21,7 +21,8 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.aiplanner.app",
       "permissions": [
-        "android.permission.USE_EXACT_ALARM"
+        "android.permission.USE_EXACT_ALARM",
+        "android.permission.CAMERA"
       ]
     },
     "web": {
@@ -46,7 +47,15 @@
           "microphonePermission": "AI Planner uses the microphone so you can capture tasks and appointments by voice."
         }
       ],
-      "expo-notifications"
+      "expo-notifications",
+      "expo-sharing",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "AI Planner lets you add photos from your library to your tasks, events and notes.",
+          "cameraPermission": "AI Planner uses the camera so you can add photos to your tasks, events and notes."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

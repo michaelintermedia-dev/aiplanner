@@ -409,3 +409,13 @@ export interface ConvertedItem {
   id: string
   needsDetails: boolean
 }
+
+/** One of an item's media files (GET /items/{type}/{id}/attachments). */
+export interface Attachment {
+  id: string
+  kind: 'Image' | 'File' | 'Audio'
+  fileName: string
+  contentType: string
+  sizeBytes: number
+  createdAtUtc: string
+}

@@ -9,6 +9,7 @@ import { tasksApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { DraftNotice, EditButtons, FollowUpReview, useEditMode } from '../components/ItemEditMode'
 import { hasEditDraft, ItemEditor } from '../components/ItemEditor'
+import { ItemMedia } from '../components/ItemMedia'
 import { SourceCapture } from '../components/SourceCapture'
 import { describeReminder } from '@shared/reminders'
 import { useAction } from '../lib/useAction'
@@ -122,6 +123,8 @@ export function TaskDetailPage() {
           </div>
         </>
       )}
+
+      {!edit.mode && <ItemMedia itemType="Task" id={task.id} />}
 
       {!edit.mode && task.sourceCaptureId && <SourceCapture captureId={task.sourceCaptureId} item={{ itemType: 'Task', itemId: task.id, title: task.title }} />}
     </div>

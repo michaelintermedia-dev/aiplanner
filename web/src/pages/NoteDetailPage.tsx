@@ -10,6 +10,7 @@ import { notesApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { DraftNotice, EditButtons, FollowUpReview, useEditMode } from '../components/ItemEditMode'
 import { hasEditDraft, ItemEditor } from '../components/ItemEditor'
+import { ItemMedia } from '../components/ItemMedia'
 import { SourceCapture } from '../components/SourceCapture'
 import { useAction } from '../lib/useAction'
 import { t } from '@shared/i18n'
@@ -75,6 +76,8 @@ export function NoteDetailPage() {
           </div>
         </>
       )}
+
+      {!edit.mode && <ItemMedia itemType="Note" id={note.id} />}
 
       {!edit.mode && note.sourceCaptureId && <SourceCapture captureId={note.sourceCaptureId} item={{ itemType: 'Note', itemId: note.id, title: noteName(note) }} />}
     </div>

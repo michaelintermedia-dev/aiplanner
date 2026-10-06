@@ -22,7 +22,7 @@ namespace AiPlanner.Application.Items.Services;
 /// Any item can become any type (user's rule), after saving too. The new item
 /// is created through the normal services (so the usual validation and
 /// reminder rules apply) and the old one is soft-deleted, all in one
-/// transaction. Carried over: title, details, notes, reminders, the source
+/// transaction. Carried over: title, details, notes, reminders, attachments, the source
 /// capture, the date where both types have one (task due &lt;-&gt; event start),
 /// and the creation time - it is the same item to the user, so "Created" and
 /// the newest/oldest sorts keep placing it where it was.
@@ -77,6 +77,15 @@ public class ItemConversionService : IItemConversionService
                 // Keep when it was first created and the link to the capture it came
                 // from, and repoint the capture's item.
                 await CarryOverAsync(request.ToType, newId, source, innerCt);
+                // Its photos and documents go with it.
+                var attachments = await _db.Attachments
+                    .Where(x => x.UserId == userId && x.ItemType == request.FromType && x.ItemId == request.Id)
+                    .ToListAsync(innerCt);
+                foreach (var attachment in attachments)
+                {
+                    attachment.ItemType = request.ToType;
+                    attachment.ItemId = newId;
+                }
                 var captureItems = await _db.AIExtractionItems
                     .Where(i => i.ResultingTaskItemId == source.Id || i.ResultingAppointmentId == source.Id || i.ResultingNoteId == source.Id)
                     .ToListAsync(innerCt);

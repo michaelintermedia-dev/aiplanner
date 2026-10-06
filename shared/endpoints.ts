@@ -1,5 +1,6 @@
 import type {
   Appointment,
+  Attachment,
   AuthResponse,
   CalendarRange,
   CalendarView,
@@ -126,6 +127,16 @@ export function createApi(request: RequestFn) {
       delete: (items: ItemRef[]) => request<ItemsResult>('POST', '/items/delete', { items }),
       /** Undo a delete. */
       restore: (items: ItemRef[]) => request<ItemsResult>('POST', '/items/restore', { items }),
+    },
+    attachments: {
+      /** An item's photos and documents, oldest first. */
+      list: (itemType: ItemType, id: string) => request<Attachment[]>('GET', `/items/${itemType}/${id}/attachments`),
+      /** Upload one file: a FormData with it in field "file". */
+      upload: (itemType: ItemType, id: string, form: FormData) =>
+        request<Attachment>('POST', `/items/${itemType}/${id}/attachments`, form),
+      /** The file itself (needs the sign-in, so it's fetched rather than linked). */
+      content: (id: string) => request<Blob>('GET', `/attachments/${id}/content`, undefined, { as: 'blob' }),
+      remove: (id: string) => request<void>('DELETE', `/attachments/${id}`),
     },
     notifications: {
       /** Everything that should go off in the next `hours` hours (Phase 4). */

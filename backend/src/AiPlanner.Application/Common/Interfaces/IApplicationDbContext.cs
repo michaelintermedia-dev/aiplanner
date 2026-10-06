@@ -24,6 +24,7 @@ public interface IApplicationDbContext
     DbSet<Tag> Tags { get; }
     DbSet<TaskTag> TaskTags { get; }
     DbSet<RecurrenceRule> RecurrenceRules { get; }
+    DbSet<Attachment> Attachments { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 

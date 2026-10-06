@@ -12,6 +12,7 @@ import { appointmentsApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { DraftNotice, EditButtons, FollowUpReview, useEditMode } from '../components/ItemEditMode'
 import { hasEditDraft, ItemEditor } from '../components/ItemEditor'
+import { ItemMedia } from '../components/ItemMedia'
 import { SourceCapture } from '../components/SourceCapture'
 import { describeReminder } from '@shared/reminders'
 import { useAction } from '../lib/useAction'
@@ -155,6 +156,8 @@ export function AppointmentDetailPage() {
           </div>
         </>
       )}
+
+      {!edit.mode && <ItemMedia itemType="Appointment" id={appt.id} />}
 
       {!edit.mode && appt.sourceCaptureId && <SourceCapture captureId={appt.sourceCaptureId} item={{ itemType: 'Appointment', itemId: appt.id, title: appt.title }} />}
     </div>

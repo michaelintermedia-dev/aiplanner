@@ -12,6 +12,7 @@ import { detailStyles as s, Facts, TextBlock } from '@/components/detail'
 import { DraftNotice, EditButtons, FollowUpReview, useEditMode } from '@/components/ItemEditMode'
 import { hasEditDraft, ItemEditor } from '@/components/ItemEditor'
 import { Screen } from '@/components/Screen'
+import { ItemMedia } from '@/components/ItemMedia'
 import { SourceCapture } from '@/components/SourceCapture'
 import { Badge, Button } from '@/components/ui'
 import { useAction } from '@/lib/useAction'
@@ -118,6 +119,8 @@ export default function TaskDetailScreen() {
           </View>
         </>
       )}
+
+      {!edit.editing && <ItemMedia itemType="Task" id={task.id} />}
 
       {!edit.editing && task.sourceCaptureId && <SourceCapture captureId={task.sourceCaptureId} item={{ itemType: 'Task', itemId: task.id, title: task.title }} />}
     </Screen>

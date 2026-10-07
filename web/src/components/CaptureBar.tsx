@@ -1,11 +1,11 @@
-import { savedItem } from '@shared/captureDraft'
-import { KIND_LABEL } from '@shared/feed'
+import { savedNotice, type SavedNotice } from '@shared/captureDraft'
 import type { AppendTarget, Capture, ItemType } from '@shared/types'
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { IoArrowUp } from 'react-icons/io5'
 import { Link, useSearchParams } from 'react-router'
 import { capturesApi } from '../api/endpoints'
+import { itemPath } from '../lib/itemPath'
 import { toWav } from '../lib/toWav'
 import { useAudioRecorder, type RecorderState } from '../lib/useAudioRecorder'
 import { useMicrophones } from '../lib/useMicrophones'
@@ -17,7 +17,6 @@ import { speedRef, usePlaybackSpeed } from '../lib/playbackSpeed'
 import { SpeedChips } from './SpeedChips'
 import { t } from '@shared/i18n'
 
-const ITEM_PATH: Record<ItemType, string> = { Task: '/tasks', Appointment: '/appointments', Note: '/notes' }
 
 type Busy = null | 'transcribing' | 'understanding'
 
@@ -89,10 +88,13 @@ export interface ContinueFrom {
 export function CaptureBar({
   continueFrom,
   onEngagedChange,
+  onFinished,
 }: {
   continueFrom?: ContinueFrom
   /** Recording, sending or reviewing: the floating dock must not collapse or hide meanwhile. */
   onEngagedChange?: (engaged: boolean) => void
+  /** A capture is done - saved (what it became) or cancelled (null): the dock folds into its bubble. */
+  onFinished?: (saved: SavedNotice | null) => void
 } = {}) {
   const recorder = useAudioRecorder()
   const [speed] = usePlaybackSpeed()
@@ -133,9 +135,11 @@ export function CaptureBar({
       if (continueFrom?.onResult) continueFrom.onResult(result)
       else if (result.autoSaved) {
         // Saved already (Settings - Save right away): say what it became, no review.
-        const item = savedItem(result)
-        setSavedMessage(item ? t('capture.savedAs', { kind: KIND_LABEL[item.itemType], title: item.title }) : t('review.saved', { count: 1 }))
-        setSavedLink(item && `${ITEM_PATH[item.itemType]}/${item.id}`)
+        const notice = savedNotice(result, 1)
+        const item = notice.item
+        setSavedMessage(notice.message)
+        onFinished?.(notice)
+        setSavedLink(item && itemPath(item))
         void queryClient.invalidateQueries()
       } else setCapture(result)
       setText('')
@@ -236,7 +240,7 @@ export function CaptureBar({
         capture={capture}
         appendTarget={followUp ? undefined : (continueFrom?.target ?? resumedTarget)}
         onMoved={followUp ? undefined : continueFrom?.onMoved}
-        onDone={(message, followUpWords) => {
+        onDone={(saved, followUpWords) => {
           setCapture(null)
           setResumedTarget(undefined)
           if (followUpWords) {
@@ -244,13 +248,18 @@ export function CaptureBar({
             setFollowUp(true)
             void run('understanding', () => capturesApi.text(followUpWords)).then((ok) => {
               if (!ok) setFollowUp(false)
-              setSavedMessage(message)
+              setSavedMessage(saved?.message ?? null)
             })
             return
           }
           setFollowUp(false)
           if (continueFrom) continueFrom.onClose?.()
-          else setSavedMessage(message)
+          else {
+            setSavedMessage(saved?.message ?? null)
+            setSavedLink(saved?.item ? itemPath(saved.item) : null)
+            // Saved or cancelled: this capture is done (the dock folds away).
+            onFinished?.(saved)
+          }
         }}
       />
     )

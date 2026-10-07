@@ -2803,3 +2803,27 @@ button.media-file {
   color: #fff;
   font-size: 0.9rem;
 }
+
+/* "Saved as ..." after the phone dock folds away (like the app's notice). */
+.dock-notice {
+  position: fixed;
+  left: 50%;
+  translate: -50% 0;
+  z-index: 60;
+  max-width: min(86vw, 420px);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  box-shadow: 0 3px 12px rgb(0 0 0 / 0.25);
+  font-size: 0.95rem;
+}
+
+.dock-notice a {
+  color: var(--accent-soft);
+  font-weight: 700;
+  white-space: nowrap;
+}

@@ -1,6 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { savedItem } from '@shared/captureDraft'
-import { KIND_LABEL } from '@shared/feed'
+import { savedNotice, type SavedNotice } from '@shared/captureDraft'
 import type { AppendTarget, Capture, ItemType } from '@shared/types'
 import { router } from 'expo-router'
 import { File } from 'expo-file-system'
@@ -8,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { capturesApi } from '@/api/endpoints'
+import { itemPath } from '@/lib/itemPath'
 import { useSegmentRecorder } from '@/lib/useSegmentRecorder'
 import { usePendingReview } from '@/lib/usePendingReview'
 import { useColors } from '@/theme'
@@ -18,7 +18,6 @@ import { SegmentPlayer } from './SegmentPlayer'
 import { Button } from './ui'
 import { t } from '@shared/i18n'
 
-const ITEM_ROUTE: Record<ItemType, string> = { Task: 'task', Appointment: 'appointment', Note: 'note' }
 
 type Busy = null | 'transcribing' | 'understanding'
 
@@ -62,7 +61,10 @@ export function CaptureBar({
   continueFrom,
   onEngagedChange,
   talkSignal: quickSignal,
+  onFinished,
 }: {
+  /** A capture is done - saved (what it became) or cancelled (null): the dock folds into its bubble. */
+  onFinished?: (saved: SavedNotice | null) => void
   continueFrom?: ContinueFrom
   /** Each new value starts recording ("Quick recording" from the home-screen widget). */
   talkSignal?: number
@@ -106,9 +108,11 @@ export function CaptureBar({
       if (continueFrom?.onResult) continueFrom.onResult(result)
       else if (result.autoSaved) {
         // Saved already (Settings - Save right away): say what it became, no review.
-        const item = savedItem(result)
-        setSavedMessage(item ? t('capture.savedAs', { kind: KIND_LABEL[item.itemType], title: item.title }) : t('review.saved', { count: 1 }))
-        setSavedLink(item && `/${ITEM_ROUTE[item.itemType]}/${item.id}`)
+        const notice = savedNotice(result, 1)
+        const item = notice.item
+        setSavedMessage(notice.message)
+        onFinished?.(notice)
+        setSavedLink(item && itemPath(item))
         void queryClient.invalidateQueries()
       } else setCapture(result)
       setText('')
@@ -173,7 +177,7 @@ export function CaptureBar({
         capture={capture}
         appendTarget={followUp ? undefined : (continueFrom?.target ?? resumedTarget)}
         onMoved={followUp ? undefined : continueFrom?.onMoved}
-        onDone={(message, followUpWords) => {
+        onDone={(saved, followUpWords) => {
           setCapture(null)
           setResumedTarget(undefined)
           if (followUpWords) {
@@ -181,13 +185,18 @@ export function CaptureBar({
             setFollowUp(true)
             void run('understanding', () => capturesApi.text(followUpWords)).then((ok) => {
               if (!ok) setFollowUp(false)
-              setSavedMessage(message)
+              setSavedMessage(saved?.message ?? null)
             })
             return
           }
           setFollowUp(false)
           if (continueFrom) continueFrom.onClose?.()
-          else setSavedMessage(message)
+          else {
+            setSavedMessage(saved?.message ?? null)
+            setSavedLink(saved?.item ? itemPath(saved.item) : null)
+            // Saved or cancelled: this capture is done (the dock folds away).
+            onFinished?.(saved)
+          }
         }}
       />
     )

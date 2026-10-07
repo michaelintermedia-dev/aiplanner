@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { useSegments } from 'expo-router'
+import { router, useSegments } from 'expo-router'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   AccessibilityInfo,
@@ -11,12 +11,15 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Text,
   useWindowDimensions,
   View,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useDockHidden } from '@/lib/dockTarget'
 import { useQuickRecording } from '@/lib/quickRecord'
+import { itemPath } from '@/lib/itemPath'
+import type { SavedNotice } from '@shared/captureDraft'
 import { useColors } from '@/theme'
 import { CaptureBar } from './CaptureBar'
 import { t } from '@shared/i18n'
@@ -105,6 +108,26 @@ export function CaptureDock({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only on a new request
   }, [quick])
 
+  // A capture is done (saved or cancelled): fold into the bubble once the bar is
+  // idle again, and say what it was saved as for a moment (with Open).
+  const [notice, setNotice] = useState<SavedNotice | null>(null)
+  const foldWhenIdle = useRef(false)
+  const finished = useCallback((saved: SavedNotice | null) => {
+    foldWhenIdle.current = true
+    setNotice(saved)
+  }, [])
+  useEffect(() => {
+    if (engaged || !foldWhenIdle.current) return
+    foldWhenIdle.current = false
+    queueMicrotask(collapse)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- when the bar becomes idle
+  }, [engaged])
+  useEffect(() => {
+    if (!notice) return
+    const timer = setTimeout(() => setNotice(null), NOTICE_MS)
+    return () => clearTimeout(timer)
+  }, [notice])
+
   // An item's screen has its own mic: the dock steps aside there (not mid-recording).
   const hidden = useDockHidden() && !engaged
 
@@ -137,7 +160,7 @@ export function CaptureDock({ children }: { children: ReactNode }) {
           style={[styles.panel, !panelShown && styles.hidden, panelMotion]}
           pointerEvents={open ? 'auto' : 'none'}>
           <ScrollView style={{ maxHeight: Math.max(160, (height - bottom - insets.top) * 0.85) }} keyboardShouldPersistTaps="handled">
-            <CaptureBar onEngagedChange={setEngaged} talkSignal={quick} />
+            <CaptureBar onEngagedChange={setEngaged} talkSignal={quick} onFinished={finished} />
           </ScrollView>
           {!engaged && (
             <Pressable
@@ -152,6 +175,25 @@ export function CaptureDock({ children }: { children: ReactNode }) {
         </Animated.View>
       </View>
 
+      {notice && !open && (
+        <View style={[styles.notice, { bottom, backgroundColor: c.text }]} accessibilityRole="alert" accessibilityLiveRegion="polite">
+          <Text style={{ color: c.bg, flexShrink: 1 }} numberOfLines={2}>
+            {notice.message}
+          </Text>
+          {notice.item && (
+            <Pressable
+              onPress={() => {
+                router.push(itemPath(notice.item!) as never)
+                setNotice(null)
+              }}
+              hitSlop={10}
+              accessibilityRole="link">
+              <Text style={{ color: c.accentSoft, fontWeight: '700' }}>{t('capture.open')}</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
+
       {/* Always mounted (hidden while open), so it remembers where it was dragged. */}
       <DraggableMic
         visible={micShown && !hidden}
@@ -164,6 +206,8 @@ export function CaptureDock({ children }: { children: ReactNode }) {
   )
 }
 
+/** How long "Saved as ..." stays up after the dock folds away. */
+const NOTICE_MS = 5000
 /** Approximate bottom tab bar height (without the system inset). */
 const TAB_BAR = 56
 /** Space between the toolbar and whatever is under it. */
@@ -298,6 +342,22 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
   },
   hidden: { display: 'none' },
+  notice: {
+    position: 'absolute',
+    alignSelf: 'center',
+    maxWidth: '86%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 999,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+  },
   close: {
     position: 'absolute',
     top: -10,

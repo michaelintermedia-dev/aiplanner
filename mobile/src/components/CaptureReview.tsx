@@ -1,6 +1,6 @@
 import { RecurrencePicker } from './RecurrencePicker'
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { draftHasTime, draftProblems, followUpText, INTENT_OPTIONS, toConfirmItem, movedItem, reviewItems, suggestedTitle, toDraft, typeChange, updatesWholeItem, type ItemDraft } from '@shared/captureDraft'
+import { draftHasTime, draftProblems, followUpText, INTENT_OPTIONS, savedNotice, type SavedNotice, toConfirmItem, movedItem, reviewItems, suggestedTitle, toDraft, typeChange, updatesWholeItem, type ItemDraft } from '@shared/captureDraft'
 import { endsNextDay } from '@shared/dates'
 import { KIND_LABEL } from '@shared/feed'
 import type { AppendTarget, Capture, ExtractionIntent, TaskPriority, ItemType } from '@shared/types'
@@ -42,7 +42,7 @@ export function CaptureReview({
 }: {
   capture: Capture
   /** `followUp`: words to capture as a new entry next (said in "Add more" but not about the item). */
-  onDone: (message: string | null, followUp?: string | null) => void
+  onDone: (saved: SavedNotice | null, followUp?: string | null) => void
   /** Reviewing a continued capture: offer "Add to this <item>". */
   appendTarget?: AppendTarget
   /** The item's type was changed, so it has a new id. */
@@ -84,7 +84,7 @@ export function CaptureReview({
       .mutateAsync(drafts.map((d) => toConfirmItem(d, zone.timeZone, appendTarget)))
       .then((saved) => {
         reviewDrafts.clear(capture.id)
-        onDone(included.length ? t('review.saved', { count: included.length }) : null, followUpText(drafts))
+        onDone(included.length ? savedNotice(saved, included.length) : null, followUpText(drafts))
         const moved = movedItem(drafts, saved, appendTarget)
         if (moved) onMoved?.(moved)
       })

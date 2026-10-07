@@ -425,6 +425,10 @@ Local dev notes:
   Expo's dev-tools bubble); a tap reopens it. Collapsing shrinks the toolbar into the button and opening grows it back out of it (Animated, native driver; the button's drag and its pop are two layers, since one view can't mix JS- and native-driven transforms; Reduce motion skips it). It sits above the tab bar on tab
   screens and lifts above the keyboard (edge-to-edge Android doesn't resize). It never collapses while recording/processing/reviewing
   (`CaptureBar onEngagedChange`), and typed text survives collapsing.
+  When a capture is done (saved, saved right away, or the review cancelled) it
+  folds into the bubble by itself and shows "Saved as Task: ... Open" above it
+  for 5 s (`CaptureBar onFinished`, `savedNotice` in shared/captureDraft) -
+  user's request, 2026-10-08, app and phone web.
   It steps aside on an item's screen (user's call, 2026-10-05 - one mic at a
   time keeps it simple): the item screen has its own mic next to Edit ("talk
   about this item"), registers in `lib/dockTarget` while focused

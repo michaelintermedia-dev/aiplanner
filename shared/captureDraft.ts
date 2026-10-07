@@ -1,4 +1,5 @@
 import { addDays, dateKey, timeKey, zonedToUtc } from './dates'
+import { KIND_LABEL } from './feed'
 import { t } from './i18n'
 import { recurrenceProblem } from './recurrence'
 import { remindersProblem } from './reminders'
@@ -204,4 +205,18 @@ export function savedItem(capture: Capture): { itemType: ItemType; id: string; t
     if (i.resultingNoteId) return { itemType: 'Note', id: i.resultingNoteId, title: i.title }
   }
   return null
+}
+
+/** What a finished capture says: "Saved as Task: “Buy milk”" for one item (with it, to open), else "Saved N items". */
+export interface SavedNotice {
+  message: string
+  item: { itemType: ItemType; id: string; title: string } | null
+}
+
+export function savedNotice(capture: Capture, count: number): SavedNotice {
+  const item = count === 1 ? savedItem(capture) : null
+  return {
+    message: item ? t('capture.savedAs', { kind: KIND_LABEL[item.itemType], title: item.title }) : t('review.saved', { count }),
+    item,
+  }
 }

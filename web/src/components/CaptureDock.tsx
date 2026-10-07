@@ -1,7 +1,9 @@
 import { t } from '@shared/i18n'
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react'
 import { IoClose, IoMic } from 'react-icons/io5'
-import { useLocation } from 'react-router'
+import { Link, useLocation } from 'react-router'
+import type { SavedNotice } from '@shared/captureDraft'
+import { itemPath } from '../lib/itemPath'
 import { useIsPhone } from '../lib/useIsPhone'
 import { CaptureBar } from './CaptureBar'
 
@@ -12,6 +14,8 @@ const EDGE = 12
 const TAB_BAR = 57
 const GAP = 12
 const POSITION_KEY = 'dock-bubble'
+/** How long "Saved as ..." stays up after the dock folds away. */
+const NOTICE_MS = 5000
 
 /** An item's page has its own mic next to Edit: the dock steps aside there. */
 const isItemPage = (path: string) => /^\/(tasks|appointments|notes)\/[^/]+/.test(path)
@@ -49,6 +53,26 @@ export function CaptureDock() {
     setOpen(false)
   }, [open, engaged, bubble])
 
+  // A capture is done (saved or cancelled): fold into the bubble once the bar is
+  // idle again, and say what it was saved as for a moment (with Open). Same as the app.
+  const [notice, setNotice] = useState<SavedNotice | null>(null)
+  const foldWhenIdle = useRef(false)
+  const finished = useCallback((saved: SavedNotice | null) => {
+    foldWhenIdle.current = true
+    setNotice(saved)
+  }, [])
+  useEffect(() => {
+    if (engaged || !foldWhenIdle.current) return
+    foldWhenIdle.current = false
+    queueMicrotask(collapse)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- when the bar becomes idle
+  }, [engaged])
+  useEffect(() => {
+    if (!notice) return
+    const timer = setTimeout(() => setNotice(null), NOTICE_MS)
+    return () => clearTimeout(timer)
+  }, [notice])
+
   // A touch anywhere behind it collapses it (the touch still does its own thing).
   useEffect(() => {
     if (!isPhone || !open) return
@@ -67,8 +91,18 @@ export function CaptureDock() {
 
   return (
     <div ref={dock} className={`dock${hidden ? ' dock-hidden' : ''}`}>
+      {notice && !open && (
+        <div className="dock-notice" style={{ bottom }} role="status">
+          <span>{notice.message}</span>
+          {notice.item && (
+            <Link to={itemPath(notice.item)} onClick={() => setNotice(null)}>
+              {t('capture.open')}
+            </Link>
+          )}
+        </div>
+      )}
       <div ref={panel} className="dock-panel" style={panelStyle} aria-hidden={!open}>
-        <CaptureBar onEngagedChange={setEngaged} />
+        <CaptureBar onEngagedChange={setEngaged} onFinished={finished} />
         {!engaged && (
           <button type="button" className="dock-close" onClick={collapse} aria-label={t('dock.hide')}>
             <IoClose aria-hidden />

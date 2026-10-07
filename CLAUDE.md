@@ -540,6 +540,32 @@ Local dev notes:
   each app) on every player, remembered per device; mobile max is 2×. Mobile
   players count a file's "finished" only once that file was seen playing (a
   fixed delay broke short pieces at 2×) and report position every 100 ms.
+- **How captures are saved** (user's rules, 2026-10-07, web + mobile;
+  Settings -> Recordings, `GET/PUT /api/settings/recordings`):
+  - **One entry per message** (`UserSettings.OneEntryPerMessage`, on by
+    default): one recording/typed message = ONE item, never two or three. The
+    prompt says so (`OneEntry` section) and `SingleEntry.Merge` (pure, tested)
+    enforces it: event > task > note leads, the others become "• " lines of
+    its details in the user's words, their "before" reminders become fixed
+    times, the whole recording is its clip. Not applied when adding to an
+    item (that is one item anyway). Off = the old splitting.
+  - **Save right away** (`!UserSettings.ReviewBeforeSave`, off by default):
+    no review - `CaptureService.SaveRightAwayAsync` confirms what was
+    understood; if it wouldn't validate (an event with no time...) the words
+    are saved as a Note instead (checked up front: a failed confirm leaves
+    tracked changes). Only if even that fails does it wait for review.
+    `CaptureDto.AutoSaved` -> the capture bar shows "Saved as Task: “...” Open".
+  - **Keep the recording**: a checkbox on the review of a voice capture
+    (default `UserSettings.KeepRecordings`, on); unticked -> `confirm` with
+    `keepRecording: false` deletes the audio once something was saved (not on
+    Cancel). Save right away uses the setting.
+  - **Quick recording**: Android home-screen widget `QuickRecord`
+    (react-native-android-widget, `src/widgets/`, registered in
+    `mobile/index.ts` - the app's entry, not expo-router/entry) opens
+    `aiplanner://record` -> `app/record.tsx` -> `lib/quickRecord` signal -> the
+    dock unfolds and its CaptureBar starts recording (`talkSignal`). Web: the
+    PWA manifest shortcut "Quick recording" -> `/feed?record=1` (CaptureBar
+    starts at once). No iOS widget (needs a Mac).
 - **Media: photos and documents on items** (user's idea, 2026-10-06, web +
   mobile; step 1 of 3 - next: keeping voice clips as media with a "Keep the
   recording" choice, then the AI reading photos/documents). `Attachment` rows

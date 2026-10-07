@@ -92,10 +92,28 @@ export default function SettingsScreen() {
       {recordings.data && (
         <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.border }]}>
           <Row
+            label={t('settings.oneEntry')}
+            hint={t('settings.oneEntryHint')}
+            value={recordings.data.oneEntryPerMessage}
+            onChange={(oneEntryPerMessage) => saveRecordings.mutate({ ...recordings.data!, oneEntryPerMessage })}
+          />
+          <Row
+            label={t('settings.saveRightAway')}
+            hint={t('settings.saveRightAwayHint')}
+            value={recordings.data.saveRightAway}
+            onChange={(saveRightAway) => saveRecordings.mutate({ ...recordings.data!, saveRightAway })}
+          />
+          <Row
+            label={t('settings.keepRecordings')}
+            hint={t('settings.keepRecordingsHint')}
+            value={recordings.data.keepRecordings}
+            onChange={(keepRecordings) => saveRecordings.mutate({ ...recordings.data!, keepRecordings })}
+          />
+          <Row
             label={t('settings.shortenPauses')}
             hint={t('settings.shortenPausesHint')}
             value={recordings.data.shortenPauses}
-            onChange={(shortenPauses) => saveRecordings.mutate({ shortenPauses })}
+            onChange={(shortenPauses) => saveRecordings.mutate({ ...recordings.data!, shortenPauses })}
           />
         </View>
       )}

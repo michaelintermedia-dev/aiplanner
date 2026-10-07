@@ -260,6 +260,8 @@ export interface Capture {
   items: CaptureItem[]
   /** Length of each recording part, in order - places item snippets across parts. */
   audioPartDurationsMs?: number[] | null
+  /** "Save right away": already saved - show what it became instead of the review. */
+  autoSaved?: boolean
 }
 
 export interface CaptureSummary {
@@ -277,6 +279,12 @@ export interface CaptureSummary {
 export interface RecordingSettings {
   /** Cut pauses longer than a second out of saved recordings. */
   shortenPauses: boolean
+  /** Keep the audio when a voice capture is saved (the review checkbox's default). */
+  keepRecordings: boolean
+  /** Everything said in one message becomes one entry. */
+  oneEntryPerMessage: boolean
+  /** No review: saved as soon as understood (falls back to a note). */
+  saveRightAway: boolean
 }
 
 export interface ConfirmCaptureItem {

@@ -1,7 +1,10 @@
+import { savedItem } from '@shared/captureDraft'
+import { KIND_LABEL } from '@shared/feed'
 import type { AppendTarget, Capture, ItemType } from '@shared/types'
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { IoArrowUp } from 'react-icons/io5'
+import { Link, useSearchParams } from 'react-router'
 import { capturesApi } from '../api/endpoints'
 import { toWav } from '../lib/toWav'
 import { useAudioRecorder, type RecorderState } from '../lib/useAudioRecorder'
@@ -13,6 +16,8 @@ import { MicButton } from './MicButton'
 import { speedRef, usePlaybackSpeed } from '../lib/playbackSpeed'
 import { SpeedChips } from './SpeedChips'
 import { t } from '@shared/i18n'
+
+const ITEM_PATH: Record<ItemType, string> = { Task: '/tasks', Appointment: '/appointments', Note: '/notes' }
 
 type Busy = null | 'transcribing' | 'understanding'
 
@@ -111,6 +116,8 @@ export function CaptureBar({
     return () => window.removeEventListener('beforeunload', warn)
   }, [capture])
   const [savedMessage, setSavedMessage] = useState<string | null>(null)
+  // "Save right away": what it was saved as, to open it.
+  const [savedLink, setSavedLink] = useState<string | null>(null)
   const preview = usePreview(recorder.state, recorder.pauseCount, recorder.snapshot)
   const mics = useMicrophones()
   const [silent, setSilent] = useState(false)
@@ -120,10 +127,17 @@ export function CaptureBar({
     setBusy(phase)
     setError(null)
     setSavedMessage(null)
+    setSavedLink(null)
     try {
       const result = await work()
       if (continueFrom?.onResult) continueFrom.onResult(result)
-      else setCapture(result)
+      else if (result.autoSaved) {
+        // Saved already (Settings - Save right away): say what it became, no review.
+        const item = savedItem(result)
+        setSavedMessage(item ? t('capture.savedAs', { kind: KIND_LABEL[item.itemType], title: item.title }) : t('review.saved', { count: 1 }))
+        setSavedLink(item && `${ITEM_PATH[item.itemType]}/${item.id}`)
+        void queryClient.invalidateQueries()
+      } else setCapture(result)
       setText('')
       return true
     } catch (err) {
@@ -186,13 +200,25 @@ export function CaptureBar({
   }
 
   // The mic shortcut on an item's page: recording starts as the form opens (once - not again on a re-render).
+  // "Quick recording" (the home-screen icon's shortcut, ?record=1): the main bar starts at once.
+  const [params, setParams] = useSearchParams()
+  const quick = !continueFrom && params.get('record') === '1'
   const autoStarted = useRef(false)
   useEffect(() => {
-    if (!continueFrom?.autoStart || autoStarted.current) return
+    if (!(continueFrom?.autoStart || quick) || autoStarted.current) return
     autoStarted.current = true
+    if (quick) {
+      setParams(
+        (p) => {
+          p.delete('record')
+          return p
+        },
+        { replace: true },
+      )
+    }
     void startRecording().catch(onMicError)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the form opens
-  }, [])
+  }, [quick])
 
   // Switching input mid-recording restarts it on the new mic: the old take is
   // usually the silent one the user is trying to fix.
@@ -309,6 +335,12 @@ export function CaptureBar({
         ) : (
           <span className="muted capture-hint">
             {hasAudio ? '' : (savedMessage ?? t('capture.hint'))}
+            {!hasAudio && savedMessage && savedLink && (
+              <>
+                {' '}
+                <Link to={savedLink}>{t('capture.open')}</Link>
+              </>
+            )}
           </span>
         )}
         {mics.devices.length > 1 && !busy && (

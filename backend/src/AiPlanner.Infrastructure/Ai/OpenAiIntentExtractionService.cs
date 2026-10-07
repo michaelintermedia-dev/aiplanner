@@ -140,8 +140,20 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             - "unrelated": null, unless the "UPDATING ONE ITEM" section below says otherwise.
 
             Never return nothing: if the input is a question, an idea, or anything that isn't clearly a task or appointment, return it as a single "note" whose "description" keeps the user's words. The user can change any item's type in the review.
-            """ + Continuing(c);
+            """ + OneEntry(c) + Continuing(c);
     }
+
+    /// <summary>"One entry per message" (Settings): never split what was said into several items.</summary>
+    private static string OneEntry(ExtractionContext c) => !c.OneEntry || c.CurrentItem is not null ? "" : """
+
+
+        ONE ENTRY. This user wants every message saved as exactly ONE item - never two or more, even when several things are mentioned.
+        - Pick the type and title for the main thing said (an appointment if a meeting/visit at a time is mentioned, else a task if something must be done, else a note).
+        - Its "date"/"time" are the main thing's.
+        - Everything else said goes into its "description": the main thing's details first (if any), then one line per other thing, each starting with "• ", in the user's own words with their dates and times. Example: "Dentist on Friday at 10, also buy milk, and the wifi code is 1234" -> an appointment "Dentist" on Friday 10:00 with description "• Buy milk\n• The wifi code is 1234".
+        - Every reminder asked for goes into its "reminders".
+        - "sourceText": the whole input.
+        """;
 
     /// <summary>Extra instructions when the user adds to an earlier capture ("continue talking").</summary>
     private static string Continuing(ExtractionContext c)

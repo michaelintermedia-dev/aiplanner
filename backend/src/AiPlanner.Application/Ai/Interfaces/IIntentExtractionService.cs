@@ -20,8 +20,9 @@ public interface IIntentExtractionService
 /// <param name="Locale">The user's locale, e.g. "en-US".</param>
 /// <param name="PreviousText">When continuing: what the user said before (already handled) - with CurrentItem, only the words about that item.</param>
 /// <param name="CurrentItem">When continuing from a saved item: the whole item as JSON in the answer's item shape (see ContinuedItem).</param>
+/// <param name="OneEntry">"One entry per message" (Settings): everything said becomes one item.</param>
 public record ExtractionContext(
-    string Text, DateTime LocalNow, string TimeZoneId, string Locale, string? PreviousText = null, string? CurrentItem = null);
+    string Text, DateTime LocalNow, string TimeZoneId, string Locale, string? PreviousText = null, string? CurrentItem = null, bool OneEntry = false);
 
 /// <summary>What the provider returned, before validation.</summary>
 public record RawExtraction(

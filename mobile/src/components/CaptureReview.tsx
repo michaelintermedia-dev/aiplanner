@@ -4,11 +4,12 @@ import { draftHasTime, draftProblems, followUpText, INTENT_OPTIONS, toConfirmIte
 import { endsNextDay } from '@shared/dates'
 import { KIND_LABEL } from '@shared/feed'
 import type { AppendTarget, Capture, ExtractionIntent, TaskPriority, ItemType } from '@shared/types'
+import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { restoreDrafts } from '@shared/pendingReview'
 import { reviewDrafts } from '@/lib/reviewDrafts'
 import { I18nManager, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native'
-import { capturesApi } from '@/api/endpoints'
+import { capturesApi, settingsApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
 import { useAction } from '@/lib/useAction'
 import { useColors, type Colors } from '@/theme'
@@ -49,7 +50,12 @@ export function CaptureReview({
 }) {
   const c = useColors()
   const { zone } = useAuth()
-  const confirm = useAction((items: ReturnType<typeof toConfirmItem>[]) => capturesApi.confirm(capture.id, items), {
+  // "Keep the recording": the default comes from Settings, this review can change it.
+  const settings = useQuery({ queryKey: ['settings', 'recordings'], queryFn: settingsApi.recordings })
+  const [keepChoice, setKeepChoice] = useState<boolean | null>(null)
+  const keepRecording = keepChoice ?? settings.data?.keepRecordings ?? true
+  const hasRecording = capture.source === 'Voice' && capture.audioParts > 0 && !appendTarget
+  const confirm = useAction((items: ReturnType<typeof toConfirmItem>[]) => capturesApi.confirm(capture.id, items, !hasRecording || keepRecording), {
     // A type change replaces the item: drop its screen's query instead of refetching a deleted item (404).
     forget: (items) => (appendTarget && items.some((i) => movesItem(i, appendTarget)) ? [DETAIL_KEY[appendTarget.itemType], appendTarget.itemId] : ['none']),
   })
@@ -127,6 +133,17 @@ export function CaptureReview({
         drafts.map((d) => <ItemEditor key={d.id} draft={d} onChange={(patch) => update(d.id, patch)} appendTarget={appendTarget} />)
       )}
 
+      {hasRecording && (
+        <Pressable
+          onPress={() => setKeepChoice(!keepRecording)}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: keepRecording }}>
+          <Ionicons name={keepRecording ? 'checkbox' : 'square-outline'} size={22} color={c.accent} />
+          <Ionicons name="mic-outline" size={16} color={c.muted} />
+          <Text style={{ color: c.text }}>{t('review.keepRecording')}</Text>
+        </Pressable>
+      )}
       {confirm.error && <Text style={{ color: c.danger }}>{confirm.error.message}</Text>}
       <View style={styles.actions}>
         <Button title={t('common.cancel')} onPress={discard} disabled={confirm.isPending} />

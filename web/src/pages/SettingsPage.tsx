@@ -99,12 +99,32 @@ export function SettingsPage() {
       <section className="card form">
         <h3>{t('settings.recordings')}</h3>
         {recordings.data && (
-          <Toggle
-            label={t('settings.shortenPauses')}
-            hint={t('settings.shortenPausesHint')}
-            checked={recordings.data.shortenPauses}
-            onChange={(shortenPauses) => saveRecordings.mutate({ shortenPauses })}
-          />
+          <>
+            <Toggle
+              label={t('settings.oneEntry')}
+              hint={t('settings.oneEntryHint')}
+              checked={recordings.data.oneEntryPerMessage}
+              onChange={(oneEntryPerMessage) => saveRecordings.mutate({ ...recordings.data!, oneEntryPerMessage })}
+            />
+            <Toggle
+              label={t('settings.saveRightAway')}
+              hint={t('settings.saveRightAwayHint')}
+              checked={recordings.data.saveRightAway}
+              onChange={(saveRightAway) => saveRecordings.mutate({ ...recordings.data!, saveRightAway })}
+            />
+            <Toggle
+              label={t('settings.keepRecordings')}
+              hint={t('settings.keepRecordingsHint')}
+              checked={recordings.data.keepRecordings}
+              onChange={(keepRecordings) => saveRecordings.mutate({ ...recordings.data!, keepRecordings })}
+            />
+            <Toggle
+              label={t('settings.shortenPauses')}
+              hint={t('settings.shortenPausesHint')}
+              checked={recordings.data.shortenPauses}
+              onChange={(shortenPauses) => saveRecordings.mutate({ ...recordings.data!, shortenPauses })}
+            />
+          </>
         )}
         {(recordings.error ?? saveRecordings.error) && <p className="error">{(recordings.error ?? saveRecordings.error)!.message}</p>}
       </section>

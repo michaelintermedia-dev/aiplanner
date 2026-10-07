@@ -506,4 +506,15 @@ export const he: Messages = {
   'media.loadFailed': 'לא ניתן לטעון.',
   'media.close': 'לסגור',
   'media.open': 'לפתוח את {name}',
+  // ---- saving captures (settings, review, quick recording) ----
+  'settings.oneEntry': 'רשומה אחת לכל הודעה',
+  'settings.oneEntryHint': 'כל מה שאומרים או מקלידים בבת אחת הופך למשימה, אירוע או פתק אחד - שאר הדברים נכנסים לפרטים שלו.',
+  'settings.saveRightAway': 'לשמור מיד',
+  'settings.saveRightAwayHint': 'בלי בדיקה: מה שאומרים נשמר ברגע שהוא מובן. אם אי אפשר לשמור כך, המילים שלך יישמרו כפתק.',
+  'settings.keepRecordings': 'לשמור הקלטות',
+  'settings.keepRecordingsHint': 'לשמור את הקלטת הדברים יחד עם הרשומה. כבוי: נשמרות רק המילים. אפשר לשנות זאת לכל הקלטה בבדיקה.',
+  'review.keepRecording': 'לשמור את ההקלטה',
+  'capture.savedAs': 'נשמר כ{kind}: „{title}”',
+  'capture.open': 'לפתוח',
+  'widget.quickRecording': 'הקלטה מהירה',
 }

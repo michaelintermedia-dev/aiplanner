@@ -1,5 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
+import { savedItem } from '@shared/captureDraft'
+import { KIND_LABEL } from '@shared/feed'
 import type { AppendTarget, Capture, ItemType } from '@shared/types'
+import { router } from 'expo-router'
 import { File } from 'expo-file-system'
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
@@ -14,6 +17,8 @@ import { MicButton } from './MicButton'
 import { SegmentPlayer } from './SegmentPlayer'
 import { Button } from './ui'
 import { t } from '@shared/i18n'
+
+const ITEM_ROUTE: Record<ItemType, string> = { Task: 'task', Appointment: 'appointment', Note: 'note' }
 
 type Busy = null | 'transcribing' | 'understanding'
 
@@ -56,8 +61,11 @@ function continueForm({ target, onResult, itemState }: ContinueFrom) {
 export function CaptureBar({
   continueFrom,
   onEngagedChange,
+  talkSignal: quickSignal,
 }: {
   continueFrom?: ContinueFrom
+  /** Each new value starts recording ("Quick recording" from the home-screen widget). */
+  talkSignal?: number
   /** True while recording, processing or reviewing - the dock mustn't hide it then. */
   onEngagedChange?: (engaged: boolean) => void
 } = {}) {
@@ -74,6 +82,8 @@ export function CaptureBar({
   // Reviewing the words an "Add more" wasn't about, captured as a new entry.
   const [followUp, setFollowUp] = useState(false)
   const [savedMessage, setSavedMessage] = useState<string | null>(null)
+  // "Save right away": what it was saved as, to open it.
+  const [savedLink, setSavedLink] = useState<string | null>(null)
   const [silent, setSilent] = useState(false)
 
   const engaged = recorder.state !== 'idle' || busy !== null || capture !== null
@@ -90,10 +100,17 @@ export function CaptureBar({
     setBusy(phase)
     setError(null)
     setSavedMessage(null)
+    setSavedLink(null)
     try {
       const result = await work()
       if (continueFrom?.onResult) continueFrom.onResult(result)
-      else setCapture(result)
+      else if (result.autoSaved) {
+        // Saved already (Settings - Save right away): say what it became, no review.
+        const item = savedItem(result)
+        setSavedMessage(item ? t('capture.savedAs', { kind: KIND_LABEL[item.itemType], title: item.title }) : t('review.saved', { count: 1 }))
+        setSavedLink(item && `/${ITEM_ROUTE[item.itemType]}/${item.id}`)
+        void queryClient.invalidateQueries()
+      } else setCapture(result)
       setText('')
       return true
     } catch (err) {
@@ -142,8 +159,8 @@ export function CaptureBar({
     await recorder.record()
   }
 
-  // The floating mic tapped on the item's page: start (or go on) recording here.
-  const talkSignal = continueFrom?.talkSignal ?? 0
+  // The floating mic tapped on the item's page, or Quick recording: start (or go on) recording here.
+  const talkSignal = continueFrom?.talkSignal ?? quickSignal ?? 0
   useEffect(() => {
     if (!talkSignal || recorder.state === 'recording' || busy !== null) return
     queueMicrotask(() => startRecording().catch(onMicError))
@@ -248,7 +265,18 @@ export function CaptureBar({
           <Text style={{ color: c.muted }}>{busy === 'transcribing' ? t('capture.transcribing') : t('capture.understanding')}</Text>
         </View>
       ) : (
-        !hasAudio && savedMessage && <Text style={{ color: c.muted }}>{savedMessage}</Text>
+        !hasAudio &&
+        savedMessage && (
+          <Text style={{ color: c.muted }}>
+            {savedMessage}
+            {savedLink && (
+              <Text style={{ color: c.accent }} onPress={() => router.push(savedLink as never)} accessibilityRole="link">
+                {'  '}
+                {t('capture.open')}
+              </Text>
+            )}
+          </Text>
+        )
       )}
       {error && <Text style={{ color: c.danger }}>{error}</Text>}
 

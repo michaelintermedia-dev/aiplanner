@@ -2,11 +2,12 @@ import { draftHasTime, draftProblems, followUpText, INTENT_OPTIONS, toConfirmIte
 import { endsNextDay } from '@shared/dates'
 import { KIND_LABEL } from '@shared/feed'
 import type { AppendTarget, Capture, TaskPriority, ItemType } from '@shared/types'
+import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { IoHelpCircleOutline, IoLockClosedOutline, IoMicOutline } from 'react-icons/io5'
 import { restoreDrafts } from '@shared/pendingReview'
 import { reviewDrafts } from '../lib/reviewDrafts'
-import { capturesApi } from '../api/endpoints'
+import { capturesApi, settingsApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { useAction } from '../lib/useAction'
 import { ReminderList } from './ReminderList'
@@ -33,7 +34,12 @@ export function CaptureReview({
   onMoved?: (item: { itemType: ItemType; itemId: string }) => void
 }) {
   const { zone } = useAuth()
-  const confirm = useAction((items: ReturnType<typeof toConfirmItem>[]) => capturesApi.confirm(capture.id, items), {
+  // "Keep the recording": the default comes from Settings, this review can change it.
+  const settings = useQuery({ queryKey: ['settings', 'recordings'], queryFn: settingsApi.recordings })
+  const [keepChoice, setKeepChoice] = useState<boolean | null>(null)
+  const keepRecording = keepChoice ?? settings.data?.keepRecordings ?? true
+  const hasRecording = capture.source === 'Voice' && capture.audioParts > 0 && !appendTarget
+  const confirm = useAction((items: ReturnType<typeof toConfirmItem>[]) => capturesApi.confirm(capture.id, items, !hasRecording || keepRecording), {
     // A type change replaces the item: drop its page's query instead of refetching a deleted item (404).
     forget: (items) => (appendTarget && items.some((i) => movesItem(i, appendTarget)) ? [DETAIL_KEY[appendTarget.itemType], appendTarget.itemId] : ['none']),
   })
@@ -117,6 +123,12 @@ export function CaptureReview({
         </ul>
       )}
 
+      {hasRecording && (
+        <label className="inline-check keep-recording">
+          <input type="checkbox" checked={keepRecording} onChange={(e) => setKeepChoice(e.target.checked)} />
+          <IoMicOutline aria-hidden /> {t('review.keepRecording')}
+        </label>
+      )}
       {confirm.error && <p className="error">{confirm.error.message}</p>}
       <div className="form-actions">
         <button type="button" onClick={discard} disabled={confirm.isPending}>

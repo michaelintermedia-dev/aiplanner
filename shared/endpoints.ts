@@ -170,8 +170,9 @@ export function createApi(request: RequestFn) {
       /** Rejects every proposal still waiting for review; returns how many. */
       discardPending: () => request<number>('POST', '/captures/pending/discard'),
       get: (id: string) => request<Capture>('GET', `/captures/${id}`),
-      confirm: (id: string, items: ConfirmCaptureItem[]) =>
-        request<Capture>('POST', `/captures/${id}/confirm`, { items }),
+      /** keepRecording false: the audio is deleted once saved (the words stay). */
+      confirm: (id: string, items: ConfirmCaptureItem[], keepRecording = true) =>
+        request<Capture>('POST', `/captures/${id}/confirm`, { items, keepRecording }),
       /** Part `part` (0-based, < Capture.audioParts) of the original recording. */
       audio: (id: string, part = 0) => request<Blob>('GET', `/captures/${id}/audio?part=${part}`, undefined, { as: 'blob' }),
       deleteAudio: (id: string) => request<void>('DELETE', `/captures/${id}/audio`),

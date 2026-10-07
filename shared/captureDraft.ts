@@ -195,3 +195,13 @@ export const reviewItems = (capture: Capture, target?: AppendTarget) =>
 /** After saving an "Add more" review: the words not about the item, to capture as a new entry (or null). */
 export const followUpText = (drafts: ItemDraft[]) =>
   drafts.filter((d) => d.include && d.unrelated && d.captureUnrelated).map((d) => d.unrelated!.trim()).join(' ') || null
+
+/** What a saved capture became (the first saved item) - for "Saved as Task: …" with a link. */
+export function savedItem(capture: Capture): { itemType: ItemType; id: string; title: string } | null {
+  for (const i of capture.items) {
+    if (i.resultingTaskId) return { itemType: 'Task', id: i.resultingTaskId, title: i.title }
+    if (i.resultingAppointmentId) return { itemType: 'Appointment', id: i.resultingAppointmentId, title: i.title }
+    if (i.resultingNoteId) return { itemType: 'Note', id: i.resultingNoteId, title: i.title }
+  }
+  return null
+}

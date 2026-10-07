@@ -22,8 +22,8 @@ public class RecordingSettingsService
     public async Task<RecordingSettingsDto> GetAsync(CancellationToken ct = default)
     {
         var userId = RequireUserId();
-        var shorten = await _db.UserSettings.Where(s => s.UserId == userId).Select(s => s.ShortenPauses).FirstOrDefaultAsync(ct);
-        return new RecordingSettingsDto(shorten);
+        var settings = await _db.UserSettings.AsNoTracking().FirstOrDefaultAsync(s => s.UserId == userId, ct);
+        return ToDto(settings ?? new UserSettings());
     }
 
     public async Task<RecordingSettingsDto> UpdateAsync(RecordingSettingsDto dto, CancellationToken ct = default)
@@ -37,10 +37,16 @@ public class RecordingSettingsService
             _db.UserSettings.Add(settings);
         }
         settings.ShortenPauses = dto.ShortenPauses;
+        settings.KeepRecordings = dto.KeepRecordings;
+        settings.OneEntryPerMessage = dto.OneEntryPerMessage;
+        settings.ReviewBeforeSave = !dto.SaveRightAway;
         settings.UpdatedAtUtc = _clock.UtcNow;
         await _db.SaveChangesAsync(ct);
-        return new RecordingSettingsDto(settings.ShortenPauses);
+        return ToDto(settings);
     }
+
+    private static RecordingSettingsDto ToDto(UserSettings s) =>
+        new(s.ShortenPauses, s.KeepRecordings, s.OneEntryPerMessage, SaveRightAway: !s.ReviewBeforeSave);
 
     private Guid RequireUserId() =>
         _currentUser.UserId ?? throw new UnauthorizedAccessException("No authenticated user.");

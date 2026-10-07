@@ -506,4 +506,15 @@ export const ru: Messages = {
   'media.loadFailed': 'Не удалось загрузить.',
   'media.close': 'Закрыть',
   'media.open': 'Открыть {name}',
+  // ---- saving captures (settings, review, quick recording) ----
+  'settings.oneEntry': 'Одна запись на сообщение',
+  'settings.oneEntryHint': 'Всё, что вы сказали или написали за раз, становится одной задачей, событием или заметкой - остальное попадает в её описание.',
+  'settings.saveRightAway': 'Сохранять сразу',
+  'settings.saveRightAwayHint': 'Без проверки: сказанное сохраняется, как только распознано. Если так сохранить нельзя, ваши слова сохранятся как заметка.',
+  'settings.keepRecordings': 'Сохранять аудиозаписи',
+  'settings.keepRecordingsHint': 'Хранить аудио сказанного вместе с записью. Выключено: остаются только слова. Для каждой записи это можно изменить при проверке.',
+  'review.keepRecording': 'Сохранить аудиозапись',
+  'capture.savedAs': 'Сохранено как {kind}: «{title}»',
+  'capture.open': 'Открыть',
+  'widget.quickRecording': 'Быстрая запись',
 }

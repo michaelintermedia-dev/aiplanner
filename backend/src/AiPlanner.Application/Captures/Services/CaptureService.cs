@@ -100,7 +100,7 @@ public class CaptureService : ICaptureService
     {
         var userId = RequireUserId();
         var extraction = await ExtractAsync(userId, request.Text.Trim(), transcript: null, timeline: null, ct);
-        return Result<CaptureDto>.Success(ToDto(extraction, transcript: null));
+        return Result<CaptureDto>.Success(await SaveRightAwayAsync(extraction, transcript: null, ct));
     }
 
     public async Task<Result<CaptureDto>> CaptureVoiceAsync(IReadOnlyList<AudioSegment> segments, CancellationToken ct = default)
@@ -206,7 +206,7 @@ public class CaptureService : ICaptureService
 
         voice.Status = VoiceCaptureStatus.Analyzed;
         await _db.SaveChangesAsync(ct);
-        return Result<CaptureDto>.Success(ToDto(extraction, transcript));
+        return Result<CaptureDto>.Success(await SaveRightAwayAsync(extraction, transcript, ct));
     }
 
     public async Task<IReadOnlyList<CaptureSummaryDto>> GetListAsync(int take, CancellationToken ct = default, int? pendingDays = null)
@@ -320,6 +320,13 @@ public class CaptureService : ICaptureService
             return Result<CaptureDto>.Failure(ex.Message);
         }
 
+        // "Keep the recording" unticked: the words stay, the audio goes.
+        // Only when something was saved - Cancel (all rejected) leaves it to RecordingCleanup.
+        if (!request.KeepRecording && request.Items.Any(i => i.Include) && extraction.Transcript?.VoiceCapture is { AudioStorageKeys.Count: > 0 })
+        {
+            await DeleteAudioAsync(extraction.Id, ct);
+        }
+
         _logger.LogInformation(
             "Capture {CaptureId} confirmed: {Accepted} saved, {Rejected} rejected",
             extraction.Id,
@@ -403,11 +410,14 @@ public class CaptureService : ICaptureService
 
         var timeZone = UserTimeZoneHelper.ResolveTimeZone(user.TimeZoneId);
         var localNow = TimeZoneInfo.ConvertTimeFromUtc(_dateTime.UtcNow, timeZone);
+        // Adding to one item is one item anyway; everything else follows "One entry per message".
+        var oneEntry = currentItem is null && (await SettingsAsync(userId, ct)).OneEntryPerMessage;
 
         var started = _dateTime.UtcNow;
         var raw = await _extraction.ExtractAsync(
-            new ExtractionContext(text, localNow, timeZone.Id, user.Locale, previousText, currentItem), ct);
+            new ExtractionContext(text, localNow, timeZone.Id, user.Locale, previousText, currentItem, oneEntry), ct);
         var normalized = ExtractionNormalizer.Normalize(raw, text, localNow, timeZone, user.Locale);
+        if (oneEntry) normalized = SingleEntry.Merge(normalized);
 
         // Log counts and timing only - never the user's words (spec section 37).
         _logger.LogInformation(
@@ -1152,6 +1162,61 @@ public class CaptureService : ICaptureService
         item.Priority = d.Priority;
         item.ProposedReminders = ReminderPlanner.ToProposed(d.Reminders);
     }
+
+    // ---- Save right away ---------------------------------------------------
+
+    /// <summary>
+    /// "Save right away" (Settings): no review - what was understood is saved at
+    /// once. If it can't be saved like that (an event with no time, say), the
+    /// words are saved as a note instead: what matters is that it's kept. Only
+    /// if even that fails does it wait in the review, as without the setting.
+    /// </summary>
+    private async Task<CaptureDto> SaveRightAwayAsync(AIExtraction extraction, Transcript? transcript, CancellationToken ct)
+    {
+        var settings = await SettingsAsync(extraction.UserId, ct);
+        var pending = extraction.Items.Where(i => i.Status == ExtractionStatus.PendingReview).ToList();
+        if (settings.ReviewBeforeSave || pending.Count == 0)
+        {
+            return ToDto(extraction, transcript);
+        }
+
+        var asUnderstood = pending.Select(AsProposed).ToList();
+        // Checked first: a failed confirm can leave half-made changes behind, so the
+        // note is chosen up front rather than tried after.
+        var decisions = (await ValidateAsync(asUnderstood, ct)).Count == 0
+            ? asUnderstood
+            : AsNote(pending, transcript?.Text ?? extraction.RawInputText ?? extraction.Title ?? "", extraction.Title);
+        var saved = await ConfirmAsync(extraction.Id, new ConfirmCaptureRequest(decisions, settings.KeepRecordings), ct);
+        if (!saved.Succeeded)
+        {
+            _logger.LogWarning("Capture {CaptureId} couldn't be saved right away; left for review", extraction.Id);
+            return ToDto(extraction, transcript);
+        }
+        return saved.Value! with { AutoSaved = true };
+    }
+
+    /// <summary>A proposal saved exactly as the AI understood it.</summary>
+    private static ConfirmCaptureItem AsProposed(AIExtractionItem i) => new(
+        i.Id, true, i.Intent, i.Title, i.Description, i.StartDateUtc, i.EndDateUtc, i.DueDateUtc, i.HasTime,
+        i.Location, i.Priority, ReminderPlanner.FromProposed(i.ProposedReminders), Recurrence: RuleOf(i));
+
+    /// <summary>The fallback: everything said, as one note (the other proposals are dropped - their words are in it).</summary>
+    private static List<ConfirmCaptureItem> AsNote(List<AIExtractionItem> pending, string words, string? title)
+    {
+        var first = pending[0];
+        // A note has no time of its own, so "before" reminders can't work on it.
+        var reminders = pending
+            .SelectMany(i => ReminderPlanner.FromProposed(i.ProposedReminders))
+            .Where(r => r.Kind != ReminderKind.Before)
+            .ToList();
+        var note = new ConfirmCaptureItem(
+            first.Id, true, ExtractionIntent.Note, string.IsNullOrWhiteSpace(title) ? first.Title : title, words,
+            null, null, null, false, null, null, reminders);
+        return [note, .. pending.Skip(1).Select(i => AsProposed(i) with { Include = false })];
+    }
+
+    private async Task<UserSettings> SettingsAsync(Guid userId, CancellationToken ct) =>
+        await _db.UserSettings.AsNoTracking().FirstOrDefaultAsync(s => s.UserId == userId, ct) ?? new UserSettings();
 
     // ---- Helpers -----------------------------------------------------------
 

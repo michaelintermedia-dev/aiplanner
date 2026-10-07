@@ -16,6 +16,7 @@ import {
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useDockHidden } from '@/lib/dockTarget'
+import { useQuickRecording } from '@/lib/quickRecord'
 import { useColors } from '@/theme'
 import { CaptureBar } from './CaptureBar'
 import { t } from '@shared/i18n'
@@ -94,6 +95,16 @@ export function CaptureDock({ children }: { children: ReactNode }) {
     animate(true, () => setMicShown(false))
   }
 
+  // Quick recording (the home-screen widget): open up if folded; the bar starts recording.
+  const quick = useQuickRecording()
+  const seenQuick = useRef(0)
+  useEffect(() => {
+    if (quick === seenQuick.current) return
+    seenQuick.current = quick
+    if (!open) queueMicrotask(expand)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on a new request
+  }, [quick])
+
   // An item's screen has its own mic: the dock steps aside there (not mid-recording).
   const hidden = useDockHidden() && !engaged
 
@@ -126,7 +137,7 @@ export function CaptureDock({ children }: { children: ReactNode }) {
           style={[styles.panel, !panelShown && styles.hidden, panelMotion]}
           pointerEvents={open ? 'auto' : 'none'}>
           <ScrollView style={{ maxHeight: Math.max(160, (height - bottom - insets.top) * 0.85) }} keyboardShouldPersistTaps="handled">
-            <CaptureBar onEngagedChange={setEngaged} />
+            <CaptureBar onEngagedChange={setEngaged} talkSignal={quick} />
           </ScrollView>
           {!engaged && (
             <Pressable

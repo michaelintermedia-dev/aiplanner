@@ -80,3 +80,23 @@ public class MediaReaderTests
         skipped.Should().Equal("p11.png", "p12.png");
     }
 }
+
+public class MediaTitlesTests
+{
+    [Fact]
+    public void The_kind_of_file_comes_first_in_the_users_language()
+    {
+        var en = ClarificationTexts.English;
+        MediaTitles.Prefix("Jazz Night", MediaTitles.Label([MediaInputKind.Image, MediaInputKind.Image], en)).Should().Be("Photo: Jazz Night");
+        MediaTitles.Prefix("Electricity bill", MediaTitles.Label([MediaInputKind.Pdf], en)).Should().Be("PDF: Electricity bill");
+        MediaTitles.Label([MediaInputKind.Text], ClarificationTexts.Russian).Should().Be("Документ");
+        MediaTitles.Label([MediaInputKind.Image, MediaInputKind.Pdf], en).Should().Be("Files");
+    }
+
+    [Fact]
+    public void A_title_that_already_says_it_is_left_alone()
+    {
+        MediaTitles.Prefix("Photo: Jazz Night flyer", "Photo").Should().Be("Photo: Jazz Night flyer");
+        MediaTitles.Prefix(new string('x', 400), "Photo", 300).Should().HaveLength(300);
+    }
+}

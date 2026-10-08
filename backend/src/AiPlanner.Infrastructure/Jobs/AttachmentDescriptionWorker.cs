@@ -5,18 +5,23 @@ using Microsoft.Extensions.Logging;
 
 namespace AiPlanner.Infrastructure.Jobs;
 
-/// <summary>Runs AttachmentDescriber every minute, until nothing is waiting.</summary>
+/// <summary>
+/// Runs AttachmentDescriber until nothing is waiting - at once when woken
+/// (an upload, AttachmentDescriptionSignal), else once a minute.
+/// </summary>
 public class AttachmentDescriptionWorker : BackgroundService
 {
     private static readonly TimeSpan FirstRun = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan Every = TimeSpan.FromMinutes(1);
 
     private readonly IServiceScopeFactory _scopes;
+    private readonly AttachmentDescriptionSignal _signal;
     private readonly ILogger<AttachmentDescriptionWorker> _logger;
 
-    public AttachmentDescriptionWorker(IServiceScopeFactory scopes, ILogger<AttachmentDescriptionWorker> logger)
+    public AttachmentDescriptionWorker(IServiceScopeFactory scopes, AttachmentDescriptionSignal signal, ILogger<AttachmentDescriptionWorker> logger)
     {
         _scopes = scopes;
+        _signal = signal;
         _logger = logger;
     }
 
@@ -24,9 +29,8 @@ public class AttachmentDescriptionWorker : BackgroundService
     {
         try
         {
-            await Task.Delay(FirstRun, stoppingToken);
-            using var timer = new PeriodicTimer(Every);
-            do
+            await _signal.WaitAsync(FirstRun, stoppingToken);
+            while (!stoppingToken.IsCancellationRequested)
             {
                 try
                 {
@@ -44,8 +48,8 @@ public class AttachmentDescriptionWorker : BackgroundService
                     // Try again next time; a failed run never takes the app down.
                     _logger.LogWarning(ex, "Attachment descriptions failed");
                 }
+                await _signal.WaitAsync(Every, stoppingToken);
             }
-            while (await timer.WaitForNextTickAsync(stoppingToken));
         }
         catch (OperationCanceledException)
         {

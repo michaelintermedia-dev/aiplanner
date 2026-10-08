@@ -37,6 +37,8 @@ public static class DependencyInjection
         // Deletes recordings no item uses any more (see RecordingCleanup).
         services.AddHostedService<RecordingCleanupWorker>();
         // Describes photos/documents for search (see AttachmentDescriber).
+        services.AddSingleton<AttachmentDescriptionSignal>();
+        services.AddSingleton<IAttachmentDescriptionSignal>(sp => sp.GetRequiredService<AttachmentDescriptionSignal>());
         services.AddHostedService<AttachmentDescriptionWorker>();
         // Stored recordings: WAV -> AAC when ffmpeg is available.
         services.AddSingleton<IAudioCompressor, FfmpegAudioCompressor>();

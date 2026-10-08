@@ -11,9 +11,11 @@ public class RecordingSettingsService
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUserService _currentUser;
     private readonly IDateTime _clock;
+    private readonly IAttachmentDescriptionSignal _describe;
 
-    public RecordingSettingsService(IApplicationDbContext db, ICurrentUserService currentUser, IDateTime clock)
+    public RecordingSettingsService(IApplicationDbContext db, ICurrentUserService currentUser, IDateTime clock, IAttachmentDescriptionSignal describe)
     {
+        _describe = describe;
         _db = db;
         _currentUser = currentUser;
         _clock = clock;
@@ -41,6 +43,8 @@ public class RecordingSettingsService
         settings.AiReadsMedia = dto.AiReadsMedia ?? settings.AiReadsMedia;
         settings.UpdatedAtUtc = _clock.UtcNow;
         await _db.SaveChangesAsync(ct);
+        // Just allowed: describe the files that are already there.
+        if (settings.AiReadsMedia == true) _describe.Wake();
         return ToDto(settings);
     }
 

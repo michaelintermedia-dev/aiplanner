@@ -624,7 +624,9 @@ Local dev notes:
   **Descriptions for search** (media step 2, 2026-10-09): every photo/document
   on an item gets `Attachment.Description` (what it is + key facts/readable
   text + everyday search words) from `AttachmentDescriber`, run every minute by
-  `AttachmentDescriptionWorker` (oldest first, 10 a batch, only users with
+  `AttachmentDescriptionWorker` - woken at once by an upload or by turning
+  AiReadsMedia on (`IAttachmentDescriptionSignal`, ~3 s), else every minute;
+  the table is the queue, no message broker needed at this scale (oldest first, 10 a batch, only users with
   AiReadsMedia = true - turning it on later describes the old ones; "" =
   unreadable; 3 tries). `IMediaDescriptionService` (OpenAI, plain text).
   `Attachment.SearchText` = file name + description as lower-case letters and

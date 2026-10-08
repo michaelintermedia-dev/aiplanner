@@ -21,9 +21,11 @@ public class AttachmentService : IAttachmentService
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUserService _currentUser;
     private readonly IFileStorageService _storage;
+    private readonly IAttachmentDescriptionSignal _describe;
 
-    public AttachmentService(IApplicationDbContext db, ICurrentUserService currentUser, IFileStorageService storage)
+    public AttachmentService(IApplicationDbContext db, ICurrentUserService currentUser, IFileStorageService storage, IAttachmentDescriptionSignal describe)
     {
+        _describe = describe;
         _db = db;
         _currentUser = currentUser;
         _storage = storage;
@@ -84,6 +86,7 @@ public class AttachmentService : IAttachmentService
             await _storage.DeleteAsync(attachment.StorageKey, CancellationToken.None);
             throw;
         }
+        _describe.Wake(); // described in seconds, not at the next check
         return Result<AttachmentDto>.Success(ToDto(attachment));
     }
 

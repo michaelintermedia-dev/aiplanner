@@ -56,5 +56,14 @@
     "lint": "expo lint",
     "postinstall": "patch-package"
   },
-  "private": true
+  "private": true,
+  "expo": {
+    "autolinking": {
+      "android": {
+        "buildFromSource": [
+          "expo-image-picker"
+        ]
+      }
+    }
+  }
 }

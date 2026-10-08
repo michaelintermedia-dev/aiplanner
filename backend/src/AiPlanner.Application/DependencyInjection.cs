@@ -41,6 +41,7 @@ public static class DependencyInjection
         services.AddScoped<IItemConversionService, ItemConversionService>();
         services.AddScoped<IItemDeletionService, ItemDeletionService>();
         services.AddScoped<RecordingCleanup>();
+        services.AddScoped<AiPlanner.Application.Attachments.Services.AttachmentDescriber>();
         services.AddScoped<RecordingSettingsService>();
         services.AddScoped<AppearanceSettingsService>();
         services.AddScoped<CalendarSettingsService>();

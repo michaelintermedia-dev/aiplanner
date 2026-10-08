@@ -30,7 +30,8 @@ public record NormalizedItem(
     RecurrenceDto? RecurrenceRule = null, // how it repeats (Recurrence + its days and interval)
     IReadOnlyList<string>? Tags = null); // tags the user asked for (cleaned)
 
-public record NormalizedExtraction(string Title, string? Summary, IReadOnlyList<NormalizedItem> Items);
+/// <param name="Search">The user asked to find something: what to look for (Items is empty then).</param>
+public record NormalizedExtraction(string Title, string? Summary, IReadOnlyList<NormalizedItem> Items, FeedSearch? Search = null);
 
 /// <summary>
 /// Validates provider output before anything is stored or shown (spec section
@@ -47,9 +48,17 @@ public static class ExtractionNormalizer
     private static readonly TimeSpan DefaultAppointmentLength = TimeSpan.FromHours(1);
 
     /// <param name="locale">The user's locale - the server's own questions are written in it.</param>
-    public static NormalizedExtraction Normalize(RawExtraction raw, string inputText, DateTime localNow, TimeZoneInfo timeZone, string? locale = null)
+    public static NormalizedExtraction Normalize(
+        RawExtraction raw, string inputText, DateTime localNow, TimeZoneInfo timeZone, string? locale = null, IReadOnlyList<string>? knownTags = null)
     {
         var texts = ClarificationTexts.For(locale);
+        // "Find ...": a search, not new items (and no "keep the words as a note" fallback).
+        if (raw.Search is { } search)
+        {
+            return new NormalizedExtraction(
+                Clean(raw.Title, MaxTitleLength) ?? Clean(inputText, 60) ?? texts.DefaultCaptureTitle, null, [],
+                FeedSearch.From(search, knownTags ?? []));
+        }
         var items = raw.Items
             .Take(MaxItems)
             .Select(item => NormalizeItem(item, localNow, timeZone, texts))

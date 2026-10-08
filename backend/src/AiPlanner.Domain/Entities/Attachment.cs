@@ -22,4 +22,28 @@ public class Attachment : BaseEntity
     public string ContentType { get; set; } = string.Empty;
     public long SizeBytes { get; set; }
     public string StorageKey { get; set; } = string.Empty;
+
+    /// <summary>
+    /// What the AI says it shows - what it is, its key facts and readable text -
+    /// so the feed search finds it ("the photo of the wifi password"). Null = not
+    /// described yet (AttachmentDescriber, only with the user's OK); "" = nothing
+    /// the AI can read (audio, HEIC, old .doc).
+    /// </summary>
+    public string? Description { get; set; }
+    public DateTime? DescribedAtUtc { get; set; }
+    /// <summary>Failed tries (the provider was down); given up after AttachmentDescriber.MaxAttempts.</summary>
+    public int DescribeAttempts { get; set; }
+
+    /// <summary>
+    /// File name + description for the feed search: lower case, letters and
+    /// digits only ("Wi-Fi SSID" -> "wifissid"), so a search for "wifi" finds it
+    /// however it's written. Set with <see cref="SearchKey"/>.
+    /// </summary>
+    public string SearchText { get; set; } = string.Empty;
+
+    public static string SearchKey(string? text) =>
+        new((text ?? "").ToLowerInvariant().Where(char.IsLetterOrDigit).ToArray());
+
+    /// <summary>Recomputes <see cref="SearchText"/> after the name or description changed.</summary>
+    public void RefreshSearchText() => SearchText = SearchKey(FileName + " " + Description);
 }

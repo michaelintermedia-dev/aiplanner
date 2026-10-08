@@ -15,4 +15,5 @@ public record CaptureDto(
     int AudioParts, // playable recording segments (0 = text capture, or recording deleted)
     DateTime CreatedAtUtc,
     IReadOnlyList<CaptureItemDto> Items,
-    bool AutoSaved = false); // the smart Save: already saved - show what it became, no review
+    bool AutoSaved = false, // the smart Save: already saved - show what it became, no review
+    AiPlanner.Application.Ai.Services.FeedSearch? Search = null); // "find ...": open the feed with these filters (no items)

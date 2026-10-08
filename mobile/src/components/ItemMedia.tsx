@@ -102,9 +102,17 @@ function FileRow({ attachment: a, removed, onToggle }: { attachment: Attachment;
         accessibilityRole="button"
         accessibilityLabel={t('media.open', { name: a.fileName })}>
         {busy ? <ActivityIndicator size="small" color={c.muted} /> : <Ionicons name="document-text-outline" size={20} color={c.muted} />}
-        <Text style={[styles.fileName, { color: removed ? c.muted : c.text, textDecorationLine: removed ? 'line-through' : 'none' }]} numberOfLines={1}>
-          {a.fileName}
-        </Text>
+        <View style={styles.fileName}>
+          <Text style={{ color: removed ? c.muted : c.text, textDecorationLine: removed ? 'line-through' : 'none' }} numberOfLines={1}>
+            {a.fileName}
+          </Text>
+          {/* What the AI says it shows (searchable). */}
+          {!!a.description && (
+            <Text style={{ color: c.muted, fontSize: 12 }} numberOfLines={3}>
+              {a.description}
+            </Text>
+          )}
+        </View>
         <Text style={{ color: failed ? c.danger : c.muted, fontSize: 12 }}>
           {failed ? t('media.loadFailed') : removed ? t('media.willBeRemoved') : formatSize(a.sizeBytes)}
         </Text>
@@ -149,7 +157,7 @@ function Viewer({ images, index, onClose }: { images: Attachment[]; index: numbe
             onMomentumScrollEnd={(e) => setAt(Math.round(e.nativeEvent.contentOffset.x / width))}
             onLayout={() => setAt(index)}
             renderItem={({ item }) => (
-              <View style={{ width, height }}>
+              <View style={{ width, height }} accessibilityLabel={item.description ?? item.fileName}>
                 <StoredImage id={item.id} fit="contain" />
               </View>
             )}
@@ -162,6 +170,9 @@ function Viewer({ images, index, onClose }: { images: Attachment[]; index: numbe
           accessibilityLabel={t('media.close')}>
           <Ionicons name="close" size={26} color="#fff" />
         </Pressable>
+        {!!images[at]?.description && (
+          <Text style={[styles.viewerCaption, { bottom: insets.bottom + (images.length > 1 ? 44 : 16) }]}>{images[at].description}</Text>
+        )}
         {images.length > 1 && (
           <Text style={[styles.viewerCount, { bottom: insets.bottom + 16 }]}>
             {at + 1} / {images.length}
@@ -319,4 +330,16 @@ const styles = StyleSheet.create({
   viewer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)' },
   viewerClose: { position: 'absolute', end: 12, width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.15)' },
   viewerCount: { position: 'absolute', alignSelf: 'center', color: '#fff', fontSize: 14 },
+  viewerCaption: {
+    position: 'absolute',
+    start: 16,
+    end: 16,
+    color: '#fff',
+    fontSize: 14,
+    textAlign: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
 })

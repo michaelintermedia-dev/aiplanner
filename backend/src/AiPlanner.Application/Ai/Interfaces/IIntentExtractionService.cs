@@ -39,7 +39,12 @@ public record RawExtraction(
     IReadOnlyList<RawExtractedItem> Items,
     string RawResponseJson,
     string ProviderName,
-    string ModelName);
+    string ModelName,
+    RawSearch? Search = null); // "find ...": what to look for instead of new items
+
+/// <summary>A search as the provider described it (see FeedSearch.From).</summary>
+public record RawSearch(
+    string? Text, IReadOnlyList<string>? Tags, IReadOnlyList<string>? Kinds, string? When, string? Status, string? Reminders, bool? FromVoice);
 
 /// <summary>
 /// One proposed item as the provider described it. Dates/times are wall-clock

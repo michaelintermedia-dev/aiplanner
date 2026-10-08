@@ -108,8 +108,8 @@ public class CaptureService : ICaptureService
         }
         // Only a photo: the capture is known by its file names; the AI makes the title from what it shows.
         var input = words.Length > 0 ? words : string.Join(", ", media!.Select(m => m.FileName));
-        var extraction = await ExtractAsync(userId, input, transcript: null, ct, read, wordsGiven: words.Length > 0);
-        return Result<CaptureDto>.Success(await SaveNowAsync(extraction, transcript: null, request.SaveNow, ct));
+        var (extraction, search) = await ExtractAsync(userId, input, transcript: null, ct, read, wordsGiven: words.Length > 0);
+        return Result<CaptureDto>.Success((await SaveNowAsync(extraction, transcript: null, request.SaveNow, ct)) with { Search = search });
     }
 
     /// <summary>
@@ -210,9 +210,10 @@ public class CaptureService : ICaptureService
         await _db.SaveChangesAsync(ct);
 
         AIExtraction extraction;
+        FeedSearch? search;
         try
         {
-            extraction = await ExtractAsync(userId, text, transcript, ct, await ReadMediaAsync(userId, media, ct));
+            (extraction, search) = await ExtractAsync(userId, text, transcript, ct, await ReadMediaAsync(userId, media, ct));
         }
         catch (AiProviderException ex)
         {
@@ -223,7 +224,7 @@ public class CaptureService : ICaptureService
 
         voice.Status = VoiceCaptureStatus.Analyzed;
         await _db.SaveChangesAsync(ct);
-        return Result<CaptureDto>.Success(await SaveNowAsync(extraction, transcript, saveNow, ct));
+        return Result<CaptureDto>.Success((await SaveNowAsync(extraction, transcript, saveNow, ct)) with { Search = search });
     }
 
     public async Task<IReadOnlyList<CaptureSummaryDto>> GetListAsync(int take, CancellationToken ct = default, int? pendingDays = null)
@@ -390,7 +391,8 @@ public class CaptureService : ICaptureService
 
     // ---- Extraction --------------------------------------------------------
 
-    private async Task<AIExtraction> ExtractAsync(
+    /// <summary>Asks the AI and stores what it proposed; with a search ("find ..."), the capture has no items.</summary>
+    private async Task<(AIExtraction Extraction, FeedSearch? Search)> ExtractAsync(
         Guid userId, string text, Transcript? transcript, CancellationToken ct, IReadOnlyList<MediaInput>? media = null, bool wordsGiven = true)
     {
         var (raw, normalized) = await ProposeAsync(userId, text, previousText: null, currentItem: null, ct, media, wordsGiven ? null : "");
@@ -412,7 +414,7 @@ public class CaptureService : ICaptureService
 
         _db.AIExtractions.Add(extraction);
         await _db.SaveChangesAsync(ct);
-        return extraction;
+        return (extraction, normalized.Search);
     }
 
     /// <summary>Asks the AI about <paramref name="text"/> and validates the answer.</summary>
@@ -436,7 +438,7 @@ public class CaptureService : ICaptureService
         var started = _dateTime.UtcNow;
         var raw = await _extraction.ExtractAsync(
             new ExtractionContext(wordsForAi ?? text, localNow, timeZone.Id, user.Locale, previousText, currentItem, oneEntry, knownTags, media), ct);
-        var normalized = ExtractionNormalizer.Normalize(raw, text, localNow, timeZone, user.Locale);
+        var normalized = ExtractionNormalizer.Normalize(raw, text, localNow, timeZone, user.Locale, knownTags);
         if (oneEntry) normalized = SingleEntry.Merge(normalized);
         // Only files, no words: the titles say what kind of file it is ("Photo: ...").
         if (wordsForAi == "" && media is { Count: > 0 })

@@ -39,8 +39,8 @@ export function ItemMedia({ itemType, id }: { itemType: ItemType; id: string }) 
       {images.length > 0 && (
         <div className="media-grid">
           {images.map((a, i) => (
-            <button key={a.id} type="button" className="media-thumb" onClick={() => setOpen(i)} aria-label={t('media.open', { name: a.fileName })}>
-              <StoredImage id={a.id} alt={a.fileName} />
+            <button key={a.id} type="button" className="media-thumb" onClick={() => setOpen(i)} aria-label={t('media.open', { name: a.fileName })} title={a.description ?? undefined}>
+              <StoredImage id={a.id} alt={a.description ?? a.fileName} />
             </button>
           ))}
         </div>
@@ -70,7 +70,10 @@ function FileList({ files, removed, onToggle }: { files: Attachment[]; removed?:
             <li key={a.id} className={gone ? 'removed' : undefined}>
               <button type="button" className="media-file" onClick={() => void download(a)} disabled={gone}>
                 <IoDocumentTextOutline aria-hidden />
-                <span className="media-file-name">{a.fileName}</span>
+                <span className="media-file-name">
+                  {a.fileName}
+                  {a.description && <span className="media-description">{a.description}</span>}
+                </span>
                 <span className="muted small">{gone ? t('media.willBeRemoved') : formatSize(a.sizeBytes)}</span>
               </button>
               {onToggle && <RemoveToggle removed={!!gone} onClick={() => onToggle(a.id)} />}
@@ -109,8 +112,13 @@ function Lightbox({ images, index, onIndex, onClose }: { images: Attachment[]; i
   return (
     <div className="lightbox" role="dialog" aria-modal="true" aria-label={a.fileName} onClick={onClose}>
       <div className="lightbox-image" onClick={(e) => e.stopPropagation()}>
-        <StoredImage id={a.id} alt={a.fileName} />
+        <StoredImage id={a.id} alt={a.description ?? a.fileName} />
       </div>
+      {a.description && (
+        <p className="lightbox-caption" onClick={(e) => e.stopPropagation()}>
+          {a.description}
+        </p>
+      )}
       <button type="button" className="lightbox-close" onClick={onClose} aria-label={t('media.close')}>
         <IoClose aria-hidden />
       </button>

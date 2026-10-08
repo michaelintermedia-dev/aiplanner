@@ -3093,3 +3093,27 @@ html[data-wallpaper] .page-header > div:first-child {
   gap: 12px;
   flex-wrap: wrap;
 }
+
+/* What the AI says an attachment shows (searchable). */
+.media-description {
+  display: block;
+  color: var(--muted);
+  font-size: 0.82rem;
+  white-space: pre-line;
+  margin-top: 2px;
+}
+
+.lightbox-caption {
+  position: absolute;
+  inset-inline: 16px;
+  bottom: 48px;
+  margin: 0 auto;
+  max-width: 640px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 0.9rem;
+  white-space: pre-line;
+  text-align: center;
+}

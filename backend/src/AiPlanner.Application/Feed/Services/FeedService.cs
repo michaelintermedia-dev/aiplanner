@@ -5,6 +5,7 @@ using AiPlanner.Application.Notifications.Services;
 using AiPlanner.Application.Common.Utils;
 using AiPlanner.Application.Feed.DTOs;
 using AiPlanner.Application.Feed.Interfaces;
+using AiPlanner.Domain.Entities;
 using AiPlanner.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -37,7 +38,8 @@ public class FeedService : IFeedService
         var userId = _currentUser.UserId ?? throw new UnauthorizedAccessException("No authenticated user.");
         var f = query.Filter ?? FeedFilter.None;
         // Lower-cased on both sides: search ignores case whatever the database does.
-        var text = string.IsNullOrWhiteSpace(f.Text) ? null : f.Text.Trim().ToLower();
+        // Every word has to be there (anywhere in the item, its tags or its media's descriptions), in any order.
+        var words = SearchWords(f.Text);
         var now = _clock.UtcNow;
         var dated = f.DateFromUtc is not null || f.DateToUtc is not null;
         var tags = f.Tags?.Select(t => t.Trim()).Where(t => t.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList() ?? [];
@@ -50,10 +52,12 @@ public class FeedService : IFeedService
         if (Wants(FeedKind.Task))
         {
             var q = _db.TaskItems.AsNoTracking().Where(t => t.UserId == userId);
-            if (text is not null)
+            foreach (var text in words)
             {
+                var key = Attachment.SearchKey(text);
                 q = q.Where(t => t.Title.ToLower().Contains(text) || (t.Description != null && t.Description.ToLower().Contains(text))
-                    || (t.Notes != null && t.Notes.ToLower().Contains(text)) || t.TaskTags.Any(tt => tt.Tag.Name.ToLower().Contains(text)));
+                    || (t.Notes != null && t.Notes.ToLower().Contains(text)) || t.TaskTags.Any(tt => tt.Tag.Name.ToLower().Contains(text))
+                    || _db.Attachments.Any(x => x.ItemId == t.Id && (key.Length > 0 && x.SearchText.Contains(key))));
             }
             if (f.CreatedFromUtc is { } cFrom) q = q.Where(t => t.CreatedAtUtc >= cFrom);
             if (f.CreatedToUtc is { } cTo) q = q.Where(t => t.CreatedAtUtc < cTo);
@@ -81,11 +85,13 @@ public class FeedService : IFeedService
         if (Wants(FeedKind.Appointment) && !f.NoDate) // every event has a date
         {
             var q = _db.Appointments.AsNoTracking().Where(a => a.UserId == userId);
-            if (text is not null)
+            foreach (var text in words)
             {
+                var key = Attachment.SearchKey(text);
                 q = q.Where(a => a.Title.ToLower().Contains(text) || (a.Description != null && a.Description.ToLower().Contains(text))
                     || (a.Notes != null && a.Notes.ToLower().Contains(text)) || (a.Location != null && a.Location.ToLower().Contains(text))
-                    || a.AppointmentTags.Any(at => at.Tag.Name.ToLower().Contains(text)));
+                    || a.AppointmentTags.Any(at => at.Tag.Name.ToLower().Contains(text))
+                    || _db.Attachments.Any(x => x.ItemId == a.Id && (key.Length > 0 && x.SearchText.Contains(key))));
             }
             if (f.CreatedFromUtc is { } cFrom) q = q.Where(a => a.CreatedAtUtc >= cFrom);
             if (f.CreatedToUtc is { } cTo) q = q.Where(a => a.CreatedAtUtc < cTo);
@@ -130,10 +136,12 @@ public class FeedService : IFeedService
         if (Wants(FeedKind.Note))
         {
             var q = _db.Notes.AsNoTracking().Where(n => n.UserId == userId);
-            if (text is not null)
+            foreach (var text in words)
             {
+                var key = Attachment.SearchKey(text);
                 q = q.Where(n => (n.Title != null && n.Title.ToLower().Contains(text)) || n.Content.ToLower().Contains(text)
-                    || n.NoteTags.Any(nt => nt.Tag.Name.ToLower().Contains(text)));
+                    || n.NoteTags.Any(nt => nt.Tag.Name.ToLower().Contains(text))
+                    || _db.Attachments.Any(x => x.ItemId == n.Id && (key.Length > 0 && x.SearchText.Contains(key))));
             }
             if (f.CreatedFromUtc is { } cFrom) q = q.Where(n => n.CreatedAtUtc >= cFrom);
             if (f.CreatedToUtc is { } cTo) q = q.Where(n => n.CreatedAtUtc < cTo);
@@ -293,6 +301,14 @@ public class FeedService : IFeedService
             .Select(name => new FeedTagDto(name, used.GetValueOrDefault(name)))
             .OrderByDescending(t => t.Count).ThenBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    /// <summary>The search box's words, lower-cased: at most 6, one-letter ones left out (unless that's all there is).</summary>
+    private static List<string> SearchWords(string? text)
+    {
+        var all = (text ?? "").ToLowerInvariant().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Distinct().ToList();
+        var words = all.Where(w => w.Length > 1).ToList();
+        return (words.Count > 0 ? words : all).Take(6).ToList();
     }
 
     private static string? Snippet(string? text, int max = SnippetLength)

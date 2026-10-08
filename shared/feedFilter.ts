@@ -1,6 +1,7 @@
 import { weekStart } from './calendar'
 import { addDays, formatDateKey, todayKey, zonedToUtc } from './dates'
 import { t } from './i18n'
+import type { CaptureSearch } from './types'
 
 /**
  * Feed filters, shared by web and mobile. One set of filters applies to
@@ -136,4 +137,22 @@ export function feedFilterParams(f: FeedFilters, timeZone: string, now = current
   if (f.fromVoice) p.fromVoice = 'true'
   if (f.tags.length) p.tags = f.tags.join(',')
   return p
+}
+
+/**
+ * "Find ..." said or typed in the capture bar: the filters to show, and the
+ * tab - one kind asked for opens its tab, otherwise All.
+ */
+export function searchFilters(search: CaptureSearch): { filters: FeedFilters; show: 'all' | 'tasks' | 'events' | 'notes' } {
+  const filters: FeedFilters = {
+    ...NO_FILTERS,
+    text: search.text ?? '',
+    tags: search.tags,
+    when: search.when ?? 'any',
+    status: search.status ?? 'Any',
+    reminders: search.reminders ?? 'Any',
+    fromVoice: search.fromVoice,
+  }
+  const one = search.kinds.length === 1 ? search.kinds[0] : null
+  return { filters, show: one === 'Task' ? 'tasks' : one === 'Appointment' ? 'events' : one === 'Note' ? 'notes' : 'all' }
 }

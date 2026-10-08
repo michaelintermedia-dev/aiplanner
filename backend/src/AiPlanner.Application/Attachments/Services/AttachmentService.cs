@@ -71,6 +71,7 @@ public class AttachmentService : IAttachmentService
             SizeBytes = sizeBytes,
         };
         attachment.StorageKey = $"{userId}/attachments/{attachment.Id}{Path.GetExtension(name).ToLowerInvariant()}";
+        attachment.RefreshSearchText();
 
         await _storage.SaveAsync(attachment.StorageKey, content, ct);
         try
@@ -123,7 +124,8 @@ public class AttachmentService : IAttachmentService
         _ => false,
     };
 
-    private static AttachmentDto ToDto(Attachment a) => new(a.Id, a.Kind, a.FileName, a.ContentType, a.SizeBytes, a.CreatedAtUtc);
+    private static AttachmentDto ToDto(Attachment a) =>
+        new(a.Id, a.Kind, a.FileName, a.ContentType, a.SizeBytes, a.CreatedAtUtc, string.IsNullOrEmpty(a.Description) ? null : a.Description);
 
     private Guid RequireUserId() => _currentUser.UserId ?? throw new UnauthorizedAccessException("No authenticated user.");
 }

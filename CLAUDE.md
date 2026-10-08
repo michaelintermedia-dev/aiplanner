@@ -616,6 +616,26 @@ Local dev notes:
   documents?" (Agree / No, just attach them) -> `UserSettings.AiReadsMedia`
   (null = not asked; Settings - Recordings toggle); the server ignores media
   unless it's true.
+  **Descriptions for search** (media step 2, 2026-10-09): every photo/document
+  on an item gets `Attachment.Description` (what it is + key facts/readable
+  text + everyday search words) from `AttachmentDescriber`, run every minute by
+  `AttachmentDescriptionWorker` (oldest first, 10 a batch, only users with
+  AiReadsMedia = true - turning it on later describes the old ones; "" =
+  unreadable; 3 tries). `IMediaDescriptionService` (OpenAI, plain text).
+  `Attachment.SearchText` = file name + description as lower-case letters and
+  digits only (`Attachment.SearchKey`), so "wifi" finds "Wi-Fi". Shown under
+  file rows and as the picture viewer's caption.
+- **"Find ..." by voice or text** (user's request, 2026-10-09, web + mobile):
+  the same capture call can answer with a search instead of items (prompt
+  FIND section, top-level `search` in the schema; only for new captures).
+  `FeedSearch.From` (pure, tested) validates it into the feed filter's own
+  words (text, known tags - an unknown one becomes the text -, kinds, when,
+  status, reminders, fromVoice); `CaptureDto.Search`, no items, no fallback
+  note. Clients: `searchFilters()` (shared/feedFilter.ts) -> the feed filter
+  store (web `lib/feedFilters.ts`, now the same as mobile's) and the tab
+  (one kind -> its tab), "Showing what matches" in the dock notice. The feed
+  text search matches every word separately (any order, `SearchWords`),
+  in titles, details, tags and attachments' SearchText.
   Photos are shrunk on the device to 2000 px JPEG q0.8 (`shared/media.ts`
   limits; web canvas `shrinkImage`, mobile expo-image-manipulator). Web reads
   picked files into memory at once (a cleared picker can empty them) and

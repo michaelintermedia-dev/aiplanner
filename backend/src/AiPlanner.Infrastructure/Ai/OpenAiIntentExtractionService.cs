@@ -90,7 +90,8 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             i.Reminders?.Select(r => new RawReminder(r.Kind, r.MinutesBefore, r.Date, r.Time, r.Days)).ToList(),
             i.Recurrence, i.Clarification, i.Confidence, i.AddsToCurrent ?? false, i.SourceText, i.Unrelated, i.RecurrenceDays, i.RecurrenceInterval, i.Tags)).ToList();
 
-        return new RawExtraction(parsed.Title, parsed.Summary, items, content, "OpenAI", completion.Model ?? _options.Model);
+        var search = parsed.Search is { } s ? new RawSearch(s.Text, s.Tags, s.Kinds, s.When, s.Status, s.Reminders, s.FromVoice) : null;
+        return new RawExtraction(parsed.Title, parsed.Summary, items, content, "OpenAI", completion.Model ?? _options.Model, search);
     }
 
     internal static string BuildInstructions(ExtractionContext c)
@@ -139,10 +140,27 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             Only extract what the user actually said. Never invent items, people, places or times.
             - "addsToCurrent": false, unless the "Continuing" section below says otherwise.
             - "unrelated": null, unless the "UPDATING ONE ITEM" section below says otherwise.
+            - Top-level "search": null, unless the "FIND" section below says otherwise.
 
             Never return nothing: if the input is a question, an idea, or anything that isn't clearly a task or appointment, return it as a single "note" whose "description" keeps the user's words. The user can change any item's type in the review.
-            """ + OneEntry(c) + Continuing(c) + AttachedFiles(c);
+            """ + OneEntry(c) + Continuing(c) + AttachedFiles(c) + Find(c);
     }
+
+    /// <summary>A new capture can be a search instead ("find the photo of the wifi password").</summary>
+    private static string Find(ExtractionContext c) => c.CurrentItem is not null ? "" : $$"""
+
+
+        FIND. If the user asks to find, show, search for or look up entries they ALREADY have ("find my shopping stuff", "show me everything about the dentist", "where's the photo of the wifi password", "what's overdue", "show my notes"), create nothing: return "items": [] and fill "search":
+        - "text": the one or two most telling words to look for in the entries and in the descriptions of their attached photos and documents ("wifi", "dentist", "IKEA") - in the language the user spoke. Leave out words like find, show, my, all, items, entries, photo, picture, note, task. null when the request is only about tags, type, dates or status.
+        - "tags": tags they name, matched to their existing tags: {{KnownTags(c)}}. [] if none.
+        - "kinds": the types they name - "task", "appointment" (event, meeting), "note"; [] for all.
+        - "when": "today", "week", "overdue" or "nodate" if they name when it's due / happens; otherwise null.
+        - "status": "open" or "done" if they ask for it; otherwise null.
+        - "reminders": "with", "repeating" or "without" if they ask for it; otherwise null.
+        - "fromVoice": true only for things they recorded / said by voice.
+        - Top-level "title": what is looked for ("Find: wifi password").
+        Anything else - something to do, to remember, an event - is a new entry as usual, with "search": null. When in doubt, it's a new entry.
+        """;
 
     /// <summary>The user's words, then each attached file: pictures and PDFs as they are, documents as text.</summary>
     private static JsonNode UserContent(ExtractionContext c)
@@ -154,27 +172,8 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
         };
         foreach (var m in media)
         {
-            switch (m.Kind)
-            {
-                case MediaInputKind.Image:
-                    parts.Add(new JsonObject { ["type"] = "text", ["text"] = $"Attached photo «{m.FileName}»:" });
-                    parts.Add(new JsonObject
-                    {
-                        ["type"] = "image_url",
-                        ["image_url"] = new JsonObject { ["url"] = $"data:{m.MimeType};base64,{Convert.ToBase64String(m.Data!)}" },
-                    });
-                    break;
-                case MediaInputKind.Pdf:
-                    parts.Add(new JsonObject
-                    {
-                        ["type"] = "file",
-                        ["file"] = new JsonObject { ["filename"] = m.FileName, ["file_data"] = $"data:application/pdf;base64,{Convert.ToBase64String(m.Data!)}" },
-                    });
-                    break;
-                default:
-                    parts.Add(new JsonObject { ["type"] = "text", ["text"] = $"Attached document «{m.FileName}»:\n{m.Text}" });
-                    break;
-            }
+            if (m.Kind == MediaInputKind.Image) parts.Add(new JsonObject { ["type"] = "text", ["text"] = $"Attached photo «{m.FileName}»:" });
+            parts.Add(OpenAiMediaParts.Part(m));
         }
         return parts;
     }
@@ -324,12 +323,32 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
         {
             ["type"] = "object",
             ["additionalProperties"] = false,
-            ["required"] = new JsonArray("title", "summary", "items"),
+            ["required"] = new JsonArray("title", "summary", "items", "search"),
             ["properties"] = new JsonObject
             {
                 ["title"] = new JsonObject { ["type"] = "string" },
                 ["summary"] = Nullable("string"),
                 ["items"] = new JsonObject { ["type"] = "array", ["items"] = item },
+                ["search"] = new JsonObject
+                {
+                    ["type"] = new JsonArray("object", "null"),
+                    ["additionalProperties"] = false,
+                    ["required"] = new JsonArray("text", "tags", "kinds", "when", "status", "reminders", "fromVoice"),
+                    ["properties"] = new JsonObject
+                    {
+                        ["text"] = Nullable("string"),
+                        ["tags"] = new JsonObject { ["type"] = "array", ["items"] = new JsonObject { ["type"] = "string" } },
+                        ["kinds"] = new JsonObject
+                        {
+                            ["type"] = "array",
+                            ["items"] = new JsonObject { ["type"] = "string", ["enum"] = new JsonArray("task", "appointment", "note") },
+                        },
+                        ["when"] = Nullable("string", values: new JsonArray("today", "week", "overdue", "nodate", null)),
+                        ["status"] = Nullable("string", values: new JsonArray("open", "done", null)),
+                        ["reminders"] = Nullable("string", values: new JsonArray("with", "repeating", "without", null)),
+                        ["fromVoice"] = new JsonObject { ["type"] = "boolean" },
+                    },
+                },
             },
         };
     }
@@ -342,7 +361,9 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
 
     private sealed record Message(string? Content, string? Refusal);
 
-    private sealed record CaptureJson(string? Title, string? Summary, List<ItemJson>? Items);
+    private sealed record CaptureJson(string? Title, string? Summary, List<ItemJson>? Items, SearchJson? Search);
+
+    private sealed record SearchJson(string? Text, List<string>? Tags, List<string>? Kinds, string? When, string? Status, string? Reminders, bool? FromVoice);
 
     private sealed record ItemJson(
         string? Intent, string? Title, string? Summary, string? Description,

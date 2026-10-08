@@ -1,6 +1,7 @@
 import { FEED_FILTERS, feedGroupLabel, feedItemKey, groupFeed } from '@shared/feed'
 import { activeSorts, parseSortChips, SORT_CHIPS_KEY, type SortChip } from '@shared/sortCriteria'
-import { activeFilterCount, feedFilterParams, NO_FILTERS, type FeedFilters } from '@shared/feedFilter'
+import { activeFilterCount, feedFilterParams } from '@shared/feedFilter'
+import { useFeedFilters } from '../lib/feedFilters'
 import type { FeedItem } from '@shared/types'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type ComponentType } from 'react'
@@ -57,7 +58,7 @@ export function FeedPage() {
   }
   const sort = activeSorts(sortChips)
   // One set of filters for every tab: switching tabs keeps them.
-  const [filters, setFilters] = useState<FeedFilters>(NO_FILTERS)
+  const [filters, setFilters] = useFeedFilters()
   // Search as you type, but only ask the server once typing pauses.
   const text = useDebounced(filters.text)
   const filterParams = feedFilterParams({ ...filters, text }, zone.timeZone)

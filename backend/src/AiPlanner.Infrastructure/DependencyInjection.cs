@@ -36,6 +36,8 @@ public static class DependencyInjection
         services.AddSingleton<IFileStorageService, LocalFileStorageService>();
         // Deletes recordings no item uses any more (see RecordingCleanup).
         services.AddHostedService<RecordingCleanupWorker>();
+        // Describes photos/documents for search (see AttachmentDescriber).
+        services.AddHostedService<AttachmentDescriptionWorker>();
         // Stored recordings: WAV -> AAC when ffmpeg is available.
         services.AddSingleton<IAudioCompressor, FfmpegAudioCompressor>();
 
@@ -51,6 +53,8 @@ public static class DependencyInjection
         services.AddHttpClient<ITranscriptionService, OpenAiTranscriptionService>(ConfigureOpenAiClient)
             .RemoveAllResilienceHandlers();
         services.AddHttpClient<IIntentExtractionService, OpenAiIntentExtractionService>(ConfigureOpenAiClient)
+            .RemoveAllResilienceHandlers();
+        services.AddHttpClient<IMediaDescriptionService, OpenAiMediaDescriptionService>(ConfigureOpenAiClient)
             .RemoveAllResilienceHandlers();
 #pragma warning restore EXTEXP0001
 

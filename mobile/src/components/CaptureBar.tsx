@@ -8,6 +8,8 @@ import { useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { capturesApi, settingsApi } from '@/api/endpoints'
 import { itemPath } from '@/lib/itemPath'
+import { setFeedFilters } from '@/lib/feedFilters'
+import { searchFilters } from '@shared/feedFilter'
 import { applyMedia, attachmentsKey, type PendingMedia } from '@/lib/media'
 import { useSegmentRecorder } from '@/lib/useSegmentRecorder'
 import { usePendingReview } from '@/lib/usePendingReview'
@@ -150,7 +152,14 @@ export function CaptureBar({
     try {
       const result = await work()
       if (continueFrom?.onResult) continueFrom.onResult(result)
-      else if (result.autoSaved) {
+      else if (result.search) {
+        // "Find ...": nothing to save - show the feed filtered by what was asked.
+        const { filters, show } = searchFilters(result.search)
+        setFeedFilters(filters)
+        router.navigate((show === 'all' ? '/' : `/${show}`) as never)
+        setSavedMessage(t('capture.searchShown'))
+        onFinished?.({ message: t('capture.searchShown'), item: null })
+      } else if (result.autoSaved) {
         // Saved already (Settings - Save right away): say what it became, no review.
         const notice = finish(savedNotice(result, 1))!
         const item = notice.item

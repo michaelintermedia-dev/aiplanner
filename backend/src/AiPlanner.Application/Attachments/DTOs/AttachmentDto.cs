@@ -9,4 +9,5 @@ public record AttachmentDto(
     string FileName,
     string ContentType,
     long SizeBytes,
-    DateTime CreatedAtUtc);
+    DateTime CreatedAtUtc,
+    string? Description = null); // what the AI says it shows (null/empty: not described)

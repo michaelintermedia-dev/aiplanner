@@ -266,6 +266,19 @@ export interface Capture {
   /** Length of each recording part, in order - places item snippets across parts. */
   /** The smart Save: already saved - show what it became instead of the review. */
   autoSaved?: boolean
+  /** "Find ...": the user asked to look something up - open the feed with these filters (no items). */
+  search?: CaptureSearch | null
+}
+
+/** What to look for, in the feed filter's own words (see searchFilters in feedFilter.ts). */
+export interface CaptureSearch {
+  text: string | null
+  tags: string[]
+  kinds: ('Task' | 'Appointment' | 'Note')[]
+  when: 'today' | 'week' | 'overdue' | 'nodate' | null
+  status: 'Open' | 'Done' | null
+  reminders: 'With' | 'Repeating' | 'Without' | null
+  fromVoice: boolean
 }
 
 export interface CaptureSummary {
@@ -430,4 +443,6 @@ export interface Attachment {
   contentType: string
   sizeBytes: number
   createdAtUtc: string
+  /** What the AI says it shows (for search); absent until it's been described. */
+  description?: string | null
 }

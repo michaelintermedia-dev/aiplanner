@@ -516,6 +516,9 @@ export const he: Messages = {
   'review.keepRecording': 'לשמור את ההקלטה',
   'capture.savedAs': 'נשמר כ{kind}: „{title}”',
   'capture.open': 'לפתוח',
+  'capture.attach': 'תמונות וקבצים',
+  'capture.mediaNote': { one: 'קובץ אחד יתווסף לרשומה שתישמר.', two: '{count} קבצים יתווספו לרשומה שתישמר.', other: '{count} קבצים יתווספו לרשומה שתישמר.' },
+  'capture.withMedia': { one: '+ קובץ אחד', two: '+ {count} קבצים', other: '+ {count} קבצים' },
   'widget.quickRecording': 'הקלטה מהירה',
   'widget.record': 'הקלטה',
   // ---- appearance (theme, skins) ----

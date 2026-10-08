@@ -516,6 +516,9 @@ export const ru: Messages = {
   'review.keepRecording': 'Сохранить аудиозапись',
   'capture.savedAs': 'Сохранено как {kind}: «{title}»',
   'capture.open': 'Открыть',
+  'capture.attach': 'Фото и файлы',
+  'capture.mediaNote': { one: '{count} фото или файл добавится к сохранённой записи.', few: '{count} фото или файла добавятся к сохранённой записи.', many: '{count} фото и файлов добавятся к сохранённой записи.', other: '{count} фото и файлов добавятся к сохранённой записи.' },
+  'capture.withMedia': { one: '+ {count} файл', few: '+ {count} файла', many: '+ {count} файлов', other: '+ {count} файла' },
   'widget.quickRecording': 'Быстрая запись',
   'widget.record': 'Запись',
   // ---- appearance (theme, skins) ----

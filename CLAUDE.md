@@ -591,6 +591,12 @@ Local dev notes:
   are in the Edit page (`MediaEditor`: Take photo [phone], Add image, Attach
   file, remove) and happen on Save, before anything else
   (`saveItemForm({ media })`; picked files stay in memory, not in the draft).
+  The capture bar has them too (user's request, 2026-10-08, web + mobile): a
+  paperclip next to the hint opens a drawer with the same `MediaEditor` (no
+  item yet: only what's picked); a badge counts them. They're uploaded once the
+  entry is saved - to the first saved item (`SavedNotice.first`), by Save or
+  after the review; a cancelled review keeps them. Not when adding to an item
+  (the Edit page has its own).
   Photos are shrunk on the device to 2000 px JPEG q0.8 (`shared/media.ts`
   limits; web canvas `shrinkImage`, mobile expo-image-manipulator). Web reads
   picked files into memory at once (a cleared picker can empty them) and

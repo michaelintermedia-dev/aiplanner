@@ -520,6 +520,9 @@ export const en = {
   'review.keepRecording': 'Keep the recording',
   'capture.savedAs': 'Saved as {kind}: “{title}”',
   'capture.open': 'Open',
+  'capture.attach': 'Photos and files',
+  'capture.mediaNote': { one: '{count} photo or file will be added to the saved entry.', other: '{count} photos and files will be added to the saved entry.' },
+  'capture.withMedia': { one: '+ {count} file', other: '+ {count} files' },
   'widget.quickRecording': 'Quick recording',
   'widget.record': 'Record',
   // ---- appearance (theme, skins) ----

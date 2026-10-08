@@ -5,13 +5,15 @@ import { router } from 'expo-router'
 import { File } from 'expo-file-system'
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { capturesApi } from '@/api/endpoints'
 import { itemPath } from '@/lib/itemPath'
+import { applyMedia, attachmentsKey, type PendingMedia } from '@/lib/media'
 import { useSegmentRecorder } from '@/lib/useSegmentRecorder'
 import { usePendingReview } from '@/lib/usePendingReview'
 import { useColors } from '@/theme'
 import { CaptureReview } from './CaptureReview'
+import { MediaEditor } from './ItemMedia'
 import { LevelMeter } from './LevelMeter'
 import { MicButton } from './MicButton'
 import { SegmentPlayer } from './SegmentPlayer'
@@ -87,6 +89,9 @@ export function CaptureBar({
   // "Save right away": what it was saved as, to open it.
   const [savedLink, setSavedLink] = useState<string | null>(null)
   const [silent, setSilent] = useState(false)
+  // Photos and files for a new entry (the drawer under the paperclip): added to it once it's saved.
+  const [media, setMedia] = useState<PendingMedia[]>([])
+  const [drawer, setDrawer] = useState(false)
 
   const engaged = recorder.state !== 'idle' || busy !== null || capture !== null
   useEffect(() => onEngagedChange?.(engaged), [engaged, onEngagedChange])
@@ -96,8 +101,24 @@ export function CaptureBar({
     if (recorder.state === 'recording' && recorder.atLimit) void recorder.pause()
   }, [recorder])
 
-  /** Runs a capture request; returns whether it succeeded. */
   const queryClient = useQueryClient()
+
+  /** Saved: the picked photos and files go to (the first) saved item. A cancelled review keeps them here. */
+  const finish = (saved: SavedNotice | null) => {
+    if (saved?.first && media.length > 0) {
+      const target = saved.first
+      const files = media
+      saved = { ...saved, message: `${saved.message} ${t('capture.withMedia', { count: files.length })}` }
+      setMedia([])
+      setDrawer(false)
+      void applyMedia(target, files, [], { removed: () => {}, uploaded: () => {} })
+        .catch((err) => setError(err instanceof Error ? err.message : t('common.error')))
+        .finally(() => void queryClient.invalidateQueries({ queryKey: attachmentsKey(target.itemType, target.id) }))
+    }
+    return saved
+  }
+
+  /** Runs a capture request; returns whether it succeeded. */
   const run = async (phase: Exclude<Busy, null>, work: () => Promise<Capture>) => {
     setBusy(phase)
     setError(null)
@@ -108,7 +129,7 @@ export function CaptureBar({
       if (continueFrom?.onResult) continueFrom.onResult(result)
       else if (result.autoSaved) {
         // Saved already (Settings - Save right away): say what it became, no review.
-        const notice = savedNotice(result, 1)
+        const notice = finish(savedNotice(result, 1))!
         const item = notice.item
         setSavedMessage(notice.message)
         onFinished?.(notice)
@@ -175,6 +196,13 @@ export function CaptureBar({
 
   if (capture) {
     return (
+      <>
+      {!continueFrom && media.length > 0 && (
+        <View style={styles.mediaNote}>
+          <Ionicons name="attach-outline" size={18} color={c.muted} />
+          <Text style={{ color: c.muted, flex: 1 }}>{t('capture.mediaNote', { count: media.length })}</Text>
+        </View>
+      )}
       <CaptureReview
         capture={capture}
         appendTarget={followUp ? undefined : (continueFrom?.target ?? resumedTarget)}
@@ -194,6 +222,7 @@ export function CaptureBar({
           setFollowUp(false)
           if (continueFrom) continueFrom.onClose?.()
           else {
+            saved = finish(saved)
             setSavedMessage(saved?.message ?? null)
             setSavedLink(saved?.item ? itemPath(saved.item) : null)
             // Saved or cancelled: this capture is done (the dock folds away).
@@ -201,6 +230,7 @@ export function CaptureBar({
           }
         }}
       />
+      </>
     )
   }
 
@@ -291,7 +321,34 @@ export function CaptureBar({
       )}
       {error && <Text style={{ color: c.danger }}>{error}</Text>}
 
+      {drawer && !continueFrom && (
+        <ScrollView style={styles.drawer} contentContainerStyle={{ paddingBottom: 4 }} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+          <MediaEditor pending={media} onPending={setMedia} bare />
+        </ScrollView>
+      )}
+
       <View style={styles.actions}>
+        {/* Photos and files for the new entry, tucked away in a drawer. */}
+        {!continueFrom && (
+          <Pressable
+            onPress={() => setDrawer((d) => !d)}
+            disabled={busy !== null}
+            hitSlop={6}
+            accessibilityRole="button"
+            accessibilityLabel={t('capture.attach')}
+            accessibilityState={{ expanded: drawer, disabled: busy !== null }}
+            style={[
+              styles.attach,
+              { borderColor: drawer ? c.accent : c.border, backgroundColor: drawer ? c.accentSoft : c.surface, opacity: busy !== null ? 0.5 : 1 },
+            ]}>
+            <Ionicons name="attach-outline" size={22} color={drawer ? c.accent : c.muted} />
+            {media.length > 0 && (
+              <View style={[styles.attachCount, { backgroundColor: c.accent }]}>
+                <Text style={styles.attachCountText}>{media.length}</Text>
+              </View>
+            )}
+          </Pressable>
+        )}
         <View style={styles.buttons}>
           {hasAudio ? (
             <>
@@ -382,4 +439,9 @@ const styles = StyleSheet.create({
   busy: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   buttons: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'flex-end' },
+  attach: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  attachCount: { position: 'absolute', top: -4, end: -4, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
+  attachCountText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  drawer: { maxHeight: 320 },
+  mediaNote: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
 })

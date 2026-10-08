@@ -63,8 +63,13 @@ export interface PendingMedia {
 
 export const attachmentsKey = (itemType: ItemType, id: string) => ['attachments', itemType, id] as const
 
-export function useAttachments(itemType: ItemType, id: string) {
-  return useQuery({ queryKey: attachmentsKey(itemType, id), queryFn: () => api.attachments.list(itemType, id) })
+/** An item's stored media (none when there's no item yet - a new entry in the capture bar). */
+export function useAttachments(itemType: ItemType | undefined, id: string | undefined) {
+  return useQuery({
+    queryKey: attachmentsKey(itemType ?? 'Task', id ?? ''),
+    queryFn: () => api.attachments.list(itemType!, id!),
+    enabled: !!itemType && !!id,
+  })
 }
 
 /**

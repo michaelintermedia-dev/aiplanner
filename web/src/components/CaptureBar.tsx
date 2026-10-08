@@ -2,15 +2,17 @@ import { savedNotice, type SavedNotice } from '@shared/captureDraft'
 import type { AppendTarget, Capture, ItemType } from '@shared/types'
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
-import { IoArrowUp, IoCheckmark, IoEyeOutline } from 'react-icons/io5'
+import { IoArrowUp, IoAttachOutline, IoCheckmark, IoEyeOutline } from 'react-icons/io5'
 import { Link, useSearchParams } from 'react-router'
 import { capturesApi } from '../api/endpoints'
 import { itemPath } from '../lib/itemPath'
+import { applyMedia, attachmentsKey, type PendingMedia } from '../lib/media'
 import { toWav } from '../lib/toWav'
 import { useAudioRecorder, type RecorderState } from '../lib/useAudioRecorder'
 import { useMicrophones } from '../lib/useMicrophones'
 import { usePendingReview } from '../lib/usePendingReview'
 import { CaptureReview } from './CaptureReview'
+import { MediaEditor } from './ItemMedia'
 import { LevelMeter } from './LevelMeter'
 import { MicButton } from './MicButton'
 import { speedRef, usePlaybackSpeed } from '../lib/playbackSpeed'
@@ -123,8 +125,26 @@ export function CaptureBar({
   const preview = usePreview(recorder.state, recorder.pauseCount, recorder.snapshot)
   const mics = useMicrophones()
   const [silent, setSilent] = useState(false)
+  // Photos and files for a new entry (the drawer under the paperclip): added to it once it's saved.
+  const [media, setMedia] = useState<PendingMedia[]>([])
+  const [drawer, setDrawer] = useState(false)
 
   const queryClient = useQueryClient()
+
+  /** Saved: the picked photos and files go to (the first) saved item. A cancelled review keeps them here. */
+  const finish = (saved: SavedNotice | null) => {
+    if (saved?.first && media.length > 0) {
+      const target = saved.first
+      const files = media
+      saved = { ...saved, message: `${saved.message} ${t('capture.withMedia', { count: files.length })}` }
+      setMedia([])
+      setDrawer(false)
+      void applyMedia(target, files, [], { removed: () => {}, uploaded: () => {} })
+        .catch((err) => setError(err instanceof Error ? err.message : t('common.error')))
+        .finally(() => void queryClient.invalidateQueries({ queryKey: attachmentsKey(target.itemType, target.id) }))
+    }
+    return saved
+  }
   const run = async (phase: Exclude<Busy, null>, work: () => Promise<Capture>) => {
     setBusy(phase)
     setError(null)
@@ -135,7 +155,7 @@ export function CaptureBar({
       if (continueFrom?.onResult) continueFrom.onResult(result)
       else if (result.autoSaved) {
         // Saved already (Settings - Save right away): say what it became, no review.
-        const notice = savedNotice(result, 1)
+        const notice = finish(savedNotice(result, 1))!
         const item = notice.item
         setSavedMessage(notice.message)
         onFinished?.(notice)
@@ -238,6 +258,12 @@ export function CaptureBar({
 
   if (capture) {
     return (
+      <>
+      {!continueFrom && media.length > 0 && (
+        <p className="muted capture-media-note">
+          <IoAttachOutline aria-hidden /> {t('capture.mediaNote', { count: media.length })}
+        </p>
+      )}
       <CaptureReview
         capture={capture}
         appendTarget={followUp ? undefined : (continueFrom?.target ?? resumedTarget)}
@@ -257,6 +283,7 @@ export function CaptureBar({
           setFollowUp(false)
           if (continueFrom) continueFrom.onClose?.()
           else {
+            saved = finish(saved)
             setSavedMessage(saved?.message ?? null)
             setSavedLink(saved?.item ? itemPath(saved.item) : null)
             // Saved or cancelled: this capture is done (the dock folds away).
@@ -264,6 +291,7 @@ export function CaptureBar({
           }
         }}
       />
+      </>
     )
   }
 
@@ -338,7 +366,27 @@ export function CaptureBar({
           autoFocus={!!continueFrom}
         />
       )}
+      {drawer && !continueFrom && (
+        <div className="capture-drawer" id="capture-media">
+          <MediaEditor pending={media} onPending={setMedia} />
+        </div>
+      )}
       <div className="capture-actions">
+        {/* Photos and files for the new entry, tucked away in a drawer. */}
+        {!continueFrom && (
+          <button
+            type="button"
+            className={`attach-toggle${drawer ? ' active' : ''}`}
+            onClick={() => setDrawer((d) => !d)}
+            disabled={busy !== null}
+            aria-expanded={drawer}
+            aria-controls="capture-media"
+            aria-label={t('capture.attach')}
+            title={t('capture.attach')}>
+            <IoAttachOutline aria-hidden />
+            {media.length > 0 && <span className="attach-count">{media.length}</span>}
+          </button>
+        )}
         {busy ? (
           <span className="muted capture-status" aria-live="polite">
             <span className="spinner" /> {busy === 'transcribing' ? t('capture.transcribing') : t('capture.understanding')}

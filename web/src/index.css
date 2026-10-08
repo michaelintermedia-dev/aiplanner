@@ -3013,3 +3013,60 @@ html[data-wallpaper] .page-header > div:first-child {
   min-height: 0;
   padding: 2px 6px;
 }
+
+/* Capture bar: the paperclip opens a drawer with the same media inputs as the Edit page. */
+.attach-toggle {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  min-height: 0;
+  padding: 0;
+  flex: none;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.attach-toggle.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft, var(--surface-2));
+}
+
+.attach-count {
+  position: absolute;
+  top: -4px;
+  inset-inline-end: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.7rem;
+  line-height: 18px;
+  text-align: center;
+}
+
+.capture-drawer {
+  max-height: 45vh;
+  overflow-y: auto;
+}
+
+.capture-drawer .edit-media {
+  border-top: none;
+  padding-top: 0;
+}
+
+.capture-media-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  font-size: 0.88rem;
+}

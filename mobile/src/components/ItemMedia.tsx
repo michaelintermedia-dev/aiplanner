@@ -175,22 +175,26 @@ function Viewer({ images, index, onClose }: { images: Attachment[]; index: numbe
 /**
  * The Edit screen's media part: what the item has (each can be marked for
  * removal), what was just picked (uploaded on Save), and Take photo / Add
- * image / Attach file. Same as the web's MediaEditor.
+ * image / Attach file. Without an item (the capture bar's drawer) only
+ * what's picked, added once it's saved. Same as the web's MediaEditor.
  */
 export function MediaEditor({
   itemType,
   id,
   pending,
   onPending,
-  removed,
-  onRemoved,
+  removed = [],
+  onRemoved = () => {},
+  bare,
 }: {
-  itemType: ItemType
-  id: string
+  itemType?: ItemType
+  id?: string
   pending: PendingMedia[]
   onPending: (update: (p: PendingMedia[]) => PendingMedia[]) => void
-  removed: string[]
-  onRemoved: (ids: string[]) => void
+  removed?: string[]
+  onRemoved?: (ids: string[]) => void
+  /** In the capture bar's drawer: no divider line above. */
+  bare?: boolean
 }) {
   const c = useColors()
   const { data = [] } = useAttachments(itemType, id)
@@ -225,7 +229,7 @@ export function MediaEditor({
   ]
 
   return (
-    <View style={[styles.section, { borderTopColor: c.border }]}>
+    <View style={[styles.section, { borderTopColor: c.border }, bare && { borderTopWidth: 0, paddingTop: 0 }]}>
       <View style={styles.head}>
         <Ionicons name="images-outline" size={18} color={c.text} />
         <Text style={{ color: c.text, fontWeight: '600', flex: 1 }}>{t('media.title')}</Text>

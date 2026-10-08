@@ -134,22 +134,23 @@ function Lightbox({ images, index, onIndex, onClose }: { images: Attachment[]; i
 /**
  * The Edit page's media part: what the item has (each can be marked for
  * removal), what was just picked (uploaded on Save), and the add buttons -
- * on a phone also "Take photo" (the browser opens the camera).
+ * on a phone also "Take photo" (the browser opens the camera). Without an
+ * item (the capture bar's drawer) only what's picked, added once it's saved.
  */
 export function MediaEditor({
   itemType,
   id,
   pending,
   onPending,
-  removed,
-  onRemoved,
+  removed = [],
+  onRemoved = () => {},
 }: {
-  itemType: ItemType
-  id: string
+  itemType?: ItemType
+  id?: string
   pending: PendingMedia[]
   onPending: (update: (p: PendingMedia[]) => PendingMedia[]) => void
-  removed: string[]
-  onRemoved: (ids: string[]) => void
+  removed?: string[]
+  onRemoved?: (ids: string[]) => void
 }) {
   const phone = useIsPhone()
   const { data = [] } = useAttachments(itemType, id)

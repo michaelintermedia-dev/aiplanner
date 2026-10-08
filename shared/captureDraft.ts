@@ -215,6 +215,8 @@ export function savedItem(capture: Capture): { itemType: ItemType; id: string; t
 export interface SavedNotice {
   message: string
   item: { itemType: ItemType; id: string; title: string } | null
+  /** The first saved item, even when several were saved (photos/files picked in the capture bar go there). */
+  first?: { itemType: ItemType; id: string; title: string } | null
 }
 
 export function savedNotice(capture: Capture, count: number): SavedNotice {
@@ -222,5 +224,6 @@ export function savedNotice(capture: Capture, count: number): SavedNotice {
   return {
     message: item ? t('capture.savedAs', { kind: KIND_LABEL[item.itemType], title: item.title }) : t('review.saved', { count }),
     item,
+    first: savedItem(capture),
   }
 }

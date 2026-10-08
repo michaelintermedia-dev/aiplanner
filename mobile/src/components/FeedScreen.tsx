@@ -97,7 +97,7 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
 
   return (
     <View style={{ flex: 1, backgroundColor: c.page }}>
-      {/* Above the list, not a sticky list header: toggling stickyHeaderIndices breaks FlatList rendering. */}
+      {/* Floats over the top of the list (the filters keep their place, dimmed), so nothing shifts when selecting starts. */}
       {selected && (
         <View style={[styles.selectionBar, { backgroundColor: c.surface, borderColor: c.accent }]} accessibilityLabel={t('select.bar')}>
           <Pressable onPress={() => setSelected(null)} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('select.stop')}>
@@ -139,7 +139,7 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
         }
         ListHeaderComponent={
           <View style={styles.top}>
-            {!selected && (
+            <View style={[styles.controls, selected && styles.dimmed]} pointerEvents={selected ? 'none' : 'auto'}>
               <FeedFilterBar
                 filters={filters}
                 onChange={setFilters}
@@ -155,8 +155,8 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
                   </Pressable>
                 }
               />
-            )}
-            {!selected && <SortChips chips={sortChips} onChange={setSortChips} />}
+              <SortChips chips={sortChips} onChange={setSortChips} />
+            </View>
             {deletion.error && <Text style={{ color: c.danger }}>{deletion.error.message}</Text>}
             {feed.isPending && <Text style={{ color: c.muted }}>{t('common.loading')}</Text>}
             {feed.error && <Text style={{ color: c.danger }}>{feed.error.message}</Text>}
@@ -186,5 +186,23 @@ const styles = StyleSheet.create({
   header: { fontSize: 12, fontWeight: '600', letterSpacing: 0.8, marginTop: 10, marginBottom: 2 },
   end: { textAlign: 'center', fontSize: 13, margin: 16 },
   select: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  selectionBar: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 14, margin: 16, marginBottom: 0, paddingLeft: 12, paddingRight: 4, minHeight: 50 },
+  selectionBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 2,
+    elevation: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: 14,
+    margin: 16,
+    paddingLeft: 12,
+    paddingRight: 4,
+    minHeight: 50,
+  },
+  dimmed: { opacity: 0.35 },
+  controls: { gap: 12 },
 })

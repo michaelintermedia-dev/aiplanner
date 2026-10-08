@@ -1817,6 +1817,11 @@ button.kind-icon:hover:not(:disabled) {
   position: sticky;
   top: 57px; /* under the app header */
   z-index: 5;
+  /* Over the filters, not above them: it takes no room, so the feed doesn't shift. */
+  height: 48px;
+  /* Its own height and the page's gap after it (.page: gap 20px). */
+  margin-bottom: calc(-48px - 20px);
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -2965,4 +2970,16 @@ html[data-wallpaper] .page-header > div:first-child {
 
 .wallpaper-photo > p {
   margin: 0;
+}
+
+/* The filters and sort chips while selecting: same place and size, dimmed and inactive. */
+.feed-controls {
+  display: flex;
+  flex-direction: column;
+  gap: inherit;
+}
+
+.feed-controls.inert {
+  opacity: 0.35;
+  pointer-events: none;
 }

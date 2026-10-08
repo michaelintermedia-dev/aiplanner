@@ -111,7 +111,8 @@ export function FeedPage() {
     <div className="page feed-page">
       {/* Phone width: the floating dock (App) has it. */}
       {!isPhone && <CaptureBar />}
-      {selected ? (
+      {/* Selecting lays its bar over the filters (they keep their place, dimmed), so nothing shifts. */}
+      {selected && (
         <div className="selection-bar" role="toolbar" aria-label={t('select.bar')}>
           <button type="button" className="icon-button" onClick={() => setSelected(null)} aria-label={t('select.stop')}>
             <IoClose aria-hidden />
@@ -132,7 +133,8 @@ export function FeedPage() {
             <IoTrashOutline aria-hidden /> {t('common.delete')}
           </button>
         </div>
-      ) : (
+      )}
+      <div className={`feed-controls${selected ? ' inert' : ''}`} inert={selected ? true : undefined}>
         <FeedFilterBar
           filters={filters}
           onChange={setFilters}
@@ -142,8 +144,8 @@ export function FeedPage() {
             </button>
           }
         />
-      )}
-      {!selected && <SortChips chips={sortChips} onChange={changeSortChips} />}
+        <SortChips chips={sortChips} onChange={changeSortChips} />
+      </div>
       {deletion.error && <p className="error">{deletion.error.message}</p>}
 
       {feed.isPending && <p className="muted">{t('common.loading')}</p>}

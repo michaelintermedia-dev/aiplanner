@@ -244,8 +244,9 @@ Local dev notes:
   a "New tag" box (Enter/comma), in every Edit page and the capture review;
   helpers in `shared/tags.ts`. The feed filter and text search cover tags on
   every kind; a type change keeps them. AI: tags every new entry by itself
-  (user's request, 2026-10-09) - 1-3 topic tags from the words and any photos/
-  documents (a chair photo -> chair, furniture), existing tags first; plus
+  (user's request, 2026-10-09) - 2-4 tags from the words and any photos/
+  documents: one specific tag for the main thing (a lamp photo -> "lamp", new
+  is fine) + broader ones ("home"), existing tags first for those; plus
   any asked for ("tag it shopping") - `tags`
   (the user's tag names are in the prompt so it reuses their spelling) -
   `AIExtractionItem.ProposedTags`, `CaptureItemDto/ConfirmCaptureItem.Tags`;

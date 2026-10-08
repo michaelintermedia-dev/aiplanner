@@ -131,7 +131,11 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             - "recurrenceDays": for "weekly", the weekdays it falls on as English names (["Monday","Thursday"]); otherwise null.
             - "recurrenceInterval": every N days/weeks/months ("every 2 weeks" = 2); null for 1.
             - "location": only if a place is mentioned.
-            - "tags": 1-3 short tags that sort the item by topic, decided from the whole context - the words and any attached photos or documents (a photo of a chair -> "chair", "furniture"; an electricity bill -> "bills", "home"; "dentist on Friday" -> "health"; "buy milk" -> "shopping"). The user's existing tags come first - use one whenever it fits, spelled exactly as it is: {{KnownTags(c)}}. Make a new tag only when none fits: one or two words, lower case (names keep their capitals), in the language of the user's words (with no words, the language of the description). Also every tag the user asks for ("tag it shopping", "put it under work").
+            - "tags": 2-4 short tags, decided from the whole context - the words and any attached photos or documents:
+              - first, one specific tag for the main thing itself - what's in the photo, what the document is, what it's about ("lamp", "chair", "electricity bill", "dentist", "milk") - a new tag is fine here;
+              - then 1-3 broader topic tags ("home", "furniture", "bills", "health", "shopping"). For these, the user's existing tags come first - use one whenever it fits, spelled exactly as it is: {{KnownTags(c)}}.
+              Examples: a photo of a lamp -> "lamp", "home"; a photo of a chair -> "chair", "furniture"; an electricity bill -> "electricity bill", "bills", "home"; "dentist on Friday" -> "dentist", "health"; "buy milk" -> "milk", "shopping".
+              New tags: one or two words, lower case (names keep their capitals), in the language of the user's words (with no words, the language of the description). Also every tag the user asks for ("tag it shopping", "put it under work").
             - "clarification": a short question for the user when something important is missing or ambiguous (e.g. an appointment with no time); otherwise null.
             - "confidence": 0 to 1, how sure you are that the item is right.
             - "sourceText": the exact words from the input this item came from, copied verbatim (same language, same wording, no paraphrase) - the whole stretch that talks about it. Used to play just that part of a voice recording.

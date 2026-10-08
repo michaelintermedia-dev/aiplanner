@@ -74,7 +74,7 @@ public class CapturesController : ControllerBase
     [EnableRateLimiting("ai")] // costs OpenAI calls
     [RequestSizeLimit(MaxTotalBytes + 256 * 1024)]
     [RequestFormLimits(MultipartBodyLengthLimit = MaxAudioBytes + 64 * 1024)]
-    public async Task<ActionResult<CaptureDto>> CaptureVoice([FromForm] List<IFormFile> audio, CancellationToken ct)
+    public async Task<ActionResult<CaptureDto>> CaptureVoice([FromForm] List<IFormFile> audio, [FromForm] bool saveNow, CancellationToken ct)
     {
         var files = audio.Where(f => f.Length > 0).ToList();
         if (files.Count == 0)
@@ -98,7 +98,7 @@ public class CapturesController : ControllerBase
         try
         {
             var segments = files.Select((f, i) => new AudioSegment(streams[i], f.FileName, f.ContentType)).ToList();
-            var result = await _captures.CaptureVoiceAsync(segments, ct);
+            var result = await _captures.CaptureVoiceAsync(segments, ct, saveNow);
             return result.Succeeded ? Ok(result.Value) : BadRequest(new { errors = result.Errors });
         }
         finally

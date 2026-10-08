@@ -98,12 +98,6 @@ export default function SettingsScreen() {
             onChange={(oneEntryPerMessage) => saveRecordings.mutate({ ...recordings.data!, oneEntryPerMessage })}
           />
           <Row
-            label={t('settings.saveRightAway')}
-            hint={t('settings.saveRightAwayHint')}
-            value={recordings.data.saveRightAway}
-            onChange={(saveRightAway) => saveRecordings.mutate({ ...recordings.data!, saveRightAway })}
-          />
-          <Row
             label={t('settings.keepRecordings')}
             hint={t('settings.keepRecordingsHint')}
             value={recordings.data.keepRecordings}

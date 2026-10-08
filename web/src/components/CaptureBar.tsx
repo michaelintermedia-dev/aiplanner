@@ -2,7 +2,7 @@ import { savedNotice, type SavedNotice } from '@shared/captureDraft'
 import type { AppendTarget, Capture, ItemType } from '@shared/types'
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
-import { IoArrowUp } from 'react-icons/io5'
+import { IoArrowUp, IoCheckmark, IoEyeOutline } from 'react-icons/io5'
 import { Link, useSearchParams } from 'react-router'
 import { capturesApi } from '../api/endpoints'
 import { itemPath } from '../lib/itemPath'
@@ -154,11 +154,12 @@ export function CaptureBar({
     }
   }
 
-  const submitText = (e?: FormEvent) => {
+  // Save (the smart button, and Enter) or Review: saveNow=false always shows the review.
+  const submitText = (e?: FormEvent, saveNow = true) => {
     e?.preventDefault()
     if (!text.trim()) return
     void run('understanding', async () => {
-      if (!continueFrom) return capturesApi.text(text.trim())
+      if (!continueFrom) return capturesApi.text(text.trim(), saveNow)
       const form = continueForm(continueFrom)
       form.append('text', text.trim())
       return capturesApi.continue(await captureIdOf(continueFrom), form)
@@ -170,12 +171,13 @@ export function CaptureBar({
     if (e.key === 'Enter' && !e.shiftKey) submitText(e)
   }
 
-  const sendRecording = async () => {
+  const sendRecording = async (saveNow = true) => {
     const recording = await recorder.stop()
     await run('transcribing', async () => {
       // Upload WAV, not the recorder's WebM - see toWav for why.
       const form = continueFrom ? continueForm(continueFrom) : new FormData()
       form.append('audio', await toWav(recording.blob), 'recording.wav')
+      if (!continueFrom && saveNow) form.append('saveNow', 'true')
       return continueFrom ? capturesApi.continue(await captureIdOf(continueFrom), form) : capturesApi.voice(form)
     })
   }
@@ -378,24 +380,40 @@ export function CaptureBar({
             {t('common.cancel')}
           </button>
         )}
-        {/* One send arrow for typed text and recordings; it only shows when there's something to send. */}
-        {hasAudio ? (
-          <button
-            type="button"
-            className="send"
-            onClick={sendRecording}
-            disabled={busy !== null || recorder.seconds < 1}
-            aria-label={t('capture.sendRecording')}
-            title={t('capture.sendRecording')}>
-            <IoArrowUp aria-hidden />
-          </button>
-        ) : (
-          text.trim() && (
-            <button type="submit" className="send" disabled={busy !== null} aria-label={t('capture.send')} title={t('capture.sendEnter')}>
+        {/* Something to send: adding to an item has one send arrow (the form reviews it); a new
+            entry has Review and the smart Save (saved at once unless something is unclear). */}
+        {(hasAudio || text.trim()) &&
+          (continueFrom ? (
+            <button
+              type={hasAudio ? 'button' : 'submit'}
+              className="send"
+              onClick={hasAudio ? () => void sendRecording(false) : undefined}
+              disabled={busy !== null || (hasAudio && recorder.seconds < 1)}
+              aria-label={hasAudio ? t('capture.sendRecording') : t('capture.send')}
+              title={hasAudio ? t('capture.sendRecording') : t('capture.sendEnter')}>
               <IoArrowUp aria-hidden />
             </button>
-          )
-        )}
+          ) : (
+            <>
+              <button
+                type="button"
+                className="review-first"
+                onClick={() => (hasAudio ? void sendRecording(false) : submitText(undefined, false))}
+                disabled={busy !== null || (hasAudio && recorder.seconds < 1)}
+                title={t('capture.reviewHint')}>
+                <IoEyeOutline aria-hidden /> {t('capture.review')}
+              </button>
+              <button
+                type={hasAudio ? 'button' : 'submit'}
+                className="send"
+                onClick={hasAudio ? () => void sendRecording(true) : undefined}
+                disabled={busy !== null || (hasAudio && recorder.seconds < 1)}
+                aria-label={t('capture.save')}
+                title={t('capture.saveHint')}>
+                <IoCheckmark aria-hidden />
+              </button>
+            </>
+          ))}
         {/* Rightmost, so it never moves between presses - hold-to-talk aims at a fixed spot. */}
         {recorder.state !== 'unsupported' && (
           <MicButton

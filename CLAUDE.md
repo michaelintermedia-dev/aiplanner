@@ -553,16 +553,19 @@ Local dev notes:
     its details in the user's words, their "before" reminders become fixed
     times, the whole recording is its clip. Not applied when adding to an
     item (that is one item anyway). Off = the old splitting.
-  - **Save right away** (`!UserSettings.ReviewBeforeSave`, off by default):
-    no review - `CaptureService.SaveRightAwayAsync` confirms what was
-    understood; if it wouldn't validate (an event with no time...) the words
-    are saved as a Note instead (checked up front: a failed confirm leaves
-    tracked changes). Only if even that fails does it wait for review.
-    `CaptureDto.AutoSaved` -> the capture bar shows "Saved as Task: “...” Open".
+  - **Save / Review buttons** (user's call, 2026-10-08 - replaced the "Save
+    right away" setting): a new entry has a smart **Save** (✓, also Enter) and
+    **Review**. Save sends `saveNow` (`/captures/text` body, voice form field);
+    `CaptureService.SaveNowAsync` saves at once only when everything is clear -
+    no clarification and it validates (checked up front: a failed confirm
+    leaves tracked changes) - else the review opens; nothing is guessed or
+    lost. `CaptureDto.AutoSaved` -> "Saved as Task: “...” Open", the dock
+    folds. Adding to an item keeps one send arrow (the form reviews it).
+    `UserSettings.ReviewBeforeSave` is unused now.
   - **Keep the recording**: a checkbox on the review of a voice capture
     (default `UserSettings.KeepRecordings`, on); unticked -> `confirm` with
     `keepRecording: false` deletes the audio once something was saved (not on
-    Cancel). Save right away uses the setting.
+    Cancel). Save uses the setting.
   - **Quick recording**: Android home-screen widget `QuickRecord`
     (react-native-android-widget, `src/widgets/`, registered in
     `mobile/index.ts` - the app's entry, not expo-router/entry) opens

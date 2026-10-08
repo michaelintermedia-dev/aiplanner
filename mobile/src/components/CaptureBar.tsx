@@ -127,17 +127,18 @@ export function CaptureBar({
     }
   }
 
-  const submitText = () => {
+  // Save (the smart button) or Review: saveNow=false always shows the review.
+  const submitText = (saveNow = true) => {
     if (!text.trim()) return
     void run('understanding', async () => {
-      if (!continueFrom) return capturesApi.text(text.trim())
+      if (!continueFrom) return capturesApi.text(text.trim(), saveNow)
       const form = continueForm(continueFrom)
       form.append('text', text.trim())
       return capturesApi.continue(await captureIdOf(continueFrom), form)
     })
   }
 
-  const send = async () => {
+  const send = async (saveNow = true) => {
     const segments = await recorder.finish()
     if (segments.length === 0) {
       setError(t('mic.error.nothing'))
@@ -148,6 +149,7 @@ export function CaptureBar({
       // Expo's fetch (the global fetch since SDK 52) doesn't accept React
       // Native's { uri, name, type } parts; an expo-file-system File is a Blob.
       segments.forEach((s, i) => form.append('audio', new File(s.uri), `part-${i + 1}.m4a`))
+      if (!continueFrom && saveNow) form.append('saveNow', 'true')
       return continueFrom ? capturesApi.continue(await captureIdOf(continueFrom), form) : capturesApi.voice(form)
     })
     // On failure the recording stays (paused) so the user can retry Send.
@@ -295,17 +297,19 @@ export function CaptureBar({
             <>
               {recorder.state === 'paused' && <SegmentPlayer segments={recorder.segments} />}
               <Button title={t('capture.discard')} variant="link" onPress={() => void recorder.discard()} disabled={busy !== null} />
-              <SendButton
+              <SendButtons
+                newEntry={!continueFrom}
                 label={t('capture.sendRecording')}
-                onPress={send}
+                onSend={(saveNow) => void send(saveNow)}
                 disabled={busy !== null || (recorder.seconds < 1 && recorder.segments.length === 0)}
               />
             </>
           ) : (
             <>
               {continueFrom?.onClose && busy === null && <Button title={t('common.cancel')} variant="link" onPress={continueFrom.onClose} />}
-              {/* One send arrow for typed text and recordings; it only shows when there's something to send. */}
-              {text.trim() !== '' && <SendButton label={t('capture.send')} onPress={submitText} disabled={busy !== null} />}
+              {text.trim() !== '' && (
+                <SendButtons newEntry={!continueFrom} label={t('capture.send')} onSend={submitText} disabled={busy !== null} />
+              )}
             </>
           )}
         </View>
@@ -322,24 +326,53 @@ export function CaptureBar({
   )
 }
 
-function SendButton({ label, onPress, disabled }: { label: string; onPress: () => void; disabled: boolean }) {
+/**
+ * Sending: a new entry gets Review and the smart Save (saved at once unless
+ * something is unclear); adding to an item has one send arrow (its form reviews it).
+ */
+function SendButtons({
+  newEntry,
+  label,
+  onSend,
+  disabled,
+}: {
+  newEntry: boolean
+  label: string
+  onSend: (saveNow: boolean) => void
+  disabled: boolean
+}) {
   const c = useColors()
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled }}
-      style={[styles.send, { backgroundColor: c.accent, opacity: disabled ? 0.5 : 1 }]}>
-      <Ionicons name="arrow-up" size={24} color="#fff" />
-    </Pressable>
+    <>
+      {newEntry && (
+        <Pressable
+          onPress={() => onSend(false)}
+          disabled={disabled}
+          accessibilityRole="button"
+          accessibilityLabel={t('capture.reviewHint')}
+          accessibilityState={{ disabled }}
+          style={({ pressed }) => [styles.review, { borderColor: c.border, backgroundColor: c.surface, opacity: disabled ? 0.5 : pressed ? 0.7 : 1 }]}>
+          <Ionicons name="eye-outline" size={18} color={c.text} />
+          <Text style={{ color: c.text }}>{t('capture.review')}</Text>
+        </Pressable>
+      )}
+      <Pressable
+        onPress={() => onSend(newEntry)}
+        disabled={disabled}
+        accessibilityRole="button"
+        accessibilityLabel={newEntry ? t('capture.save') : label}
+        accessibilityState={{ disabled }}
+        style={[styles.send, { backgroundColor: c.accent, opacity: disabled ? 0.5 : 1 }]}>
+        <Ionicons name={newEntry ? 'checkmark' : 'arrow-up'} size={24} color="#fff" />
+      </Pressable>
+    </>
   )
 }
 
 const styles = StyleSheet.create({
   pending: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 4, borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
   send: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  review: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 40, borderWidth: 1, borderRadius: 999, paddingHorizontal: 14 },
   card: { borderWidth: 1, borderRadius: 16, padding: 14, gap: 12 },
   input: { fontSize: 17, minHeight: 56, textAlignVertical: 'top' },
   recording: { gap: 8, minHeight: 56 },

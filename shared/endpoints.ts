@@ -155,8 +155,9 @@ export function createApi(request: RequestFn) {
     },
     captures: {
       /** Analyze typed text. Nothing is saved as a task/appointment until confirm(). */
-      text: (text: string) => request<Capture>('POST', '/captures/text', { text }),
-      /** Upload a recording: a FormData with the file in field "audio". */
+      /** saveNow: the smart Save - saved at once when everything is clear (Capture.autoSaved), else the review. */
+      text: (text: string, saveNow = false) => request<Capture>('POST', '/captures/text', { text, saveNow }),
+      /** Upload a recording: a FormData with the file in field "audio" (and "saveNow": "true" for the smart Save). */
       voice: (form: FormData) => request<Capture>('POST', '/captures/voice', form),
       /**
        * Add to an existing capture ("continue talking"): FormData with "audio"

@@ -107,12 +107,6 @@ export function SettingsPage() {
               onChange={(oneEntryPerMessage) => saveRecordings.mutate({ ...recordings.data!, oneEntryPerMessage })}
             />
             <Toggle
-              label={t('settings.saveRightAway')}
-              hint={t('settings.saveRightAwayHint')}
-              checked={recordings.data.saveRightAway}
-              onChange={(saveRightAway) => saveRecordings.mutate({ ...recordings.data!, saveRightAway })}
-            />
-            <Toggle
               label={t('settings.keepRecordings')}
               hint={t('settings.keepRecordingsHint')}
               checked={recordings.data.keepRecordings}

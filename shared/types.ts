@@ -260,7 +260,7 @@ export interface Capture {
   items: CaptureItem[]
   /** Length of each recording part, in order - places item snippets across parts. */
   audioPartDurationsMs?: number[] | null
-  /** "Save right away": already saved - show what it became instead of the review. */
+  /** The smart Save: already saved - show what it became instead of the review. */
   autoSaved?: boolean
 }
 
@@ -283,8 +283,6 @@ export interface RecordingSettings {
   keepRecordings: boolean
   /** Everything said in one message becomes one entry. */
   oneEntryPerMessage: boolean
-  /** No review: saved as soon as understood (falls back to a note). */
-  saveRightAway: boolean
 }
 
 export interface ConfirmCaptureItem {

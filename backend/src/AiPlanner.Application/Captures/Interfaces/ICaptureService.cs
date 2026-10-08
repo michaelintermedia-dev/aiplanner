@@ -15,7 +15,8 @@ public interface ICaptureService
     /// Stores the recording (one or more segments, in speaking order), transcribes
     /// each segment, joins the text, then extracts items from it.
     /// </summary>
-    Task<Result<CaptureDto>> CaptureVoiceAsync(IReadOnlyList<AudioSegment> segments, CancellationToken ct = default);
+    /// <param name="saveNow">The smart Save button (see CaptureTextRequest.SaveNow).</param>
+    Task<Result<CaptureDto>> CaptureVoiceAsync(IReadOnlyList<AudioSegment> segments, CancellationToken ct = default, bool saveNow = false);
 
     /// <param name="pendingDays">Only captures from the last N days with proposals still waiting for review.</param>
     Task<IReadOnlyList<CaptureSummaryDto>> GetListAsync(int take, CancellationToken ct = default, int? pendingDays = null);

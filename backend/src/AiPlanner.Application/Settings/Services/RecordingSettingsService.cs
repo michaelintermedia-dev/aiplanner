@@ -39,14 +39,13 @@ public class RecordingSettingsService
         settings.ShortenPauses = dto.ShortenPauses;
         settings.KeepRecordings = dto.KeepRecordings;
         settings.OneEntryPerMessage = dto.OneEntryPerMessage;
-        settings.ReviewBeforeSave = !dto.SaveRightAway;
         settings.UpdatedAtUtc = _clock.UtcNow;
         await _db.SaveChangesAsync(ct);
         return ToDto(settings);
     }
 
     private static RecordingSettingsDto ToDto(UserSettings s) =>
-        new(s.ShortenPauses, s.KeepRecordings, s.OneEntryPerMessage, SaveRightAway: !s.ReviewBeforeSave);
+        new(s.ShortenPauses, s.KeepRecordings, s.OneEntryPerMessage);
 
     private Guid RequireUserId() =>
         _currentUser.UserId ?? throw new UnauthorizedAccessException("No authenticated user.");

@@ -100,10 +100,10 @@ public class CaptureService : ICaptureService
     {
         var userId = RequireUserId();
         var extraction = await ExtractAsync(userId, request.Text.Trim(), transcript: null, timeline: null, ct);
-        return Result<CaptureDto>.Success(await SaveRightAwayAsync(extraction, transcript: null, ct));
+        return Result<CaptureDto>.Success(await SaveNowAsync(extraction, transcript: null, request.SaveNow, ct));
     }
 
-    public async Task<Result<CaptureDto>> CaptureVoiceAsync(IReadOnlyList<AudioSegment> segments, CancellationToken ct = default)
+    public async Task<Result<CaptureDto>> CaptureVoiceAsync(IReadOnlyList<AudioSegment> segments, CancellationToken ct = default, bool saveNow = false)
     {
         var userId = RequireUserId();
         if (segments.Count == 0)
@@ -206,7 +206,7 @@ public class CaptureService : ICaptureService
 
         voice.Status = VoiceCaptureStatus.Analyzed;
         await _db.SaveChangesAsync(ct);
-        return Result<CaptureDto>.Success(await SaveRightAwayAsync(extraction, transcript, ct));
+        return Result<CaptureDto>.Success(await SaveNowAsync(extraction, transcript, saveNow, ct));
     }
 
     public async Task<IReadOnlyList<CaptureSummaryDto>> GetListAsync(int take, CancellationToken ct = default, int? pendingDays = null)
@@ -1163,33 +1163,33 @@ public class CaptureService : ICaptureService
         item.ProposedReminders = ReminderPlanner.ToProposed(d.Reminders);
     }
 
-    // ---- Save right away ---------------------------------------------------
+    // ---- Save (the smart button) --------------------------------------------
 
     /// <summary>
-    /// "Save right away" (Settings): no review - what was understood is saved at
-    /// once. If it can't be saved like that (an event with no time, say), the
-    /// words are saved as a note instead: what matters is that it's kept. Only
-    /// if even that fails does it wait in the review, as without the setting.
+    /// The smart Save button (instead of "Review"): when everything was understood
+    /// clearly - no question from the AI, and it would save as it is - it's saved
+    /// at once. Anything unclear (an event with no time, an ambiguous date) goes
+    /// to the review instead of being guessed; nothing is lost either way.
     /// </summary>
-    private async Task<CaptureDto> SaveRightAwayAsync(AIExtraction extraction, Transcript? transcript, CancellationToken ct)
+    private async Task<CaptureDto> SaveNowAsync(AIExtraction extraction, Transcript? transcript, bool saveNow, CancellationToken ct)
     {
-        var settings = await SettingsAsync(extraction.UserId, ct);
         var pending = extraction.Items.Where(i => i.Status == ExtractionStatus.PendingReview).ToList();
-        if (settings.ReviewBeforeSave || pending.Count == 0)
+        if (!saveNow || pending.Count == 0 || pending.Any(i => !string.IsNullOrWhiteSpace(i.Clarification)))
         {
             return ToDto(extraction, transcript);
         }
 
-        var asUnderstood = pending.Select(AsProposed).ToList();
-        // Checked first: a failed confirm can leave half-made changes behind, so the
-        // note is chosen up front rather than tried after.
-        var decisions = (await ValidateAsync(asUnderstood, ct)).Count == 0
-            ? asUnderstood
-            : AsNote(pending, transcript?.Text ?? extraction.RawInputText ?? extraction.Title ?? "", extraction.Title);
-        var saved = await ConfirmAsync(extraction.Id, new ConfirmCaptureRequest(decisions, settings.KeepRecordings), ct);
+        var decisions = pending.Select(AsProposed).ToList();
+        // Checked first: a failed confirm can leave half-made changes behind.
+        if ((await ValidateAsync(decisions, ct)).Count > 0)
+        {
+            return ToDto(extraction, transcript);
+        }
+        var keep = (await SettingsAsync(extraction.UserId, ct)).KeepRecordings;
+        var saved = await ConfirmAsync(extraction.Id, new ConfirmCaptureRequest(decisions, keep), ct);
         if (!saved.Succeeded)
         {
-            _logger.LogWarning("Capture {CaptureId} couldn't be saved right away; left for review", extraction.Id);
+            _logger.LogWarning("Capture {CaptureId} couldn't be saved at once; left for review", extraction.Id);
             return ToDto(extraction, transcript);
         }
         return saved.Value! with { AutoSaved = true };
@@ -1199,21 +1199,6 @@ public class CaptureService : ICaptureService
     private static ConfirmCaptureItem AsProposed(AIExtractionItem i) => new(
         i.Id, true, i.Intent, i.Title, i.Description, i.StartDateUtc, i.EndDateUtc, i.DueDateUtc, i.HasTime,
         i.Location, i.Priority, ReminderPlanner.FromProposed(i.ProposedReminders), Recurrence: RuleOf(i));
-
-    /// <summary>The fallback: everything said, as one note (the other proposals are dropped - their words are in it).</summary>
-    private static List<ConfirmCaptureItem> AsNote(List<AIExtractionItem> pending, string words, string? title)
-    {
-        var first = pending[0];
-        // A note has no time of its own, so "before" reminders can't work on it.
-        var reminders = pending
-            .SelectMany(i => ReminderPlanner.FromProposed(i.ProposedReminders))
-            .Where(r => r.Kind != ReminderKind.Before)
-            .ToList();
-        var note = new ConfirmCaptureItem(
-            first.Id, true, ExtractionIntent.Note, string.IsNullOrWhiteSpace(title) ? first.Title : title, words,
-            null, null, null, false, null, null, reminders);
-        return [note, .. pending.Skip(1).Select(i => AsProposed(i) with { Include = false })];
-    }
 
     private async Task<UserSettings> SettingsAsync(Guid userId, CancellationToken ct) =>
         await _db.UserSettings.AsNoTracking().FirstOrDefaultAsync(s => s.UserId == userId, ct) ?? new UserSettings();

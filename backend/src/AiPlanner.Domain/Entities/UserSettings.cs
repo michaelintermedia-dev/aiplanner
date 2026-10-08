@@ -14,11 +14,11 @@ public class UserSettings
     public bool AppointmentRemindersEnabled { get; set; } = true;
 
     public bool AiProcessingEnabled { get; set; } = true;
-    /// <summary>Off = "Save right away": a capture is saved as soon as it's understood, no review.</summary>
+    /// <summary>Unused: the capture bar's Save / Review buttons decide (2026-10-08).</summary>
     public bool ReviewBeforeSave { get; set; } = true;
     /// <summary>Everything in one message becomes ONE item (user's rule) - the AI never splits it.</summary>
     public bool OneEntryPerMessage { get; set; } = true;
-    /// <summary>The default of the review's "Keep the recording" (and what Save right away does).</summary>
+    /// <summary>The default of the review's "Keep the recording" (and what the smart Save does).</summary>
     public bool KeepRecordings { get; set; } = true;
     public bool AutomaticProcessing { get; set; } = true;
 

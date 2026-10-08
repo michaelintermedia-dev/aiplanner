@@ -16,4 +16,4 @@ public record CaptureDto(
     DateTime CreatedAtUtc,
     IReadOnlyList<CaptureItemDto> Items,
     IReadOnlyList<int>? AudioPartDurationsMs = null, // per part, to place item snippets across parts
-    bool AutoSaved = false); // "Save right away": already saved - show what it became, no review
+    bool AutoSaved = false); // the smart Save: already saved - show what it became, no review

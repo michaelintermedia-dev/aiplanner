@@ -22,20 +22,21 @@ public record FeedSearch(
     public const int MaxTextLength = 100;
 
     /// <summary>
-    /// The AI's search, validated (pure, tested): unknown values are dropped;
-    /// tags are matched to the user's own (case-insensitive, their spelling) -
-    /// a tag they don't have is looked for as words instead.
+    /// The AI's search, validated (pure, tested): unknown values are dropped.
+    /// Tags it names are looked for as words like the rest (user's rule: a
+    /// voice search uses every text - title, body, tags, people, media
+    /// descriptions, the words it was captured from), so a word counts
+    /// wherever it is. Words already in the text aren't added twice.
     /// </summary>
     public static FeedSearch From(RawSearch raw, IReadOnlyList<string> knownTags)
     {
-        var text = raw.Text?.Trim();
-        var tags = new List<string>();
+        var words = (raw.Text ?? "").Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).ToList();
         foreach (var name in (raw.Tags ?? []).Select(t => t.Trim().TrimStart('#')).Where(t => t.Length > 0))
         {
-            var known = knownTags.FirstOrDefault(k => k.Equals(name, StringComparison.OrdinalIgnoreCase));
-            if (known is not null) { if (!tags.Contains(known)) tags.Add(known); }
-            else if (string.IsNullOrEmpty(text)) text = name;
+            if (!words.Any(w => w.Equals(name, StringComparison.OrdinalIgnoreCase))) words.Add(name);
         }
+        var text = string.Join(' ', words);
+        IReadOnlyList<string> tags = [];
         var kinds = (raw.Kinds ?? [])
             .Select(k => k.Trim().ToLowerInvariant() switch
             {

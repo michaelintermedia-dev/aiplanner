@@ -57,7 +57,9 @@ public class FeedService : IFeedService
                 var key = Attachment.SearchKey(text);
                 q = q.Where(t => t.Title.ToLower().Contains(text) || (t.Description != null && t.Description.ToLower().Contains(text))
                     || (t.Notes != null && t.Notes.ToLower().Contains(text)) || t.TaskTags.Any(tt => tt.Tag.Name.ToLower().Contains(text))
-                    || _db.Attachments.Any(x => x.ItemId == t.Id && (key.Length > 0 && x.SearchText.Contains(key))));
+                    || _db.Attachments.Any(x => x.ItemId == t.Id && (key.Length > 0 && x.SearchText.Contains(key)))
+                    // ...and the words it was captured from (typed or said)
+                    || (t.SourceAiExtraction != null && ((t.SourceAiExtraction.RawInputText != null && t.SourceAiExtraction.RawInputText.ToLower().Contains(text)) || (t.SourceAiExtraction.Transcript != null && t.SourceAiExtraction.Transcript.Text.ToLower().Contains(text)))));
             }
             if (f.CreatedFromUtc is { } cFrom) q = q.Where(t => t.CreatedAtUtc >= cFrom);
             if (f.CreatedToUtc is { } cTo) q = q.Where(t => t.CreatedAtUtc < cTo);
@@ -91,7 +93,9 @@ public class FeedService : IFeedService
                 q = q.Where(a => a.Title.ToLower().Contains(text) || (a.Description != null && a.Description.ToLower().Contains(text))
                     || (a.Notes != null && a.Notes.ToLower().Contains(text)) || (a.Location != null && a.Location.ToLower().Contains(text))
                     || a.AppointmentTags.Any(at => at.Tag.Name.ToLower().Contains(text))
-                    || _db.Attachments.Any(x => x.ItemId == a.Id && (key.Length > 0 && x.SearchText.Contains(key))));
+                    || _db.Attachments.Any(x => x.ItemId == a.Id && (key.Length > 0 && x.SearchText.Contains(key)))
+                    || a.Participants.Any(p => p.Name.ToLower().Contains(text))
+                    || (a.SourceAiExtraction != null && ((a.SourceAiExtraction.RawInputText != null && a.SourceAiExtraction.RawInputText.ToLower().Contains(text)) || (a.SourceAiExtraction.Transcript != null && a.SourceAiExtraction.Transcript.Text.ToLower().Contains(text)))));
             }
             if (f.CreatedFromUtc is { } cFrom) q = q.Where(a => a.CreatedAtUtc >= cFrom);
             if (f.CreatedToUtc is { } cTo) q = q.Where(a => a.CreatedAtUtc < cTo);
@@ -141,7 +145,8 @@ public class FeedService : IFeedService
                 var key = Attachment.SearchKey(text);
                 q = q.Where(n => (n.Title != null && n.Title.ToLower().Contains(text)) || n.Content.ToLower().Contains(text)
                     || n.NoteTags.Any(nt => nt.Tag.Name.ToLower().Contains(text))
-                    || _db.Attachments.Any(x => x.ItemId == n.Id && (key.Length > 0 && x.SearchText.Contains(key))));
+                    || _db.Attachments.Any(x => x.ItemId == n.Id && (key.Length > 0 && x.SearchText.Contains(key)))
+                    || (n.SourceAiExtraction != null && ((n.SourceAiExtraction.RawInputText != null && n.SourceAiExtraction.RawInputText.ToLower().Contains(text)) || (n.SourceAiExtraction.Transcript != null && n.SourceAiExtraction.Transcript.Text.ToLower().Contains(text)))));
             }
             if (f.CreatedFromUtc is { } cFrom) q = q.Where(n => n.CreatedAtUtc >= cFrom);
             if (f.CreatedToUtc is { } cTo) q = q.Where(n => n.CreatedAtUtc < cTo);

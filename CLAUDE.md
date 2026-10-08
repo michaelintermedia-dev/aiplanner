@@ -644,7 +644,10 @@ Local dev notes:
   store (web `lib/feedFilters.ts`, now the same as mobile's) and the tab
   (one kind -> its tab), "Showing what matches" in the dock notice. The feed
   text search matches every word separately (any order, `SearchWords`),
-  in titles, details, tags and attachments' SearchText.
+  in titles, details, notes, place, tags, event people, attachments'
+  SearchText and the words the item was captured from (typed text or
+  transcript) - every text (user's rule). The AI's tags go into the text too
+  (searched everywhere, tags included), not a separate tag filter.
   Photos are shrunk on the device to 2000 px JPEG q0.8 (`shared/media.ts`
   limits; web canvas `shrinkImage`, mobile expo-image-manipulator). Web reads
   picked files into memory at once (a cleared picker can empty them) and

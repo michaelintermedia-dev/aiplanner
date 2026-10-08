@@ -13,15 +13,16 @@ public class FeedSearchTests
     public void Values_are_put_in_the_feed_filters_words()
     {
         var s = FeedSearch.From(new RawSearch(" wifi ", ["shopping"], ["note", "appointment"], "OVERDUE", "open", "repeating", true), Known);
-        s.Should().BeEquivalentTo(new FeedSearch("wifi", ["Shopping"], ["Note", "Appointment"], "overdue", "Open", "Repeating", true));
+        s.Should().BeEquivalentTo(new FeedSearch("wifi shopping", [], ["Note", "Appointment"], "overdue", "Open", "Repeating", true),
+            "tags are searched as words, like everything else");
     }
 
     [Fact]
-    public void Unknown_values_are_dropped_and_a_tag_the_user_lacks_becomes_the_words()
+    public void Unknown_values_are_dropped_and_tags_join_the_words_once()
     {
-        var s = FeedSearch.From(new RawSearch(null, ["#groceries", "work"], ["recipe", "task"], "yesterday", "maybe", null, null), Known);
-        s.Text.Should().Be("groceries");
-        s.Tags.Should().Equal("work");
+        var s = FeedSearch.From(new RawSearch("Work stuff", ["#groceries", "work"], ["recipe", "task"], "yesterday", "maybe", null, null), Known);
+        s.Text.Should().Be("Work stuff groceries");
+        s.Tags.Should().BeEmpty();
         s.Kinds.Should().Equal("Task");
         s.When.Should().BeNull();
         s.Status.Should().BeNull();

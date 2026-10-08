@@ -609,8 +609,10 @@ Local dev notes:
   input text is then the file names); its titles then start with the kind of
   first file - "Photo: ...", "PDF: ...", "Document: ..." in the user's language
   (`MediaTitles`, done by the server, not the AI - user's rule). The
-  description follows the user's / files' language (an "always the app's
-  language" rule was tried and dropped, user's call 2026-10-09). The files aren't stored by the capture:
+  description's language (user's rule, 2026-10-09, captures and attachment
+  descriptions alike): the language of the text in the file - a document, or
+  a picture with writing on it; a picture with no text in the app's language
+  (User.Locale, `OpenAiMediaParts.AppLanguage`). Names, codes, amounts as written. The files aren't stored by the capture:
   the client still uploads them to the saved item. Consent (user's call): the
   first time, the capture bar asks "Let the AI read your photos and
   documents?" (Agree / No, just attach them) -> `UserSettings.AiReadsMedia`

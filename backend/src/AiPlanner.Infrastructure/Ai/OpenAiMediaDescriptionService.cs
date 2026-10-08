@@ -54,7 +54,7 @@ public class OpenAiMediaDescriptionService : IMediaDescriptionService
         1. What it is, specifically ("Receipt from IKEA", "Concert flyer - Jazz Night at Blue Note", "Photo of a router label", "Lease agreement").
         2-4. The key facts and any readable text someone might search for: names, places, dates, amounts, codes, passwords, phone numbers, addresses.
         Also use the everyday words someone would type to find it, even if the file says it differently (a router label: "wifi", "password"; a boarding pass: "flight", "ticket").
-        Write in the language of the text in the file; if it has no text, in the language of the locale "{locale}".
+        Write in the language of the text in the file (a document, or a picture with writing on it). A picture with no text is described in {OpenAiMediaParts.AppLanguage(locale)} (the app's language).
         Never invent anything that isn't in the file.
         """;
 }

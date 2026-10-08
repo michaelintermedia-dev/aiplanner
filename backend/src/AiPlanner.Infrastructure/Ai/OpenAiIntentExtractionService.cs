@@ -179,14 +179,15 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
     }
 
     /// <summary>Photos and documents sent with the words: read them as part of what the user said.</summary>
-    private static string AttachedFiles(ExtractionContext c) => c.Media is not { Count: > 0 } ? "" : """
+    private static string AttachedFiles(ExtractionContext c) => c.Media is not { Count: > 0 } ? "" : $$"""
 
 
         ATTACHED FILES. The user attached photos or documents (after their words). Read them as part of what the user said:
         - Take what matters from them - dates, times, places, names, amounts, what has to be done: a flyer, invitation or ticket -> an appointment at its date, time and place; a bill or letter with a deadline -> a task due then; a receipt -> a note with the shop, date and total; a screenshot of a message -> what it asks for; a recipe, list or anything to keep -> a note.
         - The user's words decide what to do with them ("remind me to pay this", "add this to my calendar"). With no words, make the item the files are about.
         - "title": what it is, specific ("Jazz concert - Blue Note", "Electricity bill", "IKEA receipt"), never just "Photo" or the file name.
-        - "description": the useful facts from the files in a few short lines, in the user's language (or the files' language when there are no words) - never the whole text.
+        - "description": the useful facts from the files in a few short lines - never the whole text.
+        - Language (user's rule): what comes from a file is written in the language of the text in it - a document, or a picture with writing on it (a flyer, a label, a screenshot). A picture with no text (a plain photo) is described in {{OpenAiMediaParts.AppLanguage(c.Locale)}} (the app's language). Names, addresses, codes and amounts stay as written. The "title" follows the user's words when there are any; with no words, the same language as the description.
         - Never invent what isn't in the files or the words; if a date or time is unreadable, ask in "clarification".
         - "sourceText": the user's words only ("" when there are none).
         """;

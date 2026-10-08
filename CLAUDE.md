@@ -283,11 +283,11 @@ Local dev notes:
   a tiny shared store, `lib/feedFilters.ts`). Text (title/details/note/
   location/tags), created (today/7d/30d/dates), when (due/start: today/this
   week/overdue/no date), status (open/done - passed events count as done),
-  reminders (has/repeating/none), from voice, tags (any of; tasks only). The
+  reminders (has/repeating/none), from voice, tags (any of; every kind). The
   server filters (`GET /api/feed?q=&createdFrom=...`, `GET /api/feed/tags`), so
   paging still works; `shared/feedFilter.ts` turns choices into UTC ranges in
-  the user's timezone. Notes drop out of status/date filters, events and notes
-  out of tag filters (they have no status/date/tags).
+  the user's timezone. Notes drop out of status/date filters (they have no
+  status/date).
 - **Sort criteria as round chips** (2026-10-02, web + mobile; replaced the
   single "⇅ Newest" menu). The ⇅ "Sort by" chip opens an editor: pick
   criteria (High priority first, Newest, Oldest, Recently updated, By date)

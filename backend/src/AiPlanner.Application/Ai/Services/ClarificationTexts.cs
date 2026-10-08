@@ -17,11 +17,6 @@ public sealed class ClarificationTexts
     public required string CheckDate { get; init; }
     public required string DefaultCaptureTitle { get; init; }
     public required string DefaultNoteTitle { get; init; }
-    // What a capture of only files is, named first in its title (MediaTitles).
-    public required string MediaPhoto { get; init; }
-    public required string MediaPdf { get; init; }
-    public required string MediaDocument { get; init; }
-    public required string MediaFiles { get; init; }
 
     public static ClarificationTexts For(string? locale) =>
         (locale ?? "").Split('-', '_')[0].ToLowerInvariant() switch
@@ -43,10 +38,6 @@ public sealed class ClarificationTexts
         CheckDate = "Please check the date.",
         DefaultCaptureTitle = "Capture",
         DefaultNoteTitle = "Note",
-        MediaPhoto = "Photo",
-        MediaPdf = "PDF",
-        MediaDocument = "Document",
-        MediaFiles = "Files",
     };
 
     public static readonly ClarificationTexts Russian = new()
@@ -61,10 +52,6 @@ public sealed class ClarificationTexts
         CheckDate = "Проверьте дату.",
         DefaultCaptureTitle = "Запись",
         DefaultNoteTitle = "Заметка",
-        MediaPhoto = "Фото",
-        MediaPdf = "PDF",
-        MediaDocument = "Документ",
-        MediaFiles = "Файлы",
     };
 
     public static readonly ClarificationTexts Hebrew = new()
@@ -79,10 +66,6 @@ public sealed class ClarificationTexts
         CheckDate = "כדאי לבדוק את התאריך.",
         DefaultCaptureTitle = "רישום",
         DefaultNoteTitle = "פתק",
-        MediaPhoto = "תמונה",
-        MediaPdf = "PDF",
-        MediaDocument = "מסמך",
-        MediaFiles = "קבצים",
     };
 }
 

@@ -606,9 +606,8 @@ Local dev notes:
   tested; old .doc/.xls/HEIC/RTF are skipped). The prompt's ATTACHED FILES
   section: a flyer -> event, a bill -> task, a receipt -> note, a specific
   title, the facts in the description. A photo alone is a valid capture (the
-  input text is then the file names); its titles then start with the kind of
-  file - "Photo: ...", "PDF: ...", "Document: ...", "Files: ..." in the user's
-  language (`MediaTitles`, done by the server, not the AI - user's rule).
+  input text is then the file names); the AI picks the title (a forced
+  "Photo: ..." label was tried and dropped, user's call 2026-10-09).
   With files, the title/summary/description are always in the app's language
   (`User.Locale`, user's rule) - translated from the files; names, addresses,
   numbers stay as written. Said twice: in the ATTACHED FILES section and as

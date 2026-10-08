@@ -438,11 +438,6 @@ public class CaptureService : ICaptureService
             new ExtractionContext(wordsForAi ?? text, localNow, timeZone.Id, user.Locale, previousText, currentItem, oneEntry, knownTags, media), ct);
         var normalized = ExtractionNormalizer.Normalize(raw, text, localNow, timeZone, user.Locale);
         if (oneEntry) normalized = SingleEntry.Merge(normalized);
-        // Only files, no words: the titles say what kind of file it is ("Photo: ...").
-        if (wordsForAi == "" && media is { Count: > 0 })
-        {
-            normalized = MediaTitles.Apply(normalized, MediaTitles.Label(media.Select(m => m.Kind), ClarificationTexts.For(user.Locale)));
-        }
 
         // Log counts and timing only - never the user's words (spec section 37).
         _logger.LogInformation(

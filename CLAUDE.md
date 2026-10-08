@@ -606,7 +606,9 @@ Local dev notes:
   tested; old .doc/.xls/HEIC/RTF are skipped). The prompt's ATTACHED FILES
   section: a flyer -> event, a bill -> task, a receipt -> note, a specific
   title, the facts in the description. A photo alone is a valid capture (the
-  input text is then the file names). The files aren't stored by the capture:
+  input text is then the file names); its titles then start with the kind of
+  file - "Photo: ...", "PDF: ...", "Document: ...", "Files: ..." in the user's
+  language (`MediaTitles`, done by the server, not the AI - user's rule). The files aren't stored by the capture:
   the client still uploads them to the saved item. Consent (user's call): the
   first time, the capture bar asks "Let the AI read your photos and
   documents?" (Agree / No, just attach them) -> `UserSettings.AiReadsMedia`

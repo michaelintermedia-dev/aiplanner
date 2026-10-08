@@ -65,11 +65,26 @@ export function applyAppearance(settings: AppearanceSettings = current) {
   root.style.setProperty('--shadow', scheme === 'dark' ? 'none' : '0 1px 2px rgb(0 0 0 / 0.04), 0 2px 8px rgb(0 0 0 / 0.04)')
   root.style.colorScheme = scheme
   root.dataset.scheme = scheme
-  document.body.style.background = settings.wallpaper ? wallpaperCss(scheme, settings.skin) : colors.bg
+  // Text that sits right on the wallpaper gets a pill behind it (index.css, html[data-wallpaper]).
+  if (settings.wallpaper) root.dataset.wallpaper = ''
+  else delete root.dataset.wallpaper
+  // The wallpaper image: the wide one on landscape screens (desktop), else the tall one.
+  const wide = window.innerWidth > window.innerHeight
+  document.body.style.background = settings.wallpaper ? wallpaperCss(scheme, settings.skin, wide) : colors.bg
   document.body.style.backgroundAttachment = 'fixed'
   // The browser's own bar (phones, the installed app).
   for (const meta of document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')) meta.content = colors.surface
 }
+
+// Turning a phone or resizing past square swaps the tall and wide wallpaper.
+let wasWide = typeof window !== 'undefined' && window.innerWidth > window.innerHeight
+window.addEventListener('resize', () => {
+  const wide = window.innerWidth > window.innerHeight
+  if (wide !== wasWide) {
+    wasWide = wide
+    applyAppearance()
+  }
+})
 
 // "System" follows the device switching between light and dark.
 darkQuery?.addEventListener('change', () => current.theme === 'System' && applyAppearance())

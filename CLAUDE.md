@@ -600,9 +600,15 @@ Local dev notes:
   query in index.css is only the first paint). Mobile: `useColors()` =
   palette + `page` (transparent while the wallpaper shows - screens paint
   `c.page`, never `c.bg`); `<Wallpaper>` is behind the whole app; the theme
-  is forced app-wide with `Appearance.setColorScheme`. The phone's wallpapers
-  are images rendered from `wallpaperCss` by `tools/qa/wallpapers.cjs` - re-run
-  it after changing a skin.
+  is forced app-wide with `Appearance.setColorScheme`. Wallpapers are
+  WhatsApp-like (user's ask): big organic overlapping shapes in muted tones
+  (multiply where they overlap) on a paper grain - generated (SVG -> JPEG) by
+  `tools/qa/wallpapers.cjs` from each skin's `wallpaper` colours into
+  `mobile/assets/wallpapers/` (portrait) and `web/public/wallpapers/`
+  (portrait + `-wide` for landscape screens); re-run it after changing a
+  skin. Text that sits right on the wallpaper gets a frosted pill (web:
+  `html[data-wallpaper]` rules in index.css; mobile: `c.pill` / `c.block` from
+  useColors) - add new on-page headings to those.
 - **UI languages: English, Russian, Hebrew; Hebrew is right-to-left**
   (2026-10-02, web + mobile). All UI text goes through `t('key', vars)` from
   `shared/i18n` - never write user-visible English in a component. `en.ts`

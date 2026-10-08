@@ -12,7 +12,12 @@ export function useColors() {
   const scheme: Scheme = useColorScheme() === 'dark' ? 'dark' : 'light'
   const { skin, wallpaper } = useAppearance()
   const colors = palette(scheme, skin)
-  return { ...colors, page: wallpaper ? 'transparent' : colors.bg, scheme }
+  // Text that sits right on the wallpaper (not on a card) gets a pill behind
+  // it - like WhatsApp's date chips - so it reads on any wallpaper.
+  const pill = wallpaper ? { backgroundColor: `${colors.surface}D9`, paddingHorizontal: 10, paddingVertical: 2, borderRadius: 999, overflow: 'hidden' as const } : null
+  // Several lines (Today's greeting and date): one block.
+  const block = wallpaper ? { backgroundColor: `${colors.surface}D9`, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 14 } : null
+  return { ...colors, page: wallpaper ? 'transparent' : colors.bg, scheme, pill, block }
 }
 
 export type Colors = ReturnType<typeof useColors>

@@ -46,7 +46,7 @@ export function SortChips({ chips, onChange }: { chips: SortChip[]; onChange: (c
                 <Ionicons name={SORT_ICON[chip.sort]} size={19} color={chip.on ? '#fff' : c.accent} />
               </View>
             </View>
-            <Text style={[styles.label, { color: chip.on ? c.text : c.muted }]} numberOfLines={1}>
+            <Text style={[styles.label, { color: chip.on ? c.text : c.muted }, c.pill]} numberOfLines={1}>
               {sortShortLabel(chip.sort)}
             </Text>
           </Pressable>
@@ -62,7 +62,7 @@ export function SortChips({ chips, onChange }: { chips: SortChip[]; onChange: (c
               <Ionicons name="swap-vertical" size={19} color={c.text} />
             </View>
           </View>
-          <Text style={[styles.label, { color: c.text }]} numberOfLines={1}>
+          <Text style={[styles.label, { color: c.text }, c.pill]} numberOfLines={1}>
             {t('feed.sortBy')}
           </Text>
         </Pressable>

@@ -128,7 +128,7 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
         keyboardShouldPersistTaps="handled"
         renderItem={({ item: entry }) =>
           entry.type === 'header' ? (
-            <Text style={[styles.header, { color: c.muted }]}>{entry.label.toUpperCase()}</Text>
+            <Text style={[styles.header, { color: c.muted }, c.pill && { ...c.pill, alignSelf: 'flex-start' }]}>{entry.label.toUpperCase()}</Text>
           ) : (
             <FeedRow
               item={entry.item}
@@ -167,7 +167,7 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
           feed.isFetchingNextPage ? (
             <ActivityIndicator color={c.muted} style={{ margin: 16 }} />
           ) : feed.data && !feed.hasNextPage && entries.length > 0 ? (
-            <Text style={[styles.end, { color: c.muted }]}>{t('feed.end')}</Text>
+            <Text style={[styles.end, { color: c.muted }, c.pill && { ...c.pill, alignSelf: 'center' }]}>{t('feed.end')}</Text>
           ) : null
         }
         onEndReached={() => feed.hasNextPage && !feed.isFetchingNextPage && void feed.fetchNextPage()}

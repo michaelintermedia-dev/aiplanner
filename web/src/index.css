@@ -2888,3 +2888,27 @@ button.media-file {
   font-size: 0.85rem;
   font-weight: 600;
 }
+
+/* With a wallpaper, text that sits right on it (not on a card) gets a frosted
+   pill behind it - like WhatsApp's date chips - so it reads on any wallpaper. */
+html[data-wallpaper] :is(.feed-group > h2, .feed-end:not(:empty), .sort-chip-label, .page > .empty, .page > h1, .page-header > h1, .section > h2, .section > .empty) {
+  width: fit-content;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+html[data-wallpaper] .feed-end:not(:empty) {
+  margin-inline: auto;
+}
+
+/* Today's greeting and date: one frosted block rather than separate pills. */
+html[data-wallpaper] .page-header > div:first-child {
+  padding: 8px 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}

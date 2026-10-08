@@ -8,13 +8,13 @@ export function Section({ title, empty, tone, children }: { title: string; empty
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: tone === 'warn' ? c.danger : c.muted }]}>{title.toUpperCase()}</Text>
+        <Text style={[styles.sectionTitle, { color: tone === 'warn' ? c.danger : c.muted }, c.pill]}>{title.toUpperCase()}</Text>
         {count > 0 && <Text style={[styles.count, { color: c.muted, backgroundColor: c.surface2 }]}>{count}</Text>}
       </View>
       {count > 0 ? (
         <View style={[styles.list, { backgroundColor: c.surface, borderColor: c.border }]}>{children}</View>
       ) : (
-        empty && <Text style={[styles.empty, { color: c.muted }]}>{empty}</Text>
+        empty && <Text style={[styles.empty, { color: c.muted }, c.pill && { ...c.pill, alignSelf: 'flex-start' }]}>{empty}</Text>
       )}
     </View>
   )

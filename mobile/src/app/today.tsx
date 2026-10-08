@@ -21,7 +21,7 @@ export default function TodayScreen() {
 
   return (
     <Screen bottomSpace={DOCK_SPACE}>
-      <View>
+      <View style={c.block && { ...c.block, alignSelf: 'flex-start' }}>
         <Text style={{ color: c.muted }}>{t('today.hello', { name: user?.displayName ?? '' })}</Text>
         <Text style={[styles.date, { color: c.text }]}>
           {data ? formatDateKey(data.date, zone.locale) : t('date.today')}

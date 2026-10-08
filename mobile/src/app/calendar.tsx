@@ -75,7 +75,7 @@ export default function CalendarScreen() {
       </View>
 
       <View style={styles.header}>
-        <Text style={[styles.title, { color: c.text }]} numberOfLines={1}>
+        <Text style={[styles.title, { color: c.text }, c.pill]} numberOfLines={1}>
           {periodTitle(view, selected, zone.locale)}
         </Text>
         <Pressable onPress={() => move(-1)} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('calendar.previous')}>

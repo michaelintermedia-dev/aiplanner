@@ -28,7 +28,7 @@ export function QuickRecordWidget({ label }: { label: string }) {
         maxLines={1}
         truncate="END"
         style={{
-          fontSize: 12,
+          fontSize: 14,
           color: '#ffffff',
           textAlign: 'center',
           textShadowColor: '#99000000',

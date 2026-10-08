@@ -516,4 +516,5 @@ export const he: Messages = {
   'capture.savedAs': 'נשמר כ{kind}: „{title}”',
   'capture.open': 'לפתוח',
   'widget.quickRecording': 'הקלטה מהירה',
+  'widget.record': 'הקלטה',
 }

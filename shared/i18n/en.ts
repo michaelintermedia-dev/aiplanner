@@ -520,4 +520,5 @@ export const en = {
   'capture.savedAs': 'Saved as {kind}: “{title}”',
   'capture.open': 'Open',
   'widget.quickRecording': 'Quick recording',
+  'widget.record': 'Record',
 } satisfies Record<string, Message>

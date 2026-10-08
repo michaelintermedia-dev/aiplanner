@@ -516,4 +516,5 @@ export const ru: Messages = {
   'capture.savedAs': 'Сохранено как {kind}: «{title}»',
   'capture.open': 'Открыть',
   'widget.quickRecording': 'Быстрая запись',
+  'widget.record': 'Запись',
 }

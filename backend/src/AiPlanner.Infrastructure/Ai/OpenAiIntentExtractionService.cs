@@ -39,7 +39,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             ["messages"] = new JsonArray
             {
                 new JsonObject { ["role"] = "system", ["content"] = BuildInstructions(context) },
-                new JsonObject { ["role"] = "user", ["content"] = context.Text },
+                new JsonObject { ["role"] = "user", ["content"] = UserContent(context) },
             },
             ["response_format"] = new JsonObject
             {
@@ -141,8 +141,56 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             - "unrelated": null, unless the "UPDATING ONE ITEM" section below says otherwise.
 
             Never return nothing: if the input is a question, an idea, or anything that isn't clearly a task or appointment, return it as a single "note" whose "description" keeps the user's words. The user can change any item's type in the review.
-            """ + OneEntry(c) + Continuing(c);
+            """ + OneEntry(c) + Continuing(c) + AttachedFiles(c);
     }
+
+    /// <summary>The user's words, then each attached file: pictures and PDFs as they are, documents as text.</summary>
+    private static JsonNode UserContent(ExtractionContext c)
+    {
+        if (c.Media is not { Count: > 0 } media) return JsonValue.Create(c.Text)!;
+        var parts = new JsonArray
+        {
+            new JsonObject { ["type"] = "text", ["text"] = string.IsNullOrWhiteSpace(c.Text) ? "(No words - only the attached files.)" : c.Text },
+        };
+        foreach (var m in media)
+        {
+            switch (m.Kind)
+            {
+                case MediaInputKind.Image:
+                    parts.Add(new JsonObject { ["type"] = "text", ["text"] = $"Attached photo «{m.FileName}»:" });
+                    parts.Add(new JsonObject
+                    {
+                        ["type"] = "image_url",
+                        ["image_url"] = new JsonObject { ["url"] = $"data:{m.MimeType};base64,{Convert.ToBase64String(m.Data!)}" },
+                    });
+                    break;
+                case MediaInputKind.Pdf:
+                    parts.Add(new JsonObject
+                    {
+                        ["type"] = "file",
+                        ["file"] = new JsonObject { ["filename"] = m.FileName, ["file_data"] = $"data:application/pdf;base64,{Convert.ToBase64String(m.Data!)}" },
+                    });
+                    break;
+                default:
+                    parts.Add(new JsonObject { ["type"] = "text", ["text"] = $"Attached document «{m.FileName}»:\n{m.Text}" });
+                    break;
+            }
+        }
+        return parts;
+    }
+
+    /// <summary>Photos and documents sent with the words: read them as part of what the user said.</summary>
+    private static string AttachedFiles(ExtractionContext c) => c.Media is not { Count: > 0 } ? "" : """
+
+
+        ATTACHED FILES. The user attached photos or documents (after their words). Read them as part of what the user said:
+        - Take what matters from them - dates, times, places, names, amounts, what has to be done: a flyer, invitation or ticket -> an appointment at its date, time and place; a bill or letter with a deadline -> a task due then; a receipt -> a note with the shop, date and total; a screenshot of a message -> what it asks for; a recipe, list or anything to keep -> a note.
+        - The user's words decide what to do with them ("remind me to pay this", "add this to my calendar"). With no words, make the item the files are about.
+        - "title": what it is, specific ("Jazz concert - Blue Note", "Electricity bill", "IKEA receipt"), never "Photo" or the file name.
+        - "description": the useful facts from the files in a few short lines, in the user's language (or the files' language when there are no words) - never the whole text.
+        - Never invent what isn't in the files or the words; if a date or time is unreadable, ask in "clarification".
+        - "sourceText": the user's words only ("" when there are none).
+        """;
 
     private static string KnownTags(ExtractionContext c) =>
         c.KnownTags is { Count: > 0 } tags ? string.Join(", ", tags.Select(t => $"\"{t}\"")) : "none yet";

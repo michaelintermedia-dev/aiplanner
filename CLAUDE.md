@@ -597,6 +597,21 @@ Local dev notes:
   entry is saved - to the first saved item (`SavedNotice.first`), by Save or
   after the review; a cancelled review keeps them. Not when adding to an item
   (the Edit page has its own).
+  **The AI reads them** (media step 3, 2026-10-09; roadmap after it:
+  attachment descriptions -> scan to PDF -> export PDF -> AI documents): the
+  files go with the words - `POST /api/captures/text-with-media` (multipart,
+  "text" may be empty) or "media" fields on `/captures/voice` - into the ONE
+  extraction call (`ExtractionContext.Media`; pictures as image parts, PDFs
+  as file parts, docx/pptx/xlsx/odt/txt/csv as text via `MediaReader` - pure,
+  tested; old .doc/.xls/HEIC/RTF are skipped). The prompt's ATTACHED FILES
+  section: a flyer -> event, a bill -> task, a receipt -> note, a specific
+  title, the facts in the description. A photo alone is a valid capture (the
+  input text is then the file names). The files aren't stored by the capture:
+  the client still uploads them to the saved item. Consent (user's call): the
+  first time, the capture bar asks "Let the AI read your photos and
+  documents?" (Agree / No, just attach them) -> `UserSettings.AiReadsMedia`
+  (null = not asked; Settings - Recordings toggle); the server ignores media
+  unless it's true.
   Photos are shrunk on the device to 2000 px JPEG q0.8 (`shared/media.ts`
   limits; web canvas `shrinkImage`, mobile expo-image-manipulator). Web reads
   picked files into memory at once (a cleared picker can empty them) and

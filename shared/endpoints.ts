@@ -173,6 +173,12 @@ export function createApi(request: RequestFn) {
       /** Upload a recording: a FormData with the file in field "audio" (and "saveNow": "true" for the smart Save). */
       voice: (form: FormData) => request<Capture>('POST', '/captures/voice', form),
       /**
+       * Typed words ("text", may be empty) with photos/documents ("media" fields)
+       * the AI reads too; "saveNow": "true" for the smart Save. The files aren't
+       * kept - attach them to the saved item afterwards. (Voice: add "media" to voice().)
+       */
+      textWithMedia: (form: FormData) => request<Capture>('POST', '/captures/text-with-media', form),
+      /**
        * Add to an existing capture ("continue talking"): FormData with "audio"
        * part(s) and/or "text", plus "itemType"/"itemId" of the item continued from.
        * Returns the capture with the new items to review.

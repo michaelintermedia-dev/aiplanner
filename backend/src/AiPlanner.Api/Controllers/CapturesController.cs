@@ -1,3 +1,4 @@
+using AiPlanner.Application.Attachments;
 using Microsoft.AspNetCore.RateLimiting;
 using AiPlanner.Application.Captures.DTOs;
 using AiPlanner.Application.Captures.Interfaces;
@@ -19,6 +20,9 @@ public class CapturesController : ControllerBase
     /// <summary>OpenAI's upload limit for transcription (per file).</summary>
     private const long MaxAudioBytes = 25 * 1024 * 1024;
     private const long MaxTotalBytes = 50 * 1024 * 1024;
+    /// <summary>Photos/documents sent with a capture for the AI to read.</summary>
+    private const long MaxMediaBytes = 60 * 1024 * 1024;
+    private const int MaxMediaFiles = 20;
 
     private readonly ICaptureService _captures;
 
@@ -66,16 +70,67 @@ public class CapturesController : ControllerBase
     }
 
     /// <summary>
+    /// POST /api/captures/text-with-media (multipart/form-data) - typed words
+    /// ("text", may be empty) with photos/documents ("media" fields) that the AI
+    /// reads too. The files aren't kept here: the client attaches them to the
+    /// item once it's saved.
+    /// </summary>
+    [HttpPost("text-with-media")]
+    [EnableRateLimiting("ai")] // costs OpenAI calls
+    [RequestSizeLimit(MaxMediaBytes + 256 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = MaxMediaBytes + 64 * 1024)]
+    public async Task<ActionResult<CaptureDto>> CaptureTextWithMedia(
+        [FromForm] string? text, [FromForm] bool saveNow, [FromForm] List<IFormFile>? media, CancellationToken ct)
+    {
+        var (files, problem) = await ReadMediaAsync(media, ct);
+        if (problem is not null) return BadRequest(new { errors = new[] { problem } });
+        if (string.IsNullOrWhiteSpace(text) && files.Count == 0)
+        {
+            return BadRequest(new { errors = new[] { "Type something or attach a photo or document." } });
+        }
+        if (text is { Length: > 10_000 }) return BadRequest(new { errors = new[] { "The text is too long." } });
+        var result = await _captures.CaptureTextAsync(new CaptureTextRequest(text ?? "", saveNow), ct, files);
+        return result.Succeeded ? Ok(result.Value) : BadRequest(new { errors = result.Errors });
+    }
+
+    /// <summary>The "media" fields as bytes, or why they can't be taken (same kinds and sizes as attachments).</summary>
+    private static async Task<(List<MediaUpload> Files, string? Problem)> ReadMediaAsync(List<IFormFile>? media, CancellationToken ct)
+    {
+        var files = (media ?? []).Where(f => f.Length > 0).ToList();
+        if (files.Count > MaxMediaFiles) return ([], $"Too many files (max {MaxMediaFiles}).");
+        if (files.Any(f => f.Length > AttachmentRules.MaxFileBytes) || files.Sum(f => f.Length) > MaxMediaBytes)
+        {
+            return ([], $"The files are too large (max {AttachmentRules.MaxFileBytes / 1024 / 1024} MB each).");
+        }
+        if (files.FirstOrDefault(f => AttachmentRules.Classify(f.FileName) is null) is { } bad)
+        {
+            return ([], $"{AttachmentRules.CleanFileName(bad.FileName)} can't be attached.");
+        }
+        var read = new List<MediaUpload>(files.Count);
+        foreach (var f in files)
+        {
+            using var buffer = new MemoryStream((int)f.Length);
+            await f.CopyToAsync(buffer, ct);
+            read.Add(new MediaUpload(AttachmentRules.CleanFileName(f.FileName), buffer.ToArray()));
+        }
+        return (read, null);
+    }
+
+    /// <summary>
     /// POST /api/captures/voice (multipart/form-data) - transcribe and analyze a
     /// recording. Send one "audio" field, or several in speaking order (the
     /// mobile app sends one per recorded segment).
     /// </summary>
     [HttpPost("voice")]
     [EnableRateLimiting("ai")] // costs OpenAI calls
-    [RequestSizeLimit(MaxTotalBytes + 256 * 1024)]
-    [RequestFormLimits(MultipartBodyLengthLimit = MaxAudioBytes + 64 * 1024)]
-    public async Task<ActionResult<CaptureDto>> CaptureVoice([FromForm] List<IFormFile> audio, [FromForm] bool saveNow, CancellationToken ct)
+    [RequestSizeLimit(MaxTotalBytes + MaxMediaBytes + 256 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = MaxTotalBytes + MaxMediaBytes + 64 * 1024)]
+    public async Task<ActionResult<CaptureDto>> CaptureVoice(
+        [FromForm] List<IFormFile> audio, [FromForm] bool saveNow, [FromForm] List<IFormFile>? media, CancellationToken ct)
     {
+        // Photos/documents said about ("add this to my calendar"): the AI reads them with the words.
+        var (mediaFiles, mediaProblem) = await ReadMediaAsync(media, ct);
+        if (mediaProblem is not null) return BadRequest(new { errors = new[] { mediaProblem } });
         var files = audio.Where(f => f.Length > 0).ToList();
         if (files.Count == 0)
         {
@@ -98,7 +153,7 @@ public class CapturesController : ControllerBase
         try
         {
             var segments = files.Select((f, i) => new AudioSegment(streams[i], f.FileName, f.ContentType)).ToList();
-            var result = await _captures.CaptureVoiceAsync(segments, ct, saveNow);
+            var result = await _captures.CaptureVoiceAsync(segments, ct, saveNow, mediaFiles);
             return result.Succeeded ? Ok(result.Value) : BadRequest(new { errors = result.Errors });
         }
         finally

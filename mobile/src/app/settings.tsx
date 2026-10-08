@@ -235,6 +235,12 @@ export default function SettingsScreen() {
             value={recordings.data.keepRecordings}
             onChange={(keepRecordings) => saveRecordings.mutate({ ...recordings.data!, keepRecordings })}
           />
+          <Row
+            label={t('settings.aiReadsMedia')}
+            hint={t('settings.aiReadsMediaHint')}
+            value={recordings.data.aiReadsMedia === true}
+            onChange={(aiReadsMedia) => saveRecordings.mutate({ ...recordings.data!, aiReadsMedia })}
+          />
         </View>
       )}
       {(recordings.error ?? saveRecordings.error) && <Text style={{ color: c.danger }}>{(recordings.error ?? saveRecordings.error)!.message}</Text>}

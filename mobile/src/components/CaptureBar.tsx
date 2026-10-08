@@ -3,10 +3,10 @@ import { savedNotice, type SavedNotice } from '@shared/captureDraft'
 import type { AppendTarget, Capture, ItemType } from '@shared/types'
 import { router } from 'expo-router'
 import { File } from 'expo-file-system'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
-import { capturesApi } from '@/api/endpoints'
+import { capturesApi, settingsApi } from '@/api/endpoints'
 import { itemPath } from '@/lib/itemPath'
 import { applyMedia, attachmentsKey, type PendingMedia } from '@/lib/media'
 import { useSegmentRecorder } from '@/lib/useSegmentRecorder'
@@ -103,6 +103,29 @@ export function CaptureBar({
 
   const queryClient = useQueryClient()
 
+  // Photos/documents go to OpenAI only with the user's OK - asked once, then it's a setting.
+  const recordingSettings = useQuery({ queryKey: ['settings', 'recordings'], queryFn: settingsApi.recordings, enabled: !continueFrom })
+  const aiReadsMedia = recordingSettings.data?.aiReadsMedia
+  const [asking, setAsking] = useState<(() => void) | null>(null)
+  const withConsent = (go: () => void) => {
+    if (!continueFrom && media.length > 0 && recordingSettings.data && aiReadsMedia == null) setAsking(() => go)
+    else go()
+  }
+  const answer = async (agree: boolean) => {
+    const go = asking
+    setAsking(null)
+    try {
+      const saved = await settingsApi.updateRecordings({ ...recordingSettings.data!, aiReadsMedia: agree })
+      queryClient.setQueryData(['settings', 'recordings'], saved)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('common.error'))
+      return
+    }
+    // Declined with only a photo: there's nothing for the AI to go on.
+    if (!agree && !text.trim() && recorder.state === 'idle') setError(t('capture.mediaNeedsWords'))
+    else go?.()
+  }
+
   /** Saved: the picked photos and files go to (the first) saved item. A cancelled review keeps them here. */
   const finish = (saved: SavedNotice | null) => {
     if (saved?.first && media.length > 0) {
@@ -150,8 +173,20 @@ export function CaptureBar({
 
   // Save (the smart button) or Review: saveNow=false always shows the review.
   const submitText = (saveNow = true) => {
-    if (!text.trim()) return
+    // A new entry can be just a photo or document: the AI reads it and makes the title.
+    if (!text.trim() && !(media.length > 0 && !continueFrom && aiReadsMedia !== false)) return
+    withConsent(() => sendText(saveNow))
+  }
+
+  const sendText = (saveNow: boolean) => {
     void run('understanding', async () => {
+      if (!continueFrom && media.length > 0) {
+        const form = new FormData()
+        form.append('text', text.trim())
+        if (saveNow) form.append('saveNow', 'true')
+        for (const m of media) form.append('media', new File(m.uri), m.name)
+        return capturesApi.textWithMedia(form)
+      }
       if (!continueFrom) return capturesApi.text(text.trim(), saveNow)
       const form = continueForm(continueFrom)
       form.append('text', text.trim())
@@ -171,6 +206,8 @@ export function CaptureBar({
       // Native's { uri, name, type } parts; an expo-file-system File is a Blob.
       segments.forEach((s, i) => form.append('audio', new File(s.uri), `part-${i + 1}.m4a`))
       if (!continueFrom && saveNow) form.append('saveNow', 'true')
+      // Photos/documents said about ("add this to my calendar"): the AI reads them with the words.
+      if (!continueFrom) for (const m of media) form.append('media', new File(m.uri), m.name)
       return continueFrom ? capturesApi.continue(await captureIdOf(continueFrom), form) : capturesApi.voice(form)
     })
     // On failure the recording stays (paused) so the user can retry Send.
@@ -324,7 +361,20 @@ export function CaptureBar({
       {drawer && !continueFrom && (
         <ScrollView style={styles.drawer} contentContainerStyle={{ paddingBottom: 4 }} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
           <MediaEditor pending={media} onPending={setMedia} bare />
+          <Text style={{ color: c.muted, fontSize: 13, marginTop: 6 }}>{aiReadsMedia === false ? t('capture.mediaNotRead') : t('capture.mediaHint')}</Text>
         </ScrollView>
+      )}
+
+      {asking && (
+        <View style={[styles.consent, { borderColor: c.accent, backgroundColor: c.accentSoft }]} accessibilityRole="alert">
+          <Text style={{ color: c.text, fontWeight: '700' }}>{t('consent.mediaTitle')}</Text>
+          <Text style={{ color: c.text }}>{t('consent.mediaBody')}</Text>
+          <Text style={{ color: c.muted, fontSize: 13 }}>{t('consent.settingsNote')}</Text>
+          <View style={styles.consentActions}>
+            <Button title={t('consent.notNow')} variant="link" onPress={() => void answer(false)} />
+            <Button title={t('consent.agree')} variant="primary" onPress={() => void answer(true)} />
+          </View>
+        </View>
       )}
 
       <View style={styles.actions}>
@@ -357,14 +407,14 @@ export function CaptureBar({
               <SendButtons
                 newEntry={!continueFrom}
                 label={t('capture.sendRecording')}
-                onSend={(saveNow) => void send(saveNow)}
+                onSend={(saveNow) => withConsent(() => void send(saveNow))}
                 disabled={busy !== null || (recorder.seconds < 1 && recorder.segments.length === 0)}
               />
             </>
           ) : (
             <>
               {continueFrom?.onClose && busy === null && <Button title={t('common.cancel')} variant="link" onPress={continueFrom.onClose} />}
-              {text.trim() !== '' && (
+              {(text.trim() !== '' || (!continueFrom && media.length > 0 && aiReadsMedia !== false)) && (
                 <SendButtons newEntry={!continueFrom} label={t('capture.send')} onSend={submitText} disabled={busy !== null} />
               )}
             </>
@@ -443,5 +493,7 @@ const styles = StyleSheet.create({
   attachCount: { position: 'absolute', top: -4, end: -4, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
   attachCountText: { color: '#fff', fontSize: 11, fontWeight: '700' },
   drawer: { maxHeight: 320 },
+  consent: { borderWidth: 1, borderRadius: 12, padding: 12, gap: 6 },
+  consentActions: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   mediaNote: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
 })

@@ -3070,3 +3070,26 @@ html[data-wallpaper] .page-header > div:first-child {
   margin: 0 0 8px;
   font-size: 0.88rem;
 }
+
+/* Asked once before photos/documents first go to OpenAI. */
+.consent {
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--accent-soft, var(--surface-2));
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.consent p {
+  margin: 0;
+}
+
+.consent-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}

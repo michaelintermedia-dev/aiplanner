@@ -38,13 +38,14 @@ public class RecordingSettingsService
         }
         settings.KeepRecordings = dto.KeepRecordings;
         settings.OneEntryPerMessage = dto.OneEntryPerMessage;
+        settings.AiReadsMedia = dto.AiReadsMedia ?? settings.AiReadsMedia;
         settings.UpdatedAtUtc = _clock.UtcNow;
         await _db.SaveChangesAsync(ct);
         return ToDto(settings);
     }
 
     private static RecordingSettingsDto ToDto(UserSettings s) =>
-        new(s.KeepRecordings, s.OneEntryPerMessage);
+        new(s.KeepRecordings, s.OneEntryPerMessage, s.AiReadsMedia);
 
     private Guid RequireUserId() =>
         _currentUser.UserId ?? throw new UnauthorizedAccessException("No authenticated user.");

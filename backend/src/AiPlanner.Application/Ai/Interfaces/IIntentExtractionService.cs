@@ -22,9 +22,15 @@ public interface IIntentExtractionService
 /// <param name="CurrentItem">When continuing from a saved item: the whole item as JSON in the answer's item shape (see ContinuedItem).</param>
 /// <param name="OneEntry">"One entry per message" (Settings): everything said becomes one item.</param>
 /// <param name="KnownTags">The user's tags so far - a tag asked for reuses one of these when it means the same.</param>
+/// <param name="Media">Photos and documents attached to the capture (see MediaReader) - read with the words. Text may be empty then.</param>
 public record ExtractionContext(
     string Text, DateTime LocalNow, string TimeZoneId, string Locale, string? PreviousText = null, string? CurrentItem = null, bool OneEntry = false,
-    IReadOnlyList<string>? KnownTags = null);
+    IReadOnlyList<string>? KnownTags = null, IReadOnlyList<MediaInput>? Media = null);
+
+public enum MediaInputKind { Image, Pdf, Text }
+
+/// <summary>An attached file as the AI gets it: a picture or PDF (Data), or a document's text (Text).</summary>
+public record MediaInput(MediaInputKind Kind, string FileName, string MimeType, byte[]? Data, string? Text);
 
 /// <summary>What the provider returned, before validation.</summary>
 public record RawExtraction(

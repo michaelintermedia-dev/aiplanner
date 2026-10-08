@@ -20,6 +20,12 @@ public class UserSettings
     public bool OneEntryPerMessage { get; set; } = true;
     /// <summary>The default of the review's "Keep the recording" (and what the smart Save does).</summary>
     public bool KeepRecordings { get; set; } = true;
+
+    /// <summary>
+    /// May photos/documents added while capturing be sent to OpenAI for the AI to
+    /// read? Null = not asked yet (the capture bar asks once); false = only attached.
+    /// </summary>
+    public bool? AiReadsMedia { get; set; }
     public bool AutomaticProcessing { get; set; } = true;
 
     /// <summary>"System" (follow the device), "Light" or "Dark" - Settings - Appearance, on every device.</summary>

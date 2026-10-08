@@ -285,6 +285,8 @@ export interface RecordingSettings {
   keepRecordings: boolean
   /** Everything said in one message becomes one entry. */
   oneEntryPerMessage: boolean
+  /** Photos/documents added while capturing may go to OpenAI for the AI to read. Null/absent = not asked yet. */
+  aiReadsMedia?: boolean | null
 }
 
 export interface ConfirmCaptureItem {

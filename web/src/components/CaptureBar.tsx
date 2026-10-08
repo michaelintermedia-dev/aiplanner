@@ -1,10 +1,10 @@
 import { savedNotice, type SavedNotice } from '@shared/captureDraft'
 import type { AppendTarget, Capture, ItemType } from '@shared/types'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { IoArrowUp, IoAttachOutline, IoCheckmark, IoEyeOutline } from 'react-icons/io5'
 import { Link, useSearchParams } from 'react-router'
-import { capturesApi } from '../api/endpoints'
+import { capturesApi, settingsApi } from '../api/endpoints'
 import { itemPath } from '../lib/itemPath'
 import { applyMedia, attachmentsKey, type PendingMedia } from '../lib/media'
 import { toWav } from '../lib/toWav'
@@ -131,6 +131,29 @@ export function CaptureBar({
 
   const queryClient = useQueryClient()
 
+  // Photos/documents go to OpenAI only with the user's OK - asked once, then it's a setting.
+  const recordingSettings = useQuery({ queryKey: ['settings', 'recordings'], queryFn: settingsApi.recordings, enabled: !continueFrom })
+  const aiReadsMedia = recordingSettings.data?.aiReadsMedia
+  const [asking, setAsking] = useState<(() => void) | null>(null)
+  const withConsent = (go: () => void) => {
+    if (!continueFrom && media.length > 0 && recordingSettings.data && aiReadsMedia == null) setAsking(() => go)
+    else go()
+  }
+  const answer = async (agree: boolean) => {
+    const go = asking
+    setAsking(null)
+    try {
+      const saved = await settingsApi.updateRecordings({ ...recordingSettings.data!, aiReadsMedia: agree })
+      queryClient.setQueryData(['settings', 'recordings'], saved)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('common.error'))
+      return
+    }
+    // Declined with only a photo: there's nothing for the AI to go on.
+    if (!agree && !text.trim() && !(recorder.state === 'recording' || recorder.state === 'paused')) setError(t('capture.mediaNeedsWords'))
+    else go?.()
+  }
+
   /** Saved: the picked photos and files go to (the first) saved item. A cancelled review keeps them here. */
   const finish = (saved: SavedNotice | null) => {
     if (saved?.first && media.length > 0) {
@@ -177,8 +200,20 @@ export function CaptureBar({
   // Save (the smart button, and Enter) or Review: saveNow=false always shows the review.
   const submitText = (e?: FormEvent, saveNow = true) => {
     e?.preventDefault()
-    if (!text.trim()) return
+    // A new entry can be just a photo or document: the AI reads it and makes the title.
+    if (!text.trim() && !(media.length > 0 && !continueFrom && aiReadsMedia !== false)) return
+    withConsent(() => sendText(saveNow))
+  }
+
+  const sendText = (saveNow: boolean) => {
     void run('understanding', async () => {
+      if (!continueFrom && media.length > 0) {
+        const form = new FormData()
+        form.append('text', text.trim())
+        if (saveNow) form.append('saveNow', 'true')
+        for (const m of media) form.append('media', m.file, m.file.name)
+        return capturesApi.textWithMedia(form)
+      }
       if (!continueFrom) return capturesApi.text(text.trim(), saveNow)
       const form = continueForm(continueFrom)
       form.append('text', text.trim())
@@ -198,6 +233,8 @@ export function CaptureBar({
       const form = continueFrom ? continueForm(continueFrom) : new FormData()
       form.append('audio', await toWav(recording.blob), 'recording.wav')
       if (!continueFrom && saveNow) form.append('saveNow', 'true')
+      // Photos/documents said about ("add this to my calendar"): the AI reads them with the words.
+      if (!continueFrom) for (const m of media) form.append('media', m.file, m.file.name)
       return continueFrom ? capturesApi.continue(await captureIdOf(continueFrom), form) : capturesApi.voice(form)
     })
   }
@@ -369,6 +406,22 @@ export function CaptureBar({
       {drawer && !continueFrom && (
         <div className="capture-drawer" id="capture-media">
           <MediaEditor pending={media} onPending={setMedia} />
+          <p className="muted small">{aiReadsMedia === false ? t('capture.mediaNotRead') : t('capture.mediaHint')}</p>
+        </div>
+      )}
+      {asking && (
+        <div className="consent" role="alertdialog" aria-labelledby="consent-title">
+          <strong id="consent-title">{t('consent.mediaTitle')}</strong>
+          <p>{t('consent.mediaBody')}</p>
+          <p className="muted small">{t('consent.settingsNote')}</p>
+          <div className="consent-actions">
+            <button type="button" className="link" onClick={() => void answer(false)}>
+              {t('consent.notNow')}
+            </button>
+            <button type="button" className="primary" onClick={() => void answer(true)} autoFocus>
+              {t('consent.agree')}
+            </button>
+          </div>
         </div>
       )}
       <div className="capture-actions">
@@ -430,7 +483,7 @@ export function CaptureBar({
         )}
         {/* Something to send: adding to an item has one send arrow (the form reviews it); a new
             entry has Review and the smart Save (saved at once unless something is unclear). */}
-        {(hasAudio || text.trim()) &&
+        {(hasAudio || text.trim() || (!continueFrom && media.length > 0 && aiReadsMedia !== false)) &&
           (continueFrom ? (
             <button
               type={hasAudio ? 'button' : 'submit'}
@@ -446,7 +499,7 @@ export function CaptureBar({
               <button
                 type="button"
                 className="review-first"
-                onClick={() => (hasAudio ? void sendRecording(false) : submitText(undefined, false))}
+                onClick={() => (hasAudio ? withConsent(() => void sendRecording(false)) : submitText(undefined, false))}
                 disabled={busy !== null || (hasAudio && recorder.seconds < 1)}
                 title={t('capture.reviewHint')}>
                 <IoEyeOutline aria-hidden /> {t('capture.review')}
@@ -454,7 +507,7 @@ export function CaptureBar({
               <button
                 type={hasAudio ? 'button' : 'submit'}
                 className="send"
-                onClick={hasAudio ? () => void sendRecording(true) : undefined}
+                onClick={hasAudio ? () => withConsent(() => void sendRecording(true)) : undefined}
                 disabled={busy !== null || (hasAudio && recorder.seconds < 1)}
                 aria-label={t('capture.save')}
                 title={t('capture.saveHint')}>

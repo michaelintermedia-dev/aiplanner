@@ -97,14 +97,35 @@ public class CaptureService : ICaptureService
 
     public static bool IsSupportedAudioFile(string fileName) => AudioExtensions.ContainsKey(Path.GetExtension(fileName));
 
-    public async Task<Result<CaptureDto>> CaptureTextAsync(CaptureTextRequest request, CancellationToken ct = default)
+    public async Task<Result<CaptureDto>> CaptureTextAsync(CaptureTextRequest request, CancellationToken ct = default, IReadOnlyList<MediaUpload>? media = null)
     {
         var userId = RequireUserId();
-        var extraction = await ExtractAsync(userId, request.Text.Trim(), transcript: null, ct);
+        var words = request.Text?.Trim() ?? "";
+        var read = await ReadMediaAsync(userId, media, ct);
+        if (words.Length == 0 && read.Count == 0)
+        {
+            return Result<CaptureDto>.Failure(media is { Count: > 0 } ? "Add a few words - the AI doesn't read these files." : "Text is required.");
+        }
+        // Only a photo: the capture is known by its file names; the AI makes the title from what it shows.
+        var input = words.Length > 0 ? words : string.Join(", ", media!.Select(m => m.FileName));
+        var extraction = await ExtractAsync(userId, input, transcript: null, ct, read, wordsGiven: words.Length > 0);
         return Result<CaptureDto>.Success(await SaveNowAsync(extraction, transcript: null, request.SaveNow, ct));
     }
 
-    public async Task<Result<CaptureDto>> CaptureVoiceAsync(IReadOnlyList<AudioSegment> segments, CancellationToken ct = default, bool saveNow = false)
+    /// <summary>
+    /// The attached files the AI can read (see MediaReader) - only if the user
+    /// agreed to them going to OpenAI (Settings, asked once); counts only in the log.
+    /// </summary>
+    private async Task<IReadOnlyList<MediaInput>> ReadMediaAsync(Guid userId, IReadOnlyList<MediaUpload>? media, CancellationToken ct)
+    {
+        if (media is not { Count: > 0 }) return [];
+        if ((await SettingsAsync(userId, ct)).AiReadsMedia != true) return [];
+        var (read, skipped) = MediaReader.Prepare(media.Select(m => (m.FileName, m.Data)));
+        _logger.LogInformation("Capture media: {Read} read, {Skipped} not readable", read.Count, skipped.Count);
+        return read;
+    }
+
+    public async Task<Result<CaptureDto>> CaptureVoiceAsync(IReadOnlyList<AudioSegment> segments, CancellationToken ct = default, bool saveNow = false, IReadOnlyList<MediaUpload>? media = null)
     {
         var userId = RequireUserId();
         if (segments.Count == 0)
@@ -191,7 +212,7 @@ public class CaptureService : ICaptureService
         AIExtraction extraction;
         try
         {
-            extraction = await ExtractAsync(userId, text, transcript, ct);
+            extraction = await ExtractAsync(userId, text, transcript, ct, await ReadMediaAsync(userId, media, ct));
         }
         catch (AiProviderException ex)
         {
@@ -369,9 +390,10 @@ public class CaptureService : ICaptureService
 
     // ---- Extraction --------------------------------------------------------
 
-    private async Task<AIExtraction> ExtractAsync(Guid userId, string text, Transcript? transcript, CancellationToken ct)
+    private async Task<AIExtraction> ExtractAsync(
+        Guid userId, string text, Transcript? transcript, CancellationToken ct, IReadOnlyList<MediaInput>? media = null, bool wordsGiven = true)
     {
-        var (raw, normalized) = await ProposeAsync(userId, text, previousText: null, currentItem: null, ct);
+        var (raw, normalized) = await ProposeAsync(userId, text, previousText: null, currentItem: null, ct, media, wordsGiven ? null : "");
 
         var extraction = new AIExtraction
         {
@@ -395,7 +417,8 @@ public class CaptureService : ICaptureService
 
     /// <summary>Asks the AI about <paramref name="text"/> and validates the answer.</summary>
     private async Task<(RawExtraction Raw, NormalizedExtraction Normalized)> ProposeAsync(
-        Guid userId, string text, string? previousText, string? currentItem, CancellationToken ct)
+        Guid userId, string text, string? previousText, string? currentItem, CancellationToken ct,
+        IReadOnlyList<MediaInput>? media = null, string? wordsForAi = null)
     {
         var user = await _db.Users
             .AsNoTracking()
@@ -412,14 +435,14 @@ public class CaptureService : ICaptureService
 
         var started = _dateTime.UtcNow;
         var raw = await _extraction.ExtractAsync(
-            new ExtractionContext(text, localNow, timeZone.Id, user.Locale, previousText, currentItem, oneEntry, knownTags), ct);
+            new ExtractionContext(wordsForAi ?? text, localNow, timeZone.Id, user.Locale, previousText, currentItem, oneEntry, knownTags, media), ct);
         var normalized = ExtractionNormalizer.Normalize(raw, text, localNow, timeZone, user.Locale);
         if (oneEntry) normalized = SingleEntry.Merge(normalized);
 
         // Log counts and timing only - never the user's words (spec section 37).
         _logger.LogInformation(
-            "Extracted {ItemCount} item(s) ({RawCount} proposed) with {Model} in {ElapsedMs} ms",
-            normalized.Items.Count, raw.Items.Count, raw.ModelName, (_dateTime.UtcNow - started).TotalMilliseconds);
+            "Extracted {ItemCount} item(s) ({RawCount} proposed, {MediaCount} file(s) read) with {Model} in {ElapsedMs} ms",
+            normalized.Items.Count, raw.Items.Count, media?.Count ?? 0, raw.ModelName, (_dateTime.UtcNow - started).TotalMilliseconds);
         return (raw, normalized);
     }
 

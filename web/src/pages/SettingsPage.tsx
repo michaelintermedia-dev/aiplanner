@@ -258,6 +258,12 @@ export function SettingsPage() {
               checked={recordings.data.keepRecordings}
               onChange={(keepRecordings) => saveRecordings.mutate({ ...recordings.data!, keepRecordings })}
             />
+            <Toggle
+              label={t('settings.aiReadsMedia')}
+              hint={t('settings.aiReadsMediaHint')}
+              checked={recordings.data.aiReadsMedia === true}
+              onChange={(aiReadsMedia) => saveRecordings.mutate({ ...recordings.data!, aiReadsMedia })}
+            />
           </>
         )}
         {(recordings.error ?? saveRecordings.error) && <p className="error">{(recordings.error ?? saveRecordings.error)!.message}</p>}

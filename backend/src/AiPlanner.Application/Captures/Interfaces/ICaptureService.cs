@@ -9,14 +9,15 @@ namespace AiPlanner.Application.Captures.Interfaces;
 /// </summary>
 public interface ICaptureService
 {
-    Task<Result<CaptureDto>> CaptureTextAsync(CaptureTextRequest request, CancellationToken ct = default);
+    /// <param name="media">Photos/documents the AI reads with the words; with them the text may be empty.</param>
+    Task<Result<CaptureDto>> CaptureTextAsync(CaptureTextRequest request, CancellationToken ct = default, IReadOnlyList<MediaUpload>? media = null);
 
     /// <summary>
     /// Stores the recording (one or more segments, in speaking order), transcribes
     /// each segment, joins the text, then extracts items from it.
     /// </summary>
     /// <param name="saveNow">The smart Save button (see CaptureTextRequest.SaveNow).</param>
-    Task<Result<CaptureDto>> CaptureVoiceAsync(IReadOnlyList<AudioSegment> segments, CancellationToken ct = default, bool saveNow = false);
+    Task<Result<CaptureDto>> CaptureVoiceAsync(IReadOnlyList<AudioSegment> segments, CancellationToken ct = default, bool saveNow = false, IReadOnlyList<MediaUpload>? media = null);
 
     /// <param name="pendingDays">Only captures from the last N days with proposals still waiting for review.</param>
     Task<IReadOnlyList<CaptureSummaryDto>> GetListAsync(int take, CancellationToken ct = default, int? pendingDays = null);

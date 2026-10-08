@@ -532,6 +532,11 @@ export const he: Messages = {
   'skin.rose': 'ורד',
   'skin.graphite': 'גרפיט',
   'settings.wallpaper': 'רקע',
-  'settings.wallpaperHint': 'הצבעים הרכים של הסקין מאחורי התוכן. כבוי: רקע פשוט.',
+  'settings.wallpaperHint': 'רקע מאחורי התוכן - של הסקין או תמונה משלך. כבוי: רקע פשוט.',
   'settings.appearanceSync': 'נשמר בחשבון - גם המכשירים האחרים שלך יתחלפו.',
+  'settings.myPhoto': 'התמונה שלי',
+  'settings.changePhoto': 'החלפת תמונה',
+  'settings.removePhoto': 'הסרת התמונה',
+  'settings.photoHint': 'תמונה משלך מאחורי התוכן, בכל המכשירים שלך. הסירו אותה כדי לחזור לרקע של הסקין.',
+  'settings.photoUploading': 'מעלה…',
 }

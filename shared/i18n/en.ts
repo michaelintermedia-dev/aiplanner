@@ -536,6 +536,11 @@ export const en = {
   'skin.rose': 'Rose',
   'skin.graphite': 'Graphite',
   'settings.wallpaper': 'Wallpaper',
-  'settings.wallpaperHint': 'The skin’s soft colours behind the content. Off: a plain background.',
+  'settings.wallpaperHint': 'A wallpaper behind the content - the skin’s, or your own photo. Off: a plain background.',
   'settings.appearanceSync': 'Saved on your account - your other devices switch too.',
+  'settings.myPhoto': 'Use my photo',
+  'settings.changePhoto': 'Change photo',
+  'settings.removePhoto': 'Remove photo',
+  'settings.photoHint': 'Your own picture behind the content, on all your devices. Remove it to go back to the skin’s wallpaper.',
+  'settings.photoUploading': 'Uploading…',
 } satisfies Record<string, Message>

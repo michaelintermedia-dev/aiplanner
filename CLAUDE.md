@@ -609,6 +609,13 @@ Local dev notes:
   skin. Text that sits right on the wallpaper gets a frosted pill (web:
   `html[data-wallpaper]` rules in index.css; mobile: `c.pill` / `c.block` from
   useColors) - add new on-page headings to those.
+  Your own photo as the wallpaper (user's request, 2026-10-08): `PUT
+  /api/settings/wallpaper` (form field "file", JPG/PNG/WebP, 15 MB; shrunk on
+  the device first), `DELETE` (back to the skin's), `GET .../wallpaper/{id}`
+  (owner only; a new photo gets a new id, so it's cached for good). Stored as
+  `UserSettings.WallpaperPhotoKey` in IFileStorageService; the DTO exposes only
+  the id (`wallpaperPhoto`). Shown (with a faint page-colour veil) instead of
+  the skin's while Wallpaper is on - only once signed in (it needs the token).
 - **UI languages: English, Russian, Hebrew; Hebrew is right-to-left**
   (2026-10-02, web + mobile). All UI text goes through `t('key', vars)` from
   `shared/i18n` - never write user-visible English in a component. `en.ts`

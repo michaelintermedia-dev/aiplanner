@@ -532,6 +532,11 @@ export const ru: Messages = {
   'skin.rose': 'Роза',
   'skin.graphite': 'Графит',
   'settings.wallpaper': 'Обои',
-  'settings.wallpaperHint': 'Мягкие цвета скина за содержимым. Выключено: простой фон.',
+  'settings.wallpaperHint': 'Обои за содержимым - скина или ваше фото. Выключено: простой фон.',
   'settings.appearanceSync': 'Сохраняется в аккаунте - другие устройства тоже переключатся.',
+  'settings.myPhoto': 'Моё фото',
+  'settings.changePhoto': 'Сменить фото',
+  'settings.removePhoto': 'Убрать фото',
+  'settings.photoHint': 'Ваша картинка за содержимым, на всех ваших устройствах. Уберите её, чтобы вернуть обои скина.',
+  'settings.photoUploading': 'Загрузка…',
 }

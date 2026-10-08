@@ -28,6 +28,8 @@ public class UserSettings
     public string Skin { get; set; } = "Indigo";
     /// <summary>Show the skin's wallpaper behind the content (off = a plain background).</summary>
     public bool Wallpaper { get; set; } = true;
+    /// <summary>The user's own wallpaper photo (storage key), shown instead of the skin's while Wallpaper is on.</summary>
+    public string? WallpaperPhotoKey { get; set; }
     public string DateFormat { get; set; } = "yyyy-MM-dd";
     public string TimeFormat { get; set; } = "HH:mm";
 

@@ -2912,3 +2912,31 @@ html[data-wallpaper] .page-header > div:first-child {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
+
+/* Settings - your own wallpaper photo */
+.wallpaper-photo {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  align-items: center;
+}
+
+.wallpaper-photo-thumb {
+  grid-row: span 2;
+  width: 56px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.wallpaper-photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.wallpaper-photo > p {
+  margin: 0;
+}

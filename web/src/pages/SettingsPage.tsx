@@ -1,11 +1,12 @@
 import type { NotificationSettings } from '@shared/types'
 import { LANGUAGES, languageOf, t, type Language } from '@shared/i18n'
 import { useQuery } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { settingsApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { useAction } from '../lib/useAction'
-import { applyAppearance, currentAppearance } from '../lib/appearance'
+import { applyAppearance, currentAppearance, photoUrl } from '../lib/appearance'
+import { shrinkImage } from '../lib/media'
 import { palette, SKIN_NAMES, skinLabel, THEMES, themeLabel, wallpaperCss, type AppearanceSettings } from '@shared/appearance'
 import { IoCheckmark } from 'react-icons/io5'
 import { browserNotificationsSupported, onPermissionChange, requestBrowserPermission } from '../lib/notifications'
@@ -30,6 +31,42 @@ export function SettingsPage() {
     setLook(next)
     applyAppearance(next)
     saveAppearance.mutate(next)
+  }
+  // Your own wallpaper photo: shrunk here, then uploaded (the account keeps it).
+  const photoInput = useRef<HTMLInputElement>(null)
+  const [photoBusy, setPhotoBusy] = useState(false)
+  const [photoError, setPhotoError] = useState<string | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  useEffect(() => {
+    let live = true
+    if (look.wallpaperPhoto) void photoUrl(look.wallpaperPhoto).then((url) => live && setPhotoPreview(url))
+    else queueMicrotask(() => live && setPhotoPreview(null))
+    return () => {
+      live = false
+    }
+  }, [look.wallpaperPhoto])
+  const changePhoto = async (run: () => Promise<AppearanceSettings>) => {
+    setPhotoBusy(true)
+    setPhotoError(null)
+    try {
+      const next = await run()
+      setLook(next)
+      applyAppearance(next)
+    } catch (e) {
+      setPhotoError(e instanceof Error ? e.message : t('common.error'))
+    } finally {
+      setPhotoBusy(false)
+    }
+  }
+  const uploadPhoto = (files: FileList | null) => {
+    const picked = files?.[0]
+    if (!picked) return
+    void changePhoto(async () => {
+      const file = await shrinkImage(new File([await picked.arrayBuffer()], picked.name, { type: picked.type }))
+      const form = new FormData()
+      form.append('file', file, file.name)
+      return settingsApi.setWallpaper(form)
+    })
   }
   const scheme = (document.documentElement.dataset.scheme as 'light' | 'dark' | undefined) ?? 'light'
   const supported = browserNotificationsSupported()
@@ -102,6 +139,31 @@ export function SettingsPage() {
           ))}
         </div>
         <Toggle label={t('settings.wallpaper')} hint={t('settings.wallpaperHint')} checked={look.wallpaper} onChange={(wallpaper) => changeLook({ wallpaper })} />
+        <div className="wallpaper-photo">
+          {photoPreview && <img src={photoPreview} alt="" className="wallpaper-photo-thumb" />}
+          <div className="wallpaper-photo-actions">
+            <button type="button" className="chip-button" disabled={photoBusy} onClick={() => photoInput.current?.click()}>
+              {photoBusy ? t('settings.photoUploading') : look.wallpaperPhoto ? t('settings.changePhoto') : t('settings.myPhoto')}
+            </button>
+            {look.wallpaperPhoto && (
+              <button type="button" className="link danger" disabled={photoBusy} onClick={() => void changePhoto(settingsApi.removeWallpaper)}>
+                {t('settings.removePhoto')}
+              </button>
+            )}
+          </div>
+          <p className="muted small">{t('settings.photoHint')}</p>
+          <input
+            ref={photoInput}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            hidden
+            onChange={(e) => {
+              uploadPhoto(e.target.files)
+              e.target.value = ''
+            }}
+          />
+        </div>
+        {photoError && <p className="error">{photoError}</p>}
         <p className="muted small">{t('settings.appearanceSync')}</p>
         {saveAppearance.error && <p className="error">{saveAppearance.error.message}</p>}
       </section>

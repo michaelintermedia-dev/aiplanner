@@ -43,6 +43,34 @@ public class SettingsController : ControllerBase
     public async Task<ActionResult<AppearanceSettingsDto>> UpdateAppearance(AppearanceSettingsDto settings, [FromServices] AppearanceSettingsService appearance, CancellationToken ct) =>
         Ok(await appearance.UpdateAsync(settings, ct));
 
+    /// <summary>PUT /api/settings/wallpaper - the user's own wallpaper photo (form field "file"); turns the wallpaper on.</summary>
+    [HttpPut("wallpaper")]
+    [RequestSizeLimit(AppearanceSettingsService.MaxPhotoBytes + 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = AppearanceSettingsService.MaxPhotoBytes + 1024 * 1024)]
+    public async Task<ActionResult<AppearanceSettingsDto>> SetWallpaper(IFormFile? file, [FromServices] AppearanceSettingsService appearance, CancellationToken ct)
+    {
+        if (file is null || file.Length == 0) return BadRequest(new { errors = new[] { "Attach the picture as form field \"file\"." } });
+        await using var stream = file.OpenReadStream();
+        var result = await appearance.SetPhotoAsync(file.FileName, file.Length, stream, ct);
+        return result.Succeeded ? Ok(result.Value) : BadRequest(new { errors = result.Errors });
+    }
+
+    /// <summary>DELETE /api/settings/wallpaper - back to the skin's wallpaper.</summary>
+    [HttpDelete("wallpaper")]
+    public async Task<ActionResult<AppearanceSettingsDto>> RemoveWallpaper([FromServices] AppearanceSettingsService appearance, CancellationToken ct) =>
+        Ok(await appearance.RemovePhotoAsync(ct));
+
+    /// <summary>GET /api/settings/wallpaper/{id} - the user's wallpaper photo (only their own; cacheable - a new photo gets a new id).</summary>
+    [HttpGet("wallpaper/{id}")]
+    public async Task<IActionResult> GetWallpaper(string id, [FromServices] AppearanceSettingsService appearance, CancellationToken ct)
+    {
+        var photo = await appearance.OpenPhotoAsync(id, ct);
+        if (photo is null) return NotFound(new { errors = new[] { "No such wallpaper." } });
+        Response.Headers.CacheControl = "private, max-age=31536000, immutable";
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
+        return File(photo.Value.Content, photo.Value.ContentType);
+    }
+
     [HttpPut("notifications")]
     public async Task<ActionResult<NotificationSettingsDto>> UpdateNotifications(NotificationSettingsDto settings, CancellationToken ct) =>
         Ok(await _notifications.UpdateSettingsAsync(settings, ct));

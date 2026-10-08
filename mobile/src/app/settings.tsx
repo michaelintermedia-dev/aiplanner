@@ -15,7 +15,9 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import { palette, SKIN_NAMES, skinLabel, THEMES, themeLabel, type AppearanceSettings } from '@shared/appearance'
 import { Image } from 'expo-image'
 import { applyAppearance, useAppearance } from '@/lib/appearance'
-import { wallpaperImage } from '@/components/Wallpaper'
+import { wallpaperImage, wallpaperPhotoSource } from '@/components/Wallpaper'
+import { pickPhotos } from '@/lib/media'
+import { File } from 'expo-file-system'
 
 /** Settings - Language, Notifications (same as web's Settings page). Changes save immediately. */
 export default function SettingsScreen() {
@@ -34,6 +36,33 @@ export default function SettingsScreen() {
     applyAppearance(next)
     saveAppearance.mutate(next)
   }
+  // Your own wallpaper photo: from the gallery, shrunk here, then uploaded (the account keeps it).
+  const [photoBusy, setPhotoBusy] = useState(false)
+  const [photoError, setPhotoError] = useState<string | null>(null)
+  const changePhoto = async (run: () => Promise<AppearanceSettings | null>) => {
+    setPhotoBusy(true)
+    setPhotoError(null)
+    try {
+      const next = await run()
+      if (next) applyAppearance(next)
+    } catch (e) {
+      setPhotoError(e instanceof Error ? e.message : t('common.error'))
+    } finally {
+      setPhotoBusy(false)
+    }
+  }
+  const choosePhoto = () =>
+    changePhoto(async () => {
+      const picked = await pickPhotos(false)
+      const photo = picked?.added[0]
+      if (!photo) {
+        if (picked?.problems.length) throw new Error(picked.problems[0])
+        return null
+      }
+      const form = new FormData()
+      form.append('file', new File(photo.uri), photo.name)
+      return settingsApi.setWallpaper(form)
+    })
   const [osAllowed, setOsAllowed] = useState<boolean | null>(null)
 
   useEffect(() => {
@@ -111,7 +140,24 @@ export default function SettingsScreen() {
       </View>
       <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.border }]}>
         <Row label={t('settings.wallpaper')} hint={t('settings.wallpaperHint')} value={look.wallpaper} onChange={(wallpaper) => changeLook({ wallpaper })} />
+        <View style={styles.photoRow}>
+          {look.wallpaperPhoto && <Image source={wallpaperPhotoSource(look.wallpaperPhoto)} style={[styles.photoThumb, { borderColor: c.border }]} contentFit="cover" cachePolicy="disk" />}
+          <View style={{ flex: 1, gap: 6 }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+              <Button
+                title={photoBusy ? t('settings.photoUploading') : look.wallpaperPhoto ? t('settings.changePhoto') : t('settings.myPhoto')}
+                onPress={() => void choosePhoto()}
+                disabled={photoBusy}
+              />
+              {look.wallpaperPhoto && (
+                <Button title={t('settings.removePhoto')} variant="danger" onPress={() => void changePhoto(settingsApi.removeWallpaper)} disabled={photoBusy} />
+              )}
+            </View>
+            <Text style={{ color: c.muted, fontSize: 13 }}>{t('settings.photoHint')}</Text>
+          </View>
+        </View>
       </View>
+      {photoError && <Text style={{ color: c.danger }}>{photoError}</Text>}
       <Text style={{ color: c.muted, fontSize: 13 }}>{t('settings.appearanceSync')}</Text>
       {saveAppearance.error && <Text style={{ color: c.danger }}>{saveAppearance.error.message}</Text>}
 
@@ -197,5 +243,7 @@ const styles = StyleSheet.create({
   language: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 16, minHeight: 40, justifyContent: 'center' },
   skins: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   skin: { width: '31.5%', height: 84, borderWidth: 2, borderRadius: 12, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  photoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+  photoThumb: { width: 54, height: 96, borderRadius: 8, borderWidth: StyleSheet.hairlineWidth },
   skinDot: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', elevation: 2 },
 })

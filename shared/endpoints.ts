@@ -152,6 +152,12 @@ export function createApi(request: RequestFn) {
       /** Light/dark and the skin - on the account, every device follows. */
       appearance: () => request<AppearanceSettings>('GET', '/settings/appearance'),
       updateAppearance: (body: AppearanceSettings) => request<AppearanceSettings>('PUT', '/settings/appearance', body),
+      /** Your own wallpaper: a FormData with the picture in field "file" (turns the wallpaper on). */
+      setWallpaper: (form: FormData) => request<AppearanceSettings>('PUT', '/settings/wallpaper', form),
+      /** Back to the skin's wallpaper. */
+      removeWallpaper: () => request<AppearanceSettings>('DELETE', '/settings/wallpaper'),
+      /** The wallpaper photo itself (needs the sign-in, so it's fetched). */
+      wallpaperPhoto: (id: string) => request<Blob>('GET', `/settings/wallpaper/${id}`, undefined, { as: 'blob' }),
     },
     calendar: {
       get: (view: CalendarView, date: string) =>

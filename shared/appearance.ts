@@ -14,11 +14,13 @@ export type Scheme = 'light' | 'dark'
 export interface AppearanceSettings {
   theme: Theme
   skin: Skin
-  /** Show the skin's wallpaper behind the content (off = a plain background). */
+  /** Show a wallpaper behind the content (off = a plain background). */
   wallpaper: boolean
+  /** The user's own wallpaper photo (its id - GET /settings/wallpaper/{id}), shown instead of the skin's; null = the skin's. */
+  wallpaperPhoto?: string | null
 }
 
-export const DEFAULT_APPEARANCE: AppearanceSettings = { theme: 'System', skin: 'Indigo', wallpaper: true }
+export const DEFAULT_APPEARANCE: AppearanceSettings = { theme: 'System', skin: 'Indigo', wallpaper: true, wallpaperPhoto: null }
 
 export const THEMES: Theme[] = ['System', 'Light', 'Dark']
 export const SKIN_NAMES: Skin[] = ['Indigo', 'Ocean', 'Forest', 'Sunset', 'Rose', 'Graphite']

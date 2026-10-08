@@ -68,10 +68,22 @@ export function applyAppearance(settings: AppearanceSettings = current) {
   // Text that sits right on the wallpaper gets a pill behind it (index.css, html[data-wallpaper]).
   if (settings.wallpaper) root.dataset.wallpaper = ''
   else delete root.dataset.wallpaper
-  // The wallpaper image: the wide one on landscape screens (desktop), else the tall one.
+  // The wallpaper: the user's photo, else the skin's (the wide one on landscape screens).
   const wide = window.innerWidth > window.innerHeight
-  document.body.style.background = settings.wallpaper ? wallpaperCss(scheme, settings.skin, wide) : colors.bg
+  const photo = settings.wallpaper && settings.wallpaperPhoto ? settings.wallpaperPhoto : null
+  document.body.style.background = !settings.wallpaper ? colors.bg : photo ? colors.bg : wallpaperCss(scheme, settings.skin, wide)
   document.body.style.backgroundAttachment = 'fixed'
+  // The photo needs the sign-in: until then (a reload) the page colour shows.
+  if (photo && signedIn) {
+    void photoUrl(photo).then((url) => {
+      // Still the one to show (a newer change may have come in meanwhile)?
+      if (current.wallpaperPhoto !== photo || !current.wallpaper || !url) return
+      // A faint veil in the page colour, so a busy photo doesn't drown the text.
+      const veil = `${colors.bg}40`
+      document.body.style.background = `linear-gradient(${veil}, ${veil}), ${colors.bg} url("${url}") center / cover no-repeat`
+      document.body.style.backgroundAttachment = 'fixed'
+    })
+  }
   // The browser's own bar (phones, the installed app).
   for (const meta of document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')) meta.content = colors.surface
 }
@@ -89,11 +101,32 @@ window.addEventListener('resize', () => {
 // "System" follows the device switching between light and dark.
 darkQuery?.addEventListener('change', () => current.theme === 'System' && applyAppearance())
 
+// Set once signed in (useAccountAppearance): only then can the photo be fetched.
+let signedIn = false
+
+// Wallpaper photos fetched this session, by id (a new photo gets a new id).
+const photos = new Map<string, Promise<string | null>>()
+export function photoUrl(id: string): Promise<string | null> {
+  let url = photos.get(id)
+  if (!url) {
+    url = settingsApi.wallpaperPhoto(id).then(
+      (blob) => URL.createObjectURL(blob),
+      () => {
+        photos.delete(id)
+        return null
+      },
+    )
+    photos.set(id, url)
+  }
+  return url
+}
+
 /** Signed in: the account's appearance (it follows the user to every device). */
 export function useAccountAppearance() {
   const { data } = useQuery({ queryKey: ['settings', 'appearance'], queryFn: settingsApi.appearance })
   useEffect(() => {
-    if (data) applyAppearance(data)
+    signedIn = true
+    applyAppearance(data ?? current)
   }, [data])
 }
 

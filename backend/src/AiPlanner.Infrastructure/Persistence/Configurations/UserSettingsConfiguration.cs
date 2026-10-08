@@ -13,6 +13,7 @@ public class UserSettingsConfiguration : IEntityTypeConfiguration<UserSettings>
         builder.HasIndex(s => s.UserId).IsUnique();
         builder.Property(s => s.Theme).HasMaxLength(20);
         builder.Property(s => s.Skin).HasMaxLength(20);
+        builder.Property(s => s.WallpaperPhotoKey).HasMaxLength(300);
         builder.Property(s => s.DateFormat).HasMaxLength(30);
         builder.Property(s => s.TimeFormat).HasMaxLength(30);
     }

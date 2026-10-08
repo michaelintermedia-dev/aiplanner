@@ -608,12 +608,7 @@ Local dev notes:
   title, the facts in the description. A photo alone is a valid capture (the
   input text is then the file names); its titles then start with the kind of
   file - "Photo: ...", "PDF: ...", "Document: ...", "Files: ..." in the user's
-  language (`MediaTitles`, done by the server, not the AI - user's rule).
-  With files, the title/summary/description are always in the app's language
-  (`User.Locale`, user's rule) - translated from the files; names, addresses,
-  numbers stay as written. Said twice: in the ATTACHED FILES section and as
-  the last part of the user message (once wasn't enough to beat the files'
-  language). The files aren't stored by the capture:
+  language (`MediaTitles`, done by the server, not the AI - user's rule). The files aren't stored by the capture:
   the client still uploads them to the saved item. Consent (user's call): the
   first time, the capture bar asks "Let the AI read your photos and
   documents?" (Agree / No, just attach them) -> `UserSettings.AiReadsMedia`

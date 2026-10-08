@@ -176,40 +176,24 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
                     break;
             }
         }
-        // Last, so it outweighs the files' own language (user's rule: media is described in the app's language).
-        parts.Add(new JsonObject
-        {
-            ["type"] = "text",
-            ["text"] = $"(Write the title, summary and description in {AppLanguage(c.Locale)}, translating what the files say.)",
-        });
         return parts;
     }
 
     /// <summary>Photos and documents sent with the words: read them as part of what the user said.</summary>
-    private static string AttachedFiles(ExtractionContext c) => c.Media is not { Count: > 0 } ? "" : $$"""
+    private static string AttachedFiles(ExtractionContext c) => c.Media is not { Count: > 0 } ? "" : """
 
 
         ATTACHED FILES. The user attached photos or documents (after their words). Read them as part of what the user said:
         - Take what matters from them - dates, times, places, names, amounts, what has to be done: a flyer, invitation or ticket -> an appointment at its date, time and place; a bill or letter with a deadline -> a task due then; a receipt -> a note with the shop, date and total; a screenshot of a message -> what it asks for; a recipe, list or anything to keep -> a note.
         - The user's words decide what to do with them ("remind me to pay this", "add this to my calendar"). With no words, make the item the files are about.
         - "title": what it is, specific ("Jazz concert - Blue Note", "Electricity bill", "IKEA receipt"), never just "Photo" or the file name.
-        - "description": the useful facts from the files as a few short lines, each "label: value" ("Amount: $84.20", "Pay by: 20 October") - never the files' text copied out.
-        - Language: write "title", "summary" and "description" in {{AppLanguage(c.Locale)}} (the language the app is set to) - translate what the files say, even when the files or the words are in another language. Only names, addresses, account numbers and amounts stay as written.
+        - "description": the useful facts from the files in a few short lines, in the user's language (or the files' language when there are no words) - never the whole text.
         - Never invent what isn't in the files or the words; if a date or time is unreadable, ask in "clarification".
         - "sourceText": the user's words only ("" when there are none).
         """;
 
     private static string KnownTags(ExtractionContext c) =>
         c.KnownTags is { Count: > 0 } tags ? string.Join(", ", tags.Select(t => $"\"{t}\"")) : "none yet";
-
-    /// <summary>The app's language (User.Locale) by name, for the AI.</summary>
-    private static string AppLanguage(string locale) => locale.Split('-', '_')[0].ToLowerInvariant() switch
-    {
-        "ru" => "Russian",
-        "he" or "iw" => "Hebrew",
-        "en" => "English",
-        _ => $"the language of the locale \"{locale}\"",
-    };
 
     /// <summary>"One entry per message" (Settings): never split what was said into several items.</summary>
     private static string OneEntry(ExtractionContext c) => !c.OneEntry || c.CurrentItem is not null ? "" : """

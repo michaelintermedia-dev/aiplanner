@@ -19,8 +19,8 @@ export function QuickRecordWidget({ label }: { label: string }) {
       style={{ height: 'match_parent', width: 'match_parent', justifyContent: 'center', alignItems: 'center', flexGap: 4 }}>
       <FlexWidget
         {...OPEN}
-        style={{ height: 52, width: 52, borderRadius: 26, backgroundColor: '#4f5bd5', justifyContent: 'center', alignItems: 'center' }}>
-        <SvgWidget svg={MIC} style={{ height: 26, width: 26 }} />
+        style={{ height: 64, width: 64, borderRadius: 32, backgroundColor: '#4f5bd5', justifyContent: 'center', alignItems: 'center' }}>
+        <SvgWidget svg={MIC} style={{ height: 32, width: 32 }} />
       </FlexWidget>
       <TextWidget
         {...OPEN}

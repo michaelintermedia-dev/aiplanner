@@ -71,7 +71,8 @@ export async function pickPhotos(camera: boolean): Promise<Picked | null> {
   if (!permission.granted) return null
   const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 1, exif: false }
   const result = camera
-    ? await ImagePicker.launchCameraAsync(options)
+    ? // The back camera - it's for photos of things (a flyer, a receipt), not selfies.
+      await ImagePicker.launchCameraAsync({ ...options, cameraType: ImagePicker.CameraType.back })
     : await ImagePicker.launchImageLibraryAsync({ ...options, allowsMultipleSelection: true, selectionLimit: 10 })
   if (result.canceled) return null
   const picked: Picked = { added: [], problems: [] }

@@ -12,4 +12,6 @@ public record UpdateAppointmentRequest(
     string? Location,
     IReadOnlyList<string>? ParticipantNames,
     IReadOnlyList<ReminderDto>? Reminders,
-    RecurrenceDto? Recurrence = null);
+    RecurrenceDto? Recurrence = null,
+    /// <summary>Its tags (null: unchanged; [] clears them).</summary>
+    IReadOnlyList<string>? Tags = null);

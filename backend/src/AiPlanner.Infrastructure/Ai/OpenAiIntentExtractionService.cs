@@ -88,7 +88,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             i.Intent, i.Title, i.Summary, i.Description, i.Date, i.Time, i.EndTime, i.Location,
             i.Priority,
             i.Reminders?.Select(r => new RawReminder(r.Kind, r.MinutesBefore, r.Date, r.Time, r.Days)).ToList(),
-            i.Recurrence, i.Clarification, i.Confidence, i.AddsToCurrent ?? false, i.SourceText, i.Unrelated, i.RecurrenceDays, i.RecurrenceInterval)).ToList();
+            i.Recurrence, i.Clarification, i.Confidence, i.AddsToCurrent ?? false, i.SourceText, i.Unrelated, i.RecurrenceDays, i.RecurrenceInterval, i.Tags)).ToList();
 
         return new RawExtraction(parsed.Title, parsed.Summary, items, content, "OpenAI", completion.Model ?? _options.Model);
     }
@@ -130,6 +130,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             - "recurrenceDays": for "weekly", the weekdays it falls on as English names (["Monday","Thursday"]); otherwise null.
             - "recurrenceInterval": every N days/weeks/months ("every 2 weeks" = 2); null for 1.
             - "location": only if a place is mentioned.
+            - "tags": [] unless the user asks to tag, label or file the item ("tag it shopping", "put it under work", "tags: home and urgent") - then each tag as a short name ("shopping"). Reuse the user's existing tag when one means the same (same spelling and language): {{KnownTags(c)}}. Never invent tags the user didn't ask for.
             - "clarification": a short question for the user when something important is missing or ambiguous (e.g. an appointment with no time); otherwise null.
             - "confidence": 0 to 1, how sure you are that the item is right.
             - "sourceText": the exact words from the input this item came from, copied verbatim (same language, same wording, no paraphrase) - the whole stretch that talks about it. Used to play just that part of a voice recording.
@@ -142,6 +143,9 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             Never return nothing: if the input is a question, an idea, or anything that isn't clearly a task or appointment, return it as a single "note" whose "description" keeps the user's words. The user can change any item's type in the review.
             """ + OneEntry(c) + Continuing(c);
     }
+
+    private static string KnownTags(ExtractionContext c) =>
+        c.KnownTags is { Count: > 0 } tags ? string.Join(", ", tags.Select(t => $"\"{t}\"")) : "none yet";
 
     /// <summary>"One entry per message" (Settings): never split what was said into several items.</summary>
     private static string OneEntry(ExtractionContext c) => !c.OneEntry || c.CurrentItem is not null ? "" : """
@@ -180,6 +184,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
                 - "unrelated": words from the new input that are not about this item at all (a different errand, e.g. "Also call mom tonight"), copied verbatim; null if everything is about this item. Anything you'd do as a separate errand counts, even with "also" or "on the way": for a "Call plumber back" task, "Also buy milk on the way home" is unrelated, "Ask him about the kitchen tap" is not. Keep them out of the description - the user is offered to capture them separately. Never return them as a second item.
                 - "date", "time", "endTime", "location", "priority": the saved values, unless the new input changes them.
                 - "reminders": the saved reminders plus any new ones; remove or change one only if the user says so.
+                - "tags": the saved tags plus any the user asks to add; remove one only if the user says so.
                 - "sourceText": the new words.
                 """;
         }
@@ -234,7 +239,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             ["type"] = "object",
             ["additionalProperties"] = false,
             ["required"] = new JsonArray("intent", "title", "summary", "description", "date", "time", "endTime",
-                "location", "priority", "reminders", "recurrence", "recurrenceDays", "recurrenceInterval", "clarification", "confidence", "addsToCurrent", "sourceText", "unrelated"),
+                "location", "priority", "reminders", "recurrence", "recurrenceDays", "recurrenceInterval", "tags", "clarification", "confidence", "addsToCurrent", "sourceText", "unrelated"),
             ["properties"] = new JsonObject
             {
                 ["intent"] = new JsonObject { ["type"] = "string", ["enum"] = new JsonArray("task", "appointment", "note") },
@@ -258,6 +263,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
                     },
                 },
                 ["recurrenceInterval"] = new JsonObject { ["type"] = new JsonArray("integer", "null") },
+                ["tags"] = new JsonObject { ["type"] = "array", ["items"] = new JsonObject { ["type"] = "string" } },
                 ["clarification"] = Nullable("string"),
                 ["confidence"] = new JsonObject { ["type"] = "number" },
                 ["addsToCurrent"] = new JsonObject { ["type"] = "boolean" },
@@ -294,7 +300,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
         string? Intent, string? Title, string? Summary, string? Description,
         string? Date, string? Time, string? EndTime, string? Location, string? Priority,
         List<ReminderJson>? Reminders, string? Recurrence, string? Clarification, double? Confidence, bool? AddsToCurrent, string? SourceText, string? Unrelated,
-        List<string>? RecurrenceDays, int? RecurrenceInterval);
+        List<string>? RecurrenceDays, int? RecurrenceInterval, List<string>? Tags);
 
     private sealed record ReminderJson(string? Kind, int? MinutesBefore, string? Date, string? Time, List<string>? Days);
 }

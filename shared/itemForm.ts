@@ -30,8 +30,8 @@ export interface ItemForm {
   people: string
   priority: TaskPriority
   ongoing: boolean
-  /** Task tags, comma-separated. */
-  tags: string
+  /** Tags (any type). */
+  tags: string[]
   reminders: Reminder[]
   /** Task/event description, note text. */
   details: string
@@ -52,7 +52,7 @@ const BLANK: ItemForm = {
   people: '',
   priority: 'None',
   ongoing: false,
-  tags: '',
+  tags: [],
   reminders: [],
   details: '',
   notes: '',
@@ -67,7 +67,7 @@ export const formFromTask = (task: Task, tz: string): ItemForm => ({
   time: task.dueDateUtc && task.hasDueTime ? timeKey(task.dueDateUtc, tz) : '',
   priority: task.priority,
   ongoing: task.status === 'Ongoing',
-  tags: task.tags.join(', '),
+  tags: task.tags,
   reminders: task.reminders ?? [],
   details: task.description ?? '',
   notes: task.notes ?? '',
@@ -83,6 +83,7 @@ export const formFromAppointment = (a: Appointment, tz: string): ItemForm => ({
   endTime: timeKey(a.endUtc, tz),
   location: a.location ?? '',
   people: a.participants.map((p) => p.name).join(', '),
+  tags: a.tags ?? [],
   reminders: a.reminders ?? [],
   details: a.description ?? '',
   notes: a.notes ?? '',
@@ -93,6 +94,7 @@ export const formFromNote = (n: Note): ItemForm => ({
   ...BLANK,
   type: 'Note',
   title: n.title ?? '',
+  tags: n.tags ?? [],
   reminders: n.reminders,
   details: n.content,
 })
@@ -160,6 +162,7 @@ const confirmEntry = (p: MergedProposal, include: boolean): ConfirmCaptureItem =
   location: p.item.location,
   priority: p.item.priority,
   reminders: p.item.reminders,
+  tags: p.item.tags ?? null,
 })
 
 /**
@@ -264,7 +267,7 @@ async function writeFields(api: Api, itemType: ItemType, id: string, form: ItemF
       priority: form.priority,
       isOngoing: form.ongoing,
       reminders: form.reminders,
-      tags: list(form.tags),
+      tags: form.tags,
       recurrence: due && !form.ongoing ? form.recurrence : null,
     })
   } else if (itemType === 'Appointment') {
@@ -277,12 +280,14 @@ async function writeFields(api: Api, itemType: ItemType, id: string, form: ItemF
       participantNames: list(form.people),
       reminders: form.reminders,
       recurrence: form.recurrence,
+      tags: form.tags,
     })
   } else {
     await api.notes.update(id, {
       title: form.title.trim() || null,
       content: form.details.trim() || form.title.trim(),
       reminders: form.reminders,
+      tags: form.tags,
     })
   }
 }
@@ -359,6 +364,16 @@ export function applyProposal(form: ItemForm, saved: ItemForm, item: CaptureItem
   const reminders = [...next.reminders.filter((r) => !removed.some((x) => sameReminder(x, r))), ...fresh.filter((p) => !next.reminders.some((r) => sameReminder(p, r)))]
   if (JSON.stringify(reminders) !== JSON.stringify(next.reminders)) set('reminders', reminders)
 
+  // Tags: the same - add new ones, remove the ones it dropped (it returns the saved ones plus any asked for).
+  if (item.tags) {
+    const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()
+    const gone = saved.tags.filter((x) => !item.tags!.some((p) => same(p, x)))
+    const added = item.tags.filter((p) => !next.tags.some((x) => same(p, x)))
+    const tags = [...next.tags.filter((x) => !gone.some((g) => same(g, x))), ...added]
+    // No tags back at all = it left them out (not "remove every tag").
+    if (item.tags.length > 0 && JSON.stringify(tags) !== JSON.stringify(next.tags)) set('tags', tags)
+  }
+
   return { form: next, changed }
 }
 
@@ -417,6 +432,7 @@ export function formAsAiItem(f: ItemForm, tz: string): string {
     recurrence: f.type !== 'Note' && f.recurrence ? f.recurrence.frequency.toLowerCase() : null,
     recurrenceDays: f.type !== 'Note' && f.recurrence?.frequency === 'Weekly' ? (f.recurrence.days ?? null) : null,
     recurrenceInterval: f.type !== 'Note' && f.recurrence && f.recurrence.interval > 1 ? f.recurrence.interval : null,
+    tags: f.tags,
   })
 }
 

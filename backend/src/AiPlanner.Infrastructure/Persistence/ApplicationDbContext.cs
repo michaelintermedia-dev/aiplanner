@@ -38,6 +38,8 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
 
     public DbSet<Tag> Tags => Set<Tag>();
     public DbSet<TaskTag> TaskTags => Set<TaskTag>();
+    public DbSet<AppointmentTag> AppointmentTags => Set<AppointmentTag>();
+    public DbSet<NoteTag> NoteTags => Set<NoteTag>();
     public DbSet<RecurrenceRule> RecurrenceRules => Set<RecurrenceRule>();
     public DbSet<Attachment> Attachments => Set<Attachment>();
 

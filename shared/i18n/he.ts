@@ -186,7 +186,7 @@ export const he: Messages = {
   'filter.status': 'סטטוס',
   'filter.reminders': 'תזכורות',
   'filter.more': 'עוד',
-  'filter.tags': 'תגיות (משימות)',
+  'filter.tags': 'תגיות',
 
   // ---- change type ----
   'changeType.label': 'סוג',
@@ -194,8 +194,8 @@ export const he: Messages = {
   'changeType.toTask': 'להפוך למשימה?',
   'changeType.toEvent': 'להפוך לאירוע?',
   'changeType.toNote': 'להפוך לפתק?',
-  'changeType.loses.taskToNote': 'מועד היעד, העדיפות והתגיות לא יועברו.',
-  'changeType.loses.taskToEvent': 'העדיפות והתגיות לא יועברו.',
+  'changeType.loses.taskToNote': 'מועד היעד והעדיפות לא יועברו.',
+  'changeType.loses.taskToEvent': 'העדיפות לא תועבר.',
   'changeType.loses.eventToNote': 'השעה לא תועבר (המיקום יתווסף לטקסט).',
 
   // ---- calendar screen ----
@@ -230,6 +230,9 @@ export const he: Messages = {
   'task.priority': 'עדיפות',
   'task.ongoingCheck': 'מתמשכת (ללא מועד יעד)',
   'task.tags': 'תגיות',
+  'tags.new': 'תגית חדשה',
+  'tags.add': 'הוספת תגית',
+  'tags.hint': 'הקישו כדי להוסיף או להסיר. תגיות חדשות נשמרות לפעם הבאה.',
   'event.notFound': 'האירוע לא נמצא.',
   'event.backToCalendar': 'חזרה ללוח השנה',
   'event.when': 'מתי',

@@ -25,7 +25,7 @@ export interface FeedFilters {
   /** Task due date / event start. */
   when: WhenRange
   fromVoice: boolean
-  /** Any of these (only tasks have tags). */
+  /** Any of these, on any kind of item. */
   tags: string[]
 }
 

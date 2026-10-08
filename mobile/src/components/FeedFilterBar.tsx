@@ -114,11 +114,11 @@ function FilterPanel({ filters: f, onChange, onClose }: { filters: FeedFilters; 
         </View>
       </View>
 
-      {tags.data && tags.data.length > 0 && (
+      {tags.data && tags.data.some((tag) => tag.count > 0) && (
         <View style={{ gap: 6 }}>
           <Text style={[styles.caption, { color: c.muted }]}>{t('filter.tags').toUpperCase()}</Text>
           <View style={styles.wrap}>
-            {tags.data.map((t) => {
+            {tags.data.filter((tag) => tag.count > 0 || f.tags.includes(tag.name)).map((t) => {
               const on = f.tags.includes(t.name)
               return (
                 <OptionChip

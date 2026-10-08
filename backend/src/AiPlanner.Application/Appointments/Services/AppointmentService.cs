@@ -2,6 +2,7 @@ using AiPlanner.Application.Recurrence;
 using AiPlanner.Application.Appointments.DTOs;
 using AiPlanner.Application.Appointments.Interfaces;
 using AiPlanner.Application.Common.Interfaces;
+using AiPlanner.Application.Tags;
 using AiPlanner.Application.Common.Models;
 using AiPlanner.Application.Reminders;
 using AiPlanner.Domain.Entities;
@@ -79,6 +80,7 @@ public class AppointmentService : IAppointmentService
         };
 
         ApplyParticipants(appointment, request.ParticipantNames);
+        await ApplyTagsAsync(appointment, request.Tags ?? [], ct);
         var zone = await _reminders.ZoneAsync(userId, ct);
         SetRecurrence(appointment, request.Recurrence, zone);
         SetReminders(appointment, request.Reminders, zone);
@@ -105,6 +107,7 @@ public class AppointmentService : IAppointmentService
         appointment.Location = request.Location;
 
         ApplyParticipants(appointment, request.ParticipantNames);
+        await ApplyTagsAsync(appointment, request.Tags, ct);
 
         // Re-set even if unchanged: a "before" reminder follows the start time.
         var zone = await _reminders.ZoneAsync(appointment.UserId, ct);
@@ -239,6 +242,7 @@ public class AppointmentService : IAppointmentService
             .Include(a => a.Participants)
             .Include(a => a.Reminders)
             .Include(a => a.RecurrenceRule)
+            .Include(a => a.AppointmentTags).ThenInclude(at => at.Tag)
             .Where(a => a.Id == id && a.UserId == userId);
 
         if (!track)
@@ -252,6 +256,9 @@ public class AppointmentService : IAppointmentService
     // New participants/reminders are added explicitly: their Guid keys are set in
     // the constructor, so if attached only via a tracked appointment's navigation
     // EF would treat them as existing rows (UPDATE -> 409 on edit).
+
+    private Task ApplyTagsAsync(Appointment appointment, IReadOnlyList<string>? names, CancellationToken ct) =>
+        TagSync.ApplyAsync(_db, appointment.UserId, appointment.AppointmentTags, names, tag => new AppointmentTag { Appointment = appointment, Tag = tag }, ct);
 
     private void ApplyParticipants(Appointment appointment, IReadOnlyList<string>? names)
     {
@@ -308,5 +315,6 @@ public class AppointmentService : IAppointmentService
         ReminderPlanner.ToDtos(a.Reminders),
         a.SourceAiExtractionId,
         RecurrencePlanner.ToDto(a.RecurrenceRule),
-        a.RecurrenceRule is null ? null : a.SkippedOccurrencesUtc);
+        a.RecurrenceRule is null ? null : a.SkippedOccurrencesUtc,
+        Tags: a.AppointmentTags.Select(at => at.Tag.Name).OrderBy(n => n).ToList());
 }

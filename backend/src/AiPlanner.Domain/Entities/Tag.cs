@@ -8,4 +8,6 @@ public class Tag : BaseEntity
     public string? ColorHex { get; set; }
 
     public ICollection<TaskTag> TaskTags { get; set; } = new List<TaskTag>();
+    public ICollection<AppointmentTag> AppointmentTags { get; set; } = new List<AppointmentTag>();
+    public ICollection<NoteTag> NoteTags { get; set; } = new List<NoteTag>();
 }

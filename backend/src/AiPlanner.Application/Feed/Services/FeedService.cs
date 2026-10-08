@@ -43,8 +43,7 @@ public class FeedService : IFeedService
         var tags = f.Tags?.Select(t => t.Trim()).Where(t => t.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList() ?? [];
         // Notes have no status or date of their own, so those filters leave them out.
         bool Wants(FeedKind k) => (query.Kinds.Count == 0 || query.Kinds.Contains(k))
-            && !(k == FeedKind.Note && (f.Status != FeedStatusFilter.Any || dated))
-            && !(k != FeedKind.Task && tags.Count > 0); // only tasks have tags
+            && !(k == FeedKind.Note && (f.Status != FeedStatusFilter.Any || dated));
 
         // ---- 1. Key rows (filtered) -----------------------------------------
         var keys = new List<FeedKeyRow>();
@@ -85,7 +84,8 @@ public class FeedService : IFeedService
             if (text is not null)
             {
                 q = q.Where(a => a.Title.ToLower().Contains(text) || (a.Description != null && a.Description.ToLower().Contains(text))
-                    || (a.Notes != null && a.Notes.ToLower().Contains(text)) || (a.Location != null && a.Location.ToLower().Contains(text)));
+                    || (a.Notes != null && a.Notes.ToLower().Contains(text)) || (a.Location != null && a.Location.ToLower().Contains(text))
+                    || a.AppointmentTags.Any(at => at.Tag.Name.ToLower().Contains(text)));
             }
             if (f.CreatedFromUtc is { } cFrom) q = q.Where(a => a.CreatedAtUtc >= cFrom);
             if (f.CreatedToUtc is { } cTo) q = q.Where(a => a.CreatedAtUtc < cTo);
@@ -108,6 +108,7 @@ public class FeedService : IFeedService
             if (f.DateFromUtc is { } dFrom) q = q.Where(a => a.StartUtc >= dFrom || a.RecurrenceRuleId != null);
             if (f.DateToUtc is { } dTo) q = q.Where(a => a.StartUtc < dTo);
             if (f.FromVoice) q = q.Where(a => a.SourceAiExtraction != null && a.SourceAiExtraction.TranscriptId != null);
+            if (tags.Count > 0) q = q.Where(a => a.AppointmentTags.Any(at => tags.Contains(at.Tag.Name)));
             var rows = await q.Select(a => new { a.Id, a.CreatedAtUtc, a.UpdatedAtUtc, a.StartUtc, Repeats = a.RecurrenceRuleId != null }).ToListAsync(ct);
 
             // A repeating event is dated by its next occurrence (sorting, "Today", date filters).
@@ -129,7 +130,11 @@ public class FeedService : IFeedService
         if (Wants(FeedKind.Note))
         {
             var q = _db.Notes.AsNoTracking().Where(n => n.UserId == userId);
-            if (text is not null) q = q.Where(n => (n.Title != null && n.Title.ToLower().Contains(text)) || n.Content.ToLower().Contains(text));
+            if (text is not null)
+            {
+                q = q.Where(n => (n.Title != null && n.Title.ToLower().Contains(text)) || n.Content.ToLower().Contains(text)
+                    || n.NoteTags.Any(nt => nt.Tag.Name.ToLower().Contains(text)));
+            }
             if (f.CreatedFromUtc is { } cFrom) q = q.Where(n => n.CreatedAtUtc >= cFrom);
             if (f.CreatedToUtc is { } cTo) q = q.Where(n => n.CreatedAtUtc < cTo);
             q = f.Reminders switch
@@ -141,6 +146,7 @@ public class FeedService : IFeedService
                 _ => q,
             };
             if (f.FromVoice) q = q.Where(n => n.SourceAiExtraction != null && n.SourceAiExtraction.TranscriptId != null);
+            if (tags.Count > 0) q = q.Where(n => n.NoteTags.Any(nt => tags.Contains(nt.Tag.Name)));
             keys.AddRange(await q.Select(n => new FeedKeyRow(n.Id, FeedKind.Note, n.CreatedAtUtc, n.UpdatedAtUtc, (DateTime?)null)).ToListAsync(ct));
         }
 
@@ -179,7 +185,12 @@ public class FeedService : IFeedService
         {
             var appointments = await _db.Appointments.AsNoTracking()
                 .Where(a => a.UserId == userId && appointmentIds.Contains(a.Id))
-                .Select(a => new { a.Id, a.Title, a.Description, a.Status, a.StartUtc, a.EndUtc, a.Location, a.SourceAiExtractionId, a.CreatedAtUtc, a.UpdatedAtUtc, Repeats = a.RecurrenceRuleId != null })
+                .Select(a => new
+                {
+                    a.Id, a.Title, a.Description, a.Status, a.StartUtc, a.EndUtc, a.Location, a.SourceAiExtractionId, a.CreatedAtUtc, a.UpdatedAtUtc,
+                    Repeats = a.RecurrenceRuleId != null,
+                    Tags = a.AppointmentTags.Select(at => at.Tag.Name).ToList(),
+                })
                 .ToListAsync(ct);
             var nextOnPage = await NextOccurrencesAsync(userId, appointments.Where(a => a.Repeats).Select(a => a.Id).ToList(), now, ct);
             foreach (var a in appointments)
@@ -188,7 +199,7 @@ public class FeedService : IFeedService
                 var (start, end) = a.Repeats && nextOnPage.TryGetValue(a.Id, out var n) && n is { } o ? (o.Start, o.End) : (a.StartUtc, a.EndUtc);
                 details[a.Id] = new FeedItemDto(
                     a.Id, FeedKind.Appointment, a.Title, Snippet(a.Description), a.Status.ToString(), start, end,
-                    true, null, a.Location, [], a.SourceAiExtractionId is not null, a.CreatedAtUtc, a.UpdatedAtUtc,
+                    true, null, a.Location, a.Tags.OrderBy(t => t).ToList(), a.SourceAiExtractionId is not null, a.CreatedAtUtc, a.UpdatedAtUtc,
                     Repeats: a.Repeats);
             }
         }
@@ -198,7 +209,7 @@ public class FeedService : IFeedService
         {
             var notes = await _db.Notes.AsNoTracking()
                 .Where(n => n.UserId == userId && noteIds.Contains(n.Id))
-                .Select(n => new { n.Id, n.Title, n.Content, n.SourceAiExtractionId, n.CreatedAtUtc, n.UpdatedAtUtc })
+                .Select(n => new { n.Id, n.Title, n.Content, n.SourceAiExtractionId, n.CreatedAtUtc, n.UpdatedAtUtc, Tags = n.NoteTags.Select(nt => nt.Tag.Name).ToList() })
                 .ToListAsync(ct);
             foreach (var n in notes)
             {
@@ -206,7 +217,7 @@ public class FeedService : IFeedService
                 var title = string.IsNullOrWhiteSpace(n.Title) ? Snippet(n.Content, 80)! : n.Title;
                 var snippet = n.Title is not null && n.Title != n.Content ? Snippet(n.Content) : null;
                 details[n.Id] = new FeedItemDto(
-                    n.Id, FeedKind.Note, title, snippet, null, null, null, false, null, null, [],
+                    n.Id, FeedKind.Note, title, snippet, null, null, null, false, null, null, n.Tags.OrderBy(t => t).ToList(),
                     n.SourceAiExtractionId is not null, n.CreatedAtUtc, n.UpdatedAtUtc);
             }
         }
@@ -270,14 +281,18 @@ public class FeedService : IFeedService
     public async Task<IReadOnlyList<FeedTagDto>> GetTagsAsync(CancellationToken ct = default)
     {
         var userId = _currentUser.UserId ?? throw new UnauthorizedAccessException("No authenticated user.");
-        // Counted from the user's tasks, so deleted tasks (query filter) don't count.
-        var counts = await _db.TaskItems.AsNoTracking()
-            .Where(t => t.UserId == userId)
-            .SelectMany(t => t.TaskTags.Select(tt => tt.Tag.Name))
-            .GroupBy(name => name)
-            .Select(g => new { Name = g.Key, Count = g.Count() })
-            .ToListAsync(ct);
-        return counts.OrderByDescending(t => t.Count).ThenBy(t => t.Name).Select(t => new FeedTagDto(t.Name, t.Count)).ToList();
+        // Every tag the user has made (the list to pick from), with how many of their
+        // items use it - counted from the items, so deleted ones (query filter) don't count.
+        var all = await _db.Tags.AsNoTracking().Where(t => t.UserId == userId).Select(t => t.Name).ToListAsync(ct);
+        var used = (await _db.TaskItems.AsNoTracking().Where(t => t.UserId == userId).SelectMany(t => t.TaskTags.Select(x => x.Tag.Name)).ToListAsync(ct))
+            .Concat(await _db.Appointments.AsNoTracking().Where(a => a.UserId == userId).SelectMany(a => a.AppointmentTags.Select(x => x.Tag.Name)).ToListAsync(ct))
+            .Concat(await _db.Notes.AsNoTracking().Where(n => n.UserId == userId).SelectMany(n => n.NoteTags.Select(x => x.Tag.Name)).ToListAsync(ct))
+            .GroupBy(n => n, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+        return all
+            .Select(name => new FeedTagDto(name, used.GetValueOrDefault(name)))
+            .OrderByDescending(t => t.Count).ThenBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     private static string? Snippet(string? text, int max = SnippetLength)

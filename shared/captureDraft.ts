@@ -50,6 +50,8 @@ export interface ItemDraft {
   /** "Add more": words that weren't about the item, and whether to capture them as a new entry after saving. */
   unrelated: string | null
   captureUnrelated: boolean
+  /** Its tags (any type). Missing in review drafts kept from before tags. */
+  tags?: string[]
 }
 
 /** `target`: reviewing a continued capture, so "Add to this item" is available. */
@@ -77,6 +79,7 @@ export function toDraft(item: CaptureItem, timeZone: string, target?: AppendTarg
     wholeItem,
     unrelated: target ? (item.unrelated ?? null) : null,
     captureUnrelated: true,
+    tags: item.tags ?? [],
   }
 }
 
@@ -147,6 +150,7 @@ export function toConfirmItem(d: ItemDraft, timeZone: string, target?: AppendTar
     priority: d.priority,
     reminders: d.reminders,
     recurrence: d.intent === 'Note' ? null : d.recurrence,
+    tags: d.tags ?? [],
   }
 
   if (d.intent === 'Appointment' && d.date && d.time) {

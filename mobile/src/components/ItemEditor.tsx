@@ -35,6 +35,7 @@ import { MediaEditor } from './ItemMedia'
 import { KIND_ICON } from './kindIcons'
 import { ReminderList } from './ReminderList'
 import { RecordingPlayer } from './SourceCapture'
+import { TagPicker } from './TagPicker'
 import { Button } from './ui'
 
 const TYPES: ItemType[] = ['Task', 'Appointment', 'Note']
@@ -363,15 +364,7 @@ export function ItemEditor({
       <View style={ring('reminders')}>
         <ReminderList value={form.reminders} onChange={(reminders) => set({ reminders })} itemHasTime={formHasTime(form)} isNote={isNote} />
       </View>
-      {form.type === 'Task' && (
-        <Field
-          label={`${t('task.tags')} ${t('item.commaSeparated')}`}
-          value={form.tags}
-          onChangeText={(tags) => set({ tags })}
-          autoCapitalize="none"
-          changed={marked('tags')}
-        />
-      )}
+      <TagPicker value={form.tags} onChange={(tags) => set({ tags })} changed={marked('tags')} />
       <Field
         label={isNote ? t('kind.note') : t('item.description')}
         value={form.details}

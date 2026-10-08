@@ -97,4 +97,13 @@ public class SingleEntryTests
         merged.Items.Single().Clarification.Should().Be("Which day? What time?");
         merged.Items.Single().Confidence.Should().Be(0.4);
     }
+
+    [Fact]
+    public void Tags_of_every_item_are_kept_once()
+    {
+        var merged = SingleEntry.Merge(Of(
+            Item(ExtractionIntent.Task, "Buy milk") with { Tags = ["shopping"] },
+            Item(ExtractionIntent.Task, "Buy bread") with { Tags = ["Shopping", "bakery"] }));
+        merged.Items.Single().Tags.Should().Equal("shopping", "bakery");
+    }
 }

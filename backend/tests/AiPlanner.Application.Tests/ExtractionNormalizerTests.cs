@@ -410,4 +410,17 @@ public class ExtractionNormalizerTests
         bad.Clarification.Should().NotBeNull();
         asked.StartUtc.Should().BeNull();
     }
+
+    [Fact]
+    public void Tags_are_trimmed_and_deduplicated_ignoring_case()
+    {
+        var item = Normalize(Item() with { Tags = [" shopping ", "Shopping", "", "home"] });
+        item.Tags.Should().Equal("shopping", "home");
+    }
+
+    [Fact]
+    public void No_tags_means_an_empty_list()
+    {
+        Normalize(Item()).Tags.Should().BeEmpty();
+    }
 }

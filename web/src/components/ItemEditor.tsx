@@ -30,6 +30,7 @@ import { KIND_ICON } from './kindIcons'
 import { ReminderList } from './ReminderList'
 import { RecurrencePicker } from './RecurrencePicker'
 import { RecordingPlayer } from './SourceCapture'
+import { TagPicker } from './TagPicker'
 
 const TYPES: ItemType[] = ['Task', 'Appointment', 'Note']
 
@@ -320,9 +321,6 @@ export function ItemEditor({
             <input type="checkbox" checked={form.ongoing} onChange={(e) => set({ ongoing: e.target.checked })} />
             {t('task.ongoingCheck')}
           </label>
-          <Field label={<>{t('task.tags')} <span className="muted">{t('item.commaSeparated')}</span></>} changed={mark('tags')}>
-            <input value={form.tags} onChange={(e) => set({ tags: e.target.value })} />
-          </Field>
         </>
       )}
 
@@ -364,6 +362,8 @@ export function ItemEditor({
         <span>{t('item.reminder')}</span>
         <ReminderList value={form.reminders} onChange={(reminders) => set({ reminders })} itemHasTime={formHasTime(form)} isNote={isNote} />
       </div>
+
+      <TagPicker value={form.tags} onChange={(tags) => set({ tags })} changed={!!mark('tags')} />
 
       <Field label={isNote ? t('kind.note') : t('item.description')} changed={mark('details')}>
         <textarea rows={isNote ? 6 : 3} value={form.details} onChange={(e) => set({ details: e.target.value })} />

@@ -14,4 +14,6 @@ public record CreateAppointmentRequest(
     /// <summary>The appointment's reminders.</summary>
     IReadOnlyList<ReminderDto>? Reminders,
     /// <summary>How it repeats; StartUtc/EndUtc are the first occurrence.</summary>
-    RecurrenceDto? Recurrence = null);
+    RecurrenceDto? Recurrence = null,
+    /// <summary>Its tags (null: none on create).</summary>
+    IReadOnlyList<string>? Tags = null);

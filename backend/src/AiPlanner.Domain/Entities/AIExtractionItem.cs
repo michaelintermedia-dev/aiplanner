@@ -25,6 +25,9 @@ public class AIExtractionItem : BaseEntity
     public TaskPriority? Priority { get; set; }
     /// <summary>Proposed reminders (JSON). See Reminder for what each field means per kind.</summary>
     public List<ProposedReminder> ProposedReminders { get; set; } = [];
+
+    /// <summary>Tags the user asked for (names; made on confirm).</summary>
+    public List<string> ProposedTags { get; set; } = [];
     public RecurrenceFrequency? RecurrenceFrequency { get; set; }
     public double? Confidence { get; set; }
     /// <summary>

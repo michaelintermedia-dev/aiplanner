@@ -8,6 +8,7 @@ public class SaveNoteRequestValidator : AbstractValidator<SaveNoteRequest>
 {
     public SaveNoteRequestValidator()
     {
+        RuleForEach(x => x.Tags).NotEmpty().MaximumLength(100).When(x => x.Tags is not null);
         RuleFor(x => x.Title).MaximumLength(300);
         RuleFor(x => x.Content).NotEmpty().MaximumLength(20_000);
         RuleFor(x => x.Reminders).Must(r => r is null || r.Count <= ReminderPlanner.MaxPerItem)

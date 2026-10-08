@@ -86,6 +86,7 @@ export interface Appointment {
   skippedUtc?: string[] | null
   /** In Today: this is one occurrence of a repeating event (startUtc/endUtc are its times). */
   isOccurrence?: boolean
+  tags?: string[] | null
 }
 
 /** Also the PUT body: an update replaces all fields. */
@@ -100,6 +101,8 @@ export interface CreateAppointmentRequest {
   reminders?: Reminder[]
   /** startUtc/endUtc are the first occurrence. */
   recurrence?: Recurrence | null
+  /** Omitted: none on create, unchanged on update; [] clears them. */
+  tags?: string[] | null
 }
 
 // ---- Unified feed ------------------------------------------------------------
@@ -152,6 +155,7 @@ export interface Note {
   reminders: Reminder[]
   createdAtUtc: string
   updatedAtUtc: string
+  tags?: string[] | null
 }
 
 export interface SaveNoteRequest {
@@ -159,6 +163,8 @@ export interface SaveNoteRequest {
   content: string
   /** Omitted or empty = no reminders (PUT replaces them). */
   reminders?: Reminder[]
+  /** Omitted: none on create, unchanged on update; [] clears them. */
+  tags?: string[] | null
 }
 
 export interface UpcomingReminder {
@@ -241,6 +247,8 @@ export interface CaptureItem {
   heldByEditForm?: boolean
   /** How it repeats, as the AI understood it (null: it doesn't). */
   recurrenceRule?: Recurrence | null
+  /** Tags the user asked for ("tag it shopping"). */
+  tags?: string[] | null
 }
 
 export interface Capture {
@@ -301,6 +309,8 @@ export interface ConfirmCaptureItem {
   linkOnly?: boolean
   /** Tasks (with a date) and events only. */
   recurrence?: Recurrence | null
+  /** Its tags (omitted: none on a new item, unchanged on an update). */
+  tags?: string[] | null
 }
 
 /** The saved item a capture is continued from ("Add to this task"). */

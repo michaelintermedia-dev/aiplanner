@@ -186,7 +186,7 @@ export const ru: Messages = {
   'filter.status': 'Статус',
   'filter.reminders': 'Напоминания',
   'filter.more': 'Ещё',
-  'filter.tags': 'Теги (задачи)',
+  'filter.tags': 'Теги',
 
   // ---- change type ----
   'changeType.label': 'Тип',
@@ -194,8 +194,8 @@ export const ru: Messages = {
   'changeType.toTask': 'Сделать задачей?',
   'changeType.toEvent': 'Сделать событием?',
   'changeType.toNote': 'Сделать заметкой?',
-  'changeType.loses.taskToNote': 'Срок, приоритет и теги не перенесутся.',
-  'changeType.loses.taskToEvent': 'Приоритет и теги не перенесутся.',
+  'changeType.loses.taskToNote': 'Срок и приоритет не перенесутся.',
+  'changeType.loses.taskToEvent': 'Приоритет не перенесётся.',
   'changeType.loses.eventToNote': 'Время не перенесётся (место попадёт в текст).',
 
   // ---- calendar screen ----
@@ -230,6 +230,9 @@ export const ru: Messages = {
   'task.priority': 'Приоритет',
   'task.ongoingCheck': 'Бессрочная (без срока)',
   'task.tags': 'Теги',
+  'tags.new': 'Новый тег',
+  'tags.add': 'Добавить тег',
+  'tags.hint': 'Нажмите, чтобы добавить или убрать. Новые теги сохранятся на будущее.',
   'event.notFound': 'Событие не найдено.',
   'event.backToCalendar': 'К календарю',
   'event.when': 'Когда',

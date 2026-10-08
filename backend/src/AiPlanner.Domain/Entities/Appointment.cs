@@ -25,4 +25,5 @@ public class Appointment : BaseEntity
 
     public ICollection<AppointmentParticipant> Participants { get; set; } = new List<AppointmentParticipant>();
     public ICollection<Reminder> Reminders { get; set; } = new List<Reminder>();
+    public ICollection<AppointmentTag> AppointmentTags { get; set; } = new List<AppointmentTag>();
 }

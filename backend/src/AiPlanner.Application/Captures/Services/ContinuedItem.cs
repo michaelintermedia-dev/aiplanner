@@ -18,7 +18,8 @@ public static class ContinuedItem
 
     public static string Describe(
         string intent, string title, string? description, DateTime? whenUtc, bool hasTime, DateTime? endUtc,
-        string? location, TaskPriority? priority, IEnumerable<ReminderDto> reminders, TimeZoneInfo zone, RecurrenceDto? recurrence = null)
+        string? location, TaskPriority? priority, IEnumerable<ReminderDto> reminders, TimeZoneInfo zone, RecurrenceDto? recurrence = null,
+        IEnumerable<string>? tags = null)
     {
         string? Date(DateTime? utc) => utc is { } u ? TimeZoneInfo.ConvertTimeFromUtc(u, zone).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : null;
         string? Time(DateTime? utc) => utc is { } u ? TimeZoneInfo.ConvertTimeFromUtc(u, zone).ToString("HH:mm", CultureInfo.InvariantCulture) : null;
@@ -44,6 +45,7 @@ public static class ContinuedItem
             recurrence = recurrence?.Frequency.ToString().ToLowerInvariant(),
             recurrenceDays = recurrence?.Days?.Select(d => d.ToString()).ToList(),
             recurrenceInterval = recurrence is { Interval: > 1 } ? recurrence.Interval : (int?)null,
+            tags = (tags ?? []).ToList(),
         };
         return JsonSerializer.Serialize(item, Json);
     }
@@ -52,7 +54,7 @@ public static class ContinuedItem
     public static string Describe(NormalizedItem item, TimeZoneInfo zone) => Describe(
         item.Intent switch { ExtractionIntent.Appointment => "appointment", ExtractionIntent.Note => "note", _ => "task" },
         item.Title, item.Description, item.StartUtc ?? item.DueUtc, item.HasTime, item.EndUtc, item.Location, item.Priority, item.Reminders, zone,
-        item.RecurrenceRule);
+        item.RecurrenceRule, item.Tags);
 
     /// <summary>
     /// Whether the merged details carry the user's new words (at least a third
@@ -117,6 +119,8 @@ public static class ContinuedItem
             if (kept.Priority is null && current.Priority is not null) kept = kept with { Priority = current.Priority };
             if (kept.RecurrenceRule is null && current.RecurrenceRule is not null) kept = kept with { RecurrenceRule = current.RecurrenceRule };
         }
+        // No tags back = it left them out, not "remove them all".
+        if (kept.Tags is not { Count: > 0 } && current.Tags is { Count: > 0 }) kept = kept with { Tags = current.Tags };
         // Words not about this item are offered as a new capture, not kept here.
         var about = Without(newWords, kept.Unrelated);
         var lostOldText = !MentionsWords(kept.Description, current.Description ?? "");
@@ -159,6 +163,7 @@ public static class ContinuedItem
         || kept.StartUtc != current.StartUtc || kept.EndUtc != current.EndUtc
         || kept.DueUtc != current.DueUtc || kept.HasTime != current.HasTime
         || kept.Location != current.Location || kept.Priority != current.Priority
+        || !(kept.Tags ?? []).Order(StringComparer.OrdinalIgnoreCase).SequenceEqual((current.Tags ?? []).Order(StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase)
         || kept.Reminders.Count != current.Reminders.Count
         || kept.Reminders.Zip(current.Reminders).Any(p => !SameReminder(p.First, p.Second));
 

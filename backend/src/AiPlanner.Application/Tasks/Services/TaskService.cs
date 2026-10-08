@@ -1,6 +1,7 @@
 using AiPlanner.Application.Common.Utils;
 using AiPlanner.Application.Recurrence;
 using AiPlanner.Application.Common.Interfaces;
+using AiPlanner.Application.Tags;
 using AiPlanner.Application.Common.Models;
 using AiPlanner.Application.Reminders;
 using AiPlanner.Application.Tasks.DTOs;
@@ -264,44 +265,8 @@ public class TaskService : ITaskService
         return dueDateUtc.HasValue ? TaskItemStatus.Planned : TaskItemStatus.Inbox;
     }
 
-    private async Task ApplyTagsAsync(TaskItem task, IReadOnlyList<string>? tagNames, CancellationToken ct)
-    {
-        if (tagNames is null)
-        {
-            return;
-        }
-
-        var userId = RequireUserId();
-        var normalizedNames = tagNames
-            .Select(t => t.Trim())
-            .Where(t => t.Length > 0)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        task.TaskTags.Clear();
-
-        if (normalizedNames.Count == 0)
-        {
-            return;
-        }
-
-        var existingTags = await _db.Tags
-            .Where(t => t.UserId == userId && normalizedNames.Contains(t.Name))
-            .ToListAsync(ct);
-
-        foreach (var name in normalizedNames)
-        {
-            var tag = existingTags.FirstOrDefault(t => t.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-            if (tag is null)
-            {
-                tag = new Tag { UserId = userId, Name = name };
-                _db.Tags.Add(tag);
-                existingTags.Add(tag);
-            }
-
-            task.TaskTags.Add(new TaskTag { TaskItem = task, Tag = tag });
-        }
-    }
+    private Task ApplyTagsAsync(TaskItem task, IReadOnlyList<string>? tagNames, CancellationToken ct) =>
+        TagSync.ApplyAsync(_db, RequireUserId(), task.TaskTags, tagNames, tag => new TaskTag { TaskItem = task, Tag = tag }, ct);
 
 
 

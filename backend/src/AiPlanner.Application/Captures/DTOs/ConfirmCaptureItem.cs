@@ -30,4 +30,5 @@ public record ConfirmCaptureItem(
     Guid? AppendToId = null,
     bool ReplacesItem = false,
     bool LinkOnly = false,
-    RecurrenceDto? Recurrence = null); // tasks (with a date) and events only
+    RecurrenceDto? Recurrence = null, // tasks (with a date) and events only
+    IReadOnlyList<string>? Tags = null); // null: none (new) / unchanged (an update)

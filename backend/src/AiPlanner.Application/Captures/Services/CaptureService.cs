@@ -14,6 +14,7 @@ using AiPlanner.Application.Items.Interfaces;
 using AiPlanner.Application.Notes.DTOs;
 using AiPlanner.Application.Notes.Interfaces;
 using AiPlanner.Application.Reminders;
+using AiPlanner.Application.Tags;
 using AiPlanner.Application.Common.Utils;
 using AiPlanner.Application.Tasks.DTOs;
 using AiPlanner.Application.Tasks.Interfaces;
@@ -407,9 +408,11 @@ public class CaptureService : ICaptureService
         // Adding to one item is one item anyway; everything else follows "One entry per message".
         var oneEntry = currentItem is null && (await SettingsAsync(userId, ct)).OneEntryPerMessage;
 
+        var knownTags = await _db.Tags.AsNoTracking().Where(t => t.UserId == userId).OrderBy(t => t.Name).Select(t => t.Name).Take(200).ToListAsync(ct);
+
         var started = _dateTime.UtcNow;
         var raw = await _extraction.ExtractAsync(
-            new ExtractionContext(text, localNow, timeZone.Id, user.Locale, previousText, currentItem, oneEntry), ct);
+            new ExtractionContext(text, localNow, timeZone.Id, user.Locale, previousText, currentItem, oneEntry, knownTags), ct);
         var normalized = ExtractionNormalizer.Normalize(raw, text, localNow, timeZone, user.Locale);
         if (oneEntry) normalized = SingleEntry.Merge(normalized);
 
@@ -443,6 +446,7 @@ public class CaptureService : ICaptureService
         SourceText = i.SourceText,
         Unrelated = i.Unrelated,
         ProposedReminders = ReminderPlanner.ToProposed(i.Reminders),
+        ProposedTags = TagSync.Clean(i.Tags),
     };
 
     // ---- Continue ----------------------------------------------------------
@@ -662,6 +666,7 @@ public class CaptureService : ICaptureService
                 _db.Notes.Add(note);
                 _reminders.Set(note.Reminders, decision.Reminders, itemTimeUtc: null,
                     await _reminders.ZoneAsync(extraction.UserId, ct), extraction.UserId, r => r.NoteId = note.Id);
+                await TagSync.ApplyAsync(_db, extraction.UserId, note.NoteTags, decision.Tags ?? [], tag => new NoteTag { Note = note, Tag = tag }, ct);
                 item.ResultingNoteId = note.Id;
                 return null;
             }
@@ -789,17 +794,17 @@ public class CaptureService : ICaptureService
                 return task.Value is not { } t ? null : new NormalizedItem(
                     ExtractionIntent.Task, t.Title, null, t.Description, null, null, t.DueDateUtc, t.HasDueTime, null,
                     t.Priority == TaskPriority.None ? null : t.Priority, t.Reminders ?? [], t.Recurrence?.Frequency, null, null,
-                    RecurrenceRule: t.Recurrence);
+                    RecurrenceRule: t.Recurrence, Tags: t.Tags);
             case "Appointment":
                 var appointment = await _appointments.GetByIdAsync(id, ct);
                 return appointment.Value is not { } a ? null : new NormalizedItem(
                     ExtractionIntent.Appointment, a.Title, null, a.Description, a.StartUtc, a.EndUtc, null, true, a.Location,
-                    null, a.Reminders ?? [], a.Recurrence?.Frequency, null, null, RecurrenceRule: a.Recurrence);
+                    null, a.Reminders ?? [], a.Recurrence?.Frequency, null, null, RecurrenceRule: a.Recurrence, Tags: a.Tags);
             case "Note":
-                var note = await _db.Notes.AsNoTracking().Include(n => n.Reminders).FirstOrDefaultAsync(n => n.Id == id && n.UserId == userId, ct);
+                var note = await _db.Notes.AsNoTracking().Include(n => n.Reminders).Include(n => n.NoteTags).ThenInclude(nt => nt.Tag).FirstOrDefaultAsync(n => n.Id == id && n.UserId == userId, ct);
                 return note is null ? null : new NormalizedItem(
                     ExtractionIntent.Note, note.Title ?? note.Content[..Math.Min(note.Content.Length, ExtractionNormalizer.MaxTitleLength)], null, note.Content, null, null, null, false, null,
-                    null, ReminderPlanner.ToDtos(note.Reminders), null, null, null);
+                    null, ReminderPlanner.ToDtos(note.Reminders), null, null, null, Tags: note.NoteTags.Select(nt => nt.Tag.Name).ToList());
             default:
                 return null;
         }
@@ -814,15 +819,16 @@ public class CaptureService : ICaptureService
             case "Task":
                 var task = await _tasks.GetByIdAsync(id, ct);
                 return task.Value is not { } t ? null : ContinuedItem.Describe(
-                    "task", t.Title, t.Description, t.DueDateUtc, t.HasDueTime, null, null, t.Priority, t.Reminders ?? [], zone, t.Recurrence);
+                    "task", t.Title, t.Description, t.DueDateUtc, t.HasDueTime, null, null, t.Priority, t.Reminders ?? [], zone, t.Recurrence, t.Tags);
             case "Appointment":
                 var appointment = await _appointments.GetByIdAsync(id, ct);
                 return appointment.Value is not { } a ? null : ContinuedItem.Describe(
-                    "appointment", a.Title, a.Description, a.StartUtc, true, a.EndUtc, a.Location, null, a.Reminders ?? [], zone, a.Recurrence);
+                    "appointment", a.Title, a.Description, a.StartUtc, true, a.EndUtc, a.Location, null, a.Reminders ?? [], zone, a.Recurrence, a.Tags);
             case "Note":
-                var note = await _db.Notes.AsNoTracking().Include(n => n.Reminders).FirstOrDefaultAsync(n => n.Id == id && n.UserId == userId, ct);
+                var note = await _db.Notes.AsNoTracking().Include(n => n.Reminders).Include(n => n.NoteTags).ThenInclude(nt => nt.Tag).FirstOrDefaultAsync(n => n.Id == id && n.UserId == userId, ct);
                 return note is null ? null : ContinuedItem.Describe(
-                    "note", note.Title ?? note.Content, note.Content, null, false, null, null, null, ReminderPlanner.ToDtos(note.Reminders), zone);
+                    "note", note.Title ?? note.Content, note.Content, null, false, null, null, null, ReminderPlanner.ToDtos(note.Reminders), zone,
+                    tags: note.NoteTags.Select(nt => nt.Tag.Name));
             default:
                 return null;
         }
@@ -865,7 +871,7 @@ public class CaptureService : ICaptureService
                     TitleOr(decision, t.Title), decision.Description ?? t.Description, t.Notes, t.StartDateUtc,
                     decision.DueUtc, decision.DueUtc is not null && decision.HasTime,
                     decision.Priority ?? TaskPriority.None, t.Status == TaskItemStatus.Ongoing && decision.DueUtc is null,
-                    decision.Reminders ?? [], t.Tags, decision.DueUtc is null ? null : decision.Recurrence ?? t.Recurrence), ct);
+                    decision.Reminders ?? [], decision.Tags ?? t.Tags, decision.DueUtc is null ? null : decision.Recurrence ?? t.Recurrence), ct);
                 if (!updated.Succeeded) return string.Join(" ", updated.Errors);
                 item.ResultingTaskItemId = targetId;
                 return null;
@@ -878,7 +884,7 @@ public class CaptureService : ICaptureService
                 var updated = await _appointments.UpdateAsync(targetId, new UpdateAppointmentRequest(
                     TitleOr(decision, a.Title), decision.Description ?? a.Description, a.Notes, start, end,
                     decision.Location ?? a.Location, a.Participants.Select(p => p.Name).ToList(), decision.Reminders ?? [],
-                    decision.Recurrence ?? a.Recurrence), ct);
+                    decision.Recurrence ?? a.Recurrence, decision.Tags), ct);
                 if (!updated.Succeeded) return string.Join(" ", updated.Errors);
                 item.ResultingAppointmentId = targetId;
                 return null;
@@ -887,7 +893,7 @@ public class CaptureService : ICaptureService
             {
                 if ((await _notes.GetByIdAsync(targetId, ct)).Value is not { } n) return "The note to add to was not found.";
                 var content = string.IsNullOrWhiteSpace(decision.Description) ? n.Content : decision.Description;
-                var updated = await _notes.UpdateAsync(targetId, new SaveNoteRequest(KeepsNoteUntitled(n.Title, n.Content, decision.Title) ? null : TitleOr(decision, n.Title ?? ""), content, decision.Reminders ?? []), ct);
+                var updated = await _notes.UpdateAsync(targetId, new SaveNoteRequest(KeepsNoteUntitled(n.Title, n.Content, decision.Title) ? null : TitleOr(decision, n.Title ?? ""), content, decision.Reminders ?? [], decision.Tags), ct);
                 if (!updated.Succeeded) return string.Join(" ", updated.Errors);
                 item.ResultingNoteId = targetId;
                 return null;
@@ -1026,7 +1032,7 @@ public class CaptureService : ICaptureService
         Reminders: i.Reminders is { Count: > 0 } given
             ? given
             : i.Intent == ExtractionIntent.Reminder ? [new ReminderDto(ReminderKind.Before, MinutesBefore: 0)] : null,
-        Tags: null,
+        Tags: i.Tags,
         Recurrence: i.DueUtc is null ? null : i.Recurrence);
 
     private static CreateAppointmentRequest ToAppointmentRequest(ConfirmCaptureItem i) => new(
@@ -1038,7 +1044,8 @@ public class CaptureService : ICaptureService
         Location: i.Location,
         ParticipantNames: null,
         Reminders: i.Reminders,
-        Recurrence: i.Recurrence);
+        Recurrence: i.Recurrence,
+        Tags: i.Tags);
 
     private static bool IsEdited(AIExtractionItem item, ConfirmCaptureItem d) =>
         item.Intent != d.Intent
@@ -1050,7 +1057,8 @@ public class CaptureService : ICaptureService
         || item.HasTime != d.HasTime
         || item.Location != d.Location
         || item.Priority != d.Priority
-        || !ReminderPlanner.SameList(ReminderPlanner.FromProposed(item.ProposedReminders), d.Reminders);
+        || !ReminderPlanner.SameList(ReminderPlanner.FromProposed(item.ProposedReminders), d.Reminders)
+        || !TagSync.Clean(d.Tags).SequenceEqual(item.ProposedTags);
 
     /// <summary>Keeps the stored item in sync with what was actually saved.</summary>
     private static void ApplyDecision(AIExtractionItem item, ConfirmCaptureItem d)
@@ -1065,6 +1073,7 @@ public class CaptureService : ICaptureService
         item.Location = d.Location;
         item.Priority = d.Priority;
         item.ProposedReminders = ReminderPlanner.ToProposed(d.Reminders);
+        item.ProposedTags = TagSync.Clean(d.Tags);
     }
 
     // ---- Save (the smart button) --------------------------------------------
@@ -1102,7 +1111,7 @@ public class CaptureService : ICaptureService
     /// <summary>A proposal saved exactly as the AI understood it.</summary>
     private static ConfirmCaptureItem AsProposed(AIExtractionItem i) => new(
         i.Id, true, i.Intent, i.Title, i.Description, i.StartDateUtc, i.EndDateUtc, i.DueDateUtc, i.HasTime,
-        i.Location, i.Priority, ReminderPlanner.FromProposed(i.ProposedReminders), Recurrence: RuleOf(i));
+        i.Location, i.Priority, ReminderPlanner.FromProposed(i.ProposedReminders), Recurrence: RuleOf(i), Tags: i.ProposedTags);
 
     private async Task<UserSettings> SettingsAsync(Guid userId, CancellationToken ct) =>
         await _db.UserSettings.AsNoTracking().FirstOrDefaultAsync(s => s.UserId == userId, ct) ?? new UserSettings();
@@ -1147,7 +1156,7 @@ public class CaptureService : ICaptureService
                 i.Clarification, i.Confidence,
                 i.ResultingTaskItemId, i.ResultingAppointmentId, i.ResultingNoteId, i.AddsToCurrent,
                 i.ContinuesItemType, i.ContinuesItemId, i.Unrelated, i.HeldByEditForm,
-                RuleOf(i)))
+                RuleOf(i), i.ProposedTags))
             .ToList());
 
     /// <summary>Aborts a confirm transaction with a message for the user.</summary>

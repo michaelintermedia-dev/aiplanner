@@ -15,6 +15,7 @@ import { useAction } from '@/lib/useAction'
 import { useColors, type Colors } from '@/theme'
 import { DateTimeField } from './DateTimeField'
 import { ReminderList } from './ReminderList'
+import { TagPicker } from './TagPicker'
 import { Button } from './ui'
 import { t } from '@shared/i18n'
 import { priorityLabel } from '@shared/labels'
@@ -305,6 +306,7 @@ function ItemEditor({
                 isNote={isNote}
                 showProblem={false}
               />
+              <TagPicker value={d.tags ?? []} onChange={(tags) => onChange({ tags })} />
             </View>
           )}
 

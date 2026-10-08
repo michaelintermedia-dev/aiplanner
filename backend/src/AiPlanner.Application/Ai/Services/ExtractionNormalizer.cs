@@ -2,6 +2,7 @@ using AiPlanner.Application.Recurrence;
 using System.Globalization;
 using AiPlanner.Application.Ai.Interfaces;
 using AiPlanner.Application.Reminders;
+using AiPlanner.Application.Tags;
 using AiPlanner.Application.Common.Utils;
 using AiPlanner.Domain.Enums;
 
@@ -26,7 +27,8 @@ public record NormalizedItem(
     bool AddsToCurrent = false,
     string? SourceText = null, // the user's words it came from - finds its part of a recording
     string? Unrelated = null, // adding to an item: words that weren't about it
-    RecurrenceDto? RecurrenceRule = null); // how it repeats (Recurrence + its days and interval)
+    RecurrenceDto? RecurrenceRule = null, // how it repeats (Recurrence + its days and interval)
+    IReadOnlyList<string>? Tags = null); // tags the user asked for (cleaned)
 
 public record NormalizedExtraction(string Title, string? Summary, IReadOnlyList<NormalizedItem> Items);
 
@@ -188,7 +190,8 @@ public static class ExtractionNormalizer
             raw.AddsToCurrent,
             Clean(raw.SourceText, 4000),
             Clean(raw.Unrelated, 4000),
-            intent == ExtractionIntent.Note ? null : ParseRule(ParseRecurrence(raw.Recurrence), raw.RecurrenceDays, raw.RecurrenceInterval));
+            intent == ExtractionIntent.Note ? null : ParseRule(ParseRecurrence(raw.Recurrence), raw.RecurrenceDays, raw.RecurrenceInterval),
+            TagSync.Clean(raw.Tags));
     }
 
     /// <summary>

@@ -190,7 +190,7 @@ export const en = {
   'filter.status': 'Status',
   'filter.reminders': 'Reminders',
   'filter.more': 'More',
-  'filter.tags': 'Tags (tasks)',
+  'filter.tags': 'Tags',
 
   // ---- change type ----
   'changeType.label': 'Type',
@@ -198,8 +198,8 @@ export const en = {
   'changeType.toTask': 'Change it to a task?',
   'changeType.toEvent': 'Change it to an event?',
   'changeType.toNote': 'Change it to a note?',
-  'changeType.loses.taskToNote': 'Its due date, priority and tags won’t carry over.',
-  'changeType.loses.taskToEvent': 'Its priority and tags won’t carry over.',
+  'changeType.loses.taskToNote': 'Its due date and priority won’t carry over.',
+  'changeType.loses.taskToEvent': 'Its priority won’t carry over.',
   'changeType.loses.eventToNote': 'Its time won’t carry over (the location goes into the text).',
 
   // ---- calendar screen ----
@@ -234,6 +234,9 @@ export const en = {
   'task.priority': 'Priority',
   'task.ongoingCheck': 'Ongoing (no deadline)',
   'task.tags': 'Tags',
+  'tags.new': 'New tag',
+  'tags.add': 'Add tag',
+  'tags.hint': 'Tap to add or remove. New ones are kept for next time.',
   'event.notFound': 'Event not found.',
   'event.backToCalendar': 'Back to calendar',
   'event.when': 'When',

@@ -1,4 +1,5 @@
 using AiPlanner.Application.Common.Interfaces;
+using AiPlanner.Application.Tags;
 using AiPlanner.Application.Common.Models;
 using AiPlanner.Application.Notes.DTOs;
 using AiPlanner.Application.Notes.Interfaces;
@@ -52,6 +53,7 @@ public class NoteService : INoteService
             Content = request.Content.Trim(),
         };
         _db.Notes.Add(note);
+        await ApplyTagsAsync(note, request.Tags ?? [], ct);
         await SetRemindersAsync(note, request.Reminders, ct);
         await _db.SaveChangesAsync(ct);
         return Result<NoteDto>.Success(ToDto(note));
@@ -67,6 +69,7 @@ public class NoteService : INoteService
 
         note.Title = string.IsNullOrWhiteSpace(request.Title) ? null : request.Title.Trim();
         note.Content = request.Content.Trim();
+        await ApplyTagsAsync(note, request.Tags, ct);
         await SetRemindersAsync(note, request.Reminders, ct);
         await _db.SaveChangesAsync(ct);
         return Result<NoteDto>.Success(ToDto(note));
@@ -89,7 +92,7 @@ public class NoteService : INoteService
     private async Task<Note?> FindOwnedAsync(Guid id, bool track, CancellationToken ct)
     {
         var userId = RequireUserId();
-        var q = _db.Notes.Include(n => n.Reminders).Where(n => n.Id == id && n.UserId == userId);
+        var q = _db.Notes.Include(n => n.Reminders).Include(n => n.NoteTags).ThenInclude(nt => nt.Tag).Where(n => n.Id == id && n.UserId == userId);
         return await (track ? q : q.AsNoTracking()).FirstOrDefaultAsync(ct);
     }
 
@@ -100,5 +103,9 @@ public class NoteService : INoteService
         _currentUser.UserId ?? throw new UnauthorizedAccessException("No authenticated user.");
 
     private static NoteDto ToDto(Note n) =>
-        new(n.Id, n.Title, n.Content, n.AiSummary, n.SourceAiExtractionId, ReminderPlanner.ToDtos(n.Reminders), n.CreatedAtUtc, n.UpdatedAtUtc);
+        new(n.Id, n.Title, n.Content, n.AiSummary, n.SourceAiExtractionId, ReminderPlanner.ToDtos(n.Reminders), n.CreatedAtUtc, n.UpdatedAtUtc,
+            n.NoteTags.Select(nt => nt.Tag.Name).OrderBy(x => x).ToList());
+
+    private Task ApplyTagsAsync(Note note, IReadOnlyList<string>? names, CancellationToken ct) =>
+        TagSync.ApplyAsync(_db, note.UserId, note.NoteTags, names, tag => new NoteTag { Note = note, Tag = tag }, ct);
 }

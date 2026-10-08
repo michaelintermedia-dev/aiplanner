@@ -23,6 +23,8 @@ public interface IApplicationDbContext
 
     DbSet<Tag> Tags { get; }
     DbSet<TaskTag> TaskTags { get; }
+    DbSet<AppointmentTag> AppointmentTags { get; }
+    DbSet<NoteTag> NoteTags { get; }
     DbSet<RecurrenceRule> RecurrenceRules { get; }
     DbSet<Attachment> Attachments { get; }
 

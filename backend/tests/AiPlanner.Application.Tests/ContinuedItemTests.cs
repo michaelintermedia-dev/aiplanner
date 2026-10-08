@@ -164,4 +164,24 @@ public class ContinuedItemTests
         kept.Clarification.Should().NotBeNull();
         kept.Description.Should().BeNull(); // the instruction it couldn't carry out isn't kept as details
     }
+
+    [Fact]
+    public void Tags_the_update_left_out_stay_and_new_ones_come_in()
+    {
+        var task = Item(ExtractionIntent.Task, "Buy milk", null) with { Tags = ["shopping"] };
+
+        var leftOut = ContinuedItem.Keep([Item(ExtractionIntent.Task, "Buy milk", null, addsToCurrent: true)], task, "two liters");
+        leftOut.Tags.Should().Equal("shopping");
+
+        var added = ContinuedItem.Keep([Item(ExtractionIntent.Task, "Buy milk", null, addsToCurrent: true) with { Tags = ["shopping", "urgent"] }], task, "tag it urgent");
+        added.Tags.Should().Equal("shopping", "urgent");
+        added.Description.Should().BeNull("a tag is an instruction carried out, not details");
+    }
+
+    [Fact]
+    public void The_item_is_described_with_its_tags()
+    {
+        ContinuedItem.Describe("note", "Ideas", "x", null, false, null, null, null, [], Moscow, tags: ["work"])
+            .Should().Contain("\"tags\":[\"work\"]");
+    }
 }

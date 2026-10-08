@@ -12,6 +12,7 @@ import { useAuth } from '../auth/useAuth'
 import { useAction } from '../lib/useAction'
 import { ReminderList } from './ReminderList'
 import { RecurrencePicker } from './RecurrencePicker'
+import { TagPicker } from './TagPicker'
 import { t } from '@shared/i18n'
 import { priorityLabel } from '@shared/labels'
 
@@ -286,6 +287,7 @@ function ItemEditor({
           isNote={isNote}
           showProblem={false}
         />
+          <TagPicker value={d.tags ?? []} onChange={(tags) => onChange({ tags })} />
         </>
       )}
 

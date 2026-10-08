@@ -78,6 +78,9 @@ export function AppointmentDetailPage() {
               ) : (
                 <span className={`badge status-${appt.status.toLowerCase()}`}>{statusLabel(appt.status)}</span>
               )}
+              {appt.tags?.map((tag) => (
+                <span key={tag} className="tag">#{tag}</span>
+              ))}
             </div>
           </header>
 

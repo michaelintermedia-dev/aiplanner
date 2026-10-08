@@ -21,8 +21,10 @@ public interface IIntentExtractionService
 /// <param name="PreviousText">When continuing: what the user said before (already handled) - with CurrentItem, only the words about that item.</param>
 /// <param name="CurrentItem">When continuing from a saved item: the whole item as JSON in the answer's item shape (see ContinuedItem).</param>
 /// <param name="OneEntry">"One entry per message" (Settings): everything said becomes one item.</param>
+/// <param name="KnownTags">The user's tags so far - a tag asked for reuses one of these when it means the same.</param>
 public record ExtractionContext(
-    string Text, DateTime LocalNow, string TimeZoneId, string Locale, string? PreviousText = null, string? CurrentItem = null, bool OneEntry = false);
+    string Text, DateTime LocalNow, string TimeZoneId, string Locale, string? PreviousText = null, string? CurrentItem = null, bool OneEntry = false,
+    IReadOnlyList<string>? KnownTags = null);
 
 /// <summary>What the provider returned, before validation.</summary>
 public record RawExtraction(
@@ -56,7 +58,8 @@ public record RawExtractedItem(
     string? SourceText = null, // the user's words this item came from, verbatim
     string? Unrelated = null, // adding to an item: the words that weren't about it
     IReadOnlyList<string>? RecurrenceDays = null, // weekly: English weekday names
-    int? RecurrenceInterval = null); // every N days/weeks/months
+    int? RecurrenceInterval = null, // every N days/weeks/months
+    IReadOnlyList<string>? Tags = null); // tags the user asked for
 
 /// <summary>
 /// A requested reminder: Kind is at/before/daily/weekdays/weekly. Date/Time are

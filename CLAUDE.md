@@ -235,7 +235,19 @@ Local dev notes:
 - **Reminders are idempotent on Update**: re-`PUT`-ing a Task/Appointment
   with a reminder value cancels the old pending reminder and creates a new
   one rather than accumulating duplicates. Follow this pattern in Phase 3/4.
-- **Tags auto-create per user, case-insensitive lookup.**
+- **Tags auto-create per user, case-insensitive lookup.** Every type has tags
+  (2026-10-08, user's request; `TaskTags` / `AppointmentTags` / `NoteTags`), all
+  written through `TagSync` (null = unchanged, [] = clear, new names join the
+  user's list). `GET /api/feed/tags` = the whole list, most used first (count 0 =
+  unused; the feed filter hides those, the picker shows them). Clients:
+  `TagPicker` (web + mobile) - the list as chips to tap (several at once) plus
+  a "New tag" box (Enter/comma), in every Edit page and the capture review;
+  helpers in `shared/tags.ts`. The feed filter and text search cover tags on
+  every kind; a type change keeps them. AI: "tag it shopping" fills `tags`
+  (the user's tag names are in the prompt so it reuses their spelling) -
+  `AIExtractionItem.ProposedTags`, `CaptureItemDto/ConfirmCaptureItem.Tags`;
+  adding to an item returns its tags plus the new ones (`ContinuedItem.Keep`:
+  none back = keep the item's).
 - **Aspire over docker-compose**, intentionally — gives connection string
   wiring, retry-on-failure, health checks, and a unified dashboard for logs/
   traces as more resources (background workers, notification schedulers)

@@ -68,6 +68,13 @@ export default function NoteDetailScreen() {
           <View style={{ gap: 8 }}>
             <Text style={[s.kind, { color: c.muted, borderLeftColor: c.warn }]}>{t('kind.note').toUpperCase()}</Text>
             {note.title && note.title !== note.content && <Text style={[s.title, { color: c.text }]}>{note.title}</Text>}
+            {!!note.tags?.length && (
+              <View style={s.badges}>
+                {note.tags.map((tag) => (
+                  <Text key={tag} style={{ color: c.muted }}>#{tag}</Text>
+                ))}
+              </View>
+            )}
           </View>
           <Text style={{ color: c.text, fontSize: 17, lineHeight: 25 }} selectable>
             {note.content}

@@ -91,11 +91,11 @@ function FilterPanel({ filters: f, onChange, onClose }: { filters: FeedFilters; 
         </div>
       </div>
 
-      {tags.data && tags.data.length > 0 && (
+      {tags.data && tags.data.some((tag) => tag.count > 0) && (
         <div className="filter-group">
           <span className="caption">{t('filter.tags')}</span>
           <div className="reminder-presets">
-            {tags.data.map((tag) => {
+            {tags.data.filter((tag) => tag.count > 0 || f.tags.includes(tag.name)).map((tag) => {
               const on = f.tags.includes(tag.name)
               return (
                 <button

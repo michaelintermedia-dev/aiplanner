@@ -8,6 +8,7 @@ public class UpdateAppointmentRequestValidator : AbstractValidator<UpdateAppoint
 {
     public UpdateAppointmentRequestValidator()
     {
+        RuleForEach(x => x.Tags).NotEmpty().MaximumLength(100).When(x => x.Tags is not null);
         RuleFor(x => x.Title).NotEmpty().MaximumLength(300);
         RuleFor(x => x.Location).MaximumLength(300);
         RuleFor(x => x.EndUtc).GreaterThan(x => x.StartUtc).WithMessage("EndUtc must be after StartUtc.");

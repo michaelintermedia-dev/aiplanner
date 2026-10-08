@@ -48,6 +48,7 @@ public static class SingleEntry
         {
             Description = string.Join("\n", lines),
             Reminders = reminders,
+            Tags = extraction.Items.SelectMany(i => i.Tags ?? []).Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
             Clarification = questions.Count > 0 ? string.Join(" ", questions) : null,
             Confidence = extraction.Items.Min(i => i.Confidence),
             SourceText = null,

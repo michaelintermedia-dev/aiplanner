@@ -12,7 +12,7 @@ namespace AiPlanner.Application.Feed.DTOs;
 /// <param name="DateToUtc">Task due / event start before (exclusive).</param>
 /// <param name="NoDate">Only undated items (undated tasks, notes).</param>
 /// <param name="FromVoice">Only items created from a voice capture.</param>
-/// <param name="Tags">Any of these tags (case-insensitive). Only tasks have tags, so other kinds are left out.</param>
+/// <param name="Tags">Any of these tags (case-insensitive) - on any kind of item.</param>
 public record FeedFilter(
     string? Text = null,
     DateTime? CreatedFromUtc = null,

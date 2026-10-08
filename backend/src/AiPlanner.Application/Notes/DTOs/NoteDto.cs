@@ -11,4 +11,5 @@ public record NoteDto(
     Guid? SourceCaptureId, // the capture it was created from, if any
     IReadOnlyList<ReminderDto> Reminders, // "remind me about this"
     DateTime CreatedAtUtc,
-    DateTime UpdatedAtUtc);
+    DateTime UpdatedAtUtc,
+    IReadOnlyList<string>? Tags = null);

@@ -34,4 +34,5 @@ public record CaptureItemDto(
     Guid? ContinuesItemId = null,
     string? Unrelated = null, // "Add more": words that weren't about the item
     bool HeldByEditForm = false, // made in an item's Edit form - not an unsaved review elsewhere
-    RecurrenceDto? RecurrenceRule = null); // how it repeats (Recurrence with its days and interval)
+    RecurrenceDto? RecurrenceRule = null, // how it repeats (Recurrence with its days and interval)
+    IReadOnlyList<string>? Tags = null); // tags asked for

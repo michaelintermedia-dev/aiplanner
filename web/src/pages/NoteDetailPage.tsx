@@ -50,6 +50,13 @@ export function NoteDetailPage() {
           <header className="detail-header">
             <span className="kind note">{t('kind.note')}</span>
             {note.title && note.title !== note.content && <h1>{note.title}</h1>}
+            {!!note.tags?.length && (
+              <div className="row-meta">
+                {note.tags.map((tag) => (
+                  <span key={tag} className="tag">#{tag}</span>
+                ))}
+              </div>
+            )}
           </header>
           <p className="note-body">{note.content}</p>
           {note.reminders.map((r, i) => (

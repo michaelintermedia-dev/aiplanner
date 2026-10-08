@@ -13,4 +13,5 @@ public class Note : BaseEntity
 
     /// <summary>"Remind me about this at …" - a note has no date of its own.</summary>
     public ICollection<Reminder> Reminders { get; set; } = new List<Reminder>();
+    public ICollection<NoteTag> NoteTags { get; set; } = new List<NoteTag>();
 }

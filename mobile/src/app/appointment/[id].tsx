@@ -94,6 +94,9 @@ export default function AppointmentDetailScreen() {
               ) : (
                 <Badge label={statusLabel(appt.status)} color={appt.status === 'Completed' ? c.task : appt.status === 'Cancelled' ? c.danger : undefined} />
               )}
+              {appt.tags?.map((tag) => (
+                <Text key={tag} style={{ color: c.muted }}>#{tag}</Text>
+              ))}
             </View>
           </View>
 

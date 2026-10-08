@@ -258,12 +258,6 @@ export function SettingsPage() {
               checked={recordings.data.keepRecordings}
               onChange={(keepRecordings) => saveRecordings.mutate({ ...recordings.data!, keepRecordings })}
             />
-            <Toggle
-              label={t('settings.shortenPauses')}
-              hint={t('settings.shortenPausesHint')}
-              checked={recordings.data.shortenPauses}
-              onChange={(shortenPauses) => saveRecordings.mutate({ ...recordings.data!, shortenPauses })}
-            />
           </>
         )}
         {(recordings.error ?? saveRecordings.error) && <p className="error">{(recordings.error ?? saveRecordings.error)!.message}</p>}

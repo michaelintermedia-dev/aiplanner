@@ -273,8 +273,6 @@ export interface CaptureSummary {
 /** One reviewed item sent to /confirm: include=false rejects it. */
 /** Settings - Recordings. */
 export interface RecordingSettings {
-  /** Cut pauses longer than a second out of saved recordings. */
-  shortenPauses: boolean
   /** Keep the audio when a voice capture is saved (the review checkbox's default). */
   keepRecordings: boolean
   /** Everything said in one message becomes one entry. */

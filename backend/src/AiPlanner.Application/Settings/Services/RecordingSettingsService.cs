@@ -36,7 +36,6 @@ public class RecordingSettingsService
             settings = new UserSettings { UserId = userId };
             _db.UserSettings.Add(settings);
         }
-        settings.ShortenPauses = dto.ShortenPauses;
         settings.KeepRecordings = dto.KeepRecordings;
         settings.OneEntryPerMessage = dto.OneEntryPerMessage;
         settings.UpdatedAtUtc = _clock.UtcNow;
@@ -45,7 +44,7 @@ public class RecordingSettingsService
     }
 
     private static RecordingSettingsDto ToDto(UserSettings s) =>
-        new(s.ShortenPauses, s.KeepRecordings, s.OneEntryPerMessage);
+        new(s.KeepRecordings, s.OneEntryPerMessage);
 
     private Guid RequireUserId() =>
         _currentUser.UserId ?? throw new UnauthorizedAccessException("No authenticated user.");

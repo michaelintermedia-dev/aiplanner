@@ -410,8 +410,6 @@ export const ru: Messages = {
 
   // ---- settings - recordings ----
   'settings.recordings': 'Записи',
-  'settings.shortenPauses': 'Сокращать паузы',
-  'settings.shortenPausesHint': 'При сохранении записи паузы (дольше 0,3 с — между фразами, пока вы думаете) сокращаются до короткой — быстрее слушать и меньше места. Для сохранённой записи это не отменить.',
 
   // ---- feed reminder badge ----
   'feed.reminderAt': 'Напоминание: {when}',

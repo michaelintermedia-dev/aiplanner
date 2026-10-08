@@ -139,8 +139,6 @@ public class CaptureService : ICaptureService
         _db.VoiceCaptures.Add(voice);
         await _db.SaveChangesAsync(ct);
 
-        // Word timings (a second, paid call) are only needed to shorten pauses.
-        var shorten = await ShortenPausesOnAsync(userId, ct);
         TranscriptionResult[] parts;
         try
         {
@@ -151,7 +149,7 @@ public class CaptureService : ICaptureService
                 await using var stored = await _storage.OpenReadAsync(key, ct)
                     ?? throw new InvalidOperationException("The recording was not found right after saving it.");
                 var mime = string.IsNullOrWhiteSpace(segments[i].MimeType) ? AudioExtensions[extensions[i]] : segments[i].MimeType;
-                return await _transcription.TranscribeAsync(stored, Path.GetFileName(key), mime, ct, withTimings: shorten);
+                return await _transcription.TranscribeAsync(stored, Path.GetFileName(key), mime, ct);
             }));
         }
         catch (AiProviderException ex)
@@ -164,8 +162,6 @@ public class CaptureService : ICaptureService
             string.Join(" ", parts.Select(p => p.Text.Trim()).Where(t => t.Length > 0)),
             parts.Select(p => p.LanguageCode).FirstOrDefault(l => l is not null),
             parts[0].ProviderName);
-        // "Shorten long pauses" (Settings): cut them now, from the word timings.
-        if (shorten) (_, voice.AudioStorageKeys) = await ShortenPausesAsync(voice.AudioStorageKeys, parts, ct);
         // Transcribed: now keep it small (WAV -> compressed).
         voice.AudioStorageKeys = await CompressAsync(voice.AudioStorageKeys, ct);
 
@@ -502,16 +498,14 @@ public class CaptureService : ICaptureService
                 keys.Add(key);
             }
 
-            var shorten = await ShortenPausesOnAsync(userId, ct);
             var parts = await Task.WhenAll(keys.Select(async (key, i) =>
             {
                 await using var stored = await _storage.OpenReadAsync(key, ct)
                     ?? throw new InvalidOperationException("The recording was not found right after saving it.");
                 var mime = string.IsNullOrWhiteSpace(request.Audio[i].MimeType) ? AudioExtensions[extensions[i]] : request.Audio[i].MimeType;
-                return await _transcription.TranscribeAsync(stored, Path.GetFileName(key), mime!, ct, withTimings: shorten);
+                return await _transcription.TranscribeAsync(stored, Path.GetFileName(key), mime!, ct);
             }));
             var spoken = string.Join(" ", parts.Select(p => p.Text.Trim()).Where(t => t.Length > 0));
-            if (shorten) (parts, keys) = await ShortenPausesAsync(keys, parts, ct);
 
             if (voice is not null)
             {
@@ -681,57 +675,6 @@ public class CaptureService : ICaptureService
                 return null;
             }
         }
-    }
-
-    /// <summary>
-    /// "Shorten long pauses": when the user turned it on, cuts pauses over a
-    /// second out of each part (found from its word timings), stores the shorter
-    /// file under a new key (storage never overwrites) and deletes the original;
-    /// returns the parts with their timings moved to match, and the keys to keep.
-    /// Best effort - a part that can't be cut stays as it was.
-    /// </summary>
-    private async Task<(TranscriptionResult[] Parts, List<string> Keys)> ShortenPausesAsync(
-        IReadOnlyList<string> keys, TranscriptionResult[] parts, CancellationToken ct)
-    {
-        var newKeys = keys.ToList();
-
-        var result = parts.ToArray();
-        for (var i = 0; i < parts.Length && i < keys.Count; i++)
-        {
-            if (parts[i].Words is not { Count: > 0 } words) continue;
-            var duration = parts[i].DurationMs ?? words[^1].EndMs;
-            if (PauseTrimmer.Plan(words, duration) is not { } keep) continue;
-            try
-            {
-                byte[] original;
-                await using (var stored = await _storage.OpenReadAsync(keys[i], ct))
-                {
-                    if (stored is null) continue;
-                    using var buffer = new MemoryStream();
-                    await stored.CopyToAsync(buffer, ct);
-                    original = buffer.ToArray();
-                }
-                var extension = Path.GetExtension(keys[i]);
-                var cut = extension.Equals(".wav", StringComparison.OrdinalIgnoreCase)
-                    ? PauseTrimmer.CutWav(original, keep)
-                    : await _compressor.CutAsync(new MemoryStream(original), extension, keep.Select(k => (k.StartMs, k.EndMs)).ToList(), ct);
-                if (cut is null) continue;
-                var shortKey = $"{Path.ChangeExtension(keys[i], null)}-short{(extension.Equals(".wav", StringComparison.OrdinalIgnoreCase) ? extension : ".m4a")}";
-                using (var content = new MemoryStream(cut))
-                {
-                    await _storage.SaveAsync(shortKey, content, ct);
-                }
-                await _storage.DeleteAsync(keys[i], ct);
-                newKeys[i] = shortKey;
-                result[i] = PauseTrimmer.Apply(parts[i], keep);
-                _logger.LogInformation("Shortened pauses: {Before} ms -> {After} ms", duration, result[i].DurationMs);
-            }
-            catch (Exception ex) when (ex is IOException or InvalidOperationException or UnauthorizedAccessException)
-            {
-                _logger.LogWarning("Keeping a recording part as it was ({Error})", ex.GetType().Name);
-            }
-        }
-        return (result, newKeys);
     }
 
     /// <summary>
@@ -1160,9 +1103,6 @@ public class CaptureService : ICaptureService
     private static ConfirmCaptureItem AsProposed(AIExtractionItem i) => new(
         i.Id, true, i.Intent, i.Title, i.Description, i.StartDateUtc, i.EndDateUtc, i.DueDateUtc, i.HasTime,
         i.Location, i.Priority, ReminderPlanner.FromProposed(i.ProposedReminders), Recurrence: RuleOf(i));
-
-    private async Task<bool> ShortenPausesOnAsync(Guid userId, CancellationToken ct) =>
-        await _db.UserSettings.Where(s => s.UserId == userId).Select(s => s.ShortenPauses).FirstOrDefaultAsync(ct);
 
     private async Task<UserSettings> SettingsAsync(Guid userId, CancellationToken ct) =>
         await _db.UserSettings.AsNoTracking().FirstOrDefaultAsync(s => s.UserId == userId, ct) ?? new UserSettings();

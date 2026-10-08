@@ -510,8 +510,7 @@ Local dev notes:
   per-item snippets ("Play this part", AudioSnippets alignment,
   AudioStartMs/EndMs, AudioPartDurationsMs) were removed (migration
   DropAudioSnippets). `SourceText` stays: it scopes "adding to an item".
-  Word timings (a second, paid whisper-1 call, `TimingModel`) are only asked
-  for when "Shorten pauses" is on (`TranscribeAsync(withTimings)`).
+  No word timings are fetched at all any more (see "Shorten pauses" below).
   Audio is stored once per message (never per item). `RecordingCleanup`
   (run by `RecordingCleanupWorker`, every 6 h) deletes a recording when no
   item from it is left (or none was saved) and nothing about it changed for a
@@ -522,14 +521,9 @@ Local dev notes:
   `FfmpegAudioCompressor` behind `IAudioCompressor` - only if ffmpeg is found
   (`Recordings:FfmpegPath` or PATH; otherwise WAV is kept). The phone already
   uploads .m4a. Install locally with `winget install Gyan.FFmpeg`.
-  Settings → Recordings → "Shorten pauses" (`UserSettings.ShortenPauses`,
-  off by default, `GET/PUT /api/settings/recordings`): on save, pauses over 0.3 s
-  are cut to 0.15 s (`PauseTrimmer.MaxPauseMs/KeptPauseMs`). The pauses come from the word timings (not loudness), so
-  `PauseTrimmer` moves the timings with the cuts and item snippets stay right.
-  WAV is cut in code (`PauseTrimmer.CutWav`), other formats by ffmpeg
-  (`IAudioCompressor.CutAsync`); the shorter file gets a new key (storage
-  never overwrites - FileMode.CreateNew) and the original is deleted.
-  Needs word timings; a part without them is kept as it was.
+  "Shorten pauses" (cutting pauses out of recordings) was removed at the
+  user's request on 2026-10-08, with the word-timestamp call it needed: a
+  voice message is one transcription call per audio part, nothing more.
   Playback speed 1× / 1.5× / 2× (`shared/playbackSpeed.ts`, `SpeedChips` in
   each app) on every player, remembered per device; mobile max is 2×. Mobile
   players count a file's "finished" only once that file was seen playing (a

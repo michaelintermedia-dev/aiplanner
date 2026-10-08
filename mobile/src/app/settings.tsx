@@ -235,12 +235,6 @@ export default function SettingsScreen() {
             value={recordings.data.keepRecordings}
             onChange={(keepRecordings) => saveRecordings.mutate({ ...recordings.data!, keepRecordings })}
           />
-          <Row
-            label={t('settings.shortenPauses')}
-            hint={t('settings.shortenPausesHint')}
-            value={recordings.data.shortenPauses}
-            onChange={(shortenPauses) => saveRecordings.mutate({ ...recordings.data!, shortenPauses })}
-          />
         </View>
       )}
       {(recordings.error ?? saveRecordings.error) && <Text style={{ color: c.danger }}>{(recordings.error ?? saveRecordings.error)!.message}</Text>}

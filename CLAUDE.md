@@ -562,7 +562,13 @@ Local dev notes:
     `aiplanner://record` -> `app/record.tsx` -> `lib/quickRecord` signal -> the
     dock unfolds and its CaptureBar starts recording (`talkSignal`). Web: the
     PWA manifest shortcut "Quick recording" -> `/feed?record=1` (CaptureBar
-    starts at once). No iOS widget (needs a Mac).
+    starts at once). No iOS widget (needs a Mac). The widget follows Settings -
+    Appearance (2026-10-08): the skin's accent, light/dark ("System" hands
+    Android both versions - `renderQuickRecord`) and the wallpaper inside the
+    circle (skin wallpaper, or a 160 px thumbnail of the user's photo kept in
+    `widget-photo.json`, made in the app - the widget can't sign in). Redrawn on
+    every appearance change and once per session (`redrawWidget` in
+    lib/appearance).
 - **Media: photos and documents on items** (user's idea, 2026-10-06, web +
   mobile; step 1 of 3 - next: keeping voice clips as media with a "Keep the
   recording" choice, then the AI reading photos/documents). `Attachment` rows

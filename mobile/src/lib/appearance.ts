@@ -2,7 +2,7 @@ import { DEFAULT_APPEARANCE, SKIN_NAMES, THEMES, type AppearanceSettings } from 
 import { useQuery } from '@tanstack/react-query'
 import { File, Paths } from 'expo-file-system'
 import { useEffect, useSyncExternalStore } from 'react'
-import { Appearance } from 'react-native'
+import { Appearance, Platform } from 'react-native'
 import { settingsApi } from '@/api/endpoints'
 
 /**
@@ -44,6 +44,29 @@ export function applyAppearance(settings: AppearanceSettings) {
     // not kept
   }
   listeners.forEach((l) => l())
+  void redrawWidget(settings)
+}
+
+/** Settings - Appearance as it is now (the home-screen widget draws itself from it). */
+export const currentAppearance = () => current
+
+/**
+ * The home-screen widget follows the appearance: redrawn on every change (and
+ * its photo thumbnail made first, while signed in). Android only.
+ */
+async function redrawWidget(settings: AppearanceSettings) {
+  if (Platform.OS !== 'android') return
+  try {
+    /* eslint-disable @typescript-eslint/no-require-imports -- the widget code is Android-only */
+    const { requestWidgetUpdate } = require('react-native-android-widget') as typeof import('react-native-android-widget')
+    const { renderQuickRecord } = require('@/widgets/taskHandler') as typeof import('@/widgets/taskHandler')
+    const { makeWidgetThumb } = require('@/widgets/widgetLook') as typeof import('@/widgets/widgetLook')
+    /* eslint-enable @typescript-eslint/no-require-imports */
+    if (settings.wallpaper && settings.wallpaperPhoto) await makeWidgetThumb(settings.wallpaperPhoto)
+    await requestWidgetUpdate({ widgetName: 'QuickRecord', renderWidget: () => renderQuickRecord() })
+  } catch {
+    // no widget on the home screen, or it couldn't be drawn - it redraws next time
+  }
 }
 
 export function useAppearance(): AppearanceSettings {
@@ -56,10 +79,18 @@ export function useAppearance(): AppearanceSettings {
   )
 }
 
+let widgetRefreshed = false
+
 /** Signed in: the account's appearance (it follows the user to every device). */
 export function useAccountAppearance() {
   const { data } = useQuery({ queryKey: ['settings', 'appearance'], queryFn: settingsApi.appearance })
   useEffect(() => {
-    if (data) applyAppearance(data)
+    if (!data) return
+    applyAppearance(data)
+    // Once a session, even unchanged: a new app version, or a photo whose widget thumbnail isn't made yet.
+    if (!widgetRefreshed) {
+      widgetRefreshed = true
+      void redrawWidget(data)
+    }
   }, [data])
 }

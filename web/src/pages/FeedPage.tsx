@@ -4,7 +4,7 @@ import { activeFilterCount, feedFilterParams, NO_FILTERS, type FeedFilters } fro
 import type { FeedItem } from '@shared/types'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type ComponentType } from 'react'
-import { IoAlbumsOutline, IoCheckmarkCircleOutline, IoClose, IoTrashOutline } from 'react-icons/io5'
+import { IoAlbums, IoAlbumsOutline, IoCheckbox, IoCheckmarkCircleOutline, IoClose, IoDocumentText, IoTime, IoTrashOutline } from 'react-icons/io5'
 import { useSearchParams } from 'react-router'
 import { feedApi } from '../api/endpoints'
 import { useDebounced } from '../lib/useDebounced'
@@ -23,6 +23,8 @@ import { t } from '@shared/i18n'
 const SHOW = ['all', 'tasks', 'events', 'notes'] as const
 /** Same icons as the mobile tab bar. */
 const ICONS: ComponentType[] = [IoAlbumsOutline, KIND_ICON.Task, KIND_ICON.Appointment, KIND_ICON.Note]
+/** The selected tab's icon: the filled one (same shapes as KIND_ICON). */
+const ACTIVE_ICONS: ComponentType[] = [IoAlbums, IoCheckbox, IoTime, IoDocumentText]
 const EMPTY_KEYS = ['feed.empty.all', 'feed.empty.tasks', 'feed.empty.events', 'feed.empty.notes'] as const
 
 /**
@@ -178,7 +180,7 @@ export function FeedPage() {
       <nav className="tab-bar" aria-label={t('feed.show')}>
         <div className="tab-bar-inner" role="tablist">
           {FEED_FILTERS.map((f, i) => {
-            const Icon = ICONS[i]
+            const Icon = i === showIndex ? ACTIVE_ICONS[i] : ICONS[i]
             return (
               <button
                 key={f.label}
@@ -190,7 +192,9 @@ export function FeedPage() {
                   setSelected(null)
                   window.scrollTo({ top: 0 })
                 }}>
-                <Icon />
+                <span className="tab-icon">
+                  <Icon />
+                </span>
                 <span>{f.label}</span>
               </button>
             )

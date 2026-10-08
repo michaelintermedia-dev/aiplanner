@@ -1,8 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { router, Tabs } from 'expo-router'
-import { Alert, Pressable, View } from 'react-native'
+import { Alert, Pressable, Text, View } from 'react-native'
 import { useAuth } from '@/auth/useAuth'
 import { useColors } from '@/theme'
+import { TabIcon } from '@/components/TabIcon'
 import { KIND_ICON } from '@/components/kindIcons'
 import { t } from '@shared/i18n'
 
@@ -32,6 +33,10 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: c.accent,
         tabBarInactiveTintColor: c.muted,
+        // The selected filter's label is bold too (with the pill behind its icon - TabIcon).
+        tabBarLabel: ({ focused, color, children }) => (
+          <Text style={{ color, fontSize: 12, fontWeight: focused ? '700' : '400', marginTop: 2 }}>{children}</Text>
+        ),
         tabBarStyle: { backgroundColor: c.surface, borderTopColor: c.border },
         sceneStyle: { backgroundColor: 'transparent' },
         headerStyle: { backgroundColor: c.surface },
@@ -50,20 +55,20 @@ export default function TabLayout() {
         options={{
           title: t('feed.tab.all'),
           headerTitle: t('app.name'),
-          tabBarIcon: ({ color, size }) => <Ionicons name="albums-outline" color={color} size={size} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon focused={focused} icon="albums-outline" activeIcon="albums" color={color} />,
         }}
       />
       <Tabs.Screen
         name="tasks"
-        options={{ title: t('feed.tab.tasks'), tabBarIcon: ({ color, size }) => <Ionicons name={KIND_ICON.Task} color={color} size={size} /> }}
+        options={{ title: t('feed.tab.tasks'), tabBarIcon: ({ color, focused }) => <TabIcon focused={focused} icon={KIND_ICON.Task} activeIcon="checkbox" color={color} /> }}
       />
       <Tabs.Screen
         name="events"
-        options={{ title: t('feed.tab.events'), tabBarIcon: ({ color, size }) => <Ionicons name={KIND_ICON.Appointment} color={color} size={size} /> }}
+        options={{ title: t('feed.tab.events'), tabBarIcon: ({ color, focused }) => <TabIcon focused={focused} icon={KIND_ICON.Appointment} activeIcon="time" color={color} /> }}
       />
       <Tabs.Screen
         name="notes"
-        options={{ title: t('feed.tab.notes'), tabBarIcon: ({ color, size }) => <Ionicons name={KIND_ICON.Note} color={color} size={size} /> }}
+        options={{ title: t('feed.tab.notes'), tabBarIcon: ({ color, focused }) => <TabIcon focused={focused} icon={KIND_ICON.Note} activeIcon="document-text" color={color} /> }}
       />
     </Tabs>
   )

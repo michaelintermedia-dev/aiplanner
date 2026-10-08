@@ -1326,9 +1326,35 @@ textarea {
   font-size: 1.45rem;
 }
 
+/* The selected filter stands out (Material-style): a pill in the skin's soft
+   accent behind a filled icon, and a bold accent label. Same as the app. */
+.tab-icon {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 30px;
+  border-radius: 999px;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.tab-bar button.active .tab-icon {
+  background: var(--accent-soft);
+  transform: scale(1.06);
+}
+
+.tab-bar button:active .tab-icon {
+  transform: scale(0.94);
+}
+
 .tab-bar button.active {
   color: var(--accent);
-  font-weight: 600;
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-icon {
+    transition: none;
+  }
 }
 
 .tab-bar button:hover:not(.active) {

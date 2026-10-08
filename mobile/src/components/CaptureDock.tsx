@@ -2,7 +2,6 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import { router, useSegments } from 'expo-router'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
-  AccessibilityInfo,
   Animated,
   Easing,
   Keyboard,
@@ -18,6 +17,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useDockHidden } from '@/lib/dockTarget'
 import { useQuickRecording } from '@/lib/quickRecord'
+import { useReduceMotion } from '@/lib/useReduceMotion'
 import { itemPath } from '@/lib/itemPath'
 import type { SavedNotice } from '@shared/captureDraft'
 import { useColors } from '@/theme'
@@ -223,16 +223,6 @@ const FAB = 56
 const EDGE = 12
 
 /** The system "Reduce motion" setting: animations then jump straight to the end. */
-function useReduceMotion() {
-  const [reduce, setReduce] = useState(false)
-  useEffect(() => {
-    void AccessibilityInfo.isReduceMotionEnabled().then(setReduce)
-    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduce)
-    return () => sub.remove()
-  }, [])
-  return reduce
-}
-
 /** Keyboard height while it's up (0 when hidden). */
 function useKeyboardHeight() {
   const [height, setHeight] = useState(0)

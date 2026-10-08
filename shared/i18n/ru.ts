@@ -403,8 +403,6 @@ export const ru: Messages = {
   'sort.pickOne': 'Выберите хотя бы один.',
 
   // ---- item audio snippet ----
-  'player.playThisPart': 'Прослушать эту часть ({from}–{to})',
-  'player.playWhole': 'Вся запись',
 
   // ---- updating an item by voice ----
   'review.updatesItem': 'Обновит «{title}» — название и дата создания останутся. Проверьте изменения перед сохранением.',
@@ -419,7 +417,6 @@ export const ru: Messages = {
   'feed.reminderAt': 'Напоминание: {when}',
 
   // ---- item audio in pieces ----
-  'player.playItsParts': { one: 'Прослушать {count} часть ({length})', few: 'Прослушать {count} части ({length})', many: 'Прослушать {count} частей ({length})', other: 'Прослушать {count} части ({length})' },
 
   // ---- playback speed ----
   'player.speed': 'Скорость воспроизведения',

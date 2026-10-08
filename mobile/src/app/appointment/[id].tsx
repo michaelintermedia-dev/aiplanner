@@ -133,7 +133,7 @@ export default function AppointmentDetailScreen() {
 
       {!edit.editing && <ItemMedia itemType="Appointment" id={appt.id} />}
 
-      {!edit.editing && appt.sourceCaptureId && <SourceCapture captureId={appt.sourceCaptureId} item={{ itemType: 'Appointment', itemId: appt.id, title: appt.title }} />}
+      {!edit.editing && appt.sourceCaptureId && <SourceCapture captureId={appt.sourceCaptureId} />}
     </Screen>
   )
 }

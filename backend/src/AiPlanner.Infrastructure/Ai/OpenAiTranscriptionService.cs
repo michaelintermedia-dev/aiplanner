@@ -10,8 +10,8 @@ namespace AiPlanner.Infrastructure.Ai;
 /// <summary>
 /// Speech-to-text via OpenAI's /audio/transcriptions endpoint. The text comes
 /// from TranscriptionModel; word timings (which only whisper-1 returns) come
-/// from a second, parallel call to TimingModel. Timings are a nice-to-have:
-/// if that call fails, the transcript still goes through without them.
+/// from a second, parallel call to TimingModel - only when asked for ("Shorten
+/// pauses"). If that call fails, the transcript still goes through without them.
 /// </summary>
 public class OpenAiTranscriptionService : ITranscriptionService
 {
@@ -26,7 +26,7 @@ public class OpenAiTranscriptionService : ITranscriptionService
         _logger = logger;
     }
 
-    public async Task<TranscriptionResult> TranscribeAsync(Stream audio, string fileName, string? mimeType, CancellationToken ct = default)
+    public async Task<TranscriptionResult> TranscribeAsync(Stream audio, string fileName, string? mimeType, CancellationToken ct = default, bool withTimings = false)
     {
         // Both calls need the bytes; recordings are at most a few MB.
         using var buffer = new MemoryStream();
@@ -34,7 +34,7 @@ public class OpenAiTranscriptionService : ITranscriptionService
         var bytes = buffer.ToArray();
 
         var textTask = TranscribeTextAsync(bytes, fileName, mimeType, ct);
-        var timingTask = string.IsNullOrWhiteSpace(_options.TimingModel)
+        var timingTask = !withTimings || string.IsNullOrWhiteSpace(_options.TimingModel)
             ? Task.FromResult<(IReadOnlyList<TimedWord>?, int?)>((null, null))
             : TimeWordsAsync(bytes, fileName, mimeType, ct);
         await Task.WhenAll(textTask, timingTask);
@@ -95,7 +95,7 @@ public class OpenAiTranscriptionService : ITranscriptionService
                                    || (ex is TaskCanceledException && !ct.IsCancellationRequested))
         {
             // Only the per-item snippets are lost, never the transcript. No user content in the log.
-            _logger.LogWarning("Word timings unavailable ({Error}); items will use the whole recording", ex.GetType().Name);
+            _logger.LogWarning("Word timings unavailable ({Error}); pauses are kept as they are", ex.GetType().Name);
             return (null, null);
         }
     }

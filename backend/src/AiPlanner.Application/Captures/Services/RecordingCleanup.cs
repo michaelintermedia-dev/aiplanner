@@ -76,7 +76,6 @@ public class RecordingCleanup
             }
             // New lists (not Clear) so EF sees the JSON column change.
             voice.AudioStorageKeys = [];
-            voice.AudioPartDurationsMs = [];
         }
 
         if (removed > 0 && !dryRun)

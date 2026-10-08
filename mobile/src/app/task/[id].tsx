@@ -122,7 +122,7 @@ export default function TaskDetailScreen() {
 
       {!edit.editing && <ItemMedia itemType="Task" id={task.id} />}
 
-      {!edit.editing && task.sourceCaptureId && <SourceCapture captureId={task.sourceCaptureId} item={{ itemType: 'Task', itemId: task.id, title: task.title }} />}
+      {!edit.editing && task.sourceCaptureId && <SourceCapture captureId={task.sourceCaptureId} />}
     </Screen>
   )
 }

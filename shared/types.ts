@@ -232,9 +232,6 @@ export interface CaptureItem {
   resultingNoteId: string | null
   /** From continuing a capture: completes the item the user continued from. */
   addsToCurrent: boolean
-  /** Where in the recording this item was said (ms on the whole-recording timeline), if known. */
-  audioStartMs?: number | null
-  audioEndMs?: number | null
   /** "Add more" on a saved item: which item it belongs to (to resume an unsaved review of it). */
   continuesItemType?: ItemType | null
   continuesItemId?: string | null
@@ -259,7 +256,6 @@ export interface Capture {
   createdAtUtc: string
   items: CaptureItem[]
   /** Length of each recording part, in order - places item snippets across parts. */
-  audioPartDurationsMs?: number[] | null
   /** The smart Save: already saved - show what it became instead of the review. */
   autoSaved?: boolean
 }

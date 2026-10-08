@@ -403,8 +403,6 @@ export const he: Messages = {
   'sort.pickOne': 'יש לבחור לפחות אחד.',
 
   // ---- item audio snippet ----
-  'player.playThisPart': 'השמעת החלק הזה ({from}–{to})',
-  'player.playWhole': 'כל ההקלטה',
 
   // ---- updating an item by voice ----
   'review.updatesItem': 'יעדכן את ״{title}״ - הכותרת ותאריך היצירה יישארו. כדאי לבדוק את השינויים לפני השמירה.',
@@ -419,7 +417,6 @@ export const he: Messages = {
   'feed.reminderAt': 'תזכורת: {when}',
 
   // ---- item audio in pieces ----
-  'player.playItsParts': { one: 'השמעת החלק ({length})', two: 'השמעת שני החלקים ({length})', other: 'השמעת {count} החלקים ({length})' },
 
   // ---- playback speed ----
   'player.speed': 'מהירות השמעה',

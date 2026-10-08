@@ -126,7 +126,7 @@ export function TaskDetailPage() {
 
       {!edit.mode && <ItemMedia itemType="Task" id={task.id} />}
 
-      {!edit.mode && task.sourceCaptureId && <SourceCapture captureId={task.sourceCaptureId} item={{ itemType: 'Task', itemId: task.id, title: task.title }} />}
+      {!edit.mode && task.sourceCaptureId && <SourceCapture captureId={task.sourceCaptureId} />}
     </div>
   )
 }

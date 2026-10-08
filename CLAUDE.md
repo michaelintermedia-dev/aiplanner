@@ -503,25 +503,15 @@ Local dev notes:
   disabled with nothing ticked and guarded against double clicks; a type
   change drops the old item's query (`useAction` `forget`) so it isn't
   refetched (404).
-- **Each item plays its own part of a voice message** (user's request,
-  2026-10-03). The AI quotes each item's words verbatim (`sourceText`);
-  `OpenAiTranscriptionService` makes a second, parallel call to `TimingModel`
-  (whisper-1 - the only model with word timestamps; `gpt-4o-mini-transcribe`
-  still makes the text) and `AudioSnippets` (pure, unit-tested) fuzzily
-  aligns the quote to the timed words (Smith-Waterman over tokens, small
-  spelling differences allowed). Stored as `AIExtractionItem.AudioStartMs/
-  AudioEndMs` on one timeline with parts back to back, plus
-  `VoiceCapture.AudioPartDurationsMs`; continued captures place new parts
-  after the old ones. Items are matched in the order they were said: a
-  phrase said twice finds its own place (`Find(..., notBeforeMs)`). No audio
-  is cut - clients play a range: web seeks the joined track and pauses at the
-  end (checked every animation frame, so 2× stops on time); mobile starts in the right part
-  (`locateInParts`) and stops across parts. "Play this part (0:02-0:05)" +
-  "Whole recording" on the item's source capture (`shared/audioSnippet.ts`).
-  An item can have several capture items (its words + each later addition):
-  `itemClips` collects all of them that have audio (typed additions have
-  none), in order, and the players play them back to back.
-  If timings fail, items just have no snippet (whole recording).
+- **One player per recording** (user's call, 2026-10-08 - with one entry per
+  message an item is the whole message). The item's source capture and its
+  Edit page show ONE player for the whole recording (web: parts joined into
+  one track; mobile: parts played back to back) + speed chips. The old
+  per-item snippets ("Play this part", AudioSnippets alignment,
+  AudioStartMs/EndMs, AudioPartDurationsMs) were removed (migration
+  DropAudioSnippets). `SourceText` stays: it scopes "adding to an item".
+  Word timings (a second, paid whisper-1 call, `TimingModel`) are only asked
+  for when "Shorten pauses" is on (`TranscribeAsync(withTimings)`).
   Audio is stored once per message (never per item). `RecordingCleanup`
   (run by `RecordingCleanupWorker`, every 6 h) deletes a recording when no
   item from it is left (or none was saved) and nothing about it changed for a

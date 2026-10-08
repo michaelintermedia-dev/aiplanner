@@ -19,8 +19,8 @@ public class OpenAiOptions
     public string TranscriptionModel { get; set; } = "gpt-4o-mini-transcribe";
 
     /// <summary>
-    /// Model asked separately for word timestamps, so each item can play just its
-    /// part of a recording (only whisper-1 returns them). Empty = no timings.
+    /// Model asked separately for word timestamps, for "Shorten pauses" (only
+    /// whisper-1 returns them; only called when that setting is on). Empty = never.
     /// </summary>
     public string? TimingModel { get; set; } = "whisper-1";
 

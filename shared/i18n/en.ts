@@ -407,8 +407,6 @@ export const en = {
   'sort.pickOne': 'Pick at least one.',
 
   // ---- item audio snippet ----
-  'player.playThisPart': 'Play this part ({from}–{to})',
-  'player.playWhole': 'Whole recording',
 
   // ---- updating an item by voice ----
   'review.updatesItem': 'Updates “{title}” - its title and created date stay. Check the changes before saving.',
@@ -423,7 +421,6 @@ export const en = {
   'feed.reminderAt': 'Reminder: {when}',
 
   // ---- item audio in pieces ----
-  'player.playItsParts': { one: 'Play its part ({length})', other: 'Play its {count} parts ({length})' },
 
   // ---- playback speed ----
   'player.speed': 'Playback speed',

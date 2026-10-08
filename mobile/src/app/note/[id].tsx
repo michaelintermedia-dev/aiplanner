@@ -92,7 +92,7 @@ export default function NoteDetailScreen() {
 
       {!edit.editing && <ItemMedia itemType="Note" id={note.id} />}
 
-      {!edit.editing && note.sourceCaptureId && <SourceCapture captureId={note.sourceCaptureId} item={{ itemType: 'Note', itemId: note.id, title: noteName(note) }} />}
+      {!edit.editing && note.sourceCaptureId && <SourceCapture captureId={note.sourceCaptureId} />}
     </Screen>
   )
 }

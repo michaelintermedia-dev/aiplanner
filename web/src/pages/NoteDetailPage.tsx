@@ -79,7 +79,7 @@ export function NoteDetailPage() {
 
       {!edit.mode && <ItemMedia itemType="Note" id={note.id} />}
 
-      {!edit.mode && note.sourceCaptureId && <SourceCapture captureId={note.sourceCaptureId} item={{ itemType: 'Note', itemId: note.id, title: noteName(note) }} />}
+      {!edit.mode && note.sourceCaptureId && <SourceCapture captureId={note.sourceCaptureId} />}
     </div>
   )
 }

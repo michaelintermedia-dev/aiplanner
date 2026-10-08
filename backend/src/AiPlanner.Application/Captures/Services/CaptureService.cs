@@ -99,7 +99,7 @@ public class CaptureService : ICaptureService
     public async Task<Result<CaptureDto>> CaptureTextAsync(CaptureTextRequest request, CancellationToken ct = default)
     {
         var userId = RequireUserId();
-        var extraction = await ExtractAsync(userId, request.Text.Trim(), transcript: null, timeline: null, ct);
+        var extraction = await ExtractAsync(userId, request.Text.Trim(), transcript: null, ct);
         return Result<CaptureDto>.Success(await SaveNowAsync(extraction, transcript: null, request.SaveNow, ct));
     }
 
@@ -139,6 +139,8 @@ public class CaptureService : ICaptureService
         _db.VoiceCaptures.Add(voice);
         await _db.SaveChangesAsync(ct);
 
+        // Word timings (a second, paid call) are only needed to shorten pauses.
+        var shorten = await ShortenPausesOnAsync(userId, ct);
         TranscriptionResult[] parts;
         try
         {
@@ -149,7 +151,7 @@ public class CaptureService : ICaptureService
                 await using var stored = await _storage.OpenReadAsync(key, ct)
                     ?? throw new InvalidOperationException("The recording was not found right after saving it.");
                 var mime = string.IsNullOrWhiteSpace(segments[i].MimeType) ? AudioExtensions[extensions[i]] : segments[i].MimeType;
-                return await _transcription.TranscribeAsync(stored, Path.GetFileName(key), mime, ct);
+                return await _transcription.TranscribeAsync(stored, Path.GetFileName(key), mime, ct, withTimings: shorten);
             }));
         }
         catch (AiProviderException ex)
@@ -162,12 +164,9 @@ public class CaptureService : ICaptureService
             string.Join(" ", parts.Select(p => p.Text.Trim()).Where(t => t.Length > 0)),
             parts.Select(p => p.LanguageCode).FirstOrDefault(l => l is not null),
             parts[0].ProviderName);
-        // When each word was said, so every item can play just its part.
-        // "Shorten long pauses" (Settings): cut them now; the word timings move with the cuts.
-        (parts, voice.AudioStorageKeys) = await ShortenPausesAsync(userId, voice.AudioStorageKeys, parts, ct);
-        var timeline = AudioSnippets.Timeline(parts);
-        voice.AudioPartDurationsMs = timeline?.PartDurationsMs ?? [];
-        // Transcribed: now keep it small (WAV -> compressed; same length, so the timings still fit).
+        // "Shorten long pauses" (Settings): cut them now, from the word timings.
+        if (shorten) (_, voice.AudioStorageKeys) = await ShortenPausesAsync(voice.AudioStorageKeys, parts, ct);
+        // Transcribed: now keep it small (WAV -> compressed).
         voice.AudioStorageKeys = await CompressAsync(voice.AudioStorageKeys, ct);
 
         var text = transcription.Text.Trim();
@@ -195,7 +194,7 @@ public class CaptureService : ICaptureService
         AIExtraction extraction;
         try
         {
-            extraction = await ExtractAsync(userId, text, transcript, timeline?.Words, ct);
+            extraction = await ExtractAsync(userId, text, transcript, ct);
         }
         catch (AiProviderException ex)
         {
@@ -367,14 +366,13 @@ public class CaptureService : ICaptureService
         }
         // Assign a new list (not Clear) so EF sees the JSON column change.
         voice.AudioStorageKeys = [];
-        voice.AudioPartDurationsMs = [];
         await _db.SaveChangesAsync(ct);
         return Result.Success();
     }
 
     // ---- Extraction --------------------------------------------------------
 
-    private async Task<AIExtraction> ExtractAsync(Guid userId, string text, Transcript? transcript, IReadOnlyList<TimedWord>? timeline, CancellationToken ct)
+    private async Task<AIExtraction> ExtractAsync(Guid userId, string text, Transcript? transcript, CancellationToken ct)
     {
         var (raw, normalized) = await ProposeAsync(userId, text, previousText: null, currentItem: null, ct);
 
@@ -390,7 +388,7 @@ public class CaptureService : ICaptureService
             ProcessedAtUtc = _dateTime.UtcNow,
             Title = normalized.Title,
             Summary = normalized.Summary,
-            Items = ToItems(userId, normalized.Items, timeline),
+            Items = normalized.Items.Select(i => ToItem(userId, i)).ToList(),
         };
 
         _db.AIExtractions.Add(extraction);
@@ -424,30 +422,6 @@ public class CaptureService : ICaptureService
             "Extracted {ItemCount} item(s) ({RawCount} proposed) with {Model} in {ElapsedMs} ms",
             normalized.Items.Count, raw.Items.Count, raw.ModelName, (_dateTime.UtcNow - started).TotalMilliseconds);
         return (raw, normalized);
-    }
-
-    private static AIExtractionItem ToItem(Guid userId, NormalizedItem i, IReadOnlyList<TimedWord>? timeline, int notBeforeMs = 0)
-    {
-        var item = ToItem(userId, i);
-        if (timeline is { Count: > 0 } && AudioSnippets.Find(i.SourceText, timeline, timeline[^1].EndMs + 1000, notBeforeMs) is { } range)
-        {
-            (item.AudioStartMs, item.AudioEndMs) = range;
-        }
-        return item;
-    }
-
-    /// <summary>The proposals in the order they were said: each one's clip is looked for after the previous one's.</summary>
-    private static List<AIExtractionItem> ToItems(Guid userId, IEnumerable<NormalizedItem> items, IReadOnlyList<TimedWord>? timeline)
-    {
-        var result = new List<AIExtractionItem>();
-        var after = 0;
-        foreach (var i in items)
-        {
-            var item = ToItem(userId, i, timeline, after);
-            if (item.AudioEndMs is { } end) after = end - AudioSnippets.TailMs;
-            result.Add(item);
-        }
-        return result;
     }
 
     private static AIExtractionItem ToItem(Guid userId, NormalizedItem i) => new()
@@ -515,7 +489,6 @@ public class CaptureService : ICaptureService
             ? await ItemWordsAsync(extraction.Id, request.ItemId!.Value, ct)
             : extraction.Transcript?.Text ?? extraction.RawInputText ?? "";
         var added = new List<string>();
-        IReadOnlyList<TimedWord>? newTimeline = null;
 
         if (request.Audio.Count > 0)
         {
@@ -529,25 +502,21 @@ public class CaptureService : ICaptureService
                 keys.Add(key);
             }
 
+            var shorten = await ShortenPausesOnAsync(userId, ct);
             var parts = await Task.WhenAll(keys.Select(async (key, i) =>
             {
                 await using var stored = await _storage.OpenReadAsync(key, ct)
                     ?? throw new InvalidOperationException("The recording was not found right after saving it.");
                 var mime = string.IsNullOrWhiteSpace(request.Audio[i].MimeType) ? AudioExtensions[extensions[i]] : request.Audio[i].MimeType;
-                return await _transcription.TranscribeAsync(stored, Path.GetFileName(key), mime!, ct);
+                return await _transcription.TranscribeAsync(stored, Path.GetFileName(key), mime!, ct, withTimings: shorten);
             }));
             var spoken = string.Join(" ", parts.Select(p => p.Text.Trim()).Where(t => t.Length > 0));
-            (parts, keys) = await ShortenPausesAsync(userId, keys, parts, ct);
+            if (shorten) (parts, keys) = await ShortenPausesAsync(keys, parts, ct);
 
             if (voice is not null)
             {
-                // The new parts play after the existing ones; place their words there
-                // (only if every earlier part's length is known).
-                var known = voice.AudioPartDurationsMs.Count == voice.AudioStorageKeys.Count;
-                var placed = known ? AudioSnippets.Timeline(parts, voice.AudioPartDurationsMs.Sum()) : null;
-                newTimeline = placed?.Words;
-                // Assign new lists (not Add) so EF sees the JSON column change.
-                voice.AudioPartDurationsMs = placed is null ? [] : [.. voice.AudioPartDurationsMs, .. placed.Value.PartDurationsMs];
+                // The new parts play after the existing ones. Assign a new list (not
+                // Add) so EF sees the JSON column change.
                 var compressed = await CompressAsync(keys, ct);
                 voice.AudioStorageKeys = [.. voice.AudioStorageKeys, .. compressed];
                 addedKeys.AddRange(compressed);
@@ -556,14 +525,11 @@ public class CaptureService : ICaptureService
             {
                 // A typed capture gets its first recording: keep it. The typed words
                 // become the start of the transcript; the recording covers the rest.
-                var placed = AudioSnippets.Timeline(parts);
-                newTimeline = placed?.Words;
                 var recording = new VoiceCapture
                 {
                     UserId = userId,
                     MimeType = string.IsNullOrWhiteSpace(request.Audio[0].MimeType) ? AudioExtensions[extensions[0]] : request.Audio[0].MimeType,
                     Status = VoiceCaptureStatus.Analyzed,
-                    AudioPartDurationsMs = placed?.PartDurationsMs ?? [],
                     AudioStorageKeys = await CompressAsync(keys, ct),
                 };
                 addedKeys.AddRange(recording.AudioStorageKeys);
@@ -619,7 +585,7 @@ public class CaptureService : ICaptureService
         }
         foreach (var proposed in proposals)
         {
-            var item = ToItem(userId, proposed, newTimeline);
+            var item = ToItem(userId, proposed);
             item.AiExtractionId = extraction.Id;
             if (currentItem is not null)
             {
@@ -725,11 +691,9 @@ public class CaptureService : ICaptureService
     /// Best effort - a part that can't be cut stays as it was.
     /// </summary>
     private async Task<(TranscriptionResult[] Parts, List<string> Keys)> ShortenPausesAsync(
-        Guid userId, IReadOnlyList<string> keys, TranscriptionResult[] parts, CancellationToken ct)
+        IReadOnlyList<string> keys, TranscriptionResult[] parts, CancellationToken ct)
     {
         var newKeys = keys.ToList();
-        var on = await _db.UserSettings.Where(s => s.UserId == userId).Select(s => s.ShortenPauses).FirstOrDefaultAsync(ct);
-        if (!on) return (parts, newKeys);
 
         var result = parts.ToArray();
         for (var i = 0; i < parts.Length && i < keys.Count; i++)
@@ -857,10 +821,7 @@ public class CaptureService : ICaptureService
         var voice = extraction.Transcript?.VoiceCapture;
         if (voice is not null && item.AddedAudioKeys.Count > 0)
         {
-            var keep = voice.AudioStorageKeys.Select((key, i) => (key, i)).Where(p => !item.AddedAudioKeys.Contains(p.key)).ToList();
-            var durationsKnown = voice.AudioPartDurationsMs.Count == voice.AudioStorageKeys.Count;
-            voice.AudioPartDurationsMs = durationsKnown ? keep.Select(p => voice.AudioPartDurationsMs[p.i]).ToList() : [];
-            voice.AudioStorageKeys = keep.Select(p => p.key).ToList();
+            voice.AudioStorageKeys = voice.AudioStorageKeys.Where(key => !item.AddedAudioKeys.Contains(key)).ToList();
             foreach (var key in item.AddedAudioKeys) await _storage.DeleteAsync(key, ct);
         }
         if (item.AddedRecording && extraction.Transcript is { } added)
@@ -1200,6 +1161,9 @@ public class CaptureService : ICaptureService
         i.Id, true, i.Intent, i.Title, i.Description, i.StartDateUtc, i.EndDateUtc, i.DueDateUtc, i.HasTime,
         i.Location, i.Priority, ReminderPlanner.FromProposed(i.ProposedReminders), Recurrence: RuleOf(i));
 
+    private async Task<bool> ShortenPausesOnAsync(Guid userId, CancellationToken ct) =>
+        await _db.UserSettings.Where(s => s.UserId == userId).Select(s => s.ShortenPauses).FirstOrDefaultAsync(ct);
+
     private async Task<UserSettings> SettingsAsync(Guid userId, CancellationToken ct) =>
         await _db.UserSettings.AsNoTracking().FirstOrDefaultAsync(s => s.UserId == userId, ct) ?? new UserSettings();
 
@@ -1242,12 +1206,9 @@ public class CaptureService : ICaptureService
                 i.Priority, ReminderPlanner.FromProposed(i.ProposedReminders), i.RecurrenceFrequency,
                 i.Clarification, i.Confidence,
                 i.ResultingTaskItemId, i.ResultingAppointmentId, i.ResultingNoteId, i.AddsToCurrent,
-                i.AudioStartMs, i.AudioEndMs, i.ContinuesItemType, i.ContinuesItemId, i.Unrelated, i.HeldByEditForm,
+                i.ContinuesItemType, i.ContinuesItemId, i.Unrelated, i.HeldByEditForm,
                 RuleOf(i)))
-            .ToList(),
-        transcript?.VoiceCapture is { } v && v.AudioPartDurationsMs.Count == v.AudioStorageKeys.Count && v.AudioStorageKeys.Count > 0
-            ? v.AudioPartDurationsMs
-            : null);
+            .ToList());
 
     /// <summary>Aborts a confirm transaction with a message for the user.</summary>
     private sealed class CaptureConfirmException(string message) : Exception(message);

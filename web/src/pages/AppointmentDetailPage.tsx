@@ -159,7 +159,7 @@ export function AppointmentDetailPage() {
 
       {!edit.mode && <ItemMedia itemType="Appointment" id={appt.id} />}
 
-      {!edit.mode && appt.sourceCaptureId && <SourceCapture captureId={appt.sourceCaptureId} item={{ itemType: 'Appointment', itemId: appt.id, title: appt.title }} />}
+      {!edit.mode && appt.sourceCaptureId && <SourceCapture captureId={appt.sourceCaptureId} />}
     </div>
   )
 }

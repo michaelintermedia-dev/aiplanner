@@ -1,6 +1,5 @@
 import { RecurrencePicker } from './RecurrencePicker'
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { itemClips } from '@shared/audioSnippet'
 import { reviewItems } from '@shared/captureDraft'
 import { endsNextDay } from '@shared/dates'
 import { KIND_LABEL } from '@shared/feed'
@@ -401,12 +400,7 @@ export function ItemEditor({
             </View>
           ) : (
             <>
-              <RecordingPlayer
-                captureId={captureId}
-                parts={recording.audioParts}
-                durationsMs={recording.audioPartDurationsMs ?? null}
-                clips={itemClips(recording, { itemType: item.itemType, itemId: item.id, title: item.title })}
-              />
+              <RecordingPlayer captureId={captureId} parts={recording.audioParts} />
               <Button title={t('source.deleteAudio')} variant="danger" onPress={() => setDraft((d) => ({ ...d, deleteRecording: true }))} />
             </>
           )}

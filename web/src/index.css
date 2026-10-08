@@ -2109,12 +2109,6 @@ button.kind-icon:hover:not(:disabled) {
   gap: 8px;
 }
 
-.snippet-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border-radius: 999px;
-}
 
 /* The next reminder on a feed row: bell (or repeat) + when; highlighted today. */
 .reminder-badge {

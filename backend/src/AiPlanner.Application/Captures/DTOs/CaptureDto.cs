@@ -15,5 +15,4 @@ public record CaptureDto(
     int AudioParts, // playable recording segments (0 = text capture, or recording deleted)
     DateTime CreatedAtUtc,
     IReadOnlyList<CaptureItemDto> Items,
-    IReadOnlyList<int>? AudioPartDurationsMs = null, // per part, to place item snippets across parts
     bool AutoSaved = false); // the smart Save: already saved - show what it became, no review

@@ -1,4 +1,3 @@
-import { itemClips } from '@shared/audioSnippet'
 import { reviewItems } from '@shared/captureDraft'
 import { endsNextDay } from '@shared/dates'
 import { KIND_LABEL } from '@shared/feed'
@@ -396,11 +395,7 @@ export function ItemEditor({
             </p>
           ) : (
             <>
-              <RecordingPlayer
-                captureId={captureId}
-                parts={recording.audioParts}
-                clips={itemClips(recording, { itemType: item.itemType, itemId: item.id, title: item.title })}
-              />
+              <RecordingPlayer captureId={captureId} parts={recording.audioParts} />
               <button type="button" className="link danger" onClick={() => setDraft((d) => ({ ...d, deleteRecording: true }))}>
                 {t('source.deleteAudio')}
               </button>

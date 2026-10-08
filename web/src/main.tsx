@@ -5,6 +5,10 @@ import { ApiError } from './api/client'
 import { App } from './App'
 import { AuthProvider } from './auth/AuthContext'
 import './index.css'
+import { applyAppearance } from './lib/appearance'
+
+// This device's last appearance, before anything is drawn (the account's follows once signed in).
+applyAppearance()
 
 const queryClient = new QueryClient({
   defaultOptions: {

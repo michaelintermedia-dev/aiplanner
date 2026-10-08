@@ -33,6 +33,16 @@ public class SettingsController : ControllerBase
     public async Task<ActionResult<RecordingSettingsDto>> UpdateRecordings(RecordingSettingsDto settings, [FromServices] RecordingSettingsService recordings, CancellationToken ct) =>
         Ok(await recordings.UpdateAsync(settings, ct));
 
+    /// <summary>GET /api/settings/appearance - light/dark and the colour scheme.</summary>
+    [HttpGet("appearance")]
+    public async Task<ActionResult<AppearanceSettingsDto>> GetAppearance([FromServices] AppearanceSettingsService appearance, CancellationToken ct) =>
+        Ok(await appearance.GetAsync(ct));
+
+    /// <summary>PUT /api/settings/appearance</summary>
+    [HttpPut("appearance")]
+    public async Task<ActionResult<AppearanceSettingsDto>> UpdateAppearance(AppearanceSettingsDto settings, [FromServices] AppearanceSettingsService appearance, CancellationToken ct) =>
+        Ok(await appearance.UpdateAsync(settings, ct));
+
     [HttpPut("notifications")]
     public async Task<ActionResult<NotificationSettingsDto>> UpdateNotifications(NotificationSettingsDto settings, CancellationToken ct) =>
         Ok(await _notifications.UpdateSettingsAsync(settings, ct));

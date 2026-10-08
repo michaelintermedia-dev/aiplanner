@@ -5,6 +5,9 @@ import { useEffect, useState } from 'react'
 import { settingsApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { useAction } from '../lib/useAction'
+import { applyAppearance, currentAppearance } from '../lib/appearance'
+import { palette, SKIN_NAMES, skinLabel, THEMES, themeLabel, wallpaperCss, type AppearanceSettings } from '@shared/appearance'
+import { IoCheckmark } from 'react-icons/io5'
 import { browserNotificationsSupported, onPermissionChange, requestBrowserPermission } from '../lib/notifications'
 
 /** Settings - Language, Notifications (spec "Settings"). Changes save immediately. */
@@ -15,6 +18,20 @@ export function SettingsPage() {
   const save = useAction(settingsApi.updateNotifications)
   const recordings = useQuery({ queryKey: ['settings', 'recordings'], queryFn: settingsApi.recordings })
   const saveRecordings = useAction(settingsApi.updateRecordings)
+  const appearance = useQuery({ queryKey: ['settings', 'appearance'], queryFn: settingsApi.appearance })
+  const saveAppearance = useAction(settingsApi.updateAppearance)
+  // Shown at once; saved to the account (every device follows).
+  const [look, setLook] = useState<AppearanceSettings>(currentAppearance)
+  useEffect(() => {
+    if (appearance.data) queueMicrotask(() => setLook(appearance.data))
+  }, [appearance.data])
+  const changeLook = (patch: Partial<AppearanceSettings>) => {
+    const next = { ...look, ...patch }
+    setLook(next)
+    applyAppearance(next)
+    saveAppearance.mutate(next)
+  }
+  const scheme = (document.documentElement.dataset.scheme as 'light' | 'dark' | undefined) ?? 'light'
   const supported = browserNotificationsSupported()
   const [permission, setPermission] = useState(() => (supported ? Notification.permission : 'denied'))
   useEffect(() => onPermissionChange(() => setPermission(Notification.permission)), [])
@@ -47,6 +64,46 @@ export function SettingsPage() {
         </div>
         <p className="muted small">{t('settings.languageHint')}</p>
         {languageError && <p className="error">{languageError}</p>}
+      </section>
+
+      <section className="card form">
+        <h3>{t('settings.appearance')}</h3>
+        <span className="field-label">{t('settings.theme')}</span>
+        <div className="segmented" role="radiogroup" aria-label={t('settings.theme')}>
+          {THEMES.map((theme) => (
+            <button
+              key={theme}
+              type="button"
+              role="radio"
+              aria-checked={look.theme === theme}
+              className={look.theme === theme ? 'active' : undefined}
+              onClick={() => changeLook({ theme })}>
+              {themeLabel(theme)}
+            </button>
+          ))}
+        </div>
+        <p className="muted small">{t('settings.themeHint')}</p>
+        <span className="field-label">{t('settings.skin')}</span>
+        <div className="skins" role="radiogroup" aria-label={t('settings.skin')}>
+          {SKIN_NAMES.map((skin) => (
+            <button
+              key={skin}
+              type="button"
+              role="radio"
+              aria-checked={look.skin === skin}
+              className={`skin${look.skin === skin ? ' active' : ''}`}
+              style={{ background: wallpaperCss(scheme, skin) }}
+              onClick={() => changeLook({ skin })}>
+              <span className="skin-dot" style={{ background: palette(scheme, skin).accent }}>
+                {look.skin === skin && <IoCheckmark aria-hidden style={{ color: palette(scheme, skin).accentText }} />}
+              </span>
+              <span className="skin-name">{skinLabel(skin)}</span>
+            </button>
+          ))}
+        </div>
+        <Toggle label={t('settings.wallpaper')} hint={t('settings.wallpaperHint')} checked={look.wallpaper} onChange={(wallpaper) => changeLook({ wallpaper })} />
+        <p className="muted small">{t('settings.appearanceSync')}</p>
+        {saveAppearance.error && <p className="error">{saveAppearance.error.message}</p>}
       </section>
 
       <section className="card form">

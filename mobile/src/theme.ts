@@ -1,40 +1,18 @@
+import { palette, type Scheme } from '@shared/appearance'
 import { useColorScheme } from 'react-native'
+import { useAppearance } from '@/lib/appearance'
 
-// Same palette as the web app (web/src/index.css).
-const light = {
-  bg: '#f6f6f4',
-  surface: '#ffffff',
-  surface2: '#f0f0ed',
-  border: '#e3e3de',
-  text: '#1d1d1b',
-  muted: '#6f6f69',
-  accent: '#4f5bd5',
-  accentSoft: '#e8eafb',
-  accentText: '#ffffff',
-  danger: '#c2413a',
-  warn: '#b7791f',
-  appointment: '#4f5bd5',
-  task: '#2f855a',
+/**
+ * The app's colours: light or dark (Settings - Theme; "System" follows the
+ * phone) in the chosen skin - the same palette as the web (shared/appearance).
+ * `page` is what screens paint behind their content: transparent while the
+ * skin's wallpaper shows (<Wallpaper> is behind every screen).
+ */
+export function useColors() {
+  const scheme: Scheme = useColorScheme() === 'dark' ? 'dark' : 'light'
+  const { skin, wallpaper } = useAppearance()
+  const colors = palette(scheme, skin)
+  return { ...colors, page: wallpaper ? 'transparent' : colors.bg, scheme }
 }
 
-const dark: typeof light = {
-  bg: '#121212',
-  surface: '#1b1b1b',
-  surface2: '#242424',
-  border: '#2e2e2e',
-  text: '#ececea',
-  muted: '#9a9a94',
-  accent: '#8b94f5',
-  accentSoft: '#262a4d',
-  accentText: '#121212',
-  danger: '#ef7a72',
-  warn: '#e0b35a',
-  appointment: '#8b94f5',
-  task: '#68c792',
-}
-
-export type Colors = typeof light
-
-export function useColors(): Colors {
-  return useColorScheme() === 'dark' ? dark : light
-}
+export type Colors = ReturnType<typeof useColors>

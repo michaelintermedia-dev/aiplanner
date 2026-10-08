@@ -4,7 +4,6 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
 import { StatusBar } from 'expo-status-bar'
 import { useEffect } from 'react'
-import { useColorScheme } from 'react-native'
 import { ApiError } from '@/api/client'
 import { AuthProvider } from '@/auth/AuthProvider'
 import { useAuth } from '@/auth/useAuth'
@@ -13,6 +12,8 @@ import { CaptureDock } from '@/components/CaptureDock'
 import { applyLayoutDirection } from '@/lib/layoutDirection'
 import { useNotifications } from '@/lib/useNotifications'
 import { useColors } from '@/theme'
+import { Wallpaper } from '@/components/Wallpaper'
+import { useAccountAppearance } from '@/lib/appearance'
 
 SplashScreen.preventAutoHideAsync()
 
@@ -27,13 +28,17 @@ const queryClient = new QueryClient({
 })
 
 export default function RootLayout() {
-  const scheme = useColorScheme()
+  const c = useColors()
+  // Screens are see-through: <Wallpaper> (the page colour or the skin's wallpaper) is behind them.
+  const base = c.scheme === 'dark' ? DarkTheme : DefaultTheme
   return (
-    <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={{ ...base, colors: { ...base.colors, background: 'transparent', primary: c.accent } }}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <StatusBar style="auto" />
-          <Gate />
+          <Wallpaper>
+            <Gate />
+          </Wallpaper>
         </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
@@ -73,6 +78,7 @@ function Gate() {
 function SignedIn() {
   const c = useColors()
   useNotifications()
+  useAccountAppearance()
 
   return (
     <CaptureDock>
@@ -81,7 +87,7 @@ function SignedIn() {
           headerStyle: { backgroundColor: c.surface },
           headerTintColor: c.text,
           headerShadowVisible: false,
-          contentStyle: { backgroundColor: c.bg },
+          contentStyle: { backgroundColor: c.page },
         }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="today" options={{ title: t('nav.today') }} />

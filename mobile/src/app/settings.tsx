@@ -11,6 +11,11 @@ import { Screen } from '@/components/Screen'
 import { Button } from '@/components/ui'
 import { useAction } from '@/lib/useAction'
 import { useColors } from '@/theme'
+import Ionicons from '@expo/vector-icons/Ionicons'
+import { palette, SKIN_NAMES, skinLabel, THEMES, themeLabel, type AppearanceSettings } from '@shared/appearance'
+import { Image } from 'expo-image'
+import { applyAppearance, useAppearance } from '@/lib/appearance'
+import { wallpaperImage } from '@/components/Wallpaper'
 
 /** Settings - Language, Notifications (same as web's Settings page). Changes save immediately. */
 export default function SettingsScreen() {
@@ -21,6 +26,14 @@ export default function SettingsScreen() {
   const save = useAction(settingsApi.updateNotifications)
   const recordings = useQuery({ queryKey: ['settings', 'recordings'], queryFn: settingsApi.recordings })
   const saveRecordings = useAction(settingsApi.updateRecordings)
+  // Appearance: shown at once, saved to the account (every device follows).
+  const look = useAppearance()
+  const saveAppearance = useAction(settingsApi.updateAppearance)
+  const changeLook = (patch: Partial<AppearanceSettings>) => {
+    const next = { ...look, ...patch }
+    applyAppearance(next)
+    saveAppearance.mutate(next)
+  }
   const [osAllowed, setOsAllowed] = useState<boolean | null>(null)
 
   useEffect(() => {
@@ -55,6 +68,52 @@ export default function SettingsScreen() {
       </View>
       <Text style={{ color: c.muted, fontSize: 13 }}>{t('settings.languageHint')}</Text>
       {languageError && <Text style={{ color: c.danger }}>{languageError}</Text>}
+
+      <Text style={[styles.heading, { color: c.muted }]}>{t('settings.appearance').toUpperCase()}</Text>
+      <Text style={{ color: c.text, fontWeight: '600' }}>{t('settings.theme')}</Text>
+      <View style={styles.languages} accessibilityRole="radiogroup" accessibilityLabel={t('settings.theme')}>
+        {THEMES.map((theme) => {
+          const on = look.theme === theme
+          return (
+            <Pressable
+              key={theme}
+              onPress={() => changeLook({ theme })}
+              style={[styles.language, { borderColor: on ? c.accent : c.border, backgroundColor: on ? c.accentSoft : c.surface }]}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: on }}>
+              <Text style={{ color: on ? c.accent : c.text, fontSize: 16 }}>{themeLabel(theme)}</Text>
+            </Pressable>
+          )
+        })}
+      </View>
+      <Text style={{ color: c.muted, fontSize: 13 }}>{t('settings.themeHint')}</Text>
+      <Text style={{ color: c.text, fontWeight: '600' }}>{t('settings.skin')}</Text>
+      <View style={styles.skins} accessibilityRole="radiogroup" accessibilityLabel={t('settings.skin')}>
+        {SKIN_NAMES.map((skin) => {
+          const on = look.skin === skin
+          const colors = palette(c.scheme, skin)
+          return (
+            <Pressable
+              key={skin}
+              onPress={() => changeLook({ skin })}
+              style={[styles.skin, { borderColor: on ? c.accent : c.border, backgroundColor: colors.bg }]}
+              accessibilityRole="radio"
+              accessibilityLabel={skinLabel(skin)}
+              accessibilityState={{ selected: on }}>
+              <Image source={wallpaperImage(skin, c.scheme)} style={StyleSheet.absoluteFill} contentFit="cover" />
+              <View style={[styles.skinDot, { backgroundColor: colors.accent }]}>
+                {on && <Ionicons name="checkmark" size={18} color={colors.accentText} />}
+              </View>
+              <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>{skinLabel(skin)}</Text>
+            </Pressable>
+          )
+        })}
+      </View>
+      <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.border }]}>
+        <Row label={t('settings.wallpaper')} hint={t('settings.wallpaperHint')} value={look.wallpaper} onChange={(wallpaper) => changeLook({ wallpaper })} />
+      </View>
+      <Text style={{ color: c.muted, fontSize: 13 }}>{t('settings.appearanceSync')}</Text>
+      {saveAppearance.error && <Text style={{ color: c.danger }}>{saveAppearance.error.message}</Text>}
 
       <Text style={[styles.heading, { color: c.muted }]}>{t('settings.notifications').toUpperCase()}</Text>
       {osAllowed === false && (
@@ -136,4 +195,7 @@ const styles = StyleSheet.create({
   warning: { borderWidth: 1, borderRadius: 12, padding: 12, gap: 8 },
   languages: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   language: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 16, minHeight: 40, justifyContent: 'center' },
+  skins: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  skin: { width: '31.5%', height: 84, borderWidth: 2, borderRadius: 12, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  skinDot: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', elevation: 2 },
 })

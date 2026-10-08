@@ -10,6 +10,7 @@ import { AuthPage } from './pages/AuthPage'
 import { CalendarPage } from './pages/CalendarPage'
 import { FeedPage } from './pages/FeedPage'
 import { useNotificationDelivery } from './lib/useNotificationDelivery'
+import { useAccountAppearance } from './lib/appearance'
 import { NoteDetailPage } from './pages/NoteDetailPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { TaskDetailPage } from './pages/TaskDetailPage'
@@ -36,6 +37,7 @@ function Layout() {
   const navigate = useNavigate()
   const isHome = pathname === '/feed'
   useNotificationDelivery()
+  useAccountAppearance()
 
   // Back within the app if there's history, otherwise home.
   const back = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate('/feed'))

@@ -27,6 +27,7 @@ import type {
   UpcomingNotification,
   User,
 } from './types'
+import type { AppearanceSettings } from './appearance'
 
 /**
  * The HTTP function each client provides: it owns the base URL, token
@@ -148,6 +149,9 @@ export function createApi(request: RequestFn) {
       updateNotifications: (body: NotificationSettings) => request<NotificationSettings>('PUT', '/settings/notifications', body),
       recordings: () => request<RecordingSettings>('GET', '/settings/recordings'),
       updateRecordings: (body: RecordingSettings) => request<RecordingSettings>('PUT', '/settings/recordings', body),
+      /** Light/dark and the skin - on the account, every device follows. */
+      appearance: () => request<AppearanceSettings>('GET', '/settings/appearance'),
+      updateAppearance: (body: AppearanceSettings) => request<AppearanceSettings>('PUT', '/settings/appearance', body),
     },
     calendar: {
       get: (view: CalendarView, date: string) =>

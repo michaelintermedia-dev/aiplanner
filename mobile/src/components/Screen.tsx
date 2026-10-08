@@ -19,7 +19,7 @@ export function Screen({ children, bottomSpace = DOCK_SPACE }: { children: React
 
   return (
     <ScrollView
-      style={{ backgroundColor: c.bg }}
+      style={{ backgroundColor: c.page }}
       contentContainerStyle={[styles.content, { paddingBottom: bottomSpace }]}
       keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.muted} />}>

@@ -22,7 +22,12 @@ public class UserSettings
     public bool KeepRecordings { get; set; } = true;
     public bool AutomaticProcessing { get; set; } = true;
 
+    /// <summary>"System" (follow the device), "Light" or "Dark" - Settings - Appearance, on every device.</summary>
     public string Theme { get; set; } = "System";
+    /// <summary>The colour scheme: AppearanceSettingsDto.Skins.</summary>
+    public string Skin { get; set; } = "Indigo";
+    /// <summary>Show the skin's wallpaper behind the content (off = a plain background).</summary>
+    public bool Wallpaper { get; set; } = true;
     public string DateFormat { get; set; } = "yyyy-MM-dd";
     public string TimeFormat { get; set; } = "HH:mm";
 

@@ -587,6 +587,22 @@ Local dev notes:
   sharing; pictures load with the auth header via expo-image. The
   image-picker plugin's `microphonePermission: false` would REMOVE
   RECORD_AUDIO - never set it; CAMERA is declared in app.json.
+- **Appearance: theme, skins, wallpapers** (user's request, 2026-10-08, web +
+  mobile; Settings - Appearance). Theme System/Light/Dark, a skin (Indigo -
+  default, Ocean, Forest, Sunset, Rose, Graphite: accent colours + a soft
+  three-glow wallpaper, each in light and dark) and a Wallpaper switch.
+  On the account (`UserSettings.Theme/Skin/Wallpaper`, `GET/PUT
+  /api/settings/appearance`, validated) so every device follows; each device
+  also keeps the last one (web localStorage, mobile `appearance.json`) to
+  start in the right colours. ONE definition: `shared/appearance.ts`
+  (`palette(scheme, skin)` = all colour tokens, `wallpaperCss`). Web:
+  `lib/appearance.ts` sets the CSS variables + `body` background (the media
+  query in index.css is only the first paint). Mobile: `useColors()` =
+  palette + `page` (transparent while the wallpaper shows - screens paint
+  `c.page`, never `c.bg`); `<Wallpaper>` is behind the whole app; the theme
+  is forced app-wide with `Appearance.setColorScheme`. The phone's wallpapers
+  are images rendered from `wallpaperCss` by `tools/qa/wallpapers.cjs` - re-run
+  it after changing a skin.
 - **UI languages: English, Russian, Hebrew; Hebrew is right-to-left**
   (2026-10-02, web + mobile). All UI text goes through `t('key', vars)` from
   `shared/i18n` - never write user-visible English in a component. `en.ts`

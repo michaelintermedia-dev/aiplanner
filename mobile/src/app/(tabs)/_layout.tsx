@@ -33,6 +33,7 @@ export default function TabLayout() {
         tabBarActiveTintColor: c.accent,
         tabBarInactiveTintColor: c.muted,
         tabBarStyle: { backgroundColor: c.surface, borderTopColor: c.border },
+        sceneStyle: { backgroundColor: 'transparent' },
         headerStyle: { backgroundColor: c.surface },
         headerTintColor: c.text,
         headerShadowVisible: false,

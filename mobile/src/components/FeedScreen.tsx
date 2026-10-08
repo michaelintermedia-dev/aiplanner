@@ -96,7 +96,7 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: c.bg }}>
+    <View style={{ flex: 1, backgroundColor: c.page }}>
       {/* Above the list, not a sticky list header: toggling stickyHeaderIndices breaks FlatList rendering. */}
       {selected && (
         <View style={[styles.selectionBar, { backgroundColor: c.surface, borderColor: c.accent }]} accessibilityLabel={t('select.bar')}>
@@ -119,7 +119,7 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
         </View>
       )}
       <FlatList
-        style={{ backgroundColor: c.bg }}
+        style={{ backgroundColor: c.page }}
         // Rows depend on the selection too, not only on `data`.
         extraData={selected}
         contentContainerStyle={styles.content}

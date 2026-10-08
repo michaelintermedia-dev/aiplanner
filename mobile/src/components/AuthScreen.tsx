@@ -32,7 +32,7 @@ export function AuthScreen() {
   const input = [styles.input, { color: c.text, borderColor: c.border, backgroundColor: c.surface }]
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: c.bg }]}>
+    <SafeAreaView style={[styles.screen, { backgroundColor: c.page }]}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.center}>
         <View style={styles.form}>
           <Text style={[styles.brand, { color: c.text }]}>{t('app.name')}</Text>

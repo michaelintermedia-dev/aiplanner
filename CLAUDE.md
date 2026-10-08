@@ -648,7 +648,9 @@ Local dev notes:
   picked files into memory at once (a cleared picker can empty them) and
   caches picture blobs per session outside React Query (every save
   invalidates all queries). Mobile: expo-image-picker / document-picker /
-  sharing; pictures load with the auth header via expo-image. The
+  sharing; pictures load with the auth header via expo-image. Take photo uses the
+  app's own camera (`CameraCapture`, expo-camera, back lens by default, switch
+  button) - the phone's camera app ignored image-picker's back-camera request. The
   image-picker plugin's `microphonePermission: false` would REMOVE
   RECORD_AUDIO - never set it; CAMERA is declared in app.json.
 - **Appearance: theme, skins, wallpapers** (user's request, 2026-10-08, web +

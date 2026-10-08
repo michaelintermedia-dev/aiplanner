@@ -65,6 +65,14 @@ async function check(uri: string, name: string, isImage: boolean, picked: Picked
   else picked.added.push({ key: newKey(), uri, name, isImage })
 }
 
+/** A photo taken with the app's own camera (CameraCapture), ready to upload like a picked one. */
+export async function fromCamera(shot: { uri: string; width: number; height: number }): Promise<Picked> {
+  const picked: Picked = { added: [], problems: [] }
+  const photo = await shrink(shot as ImagePicker.ImagePickerAsset, photoName())
+  await check(photo.uri, photo.name, true, picked)
+  return picked
+}
+
 /** Take a photo with the camera, or choose pictures from the gallery. Null: cancelled or not allowed. */
 export async function pickPhotos(camera: boolean): Promise<Picked | null> {
   const permission = camera ? await ImagePicker.requestCameraPermissionsAsync() : { granted: true }

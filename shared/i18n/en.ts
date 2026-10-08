@@ -498,6 +498,9 @@ export const en = {
   'form.draftNotice': 'You have unsaved changes to this item.',
   'form.continueEditing': 'Continue editing',
   // ---- media (photos, documents) ----
+  'camera.flip': 'Switch camera',
+  'camera.noPermission': 'Camera access is off for AI Planner.',
+  'camera.openSettings': 'Open settings',
   'media.title': 'Media',
   'media.takePhoto': 'Take photo',
   'media.addImage': 'Add image',

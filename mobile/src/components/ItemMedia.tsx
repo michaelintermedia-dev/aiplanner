@@ -6,7 +6,8 @@ import { Image } from 'expo-image'
 import { useState, type ReactNode } from 'react'
 import { ActivityIndicator, FlatList, I18nManager, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { attachmentSource, openAttachment, pickDocuments, pickPhotos, useAttachments, type Picked, type PendingMedia } from '@/lib/media'
+import { attachmentSource, fromCamera, openAttachment, pickDocuments, pickPhotos, useAttachments, type Picked, type PendingMedia } from '@/lib/media'
+import { CameraCapture } from './CameraCapture'
 import { useColors } from '@/theme'
 
 const COLUMNS = 3
@@ -211,6 +212,7 @@ export function MediaEditor({
   const { data = [] } = useAttachments(itemType, id)
   const [problems, setProblems] = useState<string[]>([])
   const [picking, setPicking] = useState(false)
+  const [camera, setCamera] = useState(false)
   const { images, files } = splitMedia(data)
   const toggle = (attachmentId: string) =>
     onRemoved(removed.includes(attachmentId) ? removed.filter((r) => r !== attachmentId) : [...removed, attachmentId])
@@ -234,7 +236,8 @@ export function MediaEditor({
   const pendingImages = pending.filter((p) => p.isImage)
   const pendingFiles = pending.filter((p) => !p.isImage)
   const actions: { icon: keyof typeof Ionicons.glyphMap; label: string; run: () => Promise<Picked | null> }[] = [
-    { icon: 'camera-outline', label: t('media.takePhoto'), run: () => pickPhotos(true) },
+    // The app's own camera (always the back lens) - see CameraCapture.
+    { icon: 'camera-outline', label: t('media.takePhoto'), run: async () => (setCamera(true), null) },
     { icon: 'image-outline', label: t('media.addImage'), run: () => pickPhotos(false) },
     { icon: 'attach-outline', label: t('media.addFile'), run: pickDocuments },
   ]
@@ -294,6 +297,14 @@ export function MediaEditor({
           {p}
         </Text>
       ))}
+      <CameraCapture
+        visible={camera}
+        onClose={() => setCamera(false)}
+        onShot={(shot) => {
+          setCamera(false)
+          void pick(() => fromCamera(shot))
+        }}
+      />
       <View style={styles.actions}>
         {actions.map((a) => (
           <Pressable

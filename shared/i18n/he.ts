@@ -494,6 +494,9 @@ export const he: Messages = {
   'form.draftNotice': 'יש לפריט הזה שינויים שלא נשמרו.',
   'form.continueEditing': 'להמשיך לערוך',
   // ---- media (photos, documents) ----
+  'camera.flip': 'החלפת מצלמה',
+  'camera.noPermission': 'הגישה למצלמה כבויה עבור AI Planner.',
+  'camera.openSettings': 'פתיחת ההגדרות',
   'media.title': 'מדיה',
   'media.takePhoto': 'לצלם תמונה',
   'media.addImage': 'להוסיף תמונה',

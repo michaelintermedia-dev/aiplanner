@@ -527,7 +527,6 @@ export const ru: Messages = {
   'capture.mediaNotRead': 'Они добавятся при сохранении. ИИ их не читает (Настройки - Записи).',
   'capture.searchShown': 'Показано то, что подходит - уточнить можно в фильтрах.',
   'capture.attach': 'Фото и файлы',
-  'capture.mediaHint': 'ИИ тоже их читает - можно сохранить одно фото.',
   'capture.mediaNote': { one: '{count} фото или файл добавится к сохранённой записи.', few: '{count} фото или файла добавятся к сохранённой записи.', many: '{count} фото и файлов добавятся к сохранённой записи.', other: '{count} фото и файлов добавятся к сохранённой записи.' },
   'capture.withMedia': { one: '+ {count} файл', few: '+ {count} файла', many: '+ {count} файлов', other: '+ {count} файла' },
   'widget.quickRecording': 'Быстрая запись',

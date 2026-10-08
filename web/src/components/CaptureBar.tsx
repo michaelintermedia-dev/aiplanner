@@ -22,6 +22,9 @@ import { SpeedChips } from './SpeedChips'
 import { t } from '@shared/i18n'
 
 
+/** How long "Saved as ..." stays in the bar. */
+const SAVED_MESSAGE_MS = 6000
+
 type Busy = null | 'transcribing' | 'understanding'
 
 /**
@@ -124,6 +127,19 @@ export function CaptureBar({
   const [savedMessage, setSavedMessage] = useState<string | null>(null)
   // "Save right away": what it was saved as, to open it.
   const [savedLink, setSavedLink] = useState<string | null>(null)
+
+  // "Saved as ..." is news for a moment, not a label: it goes after a few seconds or once something new is typed.
+  useEffect(() => {
+    if (!savedMessage) return
+    const timer = setTimeout(() => {
+      setSavedMessage(null)
+      setSavedLink(null)
+    }, SAVED_MESSAGE_MS)
+    return () => clearTimeout(timer)
+  }, [savedMessage])
+  useEffect(() => {
+    if (text) setSavedMessage(null)
+  }, [text])
   const preview = usePreview(recorder.state, recorder.pauseCount, recorder.snapshot)
   const mics = useMicrophones()
   const [silent, setSilent] = useState(false)
@@ -418,7 +434,7 @@ export function CaptureBar({
       {drawer && !continueFrom && (
         <div className="capture-drawer" id="capture-media">
           <MediaEditor pending={media} onPending={setMedia} />
-          <p className="muted small">{aiReadsMedia === false ? t('capture.mediaNotRead') : t('capture.mediaHint')}</p>
+          {aiReadsMedia === false && media.length > 0 && <p className="muted small">{t('capture.mediaNotRead')}</p>}
         </div>
       )}
       {asking && (

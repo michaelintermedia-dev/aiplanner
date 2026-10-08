@@ -23,6 +23,9 @@ import { Button } from './ui'
 import { t } from '@shared/i18n'
 
 
+/** How long "Saved as ..." stays in the bar. */
+const SAVED_MESSAGE_MS = 6000
+
 type Busy = null | 'transcribing' | 'understanding'
 
 const formatDuration = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
@@ -90,6 +93,19 @@ export function CaptureBar({
   const [savedMessage, setSavedMessage] = useState<string | null>(null)
   // "Save right away": what it was saved as, to open it.
   const [savedLink, setSavedLink] = useState<string | null>(null)
+
+  // "Saved as ..." is news for a moment, not a label: it goes after a few seconds or once something new is typed.
+  useEffect(() => {
+    if (!savedMessage) return
+    const timer = setTimeout(() => {
+      setSavedMessage(null)
+      setSavedLink(null)
+    }, SAVED_MESSAGE_MS)
+    return () => clearTimeout(timer)
+  }, [savedMessage])
+  useEffect(() => {
+    if (text) setSavedMessage(null)
+  }, [text])
   const [silent, setSilent] = useState(false)
   // Photos and files for a new entry (the drawer under the paperclip): added to it once it's saved.
   const [media, setMedia] = useState<PendingMedia[]>([])
@@ -370,7 +386,9 @@ export function CaptureBar({
       {drawer && !continueFrom && (
         <ScrollView style={styles.drawer} contentContainerStyle={{ paddingBottom: 4 }} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
           <MediaEditor pending={media} onPending={setMedia} bare />
-          <Text style={{ color: c.muted, fontSize: 13, marginTop: 6 }}>{aiReadsMedia === false ? t('capture.mediaNotRead') : t('capture.mediaHint')}</Text>
+          {aiReadsMedia === false && media.length > 0 && (
+            <Text style={{ color: c.muted, fontSize: 13, marginTop: 6 }}>{t('capture.mediaNotRead')}</Text>
+          )}
         </ScrollView>
       )}
 

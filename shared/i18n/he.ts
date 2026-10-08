@@ -527,7 +527,6 @@ export const he: Messages = {
   'capture.mediaNotRead': 'הם יתווספו בשמירה. ה-AI לא קורא אותם (הגדרות - הקלטות).',
   'capture.searchShown': 'מוצג מה שמתאים - אפשר לשנות במסננים.',
   'capture.attach': 'תמונות וקבצים',
-  'capture.mediaHint': 'גם ה-AI קורא אותם - מספיקה תמונה לבד.',
   'capture.mediaNote': { one: 'קובץ אחד יתווסף לרשומה שתישמר.', two: '{count} קבצים יתווספו לרשומה שתישמר.', other: '{count} קבצים יתווספו לרשומה שתישמר.' },
   'capture.withMedia': { one: '+ קובץ אחד', two: '+ {count} קבצים', other: '+ {count} קבצים' },
   'widget.quickRecording': 'הקלטה מהירה',

@@ -531,7 +531,6 @@ export const en = {
   'capture.mediaNotRead': 'They’re added when you save. The AI doesn’t read them (Settings - Recordings).',
   'capture.searchShown': 'Showing what matches - change it in the filters.',
   'capture.attach': 'Photos and files',
-  'capture.mediaHint': 'The AI reads them too - a photo alone is enough.',
   'capture.mediaNote': { one: '{count} photo or file will be added to the saved entry.', other: '{count} photos and files will be added to the saved entry.' },
   'capture.withMedia': { one: '+ {count} file', other: '+ {count} files' },
   'widget.quickRecording': 'Quick recording',

@@ -29,7 +29,7 @@ import { t } from '@shared/i18n'
  * only, user's request). Wraps the signed-in app, so it's on every screen and
  * a recording keeps going while you move around.
  *
- * Open by default; the X or a touch anywhere behind it collapses it into a
+ * Starts folded into its bubble; the X or a touch anywhere behind it folds it into a
  * round mic button that can be dragged anywhere (it snaps to the nearest side,
  * like Expo's dev-tools bubble) and opens it again on a tap. It stays open
  * while recording, processing or reviewing, and the bar stays mounted when
@@ -49,7 +49,8 @@ export function CaptureDock({ children }: { children: ReactNode }) {
   const c = useColors()
   const insets = useSafeAreaInsets()
   const { height } = useWindowDimensions()
-  const [open, setOpen] = useState(true)
+  // Starts folded into the bubble (user's call, 2026-10-08); a tap or Quick recording opens it.
+  const [open, setOpen] = useState(false)
   const [engaged, setEngaged] = useState(false)
   const keyboard = useKeyboardHeight()
   // Above the tab bar on the tab screens; above the system bar elsewhere.
@@ -58,11 +59,11 @@ export function CaptureDock({ children }: { children: ReactNode }) {
   const bottom = GAP + Math.max(base, keyboard)
 
   // 1 = toolbar open, 0 = collapsed into the mic button; both are on screen while it moves.
-  const [progress] = useState(() => new Animated.Value(1))
+  const [progress] = useState(() => new Animated.Value(0))
   // How far the toolbar's centre is from the button's (the toolbar shrinks into it).
   const [shift] = useState(() => new Animated.ValueXY({ x: 0, y: 0 }))
-  const [panelShown, setPanelShown] = useState(true)
-  const [micShown, setMicShown] = useState(false)
+  const [panelShown, setPanelShown] = useState(false)
+  const [micShown, setMicShown] = useState(true)
   const panel = useRef<View>(null)
   const panelCentre = useRef<{ x: number; y: number } | null>(null)
   const micAt = useRef<{ x: number; y: number } | null>(null)
@@ -107,6 +108,12 @@ export function CaptureDock({ children }: { children: ReactNode }) {
     if (!open) queueMicrotask(expand)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only on a new request
   }, [quick])
+
+  // Something started in the bar while folded: open up (same as the web).
+  useEffect(() => {
+    if (engaged && !open) queueMicrotask(expand)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- when the bar becomes busy
+  }, [engaged])
 
   // A capture is done (saved or cancelled): fold into the bubble once the bar is
   // idle again, and say what it was saved as for a moment (with Open).

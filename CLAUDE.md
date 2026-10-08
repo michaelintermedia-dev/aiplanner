@@ -419,8 +419,8 @@ Local dev notes:
   request, 2026-10-02 for the app; since 2026-10-05 also web at phone width,
   `web/src/components/CaptureDock.tsx` - keep the two the same; desktop web
   keeps the inline bar on Feed / Today). `CaptureDock` wraps the whole signed-in app (root layout), so it
-  floats over every screen and a recording survives navigation. Open by
-  default; the X or a touch anywhere behind it collapses it to a round mic
+  floats over every screen and a recording survives navigation. Starts
+  folded into the bubble (user's call, 2026-10-08; Quick recording opens it); the X or a touch anywhere behind it collapses it to a round mic
   button that can be dragged anywhere and snaps to the nearest side (like
   Expo's dev-tools bubble); a tap reopens it. Collapsing shrinks the toolbar into the button and opening grows it back out of it (Animated, native driver; the button's drag and its pop are two layers, since one view can't mix JS- and native-driven transforms; Reduce motion skips it). It sits above the tab bar on tab
   screens and lifts above the keyboard (edge-to-edge Android doesn't resize). It never collapses while recording/processing/reviewing

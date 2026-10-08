@@ -22,7 +22,7 @@ const isItemPage = (path: string) => /^\/(tasks|appointments|notes)\/[^/]+/.test
 
 /**
  * Phone-width web: the new-entry controls float over every page, like the
- * mobile app's CaptureDock (keep the two the same). Open by default; the X or a
+ * mobile app's CaptureDock (keep the two the same). Starts folded; the X or a
  * touch anywhere behind it collapses it into a round mic you can drag anywhere
  * (it snaps to the nearest side); a tap opens it again, growing out of the
  * button. It never collapses or hides while recording, sending or reviewing,
@@ -33,7 +33,8 @@ const isItemPage = (path: string) => /^\/(tasks|appointments|notes)\/[^/]+/.test
 export function CaptureDock() {
   const isPhone = useIsPhone()
   const { pathname } = useLocation()
-  const [open, setOpen] = useState(true)
+  // Starts folded into the bubble (user's call, 2026-10-08); a tap or Quick recording opens it.
+  const [open, setOpen] = useState(false)
   const [engaged, setEngaged] = useState(false)
   const keyboard = useKeyboardHeight()
   const panel = useRef<HTMLDivElement>(null)
@@ -72,6 +73,11 @@ export function CaptureDock() {
     const timer = setTimeout(() => setNotice(null), NOTICE_MS)
     return () => clearTimeout(timer)
   }, [notice])
+
+  // Something started in the bar while folded (Quick recording, ?record=1): open up.
+  useEffect(() => {
+    if (engaged && !open) queueMicrotask(() => setOpen(true))
+  }, [engaged, open])
 
   // A touch anywhere behind it collapses it (the touch still does its own thing).
   useEffect(() => {

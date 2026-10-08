@@ -363,6 +363,7 @@ export const en = {
   'mic.silentMobile': 'I can’t hear anything. Check the microphone isn’t muted or blocked.',
   'mic.error.couldNotUse': 'Could not use the microphone.',
   'mic.error.permission': 'Microphone permission was denied. Allow it in the phone settings to record.',
+  'dock.handle': 'Drag to move up or down, swipe down to hide',
   'dock.hide': 'Hide new entry',
   'dock.newEntry': 'New entry',
   'dock.dragHint': 'Drag to move it.',

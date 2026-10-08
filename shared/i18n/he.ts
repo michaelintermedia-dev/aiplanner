@@ -359,6 +359,7 @@ export const he: Messages = {
   'mic.silentMobile': 'לא שומעים כלום. כדאי לבדוק שהמיקרופון לא מושתק או חסום.',
   'mic.error.couldNotUse': 'לא ניתן להשתמש במיקרופון.',
   'mic.error.permission': 'אין הרשאה למיקרופון. יש לאפשר אותה בהגדרות הטלפון כדי להקליט.',
+  'dock.handle': 'גררו למעלה או למטה, החליקו למטה כדי להסתיר',
   'dock.hide': 'הסתרת רישום חדש',
   'dock.newEntry': 'רישום חדש',
   'dock.dragHint': 'אפשר לגרור כדי להזיז.',

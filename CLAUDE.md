@@ -438,7 +438,10 @@ Local dev notes:
   floats over every screen and a recording survives navigation. Starts
   folded into the bubble (user's call, 2026-10-08; Quick recording opens it); the X or a touch anywhere behind it collapses it to a round mic
   button that can be dragged anywhere and snaps to the nearest side (like
-  Expo's dev-tools bubble); a tap reopens it. A long press (450 ms, no move) on the
+  Expo's dev-tools bubble); a tap reopens it. The open toolbar has a grab handle
+  on top (user's request, 2026-10-09): drag to move it up/down (stays there
+  for the session; not while the keyboard is up), a swipe down folds it into
+  the bubble like a video mini-player (not while engaged). A long press (450 ms, no move) on the
   bubble starts recording at once, like the widget (user's request, 2026-10-09;
   mobile `requestQuickRecording`, web `?record=1`). Collapsing shrinks the toolbar into the button and opening grows it back out of it (Animated, native driver; the button's drag and its pop are two layers, since one view can't mix JS- and native-driven transforms; Reduce motion skips it). It sits above the tab bar on tab
   screens and lifts above the keyboard (edge-to-edge Android doesn't resize). It never collapses while recording/processing/reviewing
@@ -657,8 +660,13 @@ Local dev notes:
   sharing; pictures load with the auth header via expo-image. Take photo opens the
   phone's camera app (user's call: its full features) asking for the back lens;
   `mobile/patches/expo-image-picker+*.patch` (patch-package, postinstall)
-  sends NO facing extras for the back camera: Samsung's camera (S25 Ultra)
-  opened the selfie lens whenever any were present, even "back" ones. An in-app expo-camera screen was tried and dropped. The
+  sends no facing extras (iOS still uses image-picker's camera). On Android
+  even that kept Samsung's camera (S25 Ultra) on the selfie lens, so Take
+  photo there opens the FULL camera app (`STILL_IMAGE_CAMERA` intent, user's
+  call) and, back in the app, adds the photos taken meanwhile (expo-media-library
+  legacy `getAssetsAsync({ createdAfter })`, READ_MEDIA_IMAGES). Note:
+  expo-image-picker ships a prebuilt AAR - `expo.autolinking.android.buildFromSource`
+  in package.json makes the patch count. An in-app expo-camera screen was tried and dropped. The
   image-picker plugin's `microphonePermission: false` would REMOVE
   RECORD_AUDIO - never set it; CAMERA is declared in app.json.
 - **Appearance: theme, skins, wallpapers** (user's request, 2026-10-08, web +

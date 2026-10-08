@@ -6,6 +6,8 @@ import * as DocumentPicker from 'expo-document-picker'
 import { Directory, File, Paths } from 'expo-file-system'
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator'
 import * as ImagePicker from 'expo-image-picker'
+import * as MediaLibrary from 'expo-media-library/legacy'
+import { AppState, Linking, Platform } from 'react-native'
 import * as Sharing from 'expo-sharing'
 import { API_URL, getAccessToken } from '@/api/client'
 import { api } from '@/api/endpoints'
@@ -65,8 +67,65 @@ async function check(uri: string, name: string, isImage: boolean, picked: Picked
   else picked.added.push({ key: newKey(), uri, name, isImage })
 }
 
+/** Resolves when the app comes back to the front after having left it. */
+function backInApp(): Promise<void> {
+  return new Promise((resolve) => {
+    let left = false
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') left = true
+      else if (left) {
+        sub.remove()
+        resolve()
+      }
+    })
+  })
+}
+
+/**
+ * Take photo on Android (user's call, 2026-10-09): the phone's full camera app,
+ * opened like from the home screen - Samsung's camera, asked for a photo by
+ * another app, always started on the selfie lens whatever it was told. Back
+ * in AI Planner, the photos taken meanwhile are added. Null: none taken, the
+ * camera couldn't open, or reading photos isn't allowed.
+ */
+async function photosFromCameraApp(): Promise<Picked | null> {
+  const permission = await MediaLibrary.requestPermissionsAsync(false, ['photo'])
+  if (!permission.granted) return null
+  const since = Date.now() - 2000
+  const back = backInApp()
+  try {
+    await Linking.sendIntent('android.media.action.STILL_IMAGE_CAMERA')
+  } catch {
+    return null
+  }
+  await back
+  const recent = () =>
+    MediaLibrary.getAssetsAsync({
+      mediaType: MediaLibrary.MediaType.photo,
+      createdAfter: since,
+      sortBy: [[MediaLibrary.SortBy.creationTime, true]],
+      first: 20,
+    })
+  let page = await recent()
+  if (page.assets.length === 0) {
+    // The last photo can reach the phone's photo list a moment after we're back.
+    await new Promise((r) => setTimeout(r, 1200))
+    page = await recent()
+  }
+  if (page.assets.length === 0) return null
+  const picked: Picked = { added: [], problems: [] }
+  for (const asset of page.assets) {
+    const info = await MediaLibrary.getAssetInfoAsync(asset)
+    const uri = info.localUri ?? asset.uri
+    const photo = await shrink({ uri, width: asset.width, height: asset.height } as ImagePicker.ImagePickerAsset, photoName(new Date(asset.creationTime)))
+    await check(photo.uri, photo.name, true, picked)
+  }
+  return picked
+}
+
 /** Take a photo with the camera, or choose pictures from the gallery. Null: cancelled or not allowed. */
 export async function pickPhotos(camera: boolean): Promise<Picked | null> {
+  if (camera && Platform.OS === 'android') return photosFromCameraApp()
   const permission = camera ? await ImagePicker.requestCameraPermissionsAsync() : { granted: true }
   if (!permission.granted) return null
   const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 1, exif: false }

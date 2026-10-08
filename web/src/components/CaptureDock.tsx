@@ -44,6 +44,13 @@ export function CaptureDock() {
   // How far the toolbar's centre is from the bubble's, measured when it collapses.
   const [shift, setShift] = useState({ x: 0, y: 0 })
 
+  // Moving the toolbar up and down by its handle, and swiping it down to fold it
+  // away like a video mini-player - same as the app. `lift`: where it rests
+  // (0 = its normal place, negative = higher up); `pull`: the drag in progress.
+  const [lift, setLift] = useState(0)
+  const [pull, setPull] = useState<number | null>(null)
+  const grab = useRef<{ y: number; at: number; t: number } | null>(null)
+
   const hidden = isItemPage(pathname) && !engaged
   const bottom = GAP + Math.max(keyboard, pathname === '/feed' ? TAB_BAR : 0)
 
@@ -92,8 +99,36 @@ export function CaptureDock() {
 
   if (!isPhone) return null
 
+  const onHandleDown = (e: PointerEvent<HTMLDivElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId)
+    grab.current = { y: e.clientY, at: e.clientY, t: performance.now() }
+    setPull(lift)
+  }
+  const onHandleMove = (e: PointerEvent<HTMLDivElement>) => {
+    if (!grab.current) return
+    grab.current.at = e.clientY
+    setPull(lift + e.clientY - grab.current.y)
+  }
+  const onHandleUp = () => {
+    const g = grab.current
+    grab.current = null
+    setPull(null)
+    if (!g) return
+    const dy = g.at - g.y
+    const speed = dy / Math.max(1, performance.now() - g.t) // px per ms
+    const y = lift + dy
+    // A swipe down past its place folds it into the bubble (not while recording or reviewing).
+    if ((dy > 90 || speed > 1) && y > 24 && !engaged) {
+      collapse()
+      return
+    }
+    const height = panel.current?.offsetHeight ?? 0
+    setLift(Math.min(0, Math.max(Math.min(0, -(window.innerHeight - bottom - height - GAP)), y)))
+  }
+  const moved = keyboard === 0 ? (pull ?? lift) : 0
+
   const panelStyle: CSSProperties = open
-    ? { bottom }
+    ? { bottom, transform: moved ? `translateY(${moved}px)` : undefined, transition: pull !== null ? 'none' : undefined }
     : { bottom, transform: `translate(${shift.x}px, ${shift.y}px) scale(0.15)`, opacity: 0, visibility: 'hidden', pointerEvents: 'none' }
 
   return (
@@ -109,6 +144,21 @@ export function CaptureDock() {
         </div>
       )}
       <div ref={panel} className="dock-panel" style={panelStyle} aria-hidden={!open}>
+        {/* The grab handle: drag to move it up or down, swipe down to fold it away. */}
+        <div
+          className="dock-handle"
+          role="separator"
+          aria-label={t('dock.handle')}
+          title={t('dock.handle')}
+          onPointerDown={onHandleDown}
+          onPointerMove={onHandleMove}
+          onPointerUp={onHandleUp}
+          onPointerCancel={() => {
+            grab.current = null
+            setPull(null)
+          }}>
+          <span />
+        </div>
         <CaptureBar onEngagedChange={setEngaged} onFinished={finished} />
         {!engaged && (
           <button type="button" className="dock-close" onClick={collapse} aria-label={t('dock.hide')}>

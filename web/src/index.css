@@ -3117,3 +3117,25 @@ html[data-wallpaper] .page-header > div:first-child {
   white-space: pre-line;
   text-align: center;
 }
+
+/* The phone dock's grab handle: drag to move it up or down, swipe down to fold it away. */
+.dock-handle {
+  position: absolute;
+  top: 0;
+  inset-inline: 30%;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  cursor: grab;
+  touch-action: none;
+}
+
+.dock-handle span {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--muted);
+  opacity: 0.5;
+}

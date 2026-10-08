@@ -22,7 +22,8 @@
       "package": "com.aiplanner.app",
       "permissions": [
         "android.permission.USE_EXACT_ALARM",
-        "android.permission.CAMERA"
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES"
       ]
     },
     "web": {
@@ -66,6 +67,15 @@
               "updatePeriodMillis": 0
             }
           ]
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "AI Planner adds the photos you just took with the camera to your entry.",
+          "savePhotosPermission": "AI Planner adds the photos you just took with the camera to your entry.",
+          "isAccessMediaLocationEnabled": false,
+          "granularPermissions": ["photo"]
         }
       ],
       [

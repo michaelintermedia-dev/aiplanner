@@ -142,6 +142,42 @@ export function CaptureDock({ children }: { children: ReactNode }) {
   // An item's screen has its own mic: the dock steps aside there (not mid-recording).
   const hidden = useDockHidden() && !engaged
 
+  // Moving the toolbar up and down by its handle, and swiping it down to fold it
+  // away like a video mini-player (user's request, 2026-10-09). `lift` is where it
+  // rests (0 = its normal place, negative = higher up); the drag follows the finger.
+  const lift = useRef(0)
+  const [dragY] = useState(() => new Animated.Value(0))
+  const panelHeight = useRef(0)
+  const engagedNow = useRef(engaged)
+  useEffect(() => {
+    engagedNow.current = engaged
+  }, [engaged])
+  const handle = useMemo(
+    () =>
+      // eslint-disable-next-line react-hooks/refs -- the refs are read in the touch handlers only
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onPanResponderMove: (_e, g) => dragY.setValue(lift.current + g.dy),
+        onPanResponderRelease: (_e, g) => {
+          const y = lift.current + g.dy
+          // A swipe down past its place folds it into the bubble (not while recording or reviewing).
+          if ((g.dy > 90 || g.vy > 1) && y > 24 && !engagedNow.current) {
+            dragY.setValue(lift.current)
+            collapse()
+            return
+          }
+          const highest = Math.min(0, -(height - bottom - insets.top - panelHeight.current - GAP))
+          lift.current = Math.min(0, Math.max(highest, y))
+          Animated.spring(dragY, { toValue: lift.current, useNativeDriver: false, friction: 8 }).start()
+        },
+        onPanResponderTerminate: () => {
+          Animated.spring(dragY, { toValue: lift.current, useNativeDriver: false, friction: 8 }).start()
+        },
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- collapse reads the current state itself
+    [dragY, height, bottom, insets.top],
+  )
+
   const onMicRest = useCallback((at: { x: number; y: number }) => {
     micAt.current = at
   }, [])
@@ -165,14 +201,21 @@ export function CaptureDock({ children }: { children: ReactNode }) {
         {children}
       </View>
 
-      <View style={[styles.dock, { bottom }, hidden && styles.hidden]} pointerEvents="box-none">
+      <Animated.View
+        style={[styles.dock, { bottom }, hidden && styles.hidden, keyboard === 0 && { transform: [{ translateY: dragY }] }]}
+        pointerEvents="box-none">
         <Animated.View
           ref={panel}
           style={[styles.panel, !panelShown && styles.hidden, panelMotion]}
+          onLayout={(e) => (panelHeight.current = e.nativeEvent.layout.height)}
           pointerEvents={open ? 'auto' : 'none'}>
           <ScrollView style={{ maxHeight: Math.max(160, (height - bottom - insets.top) * 0.85) }} keyboardShouldPersistTaps="handled">
             <CaptureBar onEngagedChange={setEngaged} talkSignal={quick} onFinished={finished} />
           </ScrollView>
+          {/* The grab handle: drag to move it up or down, swipe down to fold it away. */}
+          <View {...handle.panHandlers} style={styles.handleArea} accessible accessibilityLabel={t('dock.handle')}>
+            <View style={[styles.handle, { backgroundColor: c.muted }]} />
+          </View>
           {!engaged && (
             <Pressable
               onPress={collapse}
@@ -184,7 +227,7 @@ export function CaptureDock({ children }: { children: ReactNode }) {
             </Pressable>
           )}
         </Animated.View>
-      </View>
+      </Animated.View>
 
       {notice && !open && (
         <View style={[styles.notice, { bottom, backgroundColor: c.text }]} accessibilityRole="alert" accessibilityLiveRegion="polite">
@@ -366,6 +409,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
   },
   hidden: { display: 'none' },
+  handleArea: { position: 'absolute', top: 0, left: '30%', right: '30%', height: 22, alignItems: 'center', justifyContent: 'center', zIndex: 2 },
+  handle: { width: 40, height: 4, borderRadius: 2, opacity: 0.5 },
   notice: {
     position: 'absolute',
     alignSelf: 'center',

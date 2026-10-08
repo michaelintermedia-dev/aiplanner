@@ -65,21 +65,14 @@ async function check(uri: string, name: string, isImage: boolean, picked: Picked
   else picked.added.push({ key: newKey(), uri, name, isImage })
 }
 
-/** A photo taken with the app's own camera (CameraCapture), ready to upload like a picked one. */
-export async function fromCamera(shot: { uri: string; width: number; height: number }): Promise<Picked> {
-  const picked: Picked = { added: [], problems: [] }
-  const photo = await shrink(shot as ImagePicker.ImagePickerAsset, photoName())
-  await check(photo.uri, photo.name, true, picked)
-  return picked
-}
-
 /** Take a photo with the camera, or choose pictures from the gallery. Null: cancelled or not allowed. */
 export async function pickPhotos(camera: boolean): Promise<Picked | null> {
   const permission = camera ? await ImagePicker.requestCameraPermissionsAsync() : { granted: true }
   if (!permission.granted) return null
   const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 1, exif: false }
   const result = camera
-    ? // The back camera - it's for photos of things (a flyer, a receipt), not selfies.
+    ? // The phone's camera app, asked for the back lens - photos of things (a flyer, a receipt), not selfies.
+      // patches/expo-image-picker adds the vendor-specific ways of asking (Samsung, LG...).
       await ImagePicker.launchCameraAsync({ ...options, cameraType: ImagePicker.CameraType.back })
     : await ImagePicker.launchImageLibraryAsync({ ...options, allowsMultipleSelection: true, selectionLimit: 10 })
   if (result.canceled) return null

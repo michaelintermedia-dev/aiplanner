@@ -437,7 +437,9 @@ Local dev notes:
   floats over every screen and a recording survives navigation. Starts
   folded into the bubble (user's call, 2026-10-08; Quick recording opens it); the X or a touch anywhere behind it collapses it to a round mic
   button that can be dragged anywhere and snaps to the nearest side (like
-  Expo's dev-tools bubble); a tap reopens it. Collapsing shrinks the toolbar into the button and opening grows it back out of it (Animated, native driver; the button's drag and its pop are two layers, since one view can't mix JS- and native-driven transforms; Reduce motion skips it). It sits above the tab bar on tab
+  Expo's dev-tools bubble); a tap reopens it. A long press (450 ms, no move) on the
+  bubble starts recording at once, like the widget (user's request, 2026-10-09;
+  mobile `requestQuickRecording`, web `?record=1`). Collapsing shrinks the toolbar into the button and opening grows it back out of it (Animated, native driver; the button's drag and its pop are two layers, since one view can't mix JS- and native-driven transforms; Reduce motion skips it). It sits above the tab bar on tab
   screens and lifts above the keyboard (edge-to-edge Android doesn't resize). It never collapses while recording/processing/reviewing
   (`CaptureBar onEngagedChange`), and typed text survives collapsing.
   When a capture is done (saved, saved right away, or the review cancelled) it
@@ -648,9 +650,11 @@ Local dev notes:
   picked files into memory at once (a cleared picker can empty them) and
   caches picture blobs per session outside React Query (every save
   invalidates all queries). Mobile: expo-image-picker / document-picker /
-  sharing; pictures load with the auth header via expo-image. Take photo uses the
-  app's own camera (`CameraCapture`, expo-camera, back lens by default, switch
-  button) - the phone's camera app ignored image-picker's back-camera request. The
+  sharing; pictures load with the auth header via expo-image. Take photo opens the
+  phone's camera app (user's call: its full features) asking for the back lens;
+  `mobile/patches/expo-image-picker+*.patch` (patch-package, postinstall) adds
+  the vendor extras (camerafacing, previous_mode...) some camera apps read
+  instead of the standard ones. An in-app expo-camera screen was tried and dropped. The
   image-picker plugin's `microphonePermission: false` would REMOVE
   RECORD_AUDIO - never set it; CAMERA is declared in app.json.
 - **Appearance: theme, skins, wallpapers** (user's request, 2026-10-08, web +

@@ -494,9 +494,6 @@ export const ru: Messages = {
   'form.draftNotice': 'У этого элемента есть несохранённые изменения.',
   'form.continueEditing': 'Продолжить редактирование',
   // ---- media (photos, documents) ----
-  'camera.flip': 'Сменить камеру',
-  'camera.noPermission': 'Доступ к камере для AI Planner выключен.',
-  'camera.openSettings': 'Открыть настройки',
   'media.title': 'Медиа',
   'media.takePhoto': 'Сделать фото',
   'media.addImage': 'Добавить изображение',

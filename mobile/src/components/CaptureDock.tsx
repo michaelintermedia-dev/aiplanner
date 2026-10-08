@@ -16,7 +16,8 @@ import {
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useDockHidden } from '@/lib/dockTarget'
-import { useQuickRecording } from '@/lib/quickRecord'
+import { requestQuickRecording, useQuickRecording } from '@/lib/quickRecord'
+import * as Haptics from 'expo-haptics'
 import { useReduceMotion } from '@/lib/useReduceMotion'
 import { itemPath } from '@/lib/itemPath'
 import type { SavedNotice } from '@shared/captureDraft'
@@ -45,6 +46,9 @@ import { t } from '@shared/i18n'
  * It lifts itself above the on-screen keyboard: Android apps are edge-to-edge,
  * so the window no longer shrinks for the keyboard.
  */
+/** Holding the bubble this long starts recording (like Quick recording). */
+const LONG_PRESS_MS = 450
+
 export function CaptureDock({ children }: { children: ReactNode }) {
   const c = useColors()
   const insets = useSafeAreaInsets()
@@ -264,6 +268,9 @@ function DraggableMic({
   const [position] = useState(() => new Animated.ValueXY(start))
   const at = useRef(start) // where it rests (read and written in the touch handlers only)
   const moved = useRef(false)
+  // A long press starts recording at once, like the home-screen widget (user's request).
+  const held = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressed = useRef(false)
   // Where it rests now (not where it started: a remount keeps the dragged spot).
   useEffect(() => onRest(at.current), [onRest])
 
@@ -276,12 +283,32 @@ function DraggableMic({
         onStartShouldSetPanResponder: () => true,
         onPanResponderGrant: () => {
           moved.current = false
+          longPressed.current = false
+          held.current = setTimeout(() => {
+            if (moved.current) return
+            longPressed.current = true
+            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+            requestQuickRecording() // opens the toolbar and starts the mic
+          }, LONG_PRESS_MS)
         },
         onPanResponderMove: (_e, g) => {
-          if (Math.abs(g.dx) + Math.abs(g.dy) > 6) moved.current = true
+          if (longPressed.current) return
+          if (Math.abs(g.dx) + Math.abs(g.dy) > 6) {
+            moved.current = true
+            if (held.current) clearTimeout(held.current)
+          }
           position.setValue({ x: at.current.x + g.dx, y: at.current.y + g.dy })
         },
+        onPanResponderTerminate: () => {
+          if (held.current) clearTimeout(held.current)
+          position.setValue(at.current)
+        },
         onPanResponderRelease: (_e, g) => {
+          if (held.current) clearTimeout(held.current)
+          if (longPressed.current) {
+            position.setValue(at.current) // recording already started; the release does nothing
+            return
+          }
           if (!moved.current) {
             position.setValue(at.current)
             onOpen() // a tap, not a drag

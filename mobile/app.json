@@ -69,12 +69,6 @@
         }
       ],
       [
-        "expo-camera",
-        {
-          "cameraPermission": "AI Planner uses the camera so you can add photos to your tasks, events and notes."
-        }
-      ],
-      [
         "expo-image-picker",
         {
           "photosPermission": "AI Planner lets you add photos from your library to your tasks, events and notes.",

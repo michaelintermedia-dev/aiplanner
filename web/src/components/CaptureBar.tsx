@@ -278,6 +278,8 @@ export function CaptureBar({
   const quick = !continueFrom && params.get('record') === '1'
   const autoStarted = useRef(false)
   useEffect(() => {
+    // Quick recording can come again (a long press on the dock's bubble): ready for the next one.
+    if (!continueFrom && !quick) autoStarted.current = false
     if (!(continueFrom?.autoStart || quick) || autoStarted.current) return
     autoStarted.current = true
     if (quick) {

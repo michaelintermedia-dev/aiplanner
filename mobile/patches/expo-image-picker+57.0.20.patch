@@ -1,0 +1,16 @@
+diff --git a/node_modules/expo-image-picker/android/src/main/java/expo/modules/imagepicker/contracts/CameraContract.kt b/node_modules/expo-image-picker/android/src/main/java/expo/modules/imagepicker/contracts/CameraContract.kt
+index 6d11883..9c4728c 100644
+--- a/node_modules/expo-image-picker/android/src/main/java/expo/modules/imagepicker/contracts/CameraContract.kt
++++ b/node_modules/expo-image-picker/android/src/main/java/expo/modules/imagepicker/contracts/CameraContract.kt
+@@ -44,6 +44,11 @@ internal class CameraContract(
+           putExtra("android.intent.extras.LENS_FACING_BACK", 1)
+           putExtra("android.intent.extras.CAMERA_FACING", 0)
+           putExtra("android.intent.extra.USE_FRONT_CAMERA", false)
++          // AI Planner: older / vendor camera apps (Samsung, LG, Huawei...) read these instead.
++          putExtra("camerafacing", "rear")
++          putExtra("previous_mode", "Rear")
++          putExtra("default_camera", "0")
++          putExtra("android.intent.extras.CAMERA_FACING_BACK", 1)
+         }
+       }
+ 

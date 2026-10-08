@@ -1,7 +1,7 @@
 import { t } from '@shared/i18n'
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react'
 import { IoClose, IoMic } from 'react-icons/io5'
-import { Link, useLocation } from 'react-router'
+import { Link, useLocation, useSearchParams } from 'react-router'
 import type { SavedNotice } from '@shared/captureDraft'
 import { itemPath } from '../lib/itemPath'
 import { useIsPhone } from '../lib/useIsPhone'
@@ -31,6 +31,7 @@ const isItemPage = (path: string) => /^\/(tasks|appointments|notes)\/[^/]+/.test
  * mic) and lifts above the on-screen keyboard. Desktop keeps the inline bar.
  */
 export function CaptureDock() {
+  const [, setParams] = useSearchParams()
   const isPhone = useIsPhone()
   const { pathname } = useLocation()
   // Starts folded into the bubble (user's call, 2026-10-08); a tap or Quick recording opens it.
@@ -127,6 +128,16 @@ export function CaptureDock() {
           }
         }}
         onOpen={() => setOpen(true)}
+        onLongPress={() =>
+          // Like the home-screen icon's Quick recording (?record=1): the bar opens and the mic starts.
+          setParams(
+            (p) => {
+              p.set('record', '1')
+              return p
+            },
+            { replace: true },
+          )
+        }
       />
     </div>
   )
@@ -150,36 +161,57 @@ function clampToScreen({ x, y }: { x: number; y: number }) {
 }
 
 /** The collapsed toolbar: a mic you can drag anywhere; it snaps to the nearest side. A tap opens the toolbar. */
+/** Holding the bubble this long starts recording (like Quick recording). */
+const LONG_PRESS_MS = 450
+
 function Bubble({
   at,
   shown,
   onMove,
   onOpen,
+  onLongPress,
 }: {
   at: { x: number; y: number }
   shown: boolean
   onMove: (at: { x: number; y: number }) => void
   onOpen: () => void
+  /** Held without moving: start recording at once (user's request - like the widget). */
+  onLongPress: () => void
 }) {
-  const drag = useRef<{ startX: number; startY: number; moved: boolean } | null>(null)
+  const drag = useRef<{ startX: number; startY: number; moved: boolean; long: boolean; timer: number } | null>(null)
   const [live, setLive] = useState<{ x: number; y: number } | null>(null)
 
   const down = (e: PointerEvent<HTMLButtonElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId)
-    drag.current = { startX: e.clientX, startY: e.clientY, moved: false }
+    const d = { startX: e.clientX, startY: e.clientY, moved: false, long: false, timer: 0 }
+    d.timer = window.setTimeout(() => {
+      if (d.moved) return
+      d.long = true
+      navigator.vibrate?.(20)
+      onLongPress()
+    }, LONG_PRESS_MS)
+    drag.current = d
   }
   const move = (e: PointerEvent<HTMLButtonElement>) => {
     const d = drag.current
-    if (!d) return
+    if (!d || d.long) return
     const dx = e.clientX - d.startX
     const dy = e.clientY - d.startY
-    if (Math.abs(dx) + Math.abs(dy) > 6) d.moved = true
+    if (Math.abs(dx) + Math.abs(dy) > 6 && !d.moved) {
+      d.moved = true
+      clearTimeout(d.timer)
+    }
     if (d.moved) setLive({ x: at.x + dx, y: at.y + dy })
   }
   const up = () => {
     const d = drag.current
     drag.current = null
     if (!d) return
+    clearTimeout(d.timer)
+    if (d.long) {
+      setLive(null) // recording already started; the release does nothing
+      return
+    }
     if (!d.moved || !live) {
       setLive(null)
       onOpen() // a tap, not a drag
@@ -199,9 +231,11 @@ function Bubble({
       onPointerMove={move}
       onPointerUp={up}
       onPointerCancel={() => {
+        if (drag.current) clearTimeout(drag.current.timer)
         drag.current = null
         setLive(null)
       }}
+      onContextMenu={(e) => e.preventDefault()}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpen())}
       tabIndex={shown ? 0 : -1}
       aria-hidden={!shown}

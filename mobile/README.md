@@ -96,6 +96,24 @@ The AppHost binds the API's http endpoint to all interfaces
 `adb reverse tcp:8081 tcp:8081` and `adb reverse tcp:58443 tcp:58443` and
 open `exp://127.0.0.1:8081`.
 
+## iPhone (needs a Mac)
+
+Never built yet - expect a few iOS-only fixes on the first run. Needs Xcode
+(App Store) and Node.js on the Mac.
+
+```bash
+git clone https://github.com/michaelintermedia-dev/aiplanner.git
+cd aiplanner/mobile && npm install
+EXPO_PUBLIC_API_URL=https://aiplanner.duckdns.org npx expo run:ios   # iPhone simulator
+EXPO_PUBLIC_API_URL=https://aiplanner.duckdns.org npx expo run:ios --device   # a connected iPhone
+```
+
+`run:ios` generates `ios/` (gitignored, like `android/`) and installs a
+development build. On a real iPhone with a free Apple ID the app stops after 7
+days (install again); TestFlight needs an Apple Developer account ($99/year).
+Not on iOS: the Quick recording home-screen widget (Android-only -
+`index.ts` loads it on Android only).
+
 ## Which API it talks to
 
 `src/api/client.ts` uses **the host the app was loaded from** (Expo's

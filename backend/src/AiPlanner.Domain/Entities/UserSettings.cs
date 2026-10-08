@@ -30,6 +30,8 @@ public class UserSettings
     public bool Wallpaper { get; set; } = true;
     /// <summary>The user's own wallpaper photo (storage key), shown instead of the skin's while Wallpaper is on.</summary>
     public string? WallpaperPhotoKey { get; set; }
+    /// <summary>"Monday", "Sunday" or "Saturday": where the calendar's weeks begin (Settings - Calendar).</summary>
+    public string FirstDayOfWeek { get; set; } = "Monday";
     public string DateFormat { get; set; } = "yyyy-MM-dd";
     public string TimeFormat { get; set; } = "HH:mm";
 

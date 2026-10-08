@@ -640,7 +640,17 @@ Local dev notes:
   (`lib/layoutDirection.ts`; RN swaps left/right styles itself), chevron
   icons flip by hand. Server-made notification texts are translated in
   `NotificationTexts` (per language, unit-tested). Not translated yet: server
-  validation/error messages (English), and weeks always start on Monday.
+  validation/error messages (English).
+- **First day of week** (user's request, 2026-10-08, web + mobile; Settings -
+  Calendar): Monday (default), Sunday or Saturday - `UserSettings.FirstDayOfWeek`,
+  `GET/PUT /api/settings/calendar`, used by the API's week view
+  (`CalendarService.WeekRange`, tested). Clients: `setFirstDayOfWeek` /
+  `weekStart` / `weekdaysInOrder` in `shared/calendar.ts` (week + month views,
+  "this week" filter, the reminder/repeat day chips); each app's
+  `lib/weekStart` keeps it locally + from the account, and screens that lay
+  out weeks call `useFirstDayOfWeek()` to re-render. Counting "every N weeks"
+  in RecurrenceSchedule stays Monday-based on purpose (changing it would shift
+  existing schedules).
 - Icons are standard Ionicons, never emoji, for UI controls (the mic button
   is `mic`/`pause`). Each item type has ONE icon (`KIND_ICON` in
   `components/kindIcons.ts` in each app): the filter tab, feed rows and calendar

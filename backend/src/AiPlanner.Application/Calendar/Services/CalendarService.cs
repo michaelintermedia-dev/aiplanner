@@ -2,6 +2,7 @@ using AiPlanner.Application.Recurrence;
 using AiPlanner.Application.Calendar.DTOs;
 using AiPlanner.Application.Calendar.Interfaces;
 using AiPlanner.Application.Common.Interfaces;
+using AiPlanner.Application.Settings.DTOs;
 using AiPlanner.Application.Common.Utils;
 using AiPlanner.Application.Tasks.DTOs;
 using AiPlanner.Domain.Entities;
@@ -103,7 +104,7 @@ public class CalendarService : ICalendarService
                 UserTimeZoneHelper.LocalDateStartToUtc(anchor, timeZone),
                 UserTimeZoneHelper.LocalDateEndToUtc(anchor, timeZone)),
 
-            CalendarView.Week => WeekRange(anchor, timeZone),
+            CalendarView.Week => WeekRange(anchor, timeZone, await FirstDayAsync(userId, ct)),
 
             CalendarView.Month => MonthRange(anchor, timeZone),
 
@@ -111,11 +112,15 @@ public class CalendarService : ICalendarService
         };
     }
 
-    private static (DateTime FromUtc, DateTime ToUtc) WeekRange(DateOnly anchor, TimeZoneInfo timeZone)
+    /// <summary>Where the user's weeks begin (Settings - Calendar; Monday unless chosen).</summary>
+    private async Task<DayOfWeek> FirstDayAsync(Guid userId, CancellationToken ct) =>
+        CalendarSettingsDto.ToDay(await _db.UserSettings.Where(s => s.UserId == userId).Select(s => s.FirstDayOfWeek).FirstOrDefaultAsync(ct));
+
+    /// <summary>The week containing <paramref name="anchor"/>, starting on <paramref name="firstDay"/>.</summary>
+    public static (DateTime FromUtc, DateTime ToUtc) WeekRange(DateOnly anchor, TimeZoneInfo timeZone, DayOfWeek firstDay = DayOfWeek.Monday)
     {
-        // ISO week: Monday..Sunday.
-        var diffToMonday = ((int)anchor.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
-        var weekStart = anchor.AddDays(-diffToMonday);
+        var back = ((int)anchor.DayOfWeek - (int)firstDay + 7) % 7;
+        var weekStart = anchor.AddDays(-back);
         var weekEnd = weekStart.AddDays(7);
 
         return (

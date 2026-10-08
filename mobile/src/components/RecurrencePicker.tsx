@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { describeRecurrence, presetLabel, presetOf, presetRule, REPEAT_PRESETS, weekdayOf, type RepeatPreset } from '@shared/recurrence'
-import { shortDay, WEEKDAYS } from '@shared/reminders'
+import { shortDay } from '@shared/reminders'
+import { weekdaysInOrder } from '@shared/calendar'
 import { t } from '@shared/i18n'
 import type { Recurrence } from '@shared/types'
 import { useState, type ReactNode } from 'react'
@@ -8,6 +9,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useAuth } from '@/auth/useAuth'
 import { useColors } from '@/theme'
 import { DateTimeField } from './DateTimeField'
+import { useFirstDayOfWeek } from '@/lib/weekStart'
 
 /**
  * How a task or event repeats: quick choices that use the item's own date
@@ -26,6 +28,8 @@ export function RecurrencePicker({
   date: string | null
   disabled?: boolean
 }) {
+  // Weeks are laid out from the chosen first day: re-render when it changes.
+  useFirstDayOfWeek()
   const c = useColors()
   const { zone } = useAuth()
   const preset = presetOf(value, date)
@@ -89,7 +93,7 @@ function CustomRule({ value, onChange }: { value: Recurrence; onChange: (value: 
       </View>
       {value.frequency === 'Weekly' && (
         <View style={styles.chips} accessibilityLabel={t('repeat.onDays')}>
-          {WEEKDAYS.map((d) => {
+          {weekdaysInOrder().map((d) => {
             const on = value.days?.includes(d) ?? false
             return (
               <Chip key={d} selected={on} onPress={() => set({ days: on ? (value.days ?? []).filter((x) => x !== d) : [...(value.days ?? []), d] })}>

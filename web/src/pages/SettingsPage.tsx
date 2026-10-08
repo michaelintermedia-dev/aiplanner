@@ -6,6 +6,8 @@ import { settingsApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { useAction } from '../lib/useAction'
 import { applyAppearance, currentAppearance, photoUrl } from '../lib/appearance'
+import { changeFirstDayOfWeek, useFirstDayOfWeek } from '../lib/weekStart'
+import { FIRST_DAYS, weekdayName } from '@shared/calendar'
 import { shrinkImage } from '../lib/media'
 import { palette, SKIN_NAMES, skinLabel, THEMES, themeLabel, wallpaperCss, type AppearanceSettings } from '@shared/appearance'
 import { IoCheckmark } from 'react-icons/io5'
@@ -21,6 +23,8 @@ export function SettingsPage() {
   const saveRecordings = useAction(settingsApi.updateRecordings)
   const appearance = useQuery({ queryKey: ['settings', 'appearance'], queryFn: settingsApi.appearance })
   const saveAppearance = useAction(settingsApi.updateAppearance)
+  const firstDay = useFirstDayOfWeek()
+  const saveCalendar = useAction(settingsApi.updateCalendar)
   // Shown at once; saved to the account (every device follows).
   const [look, setLook] = useState<AppearanceSettings>(currentAppearance)
   useEffect(() => {
@@ -166,6 +170,29 @@ export function SettingsPage() {
         {photoError && <p className="error">{photoError}</p>}
         <p className="muted small">{t('settings.appearanceSync')}</p>
         {saveAppearance.error && <p className="error">{saveAppearance.error.message}</p>}
+      </section>
+
+      <section className="card form">
+        <h3>{t('settings.calendar')}</h3>
+        <span className="field-label">{t('settings.firstDay')}</span>
+        <div className="segmented" role="radiogroup" aria-label={t('settings.firstDay')}>
+          {FIRST_DAYS.map((day) => (
+            <button
+              key={day}
+              type="button"
+              role="radio"
+              aria-checked={firstDay === day}
+              className={firstDay === day ? 'active' : undefined}
+              onClick={() => {
+                changeFirstDayOfWeek(day)
+                saveCalendar.mutate({ firstDayOfWeek: day })
+              }}>
+              {weekdayName(day, zone.locale)}
+            </button>
+          ))}
+        </div>
+        <p className="muted small">{t('settings.firstDayHint')}</p>
+        {saveCalendar.error && <p className="error">{saveCalendar.error.message}</p>}
       </section>
 
       <section className="card form">

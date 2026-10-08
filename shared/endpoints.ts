@@ -149,6 +149,9 @@ export function createApi(request: RequestFn) {
       updateNotifications: (body: NotificationSettings) => request<NotificationSettings>('PUT', '/settings/notifications', body),
       recordings: () => request<RecordingSettings>('GET', '/settings/recordings'),
       updateRecordings: (body: RecordingSettings) => request<RecordingSettings>('PUT', '/settings/recordings', body),
+      /** Where weeks begin - on the account, every device follows. */
+      calendar: () => request<{ firstDayOfWeek: string }>('GET', '/settings/calendar'),
+      updateCalendar: (body: { firstDayOfWeek: string }) => request<{ firstDayOfWeek: string }>('PUT', '/settings/calendar', body),
       /** Light/dark and the skin - on the account, every device follows. */
       appearance: () => request<AppearanceSettings>('GET', '/settings/appearance'),
       updateAppearance: (body: AppearanceSettings) => request<AppearanceSettings>('PUT', '/settings/appearance', body),

@@ -11,8 +11,11 @@ import { CALENDAR_VIEWS, periodTitle, stepPeriod, visibleDays } from '@shared/ca
 import { eventPassed } from '@shared/feed'
 import { dateKey, formatDateKey, formatTime, todayKey } from '@shared/dates'
 import { t } from '@shared/i18n'
+import { useFirstDayOfWeek } from '../lib/weekStart'
 
 export function CalendarPage() {
+  // Weeks are laid out from the chosen first day: re-render when it changes.
+  useFirstDayOfWeek()
   const { zone } = useAuth()
   const today = todayKey(zone.timeZone)
   const [view, setView] = useState<CalendarView>('week')

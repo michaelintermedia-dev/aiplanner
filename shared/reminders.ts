@@ -1,3 +1,4 @@
+import { weekdaysInOrder } from './calendar'
 import { addDays, dateKey, formatDateKey, formatTime, timeKey, todayKey, zonedToUtc, type ZoneContext } from './dates'
 import { t } from './i18n'
 import type { Reminder, ReminderKind, Weekday } from './types'
@@ -54,7 +55,7 @@ export function describeReminder(r: Reminder, zone: ZoneContext): string {
     case 'Weekdays':
       return t('reminder.weekdaysAt', { time: at })
     case 'Weekly': {
-      const days = WEEKDAYS.filter((d) => r.days?.includes(d)).map((d) => shortDay(d, zone.locale))
+      const days = weekdaysInOrder().filter((d) => r.days?.includes(d)).map((d) => shortDay(d, zone.locale))
       return t('reminder.daysAt', { days: days.length ? days.join(', ') : t('reminder.kind.weekly'), time: at })
     }
   }

@@ -33,6 +33,16 @@ public class SettingsController : ControllerBase
     public async Task<ActionResult<RecordingSettingsDto>> UpdateRecordings(RecordingSettingsDto settings, [FromServices] RecordingSettingsService recordings, CancellationToken ct) =>
         Ok(await recordings.UpdateAsync(settings, ct));
 
+    /// <summary>GET /api/settings/calendar - where weeks begin.</summary>
+    [HttpGet("calendar")]
+    public async Task<ActionResult<CalendarSettingsDto>> GetCalendar([FromServices] CalendarSettingsService calendar, CancellationToken ct) =>
+        Ok(await calendar.GetAsync(ct));
+
+    /// <summary>PUT /api/settings/calendar</summary>
+    [HttpPut("calendar")]
+    public async Task<ActionResult<CalendarSettingsDto>> UpdateCalendar(CalendarSettingsDto settings, [FromServices] CalendarSettingsService calendar, CancellationToken ct) =>
+        Ok(await calendar.UpdateAsync(settings, ct));
+
     /// <summary>GET /api/settings/appearance - light/dark and the colour scheme.</summary>
     [HttpGet("appearance")]
     public async Task<ActionResult<AppearanceSettingsDto>> GetAppearance([FromServices] AppearanceSettingsService appearance, CancellationToken ct) =>

@@ -10,7 +10,6 @@ import {
   reminderProblem,
   repeats,
   shortDay,
-  WEEKDAYS,
 } from '@shared/reminders'
 import type { Reminder } from '@shared/types'
 import { useState } from 'react'
@@ -18,7 +17,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useAuth } from '@/auth/useAuth'
 import { useColors } from '@/theme'
 import { DateTimeField } from './DateTimeField'
+import { weekdaysInOrder } from '@shared/calendar'
 import { t } from '@shared/i18n'
+import { useFirstDayOfWeek } from '@/lib/weekStart'
 
 /**
  * The one reminder control (same as web's ReminderPicker). Collapsed it reads
@@ -47,6 +48,8 @@ export function ReminderPicker({
   onOpenChange?: (open: boolean) => void
   emptyLabel?: string
 }) {
+  // Weeks are laid out from the chosen first day: re-render when it changes.
+  useFirstDayOfWeek()
   const c = useColors()
   const { zone } = useAuth()
   const [ownOpen, setOwnOpen] = useState(false)
@@ -138,7 +141,7 @@ export function ReminderPicker({
 
           {value?.kind === 'Weekly' && (
             <View style={styles.days}>
-              {WEEKDAYS.map((day) => {
+              {weekdaysInOrder().map((day) => {
                 const on = !!value.days?.includes(day)
                 return (
                   <Pressable

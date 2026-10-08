@@ -11,6 +11,7 @@ import { CalendarPage } from './pages/CalendarPage'
 import { FeedPage } from './pages/FeedPage'
 import { useNotificationDelivery } from './lib/useNotificationDelivery'
 import { useAccountAppearance } from './lib/appearance'
+import { useAccountFirstDayOfWeek } from './lib/weekStart'
 import { NoteDetailPage } from './pages/NoteDetailPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { TaskDetailPage } from './pages/TaskDetailPage'
@@ -38,6 +39,7 @@ function Layout() {
   const isHome = pathname === '/feed'
   useNotificationDelivery()
   useAccountAppearance()
+  useAccountFirstDayOfWeek()
 
   // Back within the app if there's history, otherwise home.
   const back = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate('/feed'))

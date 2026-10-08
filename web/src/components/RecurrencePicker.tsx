@@ -1,10 +1,12 @@
 import { describeRecurrence, presetLabel, presetOf, presetRule, REPEAT_PRESETS, weekdayOf, type RepeatPreset } from '@shared/recurrence'
-import { shortDay, WEEKDAYS } from '@shared/reminders'
+import { shortDay } from '@shared/reminders'
+import { weekdaysInOrder } from '@shared/calendar'
 import { t } from '@shared/i18n'
 import type { Recurrence } from '@shared/types'
 import { useState } from 'react'
 import { IoRepeat } from 'react-icons/io5'
 import { useAuth } from '../auth/useAuth'
+import { useFirstDayOfWeek } from '../lib/weekStart'
 
 const CUSTOM = 'Custom'
 
@@ -25,6 +27,8 @@ export function RecurrencePicker({
   date: string | null
   disabled?: boolean
 }) {
+  // Weeks are laid out from the chosen first day: re-render when it changes.
+  useFirstDayOfWeek()
   const { zone } = useAuth()
   const preset = presetOf(value, date)
   const [custom, setCustom] = useState(preset === null)
@@ -91,7 +95,7 @@ function CustomRule({ value, onChange }: { value: Recurrence; onChange: (value: 
       </div>
       {value.frequency === 'Weekly' && (
         <div className="day-chips" role="group" aria-label={t('repeat.onDays')}>
-          {WEEKDAYS.map((d) => {
+          {weekdaysInOrder().map((d) => {
             const on = value.days?.includes(d) ?? false
             return (
               <button

@@ -15,6 +15,8 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import { palette, SKIN_NAMES, skinLabel, THEMES, themeLabel, type AppearanceSettings } from '@shared/appearance'
 import { Image } from 'expo-image'
 import { applyAppearance, useAppearance } from '@/lib/appearance'
+import { changeFirstDayOfWeek, useFirstDayOfWeek } from '@/lib/weekStart'
+import { FIRST_DAYS, weekdayName } from '@shared/calendar'
 import { wallpaperImage, wallpaperPhotoSource } from '@/components/Wallpaper'
 import { pickPhotos } from '@/lib/media'
 import { File } from 'expo-file-system'
@@ -31,6 +33,8 @@ export default function SettingsScreen() {
   // Appearance: shown at once, saved to the account (every device follows).
   const look = useAppearance()
   const saveAppearance = useAction(settingsApi.updateAppearance)
+  const firstDay = useFirstDayOfWeek()
+  const saveCalendar = useAction(settingsApi.updateCalendar)
   const changeLook = (patch: Partial<AppearanceSettings>) => {
     const next = { ...look, ...patch }
     applyAppearance(next)
@@ -160,6 +164,29 @@ export default function SettingsScreen() {
       {photoError && <Text style={{ color: c.danger }}>{photoError}</Text>}
       <Text style={{ color: c.muted, fontSize: 13 }}>{t('settings.appearanceSync')}</Text>
       {saveAppearance.error && <Text style={{ color: c.danger }}>{saveAppearance.error.message}</Text>}
+
+      <Text style={[styles.heading, { color: c.muted }]}>{t('settings.calendar').toUpperCase()}</Text>
+      <Text style={{ color: c.text, fontWeight: '600' }}>{t('settings.firstDay')}</Text>
+      <View style={styles.languages} accessibilityRole="radiogroup" accessibilityLabel={t('settings.firstDay')}>
+        {FIRST_DAYS.map((day) => {
+          const on = firstDay === day
+          return (
+            <Pressable
+              key={day}
+              onPress={() => {
+                changeFirstDayOfWeek(day)
+                saveCalendar.mutate({ firstDayOfWeek: day })
+              }}
+              style={[styles.language, { borderColor: on ? c.accent : c.border, backgroundColor: on ? c.accentSoft : c.surface }]}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: on }}>
+              <Text style={{ color: on ? c.accent : c.text, fontSize: 16 }}>{weekdayName(day, zone.locale)}</Text>
+            </Pressable>
+          )
+        })}
+      </View>
+      <Text style={{ color: c.muted, fontSize: 13 }}>{t('settings.firstDayHint')}</Text>
+      {saveCalendar.error && <Text style={{ color: c.danger }}>{saveCalendar.error.message}</Text>}
 
       <Text style={[styles.heading, { color: c.muted }]}>{t('settings.notifications').toUpperCase()}</Text>
       {osAllowed === false && (

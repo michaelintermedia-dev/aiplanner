@@ -9,13 +9,14 @@ import {
   reminderProblem,
   repeats,
   shortDay,
-  WEEKDAYS,
 } from '@shared/reminders'
 import type { Reminder } from '@shared/types'
 import { useState } from 'react'
 import { IoClose, IoNotificationsOutline, IoRepeat } from 'react-icons/io5'
 import { useAuth } from '../auth/useAuth'
+import { weekdaysInOrder } from '@shared/calendar'
 import { t } from '@shared/i18n'
+import { useFirstDayOfWeek } from '../lib/weekStart'
 
 /**
  * The one reminder control, used wherever an item is created or edited.
@@ -45,6 +46,8 @@ export function ReminderPicker({
   onOpenChange?: (open: boolean) => void
   emptyLabel?: string
 }) {
+  // Weeks are laid out from the chosen first day: re-render when it changes.
+  useFirstDayOfWeek()
   const { zone } = useAuth()
   const [ownOpen, setOwnOpen] = useState(false)
   const open = openProp ?? ownOpen
@@ -142,7 +145,7 @@ export function ReminderPicker({
 
           {value?.kind === 'Weekly' && (
             <div className="weekday-toggles" role="group" aria-label={t('reminder.days')}>
-              {WEEKDAYS.map((day) => {
+              {weekdaysInOrder().map((day) => {
                 const on = !!value.days?.includes(day)
                 return (
                   <button

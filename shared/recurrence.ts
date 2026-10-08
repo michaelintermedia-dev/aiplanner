@@ -1,6 +1,7 @@
+import { weekdaysInOrder } from './calendar'
 import { addDays, dateKey, formatDateKey, timeKey, zonedToUtc, type ZoneContext } from './dates'
 import { t } from './i18n'
-import { shortDay, WEEKDAYS } from './reminders'
+import { shortDay } from './reminders'
 import type { Recurrence, Weekday } from './types'
 
 /**
@@ -76,7 +77,7 @@ export function occurrences(
 /** "Every day", "Every 2 weeks on Mon, Thu", "Every month on day 1 · until Dec 31". */
 export function describeRecurrence(r: Recurrence, zone: ZoneContext): string {
   const n = Math.max(1, r.interval || 1)
-  const days = (r.days ?? []).length ? WEEKDAYS.filter((d) => r.days!.includes(d)).map((d) => shortDay(d, zone.locale)).join(', ') : ''
+  const days = (r.days ?? []).length ? weekdaysInOrder().filter((d) => r.days!.includes(d)).map((d) => shortDay(d, zone.locale)).join(', ') : ''
   let text = ''
   switch (r.frequency) {
     case 'Daily':

@@ -14,6 +14,7 @@ import { useNotifications } from '@/lib/useNotifications'
 import { useColors } from '@/theme'
 import { Wallpaper } from '@/components/Wallpaper'
 import { useAccountAppearance } from '@/lib/appearance'
+import { useAccountFirstDayOfWeek } from '@/lib/weekStart'
 
 SplashScreen.preventAutoHideAsync()
 
@@ -79,6 +80,7 @@ function SignedIn() {
   const c = useColors()
   useNotifications()
   useAccountAppearance()
+  useAccountFirstDayOfWeek()
 
   return (
     <CaptureDock>

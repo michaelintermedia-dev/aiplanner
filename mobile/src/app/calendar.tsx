@@ -14,6 +14,7 @@ import { Screen } from '@/components/Screen'
 import { Row } from '@/components/ui'
 import { useColors, type Colors } from '@/theme'
 import { t } from '@shared/i18n'
+import { useFirstDayOfWeek } from '@/lib/weekStart'
 
 const isClosed = (item: CalendarItem) => item.status === 'Completed' || item.status === 'Cancelled'
 /** Ended events look like completed items. */
@@ -29,6 +30,8 @@ const isPassed = (item: CalendarItem) => item.itemType === 'Appointment' && even
 const flip = I18nManager.isRTL ? { transform: [{ scaleX: -1 }] } : undefined
 
 export default function CalendarScreen() {
+  // Weeks are laid out from the chosen first day: re-render when it changes.
+  useFirstDayOfWeek()
   const c = useColors()
   const { zone } = useAuth()
   const today = todayKey(zone.timeZone)

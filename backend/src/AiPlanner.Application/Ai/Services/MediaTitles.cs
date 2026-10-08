@@ -10,17 +10,14 @@ namespace AiPlanner.Application.Ai.Services;
 /// </summary>
 public static class MediaTitles
 {
-    /// <summary>The kind word for these files: Photo / PDF / Document, or Files for a mix.</summary>
-    public static string Label(IEnumerable<MediaInputKind> kinds, ClarificationTexts texts)
-    {
-        var distinct = kinds.Distinct().ToList();
-        return distinct.Count != 1 ? texts.MediaFiles : distinct[0] switch
+    /// <summary>The kind word of the first file: Photo / PDF / Document.</summary>
+    public static string Label(IEnumerable<MediaInputKind> kinds, ClarificationTexts texts) =>
+        kinds.FirstOrDefault() switch
         {
             MediaInputKind.Image => texts.MediaPhoto,
             MediaInputKind.Pdf => texts.MediaPdf,
             _ => texts.MediaDocument,
         };
-    }
 
     /// <summary>"Label: title" - unless it already starts with the label.</summary>
     public static string Prefix(string title, string label, int maxLength = ExtractionNormalizer.MaxTitleLength)

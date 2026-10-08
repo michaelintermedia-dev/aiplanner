@@ -21,7 +21,6 @@ public sealed class ClarificationTexts
     public required string MediaPhoto { get; init; }
     public required string MediaPdf { get; init; }
     public required string MediaDocument { get; init; }
-    public required string MediaFiles { get; init; }
 
     public static ClarificationTexts For(string? locale) =>
         (locale ?? "").Split('-', '_')[0].ToLowerInvariant() switch
@@ -46,7 +45,6 @@ public sealed class ClarificationTexts
         MediaPhoto = "Photo",
         MediaPdf = "PDF",
         MediaDocument = "Document",
-        MediaFiles = "Files",
     };
 
     public static readonly ClarificationTexts Russian = new()
@@ -64,7 +62,6 @@ public sealed class ClarificationTexts
         MediaPhoto = "Фото",
         MediaPdf = "PDF",
         MediaDocument = "Документ",
-        MediaFiles = "Файлы",
     };
 
     public static readonly ClarificationTexts Hebrew = new()
@@ -82,7 +79,6 @@ public sealed class ClarificationTexts
         MediaPhoto = "תמונה",
         MediaPdf = "PDF",
         MediaDocument = "מסמך",
-        MediaFiles = "קבצים",
     };
 }
 

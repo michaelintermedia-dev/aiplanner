@@ -90,7 +90,7 @@ public class MediaTitlesTests
         MediaTitles.Prefix("Jazz Night", MediaTitles.Label([MediaInputKind.Image, MediaInputKind.Image], en)).Should().Be("Photo: Jazz Night");
         MediaTitles.Prefix("Electricity bill", MediaTitles.Label([MediaInputKind.Pdf], en)).Should().Be("PDF: Electricity bill");
         MediaTitles.Label([MediaInputKind.Text], ClarificationTexts.Russian).Should().Be("Документ");
-        MediaTitles.Label([MediaInputKind.Image, MediaInputKind.Pdf], en).Should().Be("Files");
+        MediaTitles.Label([MediaInputKind.Pdf, MediaInputKind.Image], en).Should().Be("PDF", "the first file decides");
     }
 
     [Fact]

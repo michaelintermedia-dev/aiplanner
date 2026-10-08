@@ -243,7 +243,10 @@ Local dev notes:
   `TagPicker` (web + mobile) - the list as chips to tap (several at once) plus
   a "New tag" box (Enter/comma), in every Edit page and the capture review;
   helpers in `shared/tags.ts`. The feed filter and text search cover tags on
-  every kind; a type change keeps them. AI: "tag it shopping" fills `tags`
+  every kind; a type change keeps them. AI: tags every new entry by itself
+  (user's request, 2026-10-09) - 1-3 topic tags from the words and any photos/
+  documents (a chair photo -> chair, furniture), existing tags first; plus
+  any asked for ("tag it shopping") - `tags`
   (the user's tag names are in the prompt so it reuses their spelling) -
   `AIExtractionItem.ProposedTags`, `CaptureItemDto/ConfirmCaptureItem.Tags`;
   adding to an item returns its tags plus the new ones (`ContinuedItem.Keep`:

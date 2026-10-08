@@ -49,7 +49,7 @@ export function CaptureDock() {
   // (0 = its normal place, negative = higher up); `pull`: the drag in progress.
   const [lift, setLift] = useState(0)
   const [pull, setPull] = useState<number | null>(null)
-  const grab = useRef<{ y: number; at: number; t: number } | null>(null)
+  const grab = useRef<{ y: number; at: number; t: number; id: number; started: boolean } | null>(null)
 
   const hidden = isItemPage(pathname) && !engaged
   const bottom = GAP + Math.max(keyboard, pathname === '/feed' ? TAB_BAR : 0)
@@ -99,21 +99,31 @@ export function CaptureDock() {
 
   if (!isPhone) return null
 
-  const onHandleDown = (e: PointerEvent<HTMLDivElement>) => {
-    e.currentTarget.setPointerCapture(e.pointerId)
-    grab.current = { y: e.clientY, at: e.clientY, t: performance.now() }
-    setPull(lift)
+  // The whole toolbar drags (user's call, like YouTube's mini-player) - except the
+  // text box, the mic (hold-to-talk) and form fields; it only starts once the
+  // finger has moved, so taps still work. Not while recording or reviewing.
+  const onPanelDown = (e: PointerEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement
+    if (engaged || target.closest('textarea, input, select, audio, .mic')) return
+    grab.current = { y: e.clientY, at: e.clientY, t: performance.now(), id: e.pointerId, started: false }
   }
-  const onHandleMove = (e: PointerEvent<HTMLDivElement>) => {
-    if (!grab.current) return
-    grab.current.at = e.clientY
-    setPull(lift + e.clientY - grab.current.y)
+  const onPanelMove = (e: PointerEvent<HTMLDivElement>) => {
+    const g = grab.current
+    if (!g || g.id !== e.pointerId) return
+    g.at = e.clientY
+    if (!g.started) {
+      if (Math.abs(e.clientY - g.y) < 10) return
+      g.started = true
+      g.t = performance.now()
+      e.currentTarget.setPointerCapture(e.pointerId) // the button under the finger gets no click
+    }
+    setPull(lift + e.clientY - g.y)
   }
-  const onHandleUp = () => {
+  const onPanelUp = () => {
     const g = grab.current
     grab.current = null
     setPull(null)
-    if (!g) return
+    if (!g?.started) return
     const dy = g.at - g.y
     const speed = dy / Math.max(1, performance.now() - g.t) // px per ms
     const y = lift + dy
@@ -143,20 +153,20 @@ export function CaptureDock() {
           )}
         </div>
       )}
-      <div ref={panel} className="dock-panel" style={panelStyle} aria-hidden={!open}>
-        {/* The grab handle: drag to move it up or down, swipe down to fold it away. */}
-        <div
-          className="dock-handle"
-          role="separator"
-          aria-label={t('dock.handle')}
-          title={t('dock.handle')}
-          onPointerDown={onHandleDown}
-          onPointerMove={onHandleMove}
-          onPointerUp={onHandleUp}
-          onPointerCancel={() => {
-            grab.current = null
-            setPull(null)
-          }}>
+      <div
+        ref={panel}
+        className="dock-panel"
+        style={panelStyle}
+        aria-hidden={!open}
+        onPointerDown={onPanelDown}
+        onPointerMove={onPanelMove}
+        onPointerUp={onPanelUp}
+        onPointerCancel={() => {
+          grab.current = null
+          setPull(null)
+        }}>
+        {/* Shows it can be dragged: anywhere on it moves it up or down, a swipe down folds it away. */}
+        <div className="dock-handle" aria-hidden title={t('dock.handle')}>
           <span />
         </div>
         <CaptureBar onEngagedChange={setEngaged} onFinished={finished} />

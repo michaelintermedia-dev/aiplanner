@@ -3128,8 +3128,16 @@ html[data-wallpaper] .page-header > div:first-child {
   align-items: center;
   justify-content: center;
   z-index: 2;
-  cursor: grab;
+  pointer-events: none;
+}
+
+/* The whole toolbar drags: the page mustn't scroll under the finger instead (the text box still scrolls). */
+.dock-panel {
   touch-action: none;
+}
+
+.dock-panel textarea {
+  touch-action: auto;
 }
 
 .dock-handle span {

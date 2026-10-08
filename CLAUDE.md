@@ -438,8 +438,10 @@ Local dev notes:
   floats over every screen and a recording survives navigation. Starts
   folded into the bubble (user's call, 2026-10-08; Quick recording opens it); the X or a touch anywhere behind it collapses it to a round mic
   button that can be dragged anywhere and snaps to the nearest side (like
-  Expo's dev-tools bubble); a tap reopens it. The open toolbar has a grab handle
-  on top (user's request, 2026-10-09): drag to move it up/down (stays there
+  Expo's dev-tools bubble); a tap reopens it. The open toolbar drags anywhere
+  (user's request, 2026-10-09, like YouTube's mini-player; a clear vertical
+  move takes over - not on the text box / mic / fields on web; the handle on
+  top is just a hint): drag to move it up/down (stays there
   for the session; not while the keyboard is up), a swipe down folds it into
   the bubble like a video mini-player (not while engaged). A long press (450 ms, no move) on the
   bubble starts recording at once, like the widget (user's request, 2026-10-09;

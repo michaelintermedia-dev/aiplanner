@@ -156,7 +156,12 @@ export function CaptureDock({ children }: { children: ReactNode }) {
     () =>
       // eslint-disable-next-line react-hooks/refs -- the refs are read in the touch handlers only
       PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
+        // The whole toolbar drags (user's call, like YouTube's mini-player): a clear
+        // vertical move anywhere on it takes over - taps, typing and the mic's
+        // hold-to-talk (which doesn't move) still go to the controls. Not while busy.
+        onMoveShouldSetPanResponderCapture: (_e, g) =>
+          !engagedNow.current && Math.abs(g.dy) > 12 && Math.abs(g.dy) > Math.abs(g.dx) * 1.5,
+        onPanResponderTerminationRequest: () => false,
         onPanResponderMove: (_e, g) => dragY.setValue(lift.current + g.dy),
         onPanResponderRelease: (_e, g) => {
           const y = lift.current + g.dy
@@ -208,12 +213,13 @@ export function CaptureDock({ children }: { children: ReactNode }) {
           ref={panel}
           style={[styles.panel, !panelShown && styles.hidden, panelMotion]}
           onLayout={(e) => (panelHeight.current = e.nativeEvent.layout.height)}
+          {...handle.panHandlers}
           pointerEvents={open ? 'auto' : 'none'}>
           <ScrollView style={{ maxHeight: Math.max(160, (height - bottom - insets.top) * 0.85) }} keyboardShouldPersistTaps="handled">
             <CaptureBar onEngagedChange={setEngaged} talkSignal={quick} onFinished={finished} />
           </ScrollView>
           {/* The grab handle: drag to move it up or down, swipe down to fold it away. */}
-          <View {...handle.panHandlers} style={styles.handleArea} accessible accessibilityLabel={t('dock.handle')}>
+          <View style={styles.handleArea} pointerEvents="none" accessible accessibilityLabel={t('dock.handle')}>
             <View style={[styles.handle, { backgroundColor: c.muted }]} />
           </View>
           {!engaged && (

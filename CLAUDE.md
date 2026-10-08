@@ -656,9 +656,9 @@ Local dev notes:
   invalidates all queries). Mobile: expo-image-picker / document-picker /
   sharing; pictures load with the auth header via expo-image. Take photo opens the
   phone's camera app (user's call: its full features) asking for the back lens;
-  `mobile/patches/expo-image-picker+*.patch` (patch-package, postinstall) adds
-  the vendor extras (camerafacing, previous_mode...) some camera apps read
-  instead of the standard ones. An in-app expo-camera screen was tried and dropped. The
+  `mobile/patches/expo-image-picker+*.patch` (patch-package, postinstall)
+  sends NO facing extras for the back camera: Samsung's camera (S25 Ultra)
+  opened the selfie lens whenever any were present, even "back" ones. An in-app expo-camera screen was tried and dropped. The
   image-picker plugin's `microphonePermission: false` would REMOVE
   RECORD_AUDIO - never set it; CAMERA is declared in app.json.
 - **Appearance: theme, skins, wallpapers** (user's request, 2026-10-08, web +

@@ -5,3 +5,6 @@ ai-planner-backend-phase2/
 
 # Production secrets (deploy/README.md)
 deploy/.env
+
+# Temporary copy for building the APK when mobile/android is locked
+/mobile-build/

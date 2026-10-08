@@ -54,6 +54,8 @@ services:
     volumes:
       - caddy_data:/data
       - caddy_config:/config
+      # Phone app downloads (/dl/...), kept across rebuilds of this image.
+      - downloads:/srv/dl
 
   # Every night: a database dump and an archive of the recordings, kept 14 days
   # (in the "backups" volume - copy them off the server too, see README).
@@ -85,6 +87,7 @@ services:
         done
 
 volumes:
+  downloads:
   pgdata:
   recordings:
   caddy_data:

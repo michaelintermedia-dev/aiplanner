@@ -166,7 +166,8 @@ export function CaptureDock({ children }: { children: ReactNode }) {
         onPanResponderRelease: (_e, g) => {
           const y = lift.current + g.dy
           // A swipe down past its place folds it into the bubble (not while recording or reviewing).
-          if ((g.dy > 90 || g.vy > 1) && y > 24 && !engagedNow.current) {
+          // Wherever it was moved to: a quick swipe down, or dragged below its normal place.
+          if (!engagedNow.current && ((g.vy > 0.6 && g.dy > 40) || y > 60)) {
             dragY.setValue(lift.current)
             collapse()
             return

@@ -3134,10 +3134,15 @@ html[data-wallpaper] .page-header > div:first-child {
 /* The whole toolbar drags: the page mustn't scroll under the finger instead (the text box still scrolls). */
 .dock-panel {
   touch-action: none;
+  /* A drag mustn't select its text (a selected bit then gets dragged instead). */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .dock-panel textarea {
   touch-action: auto;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .dock-handle span {

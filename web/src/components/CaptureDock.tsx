@@ -49,7 +49,6 @@ export function CaptureDock() {
   // (0 = its normal place, negative = higher up); `pull`: the drag in progress.
   const [lift, setLift] = useState(0)
   const [pull, setPull] = useState<number | null>(null)
-  const grab = useRef<{ y: number; at: number; t: number; id: number; started: boolean } | null>(null)
 
   const hidden = isItemPage(pathname) && !engaged
   const bottom = GAP + Math.max(keyboard, pathname === '/feed' ? TAB_BAR : 0)
@@ -102,38 +101,54 @@ export function CaptureDock() {
   // The whole toolbar drags (user's call, like YouTube's mini-player) - except the
   // text box, the mic (hold-to-talk) and form fields; it only starts once the
   // finger has moved, so taps still work. Not while recording or reviewing.
+  // The drag is followed on the window, so it never loses the pointer.
   const onPanelDown = (e: PointerEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement
-    if (engaged || target.closest('textarea, input, select, audio, .mic')) return
-    grab.current = { y: e.clientY, at: e.clientY, t: performance.now(), id: e.pointerId, started: false }
-  }
-  const onPanelMove = (e: PointerEvent<HTMLDivElement>) => {
-    const g = grab.current
-    if (!g || g.id !== e.pointerId) return
-    g.at = e.clientY
-    if (!g.started) {
-      if (Math.abs(e.clientY - g.y) < 10) return
-      g.started = true
-      g.t = performance.now()
-      e.currentTarget.setPointerCapture(e.pointerId) // the button under the finger gets no click
+    if (engaged || e.button > 0 || target.closest('textarea, input, select, audio, .mic')) return
+    const id = e.pointerId
+    const startY = e.clientY
+    let at = startY
+    let started = false
+    let startedAt = 0
+    const move = (ev: globalThis.PointerEvent) => {
+      if (ev.pointerId !== id) return
+      at = ev.clientY
+      if (!started) {
+        if (Math.abs(at - startY) < 10) return
+        started = true
+        startedAt = performance.now()
+      }
+      ev.preventDefault()
+      setPull(lift + at - startY)
     }
-    setPull(lift + e.clientY - g.y)
-  }
-  const onPanelUp = () => {
-    const g = grab.current
-    grab.current = null
-    setPull(null)
-    if (!g?.started) return
-    const dy = g.at - g.y
-    const speed = dy / Math.max(1, performance.now() - g.t) // px per ms
-    const y = lift + dy
-    // A swipe down past its place folds it into the bubble (not while recording or reviewing).
-    if ((dy > 90 || speed > 1) && y > 24 && !engaged) {
-      collapse()
-      return
+    const end = (ev: globalThis.PointerEvent) => {
+      if (ev.pointerId !== id) return
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', end)
+      window.removeEventListener('pointercancel', end)
+      setPull(null)
+      if (!started || ev.type === 'pointercancel') return
+      // A drag isn't a tap: the button it started on gets no click.
+      const swallow = (c: MouseEvent) => {
+        c.stopPropagation()
+        c.preventDefault()
+      }
+      window.addEventListener('click', swallow, { capture: true, once: true })
+      setTimeout(() => window.removeEventListener('click', swallow, { capture: true }), 0) // only that click
+      const dy = at - startY
+      const speed = dy / Math.max(1, performance.now() - startedAt) // px per ms
+      const y = lift + dy
+      // Wherever it was moved to: a quick swipe down, or dragged below its normal place, folds it away.
+      if ((speed > 0.6 && dy > 40) || y > 60) {
+        collapse()
+        return
+      }
+      const height = panel.current?.offsetHeight ?? 0
+      setLift(Math.min(0, Math.max(Math.min(0, -(window.innerHeight - bottom - height - GAP)), y)))
     }
-    const height = panel.current?.offsetHeight ?? 0
-    setLift(Math.min(0, Math.max(Math.min(0, -(window.innerHeight - bottom - height - GAP)), y)))
+    window.addEventListener('pointermove', move, { passive: false })
+    window.addEventListener('pointerup', end)
+    window.addEventListener('pointercancel', end)
   }
   const moved = keyboard === 0 ? (pull ?? lift) : 0
 
@@ -158,13 +173,7 @@ export function CaptureDock() {
         className="dock-panel"
         style={panelStyle}
         aria-hidden={!open}
-        onPointerDown={onPanelDown}
-        onPointerMove={onPanelMove}
-        onPointerUp={onPanelUp}
-        onPointerCancel={() => {
-          grab.current = null
-          setPull(null)
-        }}>
+        onPointerDown={onPanelDown}>
         {/* Shows it can be dragged: anywhere on it moves it up or down, a swipe down folds it away. */}
         <div className="dock-handle" aria-hidden title={t('dock.handle')}>
           <span />

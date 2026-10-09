@@ -6,6 +6,7 @@ import * as DocumentPicker from 'expo-document-picker'
 import { Directory, File, Paths } from 'expo-file-system'
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator'
 import * as ImagePicker from 'expo-image-picker'
+import * as IntentLauncher from 'expo-intent-launcher'
 import * as MediaLibrary from 'expo-media-library/legacy'
 import { AppState, Linking, Platform } from 'react-native'
 import * as Sharing from 'expo-sharing'
@@ -67,6 +68,29 @@ async function check(uri: string, name: string, isImage: boolean, picked: Picked
   else picked.added.push({ key: newKey(), uri, name, isImage })
 }
 
+/** Samsung's camera app - opened like its home-screen icon, so it starts on the back lens. */
+const SAMSUNG_CAMERA = 'com.sec.android.app.camera'
+
+/**
+ * Opens the camera app as if from the home screen. Samsung's camera started
+ * on the selfie lens even for the "open the camera" request (user's S25 Ultra),
+ * so it's started through its launcher entry; other phones get the request.
+ */
+async function openCameraApp(): Promise<boolean> {
+  try {
+    IntentLauncher.openApplication(SAMSUNG_CAMERA) // its launcher entry (needs <queries>, plugins/withCameraAppQuery)
+    return true
+  } catch {
+    // not a Samsung phone
+  }
+  try {
+    await Linking.sendIntent('android.media.action.STILL_IMAGE_CAMERA')
+    return true
+  } catch {
+    return false
+  }
+}
+
 /** Resolves when the app comes back to the front after having left it. */
 function backInApp(): Promise<void> {
   return new Promise((resolve) => {
@@ -93,11 +117,7 @@ async function photosFromCameraApp(): Promise<Picked | null> {
   if (!permission.granted) return null
   const since = Date.now() - 2000
   const back = backInApp()
-  try {
-    await Linking.sendIntent('android.media.action.STILL_IMAGE_CAMERA')
-  } catch {
-    return null
-  }
+  if (!(await openCameraApp())) return null
   await back
   const recent = () =>
     MediaLibrary.getAssetsAsync({

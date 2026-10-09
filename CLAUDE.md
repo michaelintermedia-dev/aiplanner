@@ -440,10 +440,11 @@ Local dev notes:
   button that can be dragged anywhere and snaps to the nearest side (like
   Expo's dev-tools bubble); a tap reopens it. The open toolbar drags anywhere
   (user's request, 2026-10-09, like YouTube's mini-player; a clear vertical
-  move takes over - not on the text box / mic / fields on web; the handle on
-  top is just a hint): drag to move it up/down (stays there
-  for the session; not while the keyboard is up), a swipe down folds it into
-  the bubble like a video mini-player (not while engaged). A long press (450 ms, no move) on the
+  move takes over - not on the text box / mic / fields on web, followed on
+  the window, no text selection in it; the handle on top is just a hint):
+  drag to move it up/down (stays there
+  for the session; not while the keyboard is up), a quick swipe down (or a drag below its
+  place) folds it into the bubble from wherever it is (not while engaged). A long press (450 ms, no move) on the
   bubble starts recording at once, like the widget (user's request, 2026-10-09;
   mobile `requestQuickRecording`, web `?record=1`). Collapsing shrinks the toolbar into the button and opening grows it back out of it (Animated, native driver; the button's drag and its pop are two layers, since one view can't mix JS- and native-driven transforms; Reduce motion skips it). It sits above the tab bar on tab
   screens and lifts above the keyboard (edge-to-edge Android doesn't resize). It never collapses while recording/processing/reviewing
@@ -664,8 +665,10 @@ Local dev notes:
   `mobile/patches/expo-image-picker+*.patch` (patch-package, postinstall)
   sends no facing extras (iOS still uses image-picker's camera). On Android
   even that kept Samsung's camera (S25 Ultra) on the selfie lens, so Take
-  photo there opens the FULL camera app (`STILL_IMAGE_CAMERA` intent, user's
-  call) and, back in the app, adds the photos taken meanwhile (expo-media-library
+  photo there opens the FULL camera app (user's call) - Samsung's by its
+  launcher entry (`IntentLauncher.openApplication`, `<queries>` from
+  `plugins/withCameraAppQuery.js`; even `STILL_IMAGE_CAMERA` gave the selfie
+  lens there), other phones by the `STILL_IMAGE_CAMERA` intent and, back in the app, adds the photos taken meanwhile (expo-media-library
   legacy `getAssetsAsync({ createdAfter })`, READ_MEDIA_IMAGES). Note:
   expo-image-picker ships a prebuilt AAR - `expo.autolinking.android.buildFromSource`
   in package.json makes the patch count. An in-app expo-camera screen was tried and dropped. The

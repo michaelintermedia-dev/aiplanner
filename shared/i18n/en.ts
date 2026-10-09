@@ -499,6 +499,8 @@ export const en = {
   'form.draftNotice': 'You have unsaved changes to this item.',
   'form.continueEditing': 'Continue editing',
   // ---- media (photos, documents) ----
+  'media.needPhotoAccess': 'To add the photos you take, allow AI Planner access to all photos (Settings - Apps - AI Planner - Permissions).',
+  'media.noNewPhotos': 'No new photo found. Take a photo, then come back to AI Planner - it will be added here.',
   'media.title': 'Media',
   'media.takePhoto': 'Take photo',
   'media.addImage': 'Add image',

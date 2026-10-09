@@ -495,6 +495,8 @@ export const ru: Messages = {
   'form.draftNotice': 'У этого элемента есть несохранённые изменения.',
   'form.continueEditing': 'Продолжить редактирование',
   // ---- media (photos, documents) ----
+  'media.needPhotoAccess': 'Чтобы добавлять снятые фото, разрешите AI Planner доступ ко всем фото (Настройки - Приложения - AI Planner - Разрешения).',
+  'media.noNewPhotos': 'Новых фото нет. Сделайте снимок и вернитесь в AI Planner - он добавится сюда.',
   'media.title': 'Медиа',
   'media.takePhoto': 'Сделать фото',
   'media.addImage': 'Добавить изображение',

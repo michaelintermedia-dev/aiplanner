@@ -495,6 +495,8 @@ export const he: Messages = {
   'form.draftNotice': 'יש לפריט הזה שינויים שלא נשמרו.',
   'form.continueEditing': 'להמשיך לערוך',
   // ---- media (photos, documents) ----
+  'media.needPhotoAccess': 'כדי להוסיף את התמונות שצילמתם, אפשרו ל-AI Planner גישה לכל התמונות (הגדרות - אפליקציות - AI Planner - הרשאות).',
+  'media.noNewPhotos': 'לא נמצאה תמונה חדשה. צלמו ואז חזרו ל-AI Planner - היא תתווסף כאן.',
   'media.title': 'מדיה',
   'media.takePhoto': 'לצלם תמונה',
   'media.addImage': 'להוסיף תמונה',

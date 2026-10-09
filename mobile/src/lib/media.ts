@@ -114,27 +114,33 @@ function backInApp(): Promise<void> {
  */
 async function photosFromCameraApp(): Promise<Picked | null> {
   const permission = await MediaLibrary.requestPermissionsAsync(false, ['photo'])
-  if (!permission.granted) return null
-  const since = Date.now() - 2000
+  // "Selected photos only" can't see a new photo - say so instead of silently adding nothing.
+  if (!permission.granted || permission.accessPrivileges === 'limited') {
+    return { added: [], problems: [t('media.needPhotoAccess')] }
+  }
+  const since = Date.now() - 5000
   const back = backInApp()
   if (!(await openCameraApp())) return null
   await back
-  const recent = () =>
-    MediaLibrary.getAssetsAsync({
-      mediaType: MediaLibrary.MediaType.photo,
-      createdAfter: since,
-      sortBy: [[MediaLibrary.SortBy.creationTime, true]],
-      first: 20,
-    })
-  let page = await recent()
-  if (page.assets.length === 0) {
+  // By when the file was saved, not "date taken": some phones store that shifted by
+  // the time zone, which made a new photo look older than the camera opening.
+  const recent = async () =>
+    (
+      await MediaLibrary.getAssetsAsync({
+        mediaType: MediaLibrary.MediaType.photo,
+        sortBy: [[MediaLibrary.SortBy.modificationTime, false]],
+        first: 20,
+      })
+    ).assets.filter((a) => a.modificationTime >= since || a.creationTime >= since)
+  let assets = await recent()
+  if (assets.length === 0) {
     // The last photo can reach the phone's photo list a moment after we're back.
-    await new Promise((r) => setTimeout(r, 1200))
-    page = await recent()
+    await new Promise((r) => setTimeout(r, 1500))
+    assets = await recent()
   }
-  if (page.assets.length === 0) return null
+  if (assets.length === 0) return { added: [], problems: [t('media.noNewPhotos')] }
   const picked: Picked = { added: [], problems: [] }
-  for (const asset of page.assets) {
+  for (const asset of assets.reverse()) {
     const info = await MediaLibrary.getAssetInfoAsync(asset)
     const uri = info.localUri ?? asset.uri
     const photo = await shrink({ uri, width: asset.width, height: asset.height } as ImagePicker.ImagePickerAsset, photoName(new Date(asset.creationTime)))

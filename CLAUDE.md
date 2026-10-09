@@ -667,7 +667,10 @@ Local dev notes:
   `mobile/patches/expo-image-picker+*.patch` (patch-package, postinstall)
   sends no facing extras (iOS still uses image-picker's camera). On Android
   even that kept Samsung's camera (S25 Ultra) on the selfie lens, so Take
-  photo there opens the FULL camera app (user's call) - Samsung's by its
+  photo there used to open the FULL camera app - now back to the capture mode
+  (returns by itself, user's call 2026-10-09; Samsung keeps its own last lens
+  for that mode, expo/expo#24564 - reset on the phone). `USE_FULL_CAMERA_APP`
+  in media.ts switches the full-camera route back on: Samsung's by its
   launcher entry (`IntentLauncher.openApplication`, `<queries>` from
   `plugins/withCameraAppQuery.js`; even `STILL_IMAGE_CAMERA` gave the selfie
   lens there), other phones by the `STILL_IMAGE_CAMERA` intent and, back in the app, adds the photos taken meanwhile (expo-media-library

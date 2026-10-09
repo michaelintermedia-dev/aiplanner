@@ -68,6 +68,15 @@ async function check(uri: string, name: string, isImage: boolean, picked: Picked
   else picked.added.push({ key: newKey(), uri, name, isImage })
 }
 
+/**
+ * Take photo on Android: Samsung's "photo for another app" mode (returns here by
+ * itself - user's call, 2026-10-09). It opened the selfie lens whatever we asked:
+ * it keeps its own last-used lens for that mode (expo/expo#24564), reset on the
+ * phone (flip once there, or clear the Camera app's data). The full-camera route
+ * below (back lens, but the Back button to return) stays as the fallback.
+ */
+const USE_FULL_CAMERA_APP = false
+
 /** Samsung's camera app - opened like its home-screen icon, so it starts on the back lens. */
 const SAMSUNG_CAMERA = 'com.sec.android.app.camera'
 
@@ -152,7 +161,7 @@ async function photosFromCameraApp(): Promise<Picked | null> {
 
 /** Take a photo with the camera, or choose pictures from the gallery. Null: cancelled or not allowed. */
 export async function pickPhotos(camera: boolean): Promise<Picked | null> {
-  if (camera && Platform.OS === 'android') return photosFromCameraApp()
+  if (camera && Platform.OS === 'android' && USE_FULL_CAMERA_APP) return photosFromCameraApp()
   const permission = camera ? await ImagePicker.requestCameraPermissionsAsync() : { granted: true }
   if (!permission.granted) return null
   const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 1, exif: false }

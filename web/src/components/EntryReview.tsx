@@ -12,7 +12,7 @@ import {
   type ItemForm,
 } from '@shared/itemForm'
 import type { Capture, CaptureItem } from '@shared/types'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { IoHelpCircleOutline, IoMicOutline, IoSparkles } from 'react-icons/io5'
 import { api, settingsApi } from '../api/endpoints'
@@ -92,6 +92,7 @@ export function EntryReview({
   // The form as it was when the last words were sent - what the AI's answer is compared with.
   const sent = useRef<ItemForm | null>(null)
   const settings = useQuery({ queryKey: ['settings', 'recordings'], queryFn: settingsApi.recordings })
+  const queryClient = useQueryClient()
   const [keepChoice, setKeepChoice] = useState<boolean | null>(null)
   const hasRecording = capture.source === 'Voice' && capture.audioParts > 0
   const keepRecording = keepChoice ?? settings.data?.keepRecordings ?? true
@@ -137,6 +138,8 @@ export function EntryReview({
     try {
       const saved = await saveReviewForm(api, { captureId: capture.id, itemId: proposal.id, form, tz: zone.timeZone, proposals, keepRecording: !hasRecording || keepRecording })
       store(capture.id, null)
+      // The new entry shows in the feed, Today and the calendar at once.
+      void queryClient.invalidateQueries()
       onDone(savedNotice(saved, 1), unrelated.filter((u) => u.capture).map((u) => u.text).join(' ') || null)
     } catch (err) {
       setBusy(false)
@@ -151,6 +154,7 @@ export function EntryReview({
       // left pending at worst - the "unsaved review" banner offers it again
     }
     store(capture.id, null)
+    void queryClient.invalidateQueries({ queryKey: ['captures'] }) // the unsaved-review banner
     onDone(null)
   }
 

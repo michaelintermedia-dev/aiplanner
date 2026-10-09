@@ -141,8 +141,9 @@ async function photosFromCameraApp(): Promise<Picked | null> {
   if (assets.length === 0) return { added: [], problems: [t('media.noNewPhotos')] }
   const picked: Picked = { added: [], problems: [] }
   for (const asset of assets.reverse()) {
-    const info = await MediaLibrary.getAssetInfoAsync(asset)
-    const uri = info.localUri ?? asset.uri
+    // asset.uri is already the file (file:///storage/...). getAssetInfoAsync also reads the
+    // photo's EXIF, which Android refuses without ACCESS_MEDIA_LOCATION - not needed here.
+    const uri = asset.uri
     const photo = await shrink({ uri, width: asset.width, height: asset.height } as ImagePicker.ImagePickerAsset, photoName(new Date(asset.creationTime)))
     await check(photo.uri, photo.name, true, picked)
   }

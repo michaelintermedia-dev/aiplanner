@@ -224,12 +224,6 @@ export default function SettingsScreen() {
       {recordings.data && (
         <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.border }]}>
           <Row
-            label={t('settings.oneEntry')}
-            hint={t('settings.oneEntryHint')}
-            value={recordings.data.oneEntryPerMessage}
-            onChange={(oneEntryPerMessage) => saveRecordings.mutate({ ...recordings.data!, oneEntryPerMessage })}
-          />
-          <Row
             label={t('settings.keepRecordings')}
             hint={t('settings.keepRecordingsHint')}
             value={recordings.data.keepRecordings}

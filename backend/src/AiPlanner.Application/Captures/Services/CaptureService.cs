@@ -430,8 +430,9 @@ public class CaptureService : ICaptureService
 
         var timeZone = UserTimeZoneHelper.ResolveTimeZone(user.TimeZoneId);
         var localNow = TimeZoneInfo.ConvertTimeFromUtc(_dateTime.UtcNow, timeZone);
-        // Adding to one item is one item anyway; everything else follows "One entry per message".
-        var oneEntry = currentItem is null && (await SettingsAsync(userId, ct)).OneEntryPerMessage;
+        // One message = one entry, always (user's rule, 2026-10-09 - no longer a setting).
+        // Adding to one item is one item anyway.
+        var oneEntry = currentItem is null;
 
         var knownTags = await _db.Tags.AsNoTracking().Where(t => t.UserId == userId).OrderBy(t => t.Name).Select(t => t.Name).Take(200).ToListAsync(ct);
 

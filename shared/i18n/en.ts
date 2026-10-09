@@ -516,8 +516,6 @@ export const en = {
   'media.close': 'Close',
   'media.open': 'Open {name}',
   // ---- saving captures (settings, review, quick recording) ----
-  'settings.oneEntry': 'One entry per message',
-  'settings.oneEntryHint': 'Everything you say or type at once becomes one task, event or note - other things you mention go into its details.',
   'settings.keepRecordings': 'Keep recordings',
   'settings.keepRecordingsHint': 'Keep the audio of what you said with the entry. Off: only the words are kept. You can change it for each recording on the review.',
   'review.keepRecording': 'Keep the recording',

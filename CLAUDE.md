@@ -556,7 +556,8 @@ Local dev notes:
   fixed delay broke short pieces at 2×) and report position every 100 ms.
 - **How captures are saved** (user's rules, 2026-10-07, web + mobile;
   Settings -> Recordings, `GET/PUT /api/settings/recordings`):
-  - **One entry per message** (`UserSettings.OneEntryPerMessage`, on by
+  - **One entry per message** (always - the setting was removed at the user's
+    request, 2026-10-09; `UserSettings.OneEntryPerMessage` is unused; was on by
     default): one recording/typed message = ONE item, never two or three. The
     prompt says so (`OneEntry` section) and `SingleEntry.Merge` (pure, tested)
     enforces it: event > task > note leads, the others become "• " lines of

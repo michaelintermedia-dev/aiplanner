@@ -512,8 +512,6 @@ export const ru: Messages = {
   'media.close': 'Закрыть',
   'media.open': 'Открыть {name}',
   // ---- saving captures (settings, review, quick recording) ----
-  'settings.oneEntry': 'Одна запись на сообщение',
-  'settings.oneEntryHint': 'Всё, что вы сказали или написали за раз, становится одной задачей, событием или заметкой - остальное попадает в её описание.',
   'settings.keepRecordings': 'Сохранять аудиозаписи',
   'settings.keepRecordingsHint': 'Хранить аудио сказанного вместе с записью. Выключено: остаются только слова. Для каждой записи это можно изменить при проверке.',
   'review.keepRecording': 'Сохранить аудиозапись',

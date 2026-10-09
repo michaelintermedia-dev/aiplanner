@@ -512,8 +512,6 @@ export const he: Messages = {
   'media.close': 'לסגור',
   'media.open': 'לפתוח את {name}',
   // ---- saving captures (settings, review, quick recording) ----
-  'settings.oneEntry': 'רשומה אחת לכל הודעה',
-  'settings.oneEntryHint': 'כל מה שאומרים או מקלידים בבת אחת הופך למשימה, אירוע או פתק אחד - שאר הדברים נכנסים לפרטים שלו.',
   'settings.keepRecordings': 'לשמור הקלטות',
   'settings.keepRecordingsHint': 'לשמור את הקלטת הדברים יחד עם הרשומה. כבוי: נשמרות רק המילים. אפשר לשנות זאת לכל הקלטה בבדיקה.',
   'review.keepRecording': 'לשמור את ההקלטה',

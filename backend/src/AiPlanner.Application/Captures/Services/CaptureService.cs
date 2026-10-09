@@ -440,6 +440,19 @@ public class CaptureService : ICaptureService
             new ExtractionContext(wordsForAi ?? text, localNow, timeZone.Id, user.Locale, previousText, currentItem, oneEntry, knownTags, media), ct);
         var normalized = ExtractionNormalizer.Normalize(raw, text, localNow, timeZone, user.Locale, knownTags);
         if (oneEntry) normalized = SingleEntry.Merge(normalized);
+        // A tag the user already has is shown and saved with their spelling ("family" -> "Family").
+        normalized = normalized with
+        {
+            Items = normalized.Items
+                .Select(i => i.Tags is { Count: > 0 } tags
+                    ? i with
+                    {
+                        Tags = tags.Select(t => knownTags.FirstOrDefault(k => k.Equals(t, StringComparison.OrdinalIgnoreCase)) ?? t)
+                            .Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
+                    }
+                    : i)
+                .ToList(),
+        };
         // Only files, no words: the titles say what kind of file it is ("Photo: ...").
         if (wordsForAi == "" && media is { Count: > 0 })
         {

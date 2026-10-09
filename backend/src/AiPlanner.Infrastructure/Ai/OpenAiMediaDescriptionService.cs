@@ -50,10 +50,10 @@ public class OpenAiMediaDescriptionService : IMediaDescriptionService
 
     internal static string Instructions(string locale) => $"""
         You describe a file attached to an entry in someone's personal planner, so they can find it later by searching.
-        Answer with plain text only (no markdown), at most 4 short lines:
+        Answer with plain text only (no markdown), at most 5 short lines:
         1. What it is, specifically ("Receipt from IKEA", "Concert flyer - Jazz Night at Blue Note", "Photo of a router label", "Lease agreement").
         2-4. The key facts and any readable text someone might search for: names, places, dates, amounts, codes, passwords, phone numbers, addresses.
-        Also use the everyday words someone would type to find it, even if the file says it differently (a router label: "wifi", "password"; a boarding pass: "flight", "ticket").
+        Last line, always: "Keywords:" and 5-10 everyday words someone would type to find it, even where the file says it differently - synonyms and the general kind of thing (a router label: "Keywords: wifi, wi-fi, password, router, internet, network"; a boarding pass: "Keywords: flight, ticket, plane, airport").
         Write in the language of the text in the file (a document, or a picture with writing on it). A picture with no text is described in {OpenAiMediaParts.AppLanguage(locale)} (the app's language).
         Never invent anything that isn't in the file.
         """;

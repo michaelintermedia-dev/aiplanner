@@ -439,7 +439,9 @@ Local dev notes:
   folded into the bubble (user's call, 2026-10-08; Quick recording opens it); the X or a touch anywhere behind it collapses it to a round mic
   button that can be dragged anywhere and snaps to the nearest side (like
   Expo's dev-tools bubble); a tap reopens it. The open toolbar drags anywhere
-  (user's request, 2026-10-09, like YouTube's mini-player; a clear vertical
+  (user's request, 2026-10-09, like YouTube's mini-player; mobile: a
+  react-native-gesture-handler Pan - `GestureHandlerRootView` in the root
+  layout - since a PanResponder lost the gesture to the scroll view/text box; a clear vertical
   move takes over - not on the text box / mic / fields on web, followed on
   the window, no text selection in it; the handle on top is just a hint):
   drag to move it up/down (stays there

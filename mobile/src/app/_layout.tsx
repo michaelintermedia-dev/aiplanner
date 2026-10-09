@@ -1,4 +1,5 @@
 import { languageOf, setLocale, t } from '@shared/i18n'
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
@@ -33,16 +34,19 @@ export default function RootLayout() {
   // Screens are see-through: <Wallpaper> (the page colour or the skin's wallpaper) is behind them.
   const base = c.scheme === 'dark' ? DarkTheme : DefaultTheme
   return (
-    <ThemeProvider value={{ ...base, colors: { ...base.colors, background: 'transparent', primary: c.accent } }}>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <StatusBar style="auto" />
-          <Wallpaper>
-            <Gate />
-          </Wallpaper>
-        </AuthProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
+    // Gesture handler root: the floating toolbar's drag/swipe is a native pan gesture.
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={{ ...base, colors: { ...base.colors, background: 'transparent', primary: c.accent } }}>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <StatusBar style="auto" />
+            <Wallpaper>
+              <Gate />
+            </Wallpaper>
+          </AuthProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   )
 }
 

@@ -14,6 +14,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native'
+import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useDockHidden } from '@/lib/dockTarget'
 import { requestQuickRecording, useQuickRecording } from '@/lib/quickRecord'
@@ -148,41 +149,38 @@ export function CaptureDock({ children }: { children: ReactNode }) {
   const lift = useRef(0)
   const [dragY] = useState(() => new Animated.Value(0))
   const panelHeight = useRef(0)
-  const engagedNow = useRef(engaged)
+  // The whole toolbar drags (user's call, like YouTube's mini-player): a native pan
+  // that only starts on a clear vertical move, so taps, typing and the mic's
+  // hold-to-talk (which doesn't move) still reach the controls. Not while busy.
+  // (A PanResponder lost the gesture to the toolbar's scroll view and text box.)
+  const collapseNow = useRef(collapse)
   useEffect(() => {
-    engagedNow.current = engaged
-  }, [engaged])
-  const handle = useMemo(
+    collapseNow.current = collapse
+  })
+  /* eslint-disable react-hooks/refs -- the refs are read in the gesture callbacks only, never during render */
+  const pan = useMemo(
     () =>
-      // eslint-disable-next-line react-hooks/refs -- the refs are read in the touch handlers only
-      PanResponder.create({
-        // The whole toolbar drags (user's call, like YouTube's mini-player): a clear
-        // vertical move anywhere on it takes over - taps, typing and the mic's
-        // hold-to-talk (which doesn't move) still go to the controls. Not while busy.
-        onMoveShouldSetPanResponderCapture: (_e, g) =>
-          !engagedNow.current && Math.abs(g.dy) > 12 && Math.abs(g.dy) > Math.abs(g.dx) * 1.5,
-        onPanResponderTerminationRequest: () => false,
-        onPanResponderMove: (_e, g) => dragY.setValue(lift.current + g.dy),
-        onPanResponderRelease: (_e, g) => {
-          const y = lift.current + g.dy
-          // A swipe down past its place folds it into the bubble (not while recording or reviewing).
-          // Wherever it was moved to: a quick swipe down, or dragged below its normal place.
-          if (!engagedNow.current && ((g.vy > 0.6 && g.dy > 40) || y > 60)) {
+      Gesture.Pan()
+        .runOnJS(true)
+        .enabled(open && !engaged)
+        .activeOffsetY([-12, 12])
+        .failOffsetX([-24, 24])
+        .onUpdate((e) => dragY.setValue(lift.current + e.translationY))
+        .onEnd((e) => {
+          const y = lift.current + e.translationY
+          // Wherever it was moved to: a quick swipe down, or dragged below its normal place, folds it away.
+          if ((e.velocityY > 600 && e.translationY > 40) || y > 60) {
             dragY.setValue(lift.current)
-            collapse()
+            collapseNow.current()
             return
           }
           const highest = Math.min(0, -(height - bottom - insets.top - panelHeight.current - GAP))
           lift.current = Math.min(0, Math.max(highest, y))
           Animated.spring(dragY, { toValue: lift.current, useNativeDriver: false, friction: 8 }).start()
-        },
-        onPanResponderTerminate: () => {
-          Animated.spring(dragY, { toValue: lift.current, useNativeDriver: false, friction: 8 }).start()
-        },
-      }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- collapse reads the current state itself
-    [dragY, height, bottom, insets.top],
+        }),
+    [open, engaged, dragY, height, bottom, insets.top],
   )
+  /* eslint-enable react-hooks/refs */
 
   const onMicRest = useCallback((at: { x: number; y: number }) => {
     micAt.current = at
@@ -210,11 +208,11 @@ export function CaptureDock({ children }: { children: ReactNode }) {
       <Animated.View
         style={[styles.dock, { bottom }, hidden && styles.hidden, keyboard === 0 && { transform: [{ translateY: dragY }] }]}
         pointerEvents="box-none">
+        <GestureDetector gesture={pan}>
         <Animated.View
           ref={panel}
           style={[styles.panel, !panelShown && styles.hidden, panelMotion]}
           onLayout={(e) => (panelHeight.current = e.nativeEvent.layout.height)}
-          {...handle.panHandlers}
           pointerEvents={open ? 'auto' : 'none'}>
           <ScrollView style={{ maxHeight: Math.max(160, (height - bottom - insets.top) * 0.85) }} keyboardShouldPersistTaps="handled">
             <CaptureBar onEngagedChange={setEngaged} talkSignal={quick} onFinished={finished} />
@@ -234,6 +232,7 @@ export function CaptureDock({ children }: { children: ReactNode }) {
             </Pressable>
           )}
         </Animated.View>
+        </GestureDetector>
       </Animated.View>
 
       {notice && !open && (

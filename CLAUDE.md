@@ -328,6 +328,18 @@ Local dev notes:
   `INTENT_OPTIONS` in `shared/captureDraft.ts`) plus editable dates,
   time, priority, reminder and details, so the user can turn anything into
   anything and fill in what's missing before saving.
+- **The review of a new entry IS the Edit form** (user's call, 2026-10-09,
+  web + mobile): `EntryReview` shows the AI's proposal (`formFromProposal`) in
+  the same `ItemFields` the Edit page uses (one component, so they can't drift)
+  plus the capture bar's photos/files (`MediaEditor` on its pending list - open,
+  remove, add), the recording + "Keep the recording", "Change it by voice or
+  text" (continue with `itemState` and NO item: the server works on the form,
+  proposals are HeldByEditForm) and the AI's question. Save = `saveReviewForm`:
+  confirm the proposal from the form (`formToConfirm` - incl. notes, people,
+  ongoing on `ConfirmCaptureItem`), then link the held proposals (`linkOnly`) to
+  the new item; Cancel = `discardReviewForm`. Kept on the device until Save /
+  Cancel (web localStorage `entry-review:`, mobile `entryDrafts`). Additions to a
+  saved item resumed from the banner still use the old `CaptureReview`.
 - **Everything that changes an item happens in its Edit page** (user's call,
   2026-10-05, web + mobile; replaced the view's Type chips, "Add more" and
   "Delete recording"). The view is read / listen / Complete-Cancel-Reopen,

@@ -326,6 +326,10 @@ export interface ConfirmCaptureItem {
   recurrence?: Recurrence | null
   /** Its tags (omitted: none on a new item, unchanged on an update). */
   tags?: string[] | null
+  /** The review is the full Edit form: notes (tasks, events), people (events), "ongoing" (tasks). */
+  notes?: string | null
+  participantNames?: string[] | null
+  isOngoing?: boolean
 }
 
 /** The saved item a capture is continued from ("Add to this task"). */

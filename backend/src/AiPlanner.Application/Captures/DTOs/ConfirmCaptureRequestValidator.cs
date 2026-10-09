@@ -41,6 +41,9 @@ public class ConfirmCaptureRequestValidator : AbstractValidator<ConfirmCaptureRe
                 item.RuleForEach(i => i.Reminders).SetValidator(new ReminderDtoValidator());
                 item.RuleFor(i => i.Tags).Must(t => t is null || t.Count <= 50).WithMessage("Too many tags.");
                 item.RuleForEach(i => i.Tags).MaximumLength(100);
+                item.RuleFor(i => i.Notes).MaximumLength(4000);
+                item.RuleFor(i => i.ParticipantNames).Must(p => p is null || p.Count <= 50).WithMessage("Too many people.");
+                item.RuleForEach(i => i.ParticipantNames).MaximumLength(200);
 
                 item.When(i => i.Intent == ExtractionIntent.Appointment, () =>
                 {

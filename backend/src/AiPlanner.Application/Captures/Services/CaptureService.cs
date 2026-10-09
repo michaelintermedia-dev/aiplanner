@@ -520,7 +520,9 @@ public class CaptureService : ICaptureService
 
         // The item the user continues from, whole - the AI returns it updated. From
         // the Edit form: as it is in the form right now (unsaved changes included).
-        var formState = request.ItemId is not null && request.ItemState is { } state ? await FormStateAsync(userId, state, ct) : null;
+        // Without an item it's the review of a new entry (the full Edit form, user's call
+        // 2026-10-09): the AI works on the form as it is, before anything is saved.
+        var formState = request.ItemState is { } state ? await FormStateAsync(userId, state, ct) : null;
         var currentItem = formState is { } fs
             ? ContinuedItem.Describe(fs, await _reminders.ZoneAsync(userId, ct))
             : request.ItemId is { } itemId ? await DescribeItemAsync(userId, request.ItemType, itemId, ct) : null;
@@ -529,8 +531,8 @@ public class CaptureService : ICaptureService
 
         // Adding to one saved item is scoped to it: the AI sees only that item and
         // what was said about it - not the rest of the message.
-        var previousText = currentItem is not null
-            ? await ItemWordsAsync(extraction.Id, request.ItemId!.Value, ct)
+        var previousText = currentItem is not null && request.ItemId is { } savedItemId
+            ? await ItemWordsAsync(extraction.Id, savedItemId, ct)
             : extraction.Transcript?.Text ?? extraction.RawInputText ?? "";
         var added = new List<string>();
 
@@ -1066,12 +1068,12 @@ public class CaptureService : ICaptureService
     private static CreateTaskRequest ToTaskRequest(ConfirmCaptureItem i) => new(
         Title: i.Title.Trim(),
         Description: i.Description,
-        Notes: null,
+        Notes: string.IsNullOrWhiteSpace(i.Notes) ? null : i.Notes,
         StartDateUtc: null,
         DueDateUtc: i.DueUtc,
         HasDueTime: i.DueUtc is not null && i.HasTime,
         Priority: i.Priority ?? TaskPriority.None,
-        IsOngoing: false,
+        IsOngoing: i.IsOngoing && i.DueUtc is null,
         // Legacy "reminder" items are tasks that remind at their time.
         Reminders: i.Reminders is { Count: > 0 } given
             ? given
@@ -1082,11 +1084,11 @@ public class CaptureService : ICaptureService
     private static CreateAppointmentRequest ToAppointmentRequest(ConfirmCaptureItem i) => new(
         Title: i.Title.Trim(),
         Description: i.Description,
-        Notes: null,
+        Notes: string.IsNullOrWhiteSpace(i.Notes) ? null : i.Notes,
         StartUtc: i.StartUtc ?? default,
         EndUtc: i.EndUtc ?? default,
         Location: i.Location,
-        ParticipantNames: null,
+        ParticipantNames: i.ParticipantNames,
         Reminders: i.Reminders,
         Recurrence: i.Recurrence,
         Tags: i.Tags);

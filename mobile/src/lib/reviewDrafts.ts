@@ -44,3 +44,6 @@ export const reviewDrafts = draftStore<ItemDraft[]>('review-drafts.json')
 
 /** The item Edit page's unsaved changes, by item id (ItemEditor checks they still fit). */
 export const editDrafts = draftStore<unknown>('item-edit-drafts.json')
+
+/** A new entry's review (EntryReview): the form, its changes and held proposals, by capture id. */
+export const entryDrafts = draftStore<unknown>('entry-review-drafts.json')

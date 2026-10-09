@@ -14,6 +14,7 @@ import { useAudioRecorder, type RecorderState } from '../lib/useAudioRecorder'
 import { useMicrophones } from '../lib/useMicrophones'
 import { usePendingReview } from '../lib/usePendingReview'
 import { CaptureReview } from './CaptureReview'
+import { EntryReview, entryProposal } from './EntryReview'
 import { MediaEditor } from './ItemMedia'
 import { LevelMeter } from './LevelMeter'
 import { MicButton } from './MicButton'
@@ -64,8 +65,11 @@ function continueForm({ target, onResult, itemState }: ContinueFrom) {
   // The Edit form collects several additions before Save: keep the earlier ones pending.
   if (onResult) form.append('keepEarlier', 'true')
   if (itemState) form.append('itemState', itemState())
-  form.append('itemType', target.itemType)
-  form.append('itemId', target.itemId)
+  // No target: the review of a new entry (the AI works on the form, nothing is saved yet).
+  if (target) {
+    form.append('itemType', target.itemType)
+    form.append('itemId', target.itemId)
+  }
   return form
 }
 
@@ -75,7 +79,8 @@ const formatDuration = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).pa
 export interface ContinueFrom {
   /** Or a function that gets it when first needed (an item made by hand gets one then). */
   captureId: string | (() => Promise<string>)
-  target: AppendTarget
+  /** The saved item it adds to; none in a new entry's review (see EntryReview). */
+  target?: AppendTarget
   onClose?: () => void
   /** The item's Edit form: it takes the AI's answer itself (fills its fields) - no review here. */
   onResult?: (capture: Capture) => void
@@ -137,9 +142,11 @@ export function CaptureBar({
     }, SAVED_MESSAGE_MS)
     return () => clearTimeout(timer)
   }, [savedMessage])
-  useEffect(() => {
-    if (text) setSavedMessage(null)
-  }, [text])
+  // Typing something new: the old "Saved as ..." is gone.
+  const typed = (value: string) => {
+    setText(value)
+    if (value) setSavedMessage(null)
+  }
   const preview = usePreview(recorder.state, recorder.pauseCount, recorder.snapshot)
   const mics = useMicrophones()
   const [silent, setSilent] = useState(false)
@@ -321,6 +328,29 @@ export function CaptureBar({
     }
   }
 
+  // A new entry: its review is the full Edit form (user's call, 2026-10-09).
+  if (capture && !continueFrom && !resumedTarget && entryProposal(capture)) {
+    return (
+      <EntryReview
+        capture={capture}
+        media={media}
+        onMedia={setMedia}
+        onDone={(saved, followUpWords) => {
+          setCapture(null)
+          if (followUpWords) {
+            // Other words said while changing it: their own review comes next.
+            setFollowUp(true)
+            void run('understanding', () => capturesApi.text(followUpWords)).then(() => setFollowUp(false))
+          }
+          saved = finish(saved)
+          setSavedMessage(saved?.message ?? null)
+          setSavedLink(saved?.item ? itemPath(saved.item) : null)
+          onFinished?.(saved)
+        }}
+      />
+    )
+  }
+
   if (capture) {
     return (
       <>
@@ -423,7 +453,7 @@ export function CaptureBar({
             continueFrom ? t('capture.continuePlaceholder') : t('capture.placeholder')
           }
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => typed(e.target.value)}
           onKeyDown={onKeyDown}
           rows={2}
           disabled={busy !== null}

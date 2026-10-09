@@ -1,14 +1,11 @@
-import { RecurrencePicker } from './RecurrencePicker'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { reviewItems } from '@shared/captureDraft'
-import { endsNextDay } from '@shared/dates'
 import { KIND_LABEL } from '@shared/feed'
 import { t } from '@shared/i18n'
 import {
   applyProposal,
   discardProposals,
   formChanged,
-  formHasTime,
   formProblems,
   formAsAiItem,
   SaveConflict,
@@ -18,8 +15,7 @@ import {
   type ItemForm,
   type MergedProposal,
 } from '@shared/itemForm'
-import { priorityLabel } from '@shared/labels'
-import type { AppendTarget, Capture, ItemType, TaskPriority } from '@shared/types'
+import type { AppendTarget, Capture, ItemType } from '@shared/types'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
@@ -29,17 +25,12 @@ import { applyMedia, type PendingMedia } from '@/lib/media'
 import { editDrafts } from '@/lib/reviewDrafts'
 import { useColors } from '@/theme'
 import { CaptureBar } from './CaptureBar'
-import { DateTimeField } from './DateTimeField'
-import { CycleChip, detailStyles as s, Field } from './detail'
+import { detailStyles as s } from './detail'
 import { MediaEditor } from './ItemMedia'
-import { KIND_ICON } from './kindIcons'
-import { ReminderList } from './ReminderList'
 import { RecordingPlayer } from './SourceCapture'
-import { TagPicker } from './TagPicker'
+import { ItemFields } from './ItemFields'
 import { Button } from './ui'
 
-const TYPES: ItemType[] = ['Task', 'Appointment', 'Note']
-const PRIORITIES: TaskPriority[] = ['None', 'Low', 'Medium', 'High']
 const DETAIL_KEY = { Task: 'task', Appointment: 'appointment', Note: 'note' } as const
 
 /** Whether there are unsaved changes to this item (the view says so). */
@@ -209,10 +200,7 @@ export function ItemEditor({
     onDone(current.id !== item.id ? { moved: { itemType: current.itemType, id: current.id } } : null)
   }
 
-  const isNote = form.type === 'Note'
-  const marked = (key: FormField) => changed.includes(key)
   const recording = capture.data && capture.data.source === 'Voice' && capture.data.audioParts > 0 ? capture.data : null
-  const ring = (key: FormField) => (marked(key) ? { borderWidth: 2, borderColor: c.accent, borderRadius: 12, padding: 4 } : null)
 
   return (
     <View style={s.form}>
@@ -261,118 +249,17 @@ export function ItemEditor({
         ))}
       </View>
 
-      <View style={[styles.chips, ring('type')]} accessibilityRole="radiogroup" accessibilityLabel={t('changeType.label')}>
-        {TYPES.map((type) => {
-          const selected = form.type === type
-          return (
-            <Pressable
-              key={type}
-              onPress={() => setDraft((d) => ({ ...d, form: switchType(d.form, type, zone.timeZone), changed: d.changed.filter((k) => k !== 'type') }))}
-              style={[styles.chip, { borderColor: selected ? c.accent : c.border, backgroundColor: selected ? c.surface2 : c.surface }]}
-              accessibilityRole="radio"
-              accessibilityState={{ selected }}>
-              <Ionicons name={KIND_ICON[type]} size={16} color={selected ? c.text : c.muted} />
-              <Text style={{ color: selected ? c.text : c.muted }}>{KIND_LABEL[type]}</Text>
-            </Pressable>
+      <ItemFields
+        form={form}
+        set={set}
+        setType={(type) => setDraft((d) => ({ ...d, form: switchType(d.form, type, zone.timeZone), changed: d.changed.filter((k) => k !== 'type') }))}
+        changed={changed}
+        afterType={
+          form.type !== item.itemType && (
+            <Text style={{ color: c.warn, fontWeight: '600' }}>{t('review.typeChange', { from: KIND_LABEL[item.itemType], to: KIND_LABEL[form.type] })}</Text>
           )
-        })}
-      </View>
-      {form.type !== item.itemType && (
-        <Text style={{ color: c.warn, fontWeight: '600' }}>{t('review.typeChange', { from: KIND_LABEL[item.itemType], to: KIND_LABEL[form.type] })}</Text>
-      )}
-
-      <Field
-        label={isNote ? `${t('item.title')} (${t('item.optional')})` : t('item.title')}
-        value={form.title}
-        onChangeText={(title) => set({ title })}
-        changed={marked('title')}
+        }
       />
-
-      {form.type !== 'Note' && (
-        <View style={[s.chips, ring('date') ?? ring('time') ?? ring('endTime')]}>
-          <DateTimeField
-            mode="date"
-            value={form.date || null}
-            onChange={(date) => set({ date: date ?? '' })}
-            placeholder={form.type === 'Task' ? t('task.dueDate') : t('item.date')}
-            disabled={form.type === 'Task' && form.ongoing}
-          />
-          <DateTimeField
-            mode="time"
-            value={form.time || null}
-            onChange={(time) => set({ time: time ?? '' })}
-            placeholder={form.type === 'Task' ? t('item.time') : t('event.start')}
-            date={form.date || null}
-            disabled={form.type === 'Task' && (form.ongoing || !form.date)}
-          />
-          {form.type === 'Appointment' && (
-            <DateTimeField
-              mode="time"
-              value={form.endTime || null}
-              onChange={(endTime) => set({ endTime: endTime ?? '' })}
-              placeholder={t('event.end')}
-              date={form.date || null}
-              prefix={t('event.until')}
-            />
-          )}
-        </View>
-      )}
-      {form.type === 'Appointment' && endsNextDay(form.time, form.endTime) && (
-        <Text style={{ color: c.warn, fontSize: 13 }}>{t('event.endsNextDay')}</Text>
-      )}
-
-      {form.type === 'Task' && (
-        <View style={[s.chips, ring('priority')]}>
-          <CycleChip
-            values={PRIORITIES}
-            value={form.priority}
-            onChange={(priority) => set({ priority })}
-            label={(p) => (p === 'None' ? t('task.noPriority') : t('task.priorityBadge', { priority: priorityLabel(p) }))}
-            highlight={(p) => p !== 'None'}
-          />
-          <CycleChip
-            values={[false, true]}
-            value={form.ongoing}
-            onChange={(ongoing) => set({ ongoing })}
-            label={(o) => (o ? `${t('today.ongoing')} ✓` : t('today.ongoing'))}
-            highlight={(o) => o}
-          />
-        </View>
-      )}
-      {form.type === 'Appointment' && (
-        <>
-          <Field label={t('event.location')} value={form.location} onChangeText={(location) => set({ location })} changed={marked('location')} />
-          <Field
-            label={`${t('event.with')} ${t('item.commaSeparated')}`}
-            value={form.people}
-            onChangeText={(people) => set({ people })}
-            changed={marked('people')}
-          />
-        </>
-      )}
-
-      {form.type !== 'Note' && (
-        <View style={ring('recurrence')}>
-          <RecurrencePicker
-            value={form.recurrence}
-            onChange={(recurrence) => set({ recurrence })}
-            date={form.date || null}
-            disabled={form.type === 'Task' && form.ongoing}
-          />
-        </View>
-      )}
-      <View style={ring('reminders')}>
-        <ReminderList value={form.reminders} onChange={(reminders) => set({ reminders })} itemHasTime={formHasTime(form)} isNote={isNote} />
-      </View>
-      <TagPicker value={form.tags} onChange={(tags) => set({ tags })} changed={marked('tags')} />
-      <Field
-        label={isNote ? t('kind.note') : t('item.description')}
-        value={form.details}
-        onChangeText={(details) => set({ details })}
-        multiline
-        changed={marked('details')}
-      />
-      {!isNote && <Field label={t('item.notes')} value={form.notes} onChangeText={(notes) => set({ notes })} multiline changed={marked('notes')} />}
 
       <MediaEditor
         itemType={current.itemType}

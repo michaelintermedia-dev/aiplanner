@@ -31,4 +31,8 @@ public record ConfirmCaptureItem(
     bool ReplacesItem = false,
     bool LinkOnly = false,
     RecurrenceDto? Recurrence = null, // tasks (with a date) and events only
-    IReadOnlyList<string>? Tags = null); // null: none (new) / unchanged (an update)
+    IReadOnlyList<string>? Tags = null, // null: none (new) / unchanged (an update)
+    // The review is the full Edit form (user's call, 2026-10-09): what it has beyond the AI's fields.
+    string? Notes = null, // tasks and events
+    IReadOnlyList<string>? ParticipantNames = null, // events
+    bool IsOngoing = false); // a task without a deadline

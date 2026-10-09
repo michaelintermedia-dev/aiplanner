@@ -452,3 +452,95 @@ function unfold(f: ItemForm): ItemForm {
   }
   return location || people ? { ...f, details: lines.join('\n').trim(), location, people } : f
 }
+
+// ---- The review of a new entry is this same form (user's call, 2026-10-09) ----
+
+/** The AI's proposal for a new entry, as the Edit form. */
+export function formFromProposal(item: CaptureItem, tz: string): ItemForm {
+  const d = toDraft(item, tz)
+  const type: ItemType = d.intent === 'Appointment' ? 'Appointment' : d.intent === 'Note' ? 'Note' : 'Task'
+  return {
+    ...BLANK,
+    type,
+    title: d.title,
+    date: d.date ?? '',
+    time: d.time ?? '',
+    endTime: d.endTime ?? '',
+    location: d.location ?? '',
+    priority: d.priority ?? 'None',
+    tags: d.tags ?? [],
+    reminders: d.reminders,
+    details: d.description ?? '',
+    recurrence: d.recurrence,
+  }
+}
+
+/** Save from the review: the form as the confirm entry that creates the item (`id`: the proposal's). */
+export function formToConfirm(f: ItemForm, id: string, tz: string): ConfirmCaptureItem {
+  const due = f.type === 'Task' ? taskDue(f, tz) : null
+  const times = f.type === 'Appointment' ? eventTimes(f, tz) : null
+  return {
+    id,
+    include: true,
+    intent: INTENT[f.type],
+    title: f.title.trim() || noteName({ title: null, content: f.details }) || '-',
+    description: f.details.trim() || null,
+    startUtc: times?.startUtc ?? null,
+    endUtc: times?.endUtc ?? null,
+    dueUtc: due,
+    hasTime: f.type === 'Appointment' || (!!due && !!f.time),
+    location: f.type === 'Appointment' ? f.location.trim() || null : null,
+    priority: f.type === 'Task' && f.priority !== 'None' ? f.priority : null,
+    reminders: f.reminders,
+    recurrence: f.type === 'Note' || (f.type === 'Task' && !due) ? null : f.recurrence,
+    tags: f.tags,
+    notes: f.type === 'Note' ? null : f.notes.trim() || null,
+    participantNames: f.type === 'Appointment' ? list(f.people) : null,
+    isOngoing: f.type === 'Task' && f.ongoing,
+  }
+}
+
+/**
+ * Save the review: the entry is created from the form, then what was said or
+ * typed to change it ("change it by voice or text") is recorded as part of it
+ * (its words and audio stay with it). Returns the saved capture.
+ */
+export async function saveReviewForm(
+  api: Api,
+  { captureId, itemId, form, tz, proposals, keepRecording }: {
+    captureId: string
+    /** The AI's proposal the form started from. */
+    itemId: string
+    form: ItemForm
+    tz: string
+    /** The form's own changes by voice/text (held until Save). */
+    proposals: CaptureItem[]
+    keepRecording: boolean
+  },
+) {
+  const saved = await api.captures.confirm(captureId, [formToConfirm(form, itemId, tz)], keepRecording)
+  const made = saved.items.find((i) => i.id === itemId)
+  const target: { itemType: ItemType; id: string } | null = made?.resultingTaskId
+    ? { itemType: 'Task', id: made.resultingTaskId }
+    : made?.resultingAppointmentId
+      ? { itemType: 'Appointment', id: made.resultingAppointmentId }
+      : made?.resultingNoteId
+        ? { itemType: 'Note', id: made.resultingNoteId }
+        : null
+  const open = proposals.filter((p) => saved.items.some((i) => i.id === p.id && i.status === 'PendingReview'))
+  if (target && open.length) {
+    await api.captures.confirm(
+      captureId,
+      open.map((p) => ({ ...confirmEntry({ captureId, item: p }, true), intent: INTENT[target.itemType], appendToType: target.itemType, appendToId: target.id, linkOnly: true })),
+    )
+  }
+  return saved
+}
+
+/** Cancel the review: the proposal and the form's own changes are all rejected. */
+export async function discardReviewForm(api: Api, captureId: string, itemId: string, proposals: CaptureItem[], form: ItemForm, tz: string) {
+  await api.captures.confirm(captureId, [
+    { ...formToConfirm(form, itemId, tz), include: false },
+    ...proposals.map((p) => confirmEntry({ captureId, item: p }, false)),
+  ])
+}

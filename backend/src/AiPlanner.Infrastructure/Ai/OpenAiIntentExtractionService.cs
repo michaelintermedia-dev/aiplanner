@@ -179,6 +179,14 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             if (m.Kind == MediaInputKind.Image) parts.Add(new JsonObject { ["type"] = "text", ["text"] = $"Attached photo «{m.FileName}»:" });
             parts.Add(OpenAiMediaParts.Part(m));
         }
+        // Last, so it outweighs the habit of answering in English (user's rule, checked live:
+        // a plain photo got a Russian label and an English title and description).
+        parts.Add(new JsonObject
+        {
+            ["type"] = "text",
+            ["text"] = $"(Language of the title, summary and description: for a picture with no writing in it - a plain photo - {OpenAiMediaParts.AppLanguage(c.Locale)}; " +
+                "for a document or a picture with writing, the language of that writing. My own words above, if any, decide the title's language.)",
+        });
         return parts;
     }
 

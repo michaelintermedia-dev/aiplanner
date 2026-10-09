@@ -454,6 +454,8 @@ public class CaptureService : ICaptureService
                     : i)
                 .ToList(),
         };
+        // A short message stays whole in the title, never cut into title + a scrap (a new entry only).
+        if (currentItem is null && wordsForAi != "") normalized = ShortMessage.Fix(normalized, text);
         // Only files, no words: the titles say what kind of file it is ("Photo: ...").
         if (wordsForAi == "" && media is { Count: > 0 })
         {

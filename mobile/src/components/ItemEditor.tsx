@@ -100,7 +100,11 @@ export function ItemEditor({
   const sent = useRef<ItemForm | null>(null)
   // Save stopped: the item was changed somewhere else meanwhile.
   const [conflict, setConflict] = useState(false)
-  const capture = useQuery({ queryKey: ['capture', captureId], queryFn: () => capturesApi.get(captureId!), enabled: !!captureId })
+  // The capture whose recording the form plays - also one made on the first addition to an item made by hand.
+  const [captureRef, setCaptureRef] = useState<string | null>(captureId)
+  const capture = useQuery({ queryKey: ['capture', captureRef], queryFn: () => capturesApi.get(captureRef!), enabled: !!captureRef })
+  // Voice was just added: the recording plays it already, but it's only kept on Save.
+  const [addedVoice, setAddedVoice] = useState(false)
 
   const dirty = formChanged(form, saved) || proposals.length > 0 || deleteRecording || removeMedia.length > 0 || pendingMedia.length > 0
 
@@ -143,6 +147,11 @@ export function ItemEditor({
     })
     setClarifications(fresh.map((p) => p.clarification).filter((x): x is string => !!x))
     resolvedCapture.current = result.id
+    // Before Save, hear the whole recording - the earlier parts and the one just added
+    // (the server joins it on at once; Cancel takes it back out).
+    if (result.audioParts > (capture.data?.audioParts ?? 0)) setAddedVoice(true)
+    queryClient.setQueryData(['capture', result.id], result)
+    setCaptureRef(result.id)
   }
 
   const problems = formProblems(form)
@@ -161,7 +170,7 @@ export function ItemEditor({
         force: force || isMoved(current),
         tz: zone.timeZone,
         proposals,
-        deleteRecordingOf: deleteRecording ? captureId : null,
+        deleteRecordingOf: deleteRecording ? captureRef : null,
         media:
           pendingMedia.length || removeMedia.length
             ? (target) =>
@@ -173,7 +182,7 @@ export function ItemEditor({
       })
       editDrafts.clear(item.id)
       // The recording is gone: don't let the item's page fetch it from the stale capture (404s).
-      if (deleteRecording && captureId) queryClient.setQueryData<Capture>(['capture', captureId], (c) => c && { ...c, audioParts: 0 })
+      if (deleteRecording && captureRef) queryClient.setQueryData<Capture>(['capture', captureRef], (c) => c && { ...c, audioParts: 0 })
       // The old item is gone after a type change: refresh everything but it (it would 404).
       const gone = isMoved(result) ? [DETAIL_KEY[item.itemType], item.id] : null
       void queryClient.invalidateQueries({ predicate: (q) => !gone || q.queryKey[0] !== gone[0] || q.queryKey[1] !== gone[1] })
@@ -272,7 +281,7 @@ export function ItemEditor({
         onRemoved={(ids) => setDraft((d) => ({ ...d, removeMedia: ids }))}
       />
 
-      {recording && captureId && (
+      {recording && captureRef && (
         <View style={[styles.section, { borderTopColor: c.border }]}>
           <Text style={{ color: c.text, fontWeight: '600' }}>{t('form.recording')}</Text>
           {deleteRecording ? (
@@ -282,7 +291,8 @@ export function ItemEditor({
             </View>
           ) : (
             <>
-              <RecordingPlayer captureId={captureId} parts={recording.audioParts} />
+              <RecordingPlayer captureId={captureRef} parts={recording.audioParts} />
+              {addedVoice && <Text style={{ color: c.muted, fontSize: 13 }}>{t('form.recordingAddedNotSaved')}</Text>}
               <Button title={t('source.deleteAudio')} variant="danger" onPress={() => setDraft((d) => ({ ...d, deleteRecording: true }))} />
             </>
           )}

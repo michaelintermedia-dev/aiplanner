@@ -552,6 +552,10 @@ Local dev notes:
   details that lost the old text or the new words get both back. A new
   "Add more" on an item rejects earlier unsaved ones of that capture, and the
   review shows only the item's own proposal (`reviewItems`).
+  Before Save the Edit page's player plays the whole recording incl. the part just
+  added (the continue result goes into the ['capture', id] query; "kept only if
+  you press Save"); Cancel takes it out again (TakeBack). A short message (<= 8
+  words) is never cut into title + a scrap (prompt + `ShortMessage.Fix`, tested).
   A note takes everything said - nothing is ever split off it (user's rule,
   2026-10-10; prompt + `ContinuedItem.Keep` clears `Unrelated` for notes); for
   tasks/events more about the same thing is never unrelated either.

@@ -445,6 +445,7 @@ export const ru: Messages = {
   'form.aiFilled': 'Заполнено по вашим словам — проверьте отмеченные поля.',
   'form.changedByAi': 'Изменено по вашим словам',
   'form.recording': 'Запись',
+  'form.recordingAddedNotSaved': 'Здесь уже то, что вы только что добавили - оно сохранится, только если нажать «Сохранить».',
   'form.recordingWillBeDeleted': 'Запись будет удалена при сохранении.',
   'form.talk': 'Сказать об этом',
   'form.talkHint': 'Открывает редактирование и начинает запись',

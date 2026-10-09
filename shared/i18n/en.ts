@@ -449,6 +449,7 @@ export const en = {
   'form.aiFilled': 'Filled in from what you said - check the marked fields.',
   'form.changedByAi': 'Changed from what you said',
   'form.recording': 'Recording',
+  'form.recordingAddedNotSaved': 'Includes what you just added - it is kept only if you press Save.',
   'form.recordingWillBeDeleted': 'The recording will be deleted when you save.',
   'form.talk': 'Talk about it',
   'form.talkHint': 'Opens Edit and starts recording',

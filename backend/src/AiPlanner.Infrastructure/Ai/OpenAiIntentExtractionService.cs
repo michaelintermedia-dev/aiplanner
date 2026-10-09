@@ -120,6 +120,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
 
             Other fields:
             - "title": short and action-oriented (at most ~6 words), e.g. "Prepare proposal", "Meet Sarah". Write every title, summary and clarification in the same language the user used.
+            - A short message (a few words: "call Anna about the trip", "wifi code 1234") is never cut in two: the title is the whole message and "description" is null. Whenever "description" is used, it must be complete and make sense on its own - never a leftover piece of the message like "about the trip" or "1234".
             - "priority": "high", "medium" or "low" only if stated or clearly implied (urgent, ASAP, important); otherwise null.
             - "reminders": [] unless the user asks to be reminded. One object per reminder ("remind me at 3 and at 4" = two), each with "kind":
               - "before": relative to the item's own time; "minutesBefore" = 0 for "at the time", 30 for "30 minutes before".

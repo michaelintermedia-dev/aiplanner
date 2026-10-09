@@ -445,6 +445,7 @@ export const he: Messages = {
   'form.aiFilled': 'מולא לפי מה שאמרתם - בדקו את השדות המסומנים.',
   'form.changedByAi': 'שונה לפי מה שאמרתם',
   'form.recording': 'הקלטה',
+  'form.recordingAddedNotSaved': 'כולל את מה שהוספתם עכשיו - זה יישמר רק אם תלחצו על שמירה.',
   'form.recordingWillBeDeleted': 'ההקלטה תימחק בשמירה.',
   'form.talk': 'לדבר על זה',
   'form.talkHint': 'פותח עריכה ומתחיל להקליט',

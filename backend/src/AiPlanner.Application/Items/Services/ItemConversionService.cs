@@ -117,11 +117,11 @@ public class ItemConversionService : IItemConversionService
             {
                 var due = r.DueUtc ?? s.WhenUtc;
                 var hasTime = due is not null && (r.HasDueTime ?? (r.DueUtc is null ? s.HasTime : true));
-                // A task has no location field: keep it in the details.
-                var details = JoinText(s.Details, s.Location is null ? null : $"Location: {s.Location}");
+                // Every type has the same attributes (user's call, 2026-10-09): place, people, priority carry over as they are.
                 var created = await _tasks.CreateAsync(new CreateTaskRequest(
-                    s.Title, details, s.Notes, StartDateUtc: null, due, hasTime, TaskPriority.None, IsOngoing: false,
-                    Reminders(s, targetHasTime: due is not null && hasTime), Tags: s.Tags, Recurrence: due is null ? null : s.Recurrence), ct);
+                    s.Title, s.Details, s.Notes, StartDateUtc: null, due, hasTime, s.Priority, IsOngoing: false,
+                    Reminders(s, targetHasTime: due is not null && hasTime), Tags: s.Tags, Recurrence: due is null ? null : s.Recurrence,
+                    Location: s.Location, People: s.People), ct);
                 return (created.Succeeded ? Result<Guid>.Success(created.Value!.Id) : Result<Guid>.Failure(created.Errors.ToArray()), false);
             }
             case "Appointment":
@@ -134,15 +134,15 @@ public class ItemConversionService : IItemConversionService
                     : UserTimeZoneHelper.LocalToUtc(UserTimeZoneHelper.TodayInTimeZone(zone, _clock.UtcNow).AddDays(1).ToDateTime(DefaultEventTime), zone);
                 var end = r.EndUtc ?? (s.EndUtc is { } e && e > start ? e : start.Value + DefaultEventLength);
                 var created = await _appointments.CreateAsync(new CreateAppointmentRequest(
-                    s.Title, s.Details, s.Notes, start.Value, end, s.Location, ParticipantNames: null,
-                    Reminders(s, targetHasTime: true), s.Recurrence, s.Tags), ct);
+                    s.Title, s.Details, s.Notes, start.Value, end, s.Location, ParticipantNames: s.People,
+                    Reminders(s, targetHasTime: true), s.Recurrence, s.Tags, s.Priority), ct);
                 return (created.Succeeded ? Result<Guid>.Success(created.Value!.Id) : Result<Guid>.Failure(created.Errors.ToArray()), guessed);
             }
             default:
             {
-                var content = JoinText(s.Details, s.Notes, s.Location is null ? null : $"Location: {s.Location}");
+                var content = JoinText(s.Details, s.Notes);
                 var created = await _notes.CreateAsync(new SaveNoteRequest(
-                    s.Title, content ?? s.Title, Reminders(s, targetHasTime: false), s.Tags), ct);
+                    s.Title, content ?? s.Title, Reminders(s, targetHasTime: false), s.Tags, s.Priority, s.Location, s.People), ct);
                 return (created.Succeeded ? Result<Guid>.Success(created.Value!.Id) : Result<Guid>.Failure(created.Errors.ToArray()), false);
             }
         }
@@ -167,7 +167,8 @@ public class ItemConversionService : IItemConversionService
     private sealed record Source(
         Guid Id, string Title, string? Details, string? Notes, DateTime? WhenUtc, bool HasTime, DateTime? EndUtc,
         string? Location, Guid? SourceCaptureId, DateTime CreatedAtUtc, IReadOnlyList<ReminderDto> Reminders, Action Delete,
-        RecurrenceDto? Recurrence = null, IReadOnlyList<string>? Tags = null);
+        RecurrenceDto? Recurrence = null, IReadOnlyList<string>? Tags = null,
+        TaskPriority Priority = TaskPriority.None, IReadOnlyList<string>? People = null);
 
     private async Task<Source?> LoadAsync(Guid userId, string type, Guid id, CancellationToken ct)
     {
@@ -177,17 +178,18 @@ public class ItemConversionService : IItemConversionService
             {
                 var t = await _db.TaskItems.Include(x => x.Reminders).Include(x => x.RecurrenceRule).Include(x => x.TaskTags).ThenInclude(x => x.Tag).FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId, ct);
                 return t is null ? null : new Source(
-                    t.Id, t.Title, t.Description, t.Notes, t.DueDateUtc, t.HasDueTime, null, null, t.SourceAiExtractionId, t.CreatedAtUtc,
+                    t.Id, t.Title, t.Description, t.Notes, t.DueDateUtc, t.HasDueTime, null, t.Location, t.SourceAiExtractionId, t.CreatedAtUtc,
                     ReminderPlanner.ToDtos(t.Reminders), () => { t.IsDeleted = true; ReminderPlanner.TurnOff(t.Reminders); },
-                    RecurrencePlanner.ToDto(t.RecurrenceRule), t.TaskTags.Select(x => x.Tag.Name).ToList());
+                    RecurrencePlanner.ToDto(t.RecurrenceRule), t.TaskTags.Select(x => x.Tag.Name).ToList(), t.Priority, t.People);
             }
             case "Appointment":
             {
-                var a = await _db.Appointments.Include(x => x.Reminders).Include(x => x.RecurrenceRule).Include(x => x.AppointmentTags).ThenInclude(x => x.Tag).FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId, ct);
+                var a = await _db.Appointments.Include(x => x.Reminders).Include(x => x.RecurrenceRule).Include(x => x.Participants).Include(x => x.AppointmentTags).ThenInclude(x => x.Tag).FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId, ct);
                 return a is null ? null : new Source(
                     a.Id, a.Title, a.Description, a.Notes, a.StartUtc, true, a.EndUtc, a.Location, a.SourceAiExtractionId, a.CreatedAtUtc,
                     ReminderPlanner.ToDtos(a.Reminders), () => { a.IsDeleted = true; ReminderPlanner.TurnOff(a.Reminders); },
-                    RecurrencePlanner.ToDto(a.RecurrenceRule), a.AppointmentTags.Select(x => x.Tag.Name).ToList());
+                    RecurrencePlanner.ToDto(a.RecurrenceRule), a.AppointmentTags.Select(x => x.Tag.Name).ToList(), a.Priority,
+                    a.Participants.Select(p => p.Name).ToList());
             }
             default:
             {
@@ -197,9 +199,9 @@ public class ItemConversionService : IItemConversionService
                 var title = n.Title ?? Shorten(n.Content);
                 var details = n.Title is null && title == n.Content ? null : n.Content;
                 return new Source(
-                    n.Id, title, details, null, null, false, null, null, n.SourceAiExtractionId, n.CreatedAtUtc,
+                    n.Id, title, details, null, null, false, null, n.Location, n.SourceAiExtractionId, n.CreatedAtUtc,
                     ReminderPlanner.ToDtos(n.Reminders), () => { n.IsDeleted = true; ReminderPlanner.TurnOff(n.Reminders); },
-                    Tags: n.NoteTags.Select(x => x.Tag.Name).ToList());
+                    Tags: n.NoteTags.Select(x => x.Tag.Name).ToList(), Priority: n.Priority, People: n.People);
             }
         }
     }

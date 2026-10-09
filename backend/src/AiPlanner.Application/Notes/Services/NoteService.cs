@@ -1,3 +1,4 @@
+using AiPlanner.Domain.Enums;
 using AiPlanner.Application.Common.Interfaces;
 using AiPlanner.Application.Tags;
 using AiPlanner.Application.Common.Models;
@@ -51,6 +52,9 @@ public class NoteService : INoteService
             UserId = RequireUserId(),
             Title = string.IsNullOrWhiteSpace(request.Title) ? null : request.Title.Trim(),
             Content = request.Content.Trim(),
+            Priority = request.Priority ?? TaskPriority.None,
+            Location = string.IsNullOrWhiteSpace(request.Location) ? null : request.Location.Trim(),
+            People = CleanPeople(request.People) ?? [],
         };
         _db.Notes.Add(note);
         await ApplyTagsAsync(note, request.Tags ?? [], ct);
@@ -69,6 +73,10 @@ public class NoteService : INoteService
 
         note.Title = string.IsNullOrWhiteSpace(request.Title) ? null : request.Title.Trim();
         note.Content = request.Content.Trim();
+        if (request.Priority is { } priority) note.Priority = priority;
+        // Null: unchanged (an older app doesn't know notes have a place); "" clears it.
+        if (request.Location is not null) note.Location = string.IsNullOrWhiteSpace(request.Location) ? null : request.Location.Trim();
+        if (CleanPeople(request.People) is { } people) note.People = people;
         await ApplyTagsAsync(note, request.Tags, ct);
         await SetRemindersAsync(note, request.Reminders, ct);
         await _db.SaveChangesAsync(ct);
@@ -104,7 +112,14 @@ public class NoteService : INoteService
 
     private static NoteDto ToDto(Note n) =>
         new(n.Id, n.Title, n.Content, n.AiSummary, n.SourceAiExtractionId, ReminderPlanner.ToDtos(n.Reminders), n.CreatedAtUtc, n.UpdatedAtUtc,
-            n.NoteTags.Select(nt => nt.Tag.Name).OrderBy(x => x).ToList());
+            n.NoteTags.Select(nt => nt.Tag.Name).OrderBy(x => x).ToList(),
+            n.Priority,
+            n.Location,
+            n.People);
+
+    /// <summary>The names as kept: trimmed, no empties or repeats (null stays null: "unchanged").</summary>
+    private static List<string>? CleanPeople(IReadOnlyList<string>? names) =>
+        names?.Select(x => x.Trim()).Where(x => x.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).Take(50).ToList();
 
     private Task ApplyTagsAsync(Note note, IReadOnlyList<string>? names, CancellationToken ct) =>
         TagSync.ApplyAsync(_db, note.UserId, note.NoteTags, names, tag => new NoteTag { Note = note, Tag = tag }, ct);

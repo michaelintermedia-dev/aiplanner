@@ -102,7 +102,9 @@ public class TaskService : ITaskService
             DueDateUtc = request.DueDateUtc,
             HasDueTime = request.HasDueTime,
             Priority = request.Priority,
-            Status = DetermineInitialStatus(request.IsOngoing, request.DueDateUtc)
+            Status = DetermineInitialStatus(request.IsOngoing, request.DueDateUtc),
+            Location = Clean(request.Location),
+            People = CleanPeople(request.People) ?? [],
         };
 
         await ApplyTagsAsync(task, request.Tags, ct);
@@ -132,6 +134,9 @@ public class TaskService : ITaskService
         task.DueDateUtc = request.DueDateUtc;
         task.HasDueTime = request.HasDueTime;
         task.Priority = request.Priority;
+        // Null: unchanged (an older app doesn't know tasks have a place); "" clears it.
+        if (request.Location is not null) task.Location = Clean(request.Location);
+        if (CleanPeople(request.People) is { } people) task.People = people;
 
         // Only move between the "open" statuses here; Complete/Cancel/Reopen
         // are explicit actions so a plain field edit can never silently
@@ -319,5 +324,13 @@ public class TaskService : ITaskService
         t.UpdatedAtUtc,
         ReminderPlanner.ToDtos(t.Reminders),
         t.SourceAiExtractionId,
-        RecurrencePlanner.ToDto(t.RecurrenceRule));
+        RecurrencePlanner.ToDto(t.RecurrenceRule),
+        t.Location,
+        t.People);
+
+    private static string? Clean(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+
+    /// <summary>The names as kept: trimmed, no empties or repeats (null stays null: "unchanged").</summary>
+    private static List<string>? CleanPeople(IReadOnlyList<string>? names) =>
+        names?.Select(n => n.Trim()).Where(n => n.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).Take(50).ToList();
 }

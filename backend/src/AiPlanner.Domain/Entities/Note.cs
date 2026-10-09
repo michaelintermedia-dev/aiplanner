@@ -1,4 +1,5 @@
 using AiPlanner.Domain.Common;
+using AiPlanner.Domain.Enums;
 
 namespace AiPlanner.Domain.Entities;
 
@@ -7,6 +8,11 @@ public class Note : BaseEntity
     public string? Title { get; set; }
     public string Content { get; set; } = default!;
     public string? AiSummary { get; set; }
+
+    // Every type has the same attributes (user's call, 2026-10-09): priority, a place, people.
+    public TaskPriority Priority { get; set; } = TaskPriority.None;
+    public string? Location { get; set; }
+    public List<string> People { get; set; } = [];
 
     public Guid? SourceAiExtractionId { get; set; }
     public AIExtraction? SourceAiExtraction { get; set; }

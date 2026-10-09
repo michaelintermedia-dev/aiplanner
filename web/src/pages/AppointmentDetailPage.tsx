@@ -17,7 +17,7 @@ import { SourceCapture } from '../components/SourceCapture'
 import { describeReminder } from '@shared/reminders'
 import { useAction } from '../lib/useAction'
 import { t } from '@shared/i18n'
-import { statusLabel } from '@shared/labels'
+import { priorityLabel, statusLabel } from '@shared/labels'
 
 export function AppointmentDetailPage() {
   const { id = '' } = useParams()
@@ -77,6 +77,9 @@ export function AppointmentDetailPage() {
                 <span className="badge status-passed">{t('status.passed')}</span>
               ) : (
                 <span className={`badge status-${appt.status.toLowerCase()}`}>{statusLabel(appt.status)}</span>
+              )}
+              {appt.priority && appt.priority !== 'None' && (
+                <span className={`badge prio-${appt.priority.toLowerCase()}`}>{t('task.priorityBadge', { priority: priorityLabel(appt.priority) })}</span>
               )}
               {appt.tags?.map((tag) => (
                 <span key={tag} className="tag">#{tag}</span>

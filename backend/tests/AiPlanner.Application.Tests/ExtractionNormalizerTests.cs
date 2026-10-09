@@ -297,14 +297,14 @@ public class ExtractionNormalizerTests
     }
 
     [Fact]
-    public void Notes_without_a_reminder_carry_no_dates_or_locations()
+    public void Notes_carry_no_dates_but_keep_a_place()
     {
         var item = Normalize(Item(intent: "note", date: "2026-10-01", time: "10:00", location: "Office"));
 
         item.DueUtc.Should().BeNull();
         item.StartUtc.Should().BeNull();
         item.HasTime.Should().BeFalse();
-        item.Location.Should().BeNull();
+        item.Location.Should().Be("Office", "every type can have a place (2026-10-09)");
         item.Reminders.Should().BeEmpty();
     }
 

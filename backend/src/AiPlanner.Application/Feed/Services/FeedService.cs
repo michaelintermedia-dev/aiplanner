@@ -57,6 +57,7 @@ public class FeedService : IFeedService
                 var key = Attachment.SearchKey(text);
                 q = q.Where(t => t.Title.ToLower().Contains(text) || (t.Description != null && t.Description.ToLower().Contains(text))
                     || (t.Notes != null && t.Notes.ToLower().Contains(text)) || t.TaskTags.Any(tt => tt.Tag.Name.ToLower().Contains(text))
+                    || (t.Location != null && t.Location.ToLower().Contains(text)) || t.People.Any(p => p.ToLower().Contains(text))
                     || _db.Attachments.Any(x => x.ItemId == t.Id && (key.Length > 0 && x.SearchText.Contains(key)))
                     // ...and the words it was captured from (typed or said)
                     || (t.SourceAiExtraction != null && ((t.SourceAiExtraction.RawInputText != null && t.SourceAiExtraction.RawInputText.ToLower().Contains(text)) || (t.SourceAiExtraction.Transcript != null && t.SourceAiExtraction.Transcript.Text.ToLower().Contains(text)))));
@@ -119,7 +120,7 @@ public class FeedService : IFeedService
             if (f.DateToUtc is { } dTo) q = q.Where(a => a.StartUtc < dTo);
             if (f.FromVoice) q = q.Where(a => a.SourceAiExtraction != null && a.SourceAiExtraction.TranscriptId != null);
             if (tags.Count > 0) q = q.Where(a => a.AppointmentTags.Any(at => tags.Contains(at.Tag.Name)));
-            var rows = await q.Select(a => new { a.Id, a.CreatedAtUtc, a.UpdatedAtUtc, a.StartUtc, Repeats = a.RecurrenceRuleId != null }).ToListAsync(ct);
+            var rows = await q.Select(a => new { a.Id, a.CreatedAtUtc, a.UpdatedAtUtc, a.StartUtc, Repeats = a.RecurrenceRuleId != null, High = a.Priority == TaskPriority.High }).ToListAsync(ct);
 
             // A repeating event is dated by its next occurrence (sorting, "Today", date filters).
             var next = await NextOccurrencesAsync(userId, rows.Where(r => r.Repeats).Select(r => r.Id).ToList(), now, ct);
@@ -134,7 +135,7 @@ public class FeedService : IFeedService
                     if (f.DateFromUtc is { } from && date < from) continue;
                     if (f.DateToUtc is { } to && date >= to) continue;
                 }
-                keys.Add(new FeedKeyRow(r.Id, FeedKind.Appointment, r.CreatedAtUtc, r.UpdatedAtUtc, date));
+                keys.Add(new FeedKeyRow(r.Id, FeedKind.Appointment, r.CreatedAtUtc, r.UpdatedAtUtc, date, r.High));
             }
         }
         if (Wants(FeedKind.Note))
@@ -145,6 +146,7 @@ public class FeedService : IFeedService
                 var key = Attachment.SearchKey(text);
                 q = q.Where(n => (n.Title != null && n.Title.ToLower().Contains(text)) || n.Content.ToLower().Contains(text)
                     || n.NoteTags.Any(nt => nt.Tag.Name.ToLower().Contains(text))
+                    || (n.Location != null && n.Location.ToLower().Contains(text)) || n.People.Any(p => p.ToLower().Contains(text))
                     || _db.Attachments.Any(x => x.ItemId == n.Id && (key.Length > 0 && x.SearchText.Contains(key)))
                     || (n.SourceAiExtraction != null && ((n.SourceAiExtraction.RawInputText != null && n.SourceAiExtraction.RawInputText.ToLower().Contains(text)) || (n.SourceAiExtraction.Transcript != null && n.SourceAiExtraction.Transcript.Text.ToLower().Contains(text)))));
             }
@@ -160,7 +162,7 @@ public class FeedService : IFeedService
             };
             if (f.FromVoice) q = q.Where(n => n.SourceAiExtraction != null && n.SourceAiExtraction.TranscriptId != null);
             if (tags.Count > 0) q = q.Where(n => n.NoteTags.Any(nt => tags.Contains(nt.Tag.Name)));
-            keys.AddRange(await q.Select(n => new FeedKeyRow(n.Id, FeedKind.Note, n.CreatedAtUtc, n.UpdatedAtUtc, (DateTime?)null)).ToListAsync(ct));
+            keys.AddRange(await q.Select(n => new FeedKeyRow(n.Id, FeedKind.Note, n.CreatedAtUtc, n.UpdatedAtUtc, (DateTime?)null, n.Priority == TaskPriority.High)).ToListAsync(ct));
         }
 
         var (page, nextCursor) = FeedPager.Page(keys, query.Sorts, query.Cursor, query.Take);
@@ -176,7 +178,7 @@ public class FeedService : IFeedService
                 .Where(t => t.UserId == userId && taskIds.Contains(t.Id))
                 .Select(t => new
                 {
-                    t.Id, t.Title, t.Description, t.Status, t.DueDateUtc, t.HasDueTime, t.Priority,
+                    t.Id, t.Title, t.Description, t.Status, t.DueDateUtc, t.HasDueTime, t.Priority, t.Location,
                     Repeats = t.RecurrenceRuleId != null,
                     Tags = t.TaskTags.Select(tt => tt.Tag.Name).ToList(),
                     t.SourceAiExtractionId, t.CreatedAtUtc, t.UpdatedAtUtc,
@@ -187,7 +189,7 @@ public class FeedService : IFeedService
                 details[t.Id] = new FeedItemDto(
                     t.Id, FeedKind.Task, t.Title, Snippet(t.Description), t.Status.ToString(), t.DueDateUtc, null,
                     t.DueDateUtc is not null && t.HasDueTime,
-                    t.Priority == Domain.Enums.TaskPriority.None ? null : t.Priority.ToString(), null,
+                    t.Priority == Domain.Enums.TaskPriority.None ? null : t.Priority.ToString(), t.Location,
                     t.Tags.OrderBy(n => n).ToList(), t.SourceAiExtractionId is not null, t.CreatedAtUtc, t.UpdatedAtUtc,
                     Repeats: t.Repeats);
             }
@@ -200,7 +202,7 @@ public class FeedService : IFeedService
                 .Where(a => a.UserId == userId && appointmentIds.Contains(a.Id))
                 .Select(a => new
                 {
-                    a.Id, a.Title, a.Description, a.Status, a.StartUtc, a.EndUtc, a.Location, a.SourceAiExtractionId, a.CreatedAtUtc, a.UpdatedAtUtc,
+                    a.Id, a.Title, a.Description, a.Status, a.StartUtc, a.EndUtc, a.Location, a.Priority, a.SourceAiExtractionId, a.CreatedAtUtc, a.UpdatedAtUtc,
                     Repeats = a.RecurrenceRuleId != null,
                     Tags = a.AppointmentTags.Select(at => at.Tag.Name).ToList(),
                 })
@@ -212,7 +214,7 @@ public class FeedService : IFeedService
                 var (start, end) = a.Repeats && nextOnPage.TryGetValue(a.Id, out var n) && n is { } o ? (o.Start, o.End) : (a.StartUtc, a.EndUtc);
                 details[a.Id] = new FeedItemDto(
                     a.Id, FeedKind.Appointment, a.Title, Snippet(a.Description), a.Status.ToString(), start, end,
-                    true, null, a.Location, a.Tags.OrderBy(t => t).ToList(), a.SourceAiExtractionId is not null, a.CreatedAtUtc, a.UpdatedAtUtc,
+                    true, a.Priority == Domain.Enums.TaskPriority.None ? null : a.Priority.ToString(), a.Location, a.Tags.OrderBy(t => t).ToList(), a.SourceAiExtractionId is not null, a.CreatedAtUtc, a.UpdatedAtUtc,
                     Repeats: a.Repeats);
             }
         }
@@ -222,7 +224,7 @@ public class FeedService : IFeedService
         {
             var notes = await _db.Notes.AsNoTracking()
                 .Where(n => n.UserId == userId && noteIds.Contains(n.Id))
-                .Select(n => new { n.Id, n.Title, n.Content, n.SourceAiExtractionId, n.CreatedAtUtc, n.UpdatedAtUtc, Tags = n.NoteTags.Select(nt => nt.Tag.Name).ToList() })
+                .Select(n => new { n.Id, n.Title, n.Content, n.Priority, n.Location, n.SourceAiExtractionId, n.CreatedAtUtc, n.UpdatedAtUtc, Tags = n.NoteTags.Select(nt => nt.Tag.Name).ToList() })
                 .ToListAsync(ct);
             foreach (var n in notes)
             {
@@ -230,7 +232,8 @@ public class FeedService : IFeedService
                 var title = string.IsNullOrWhiteSpace(n.Title) ? Snippet(n.Content, 80)! : n.Title;
                 var snippet = n.Title is not null && n.Title != n.Content ? Snippet(n.Content) : null;
                 details[n.Id] = new FeedItemDto(
-                    n.Id, FeedKind.Note, title, snippet, null, null, null, false, null, null, n.Tags.OrderBy(t => t).ToList(),
+                    n.Id, FeedKind.Note, title, snippet, null, null, null, false,
+                    n.Priority == Domain.Enums.TaskPriority.None ? null : n.Priority.ToString(), n.Location, n.Tags.OrderBy(t => t).ToList(),
                     n.SourceAiExtractionId is not null, n.CreatedAtUtc, n.UpdatedAtUtc);
             }
         }

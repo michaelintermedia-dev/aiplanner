@@ -90,6 +90,8 @@ export default function TaskDetailScreen() {
           <Facts
             rows={[
               [t('task.due'), task.dueDateUtc ? formatDue(task.dueDateUtc, task.hasDueTime, zone) : task.status === 'Ongoing' ? t('task.ongoingNoDeadline') : t('task.noDueDate')],
+              ...(task.location ? [[t('event.where'), task.location] as [string, string]] : []),
+              ...(task.people?.length ? [[t('event.with'), task.people.join(', ')] as [string, string]] : []),
               [t('filter.reminders'), task.reminders?.length ? task.reminders.map((r) => describeReminder(r, zone)).join(' · ') : t('item.none')],
               ...(task.recurrence ? [[t('repeat.repeats'), describeRecurrence(task.recurrence, zone)] as [string, string]] : []),
               // A repeating task stays open: this is when it was last done.

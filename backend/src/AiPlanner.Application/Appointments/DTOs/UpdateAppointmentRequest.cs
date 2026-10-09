@@ -1,3 +1,4 @@
+using AiPlanner.Domain.Enums;
 using AiPlanner.Application.Recurrence;
 using AiPlanner.Application.Reminders;
 
@@ -14,4 +15,6 @@ public record UpdateAppointmentRequest(
     IReadOnlyList<ReminderDto>? Reminders,
     RecurrenceDto? Recurrence = null,
     /// <summary>Its tags (null: unchanged; [] clears them).</summary>
-    IReadOnlyList<string>? Tags = null);
+    IReadOnlyList<string>? Tags = null,
+    /// <summary>Null: unchanged.</summary>
+    TaskPriority? Priority = null);

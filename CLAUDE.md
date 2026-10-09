@@ -328,6 +328,20 @@ Local dev notes:
   `INTENT_OPTIONS` in `shared/captureDraft.ts`) plus editable dates,
   time, priority, reminder and details, so the user can turn anything into
   anything and fill in what's missing before saving.
+- **Every type has the same attributes** (user's call, 2026-10-09): priority,
+  place, people, reminders, tags, media, one text field - on tasks, events and
+  notes. What differs: an event has its time slot (required), a task can be
+  done and has an optional deadline ("ongoing" = none); notes have no date.
+  `TaskItem.Location/People` (text[]), `Note.Priority/Location/People`,
+  `Appointment.Priority` (events keep their `Participants` rows). Updates from
+  an older app don't wipe them: priority/people null = unchanged, and a task's
+  or note's place too (the new apps send "" to clear it). "Details" + "Notes"
+  became one text (migration UniformItemAttributes moved Notes into
+  Description; the Notes columns are unused). Type changes carry all of it
+  over in its field (no more "Location: ..." folded into the text). Feed: "High
+  priority first" and the priority/place row badges for every type; search
+  covers a task's/note's place and people. Next step planned: Archive for every
+  type; later maybe one item table (type = a field).
 - **The review of a new entry IS the Edit form** (user's call, 2026-10-09,
   web + mobile): `EntryReview` shows the AI's proposal (`formFromProposal`) in
   the same `ItemFields` the Edit page uses (one component, so they can't drift)

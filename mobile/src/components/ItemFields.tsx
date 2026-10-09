@@ -103,15 +103,16 @@ export function ItemFields({
           <Text style={{ color: c.warn, fontSize: 13 }}>{t('event.endsNextDay')}</Text>
         )}
 
-        {form.type === 'Task' && (
-          <View style={[s.chips, ring('priority')]}>
-            <CycleChip
-              values={PRIORITIES}
-              value={form.priority}
-              onChange={(priority) => set({ priority })}
-              label={(p) => (p === 'None' ? t('task.noPriority') : t('task.priorityBadge', { priority: priorityLabel(p) }))}
-              highlight={(p) => p !== 'None'}
-            />
+        {/* Every type has the same attributes (user's call, 2026-10-09): priority, place, people. */}
+        <View style={[s.chips, ring('priority')]}>
+          <CycleChip
+            values={PRIORITIES}
+            value={form.priority}
+            onChange={(priority) => set({ priority })}
+            label={(p) => (p === 'None' ? t('task.noPriority') : t('task.priorityBadge', { priority: priorityLabel(p) }))}
+            highlight={(p) => p !== 'None'}
+          />
+          {form.type === 'Task' && (
             <CycleChip
               values={[false, true]}
               value={form.ongoing}
@@ -119,19 +120,15 @@ export function ItemFields({
               label={(o) => (o ? `${t('today.ongoing')} ✓` : t('today.ongoing'))}
               highlight={(o) => o}
             />
-          </View>
-        )}
-        {form.type === 'Appointment' && (
-          <>
-            <Field label={t('event.location')} value={form.location} onChangeText={(location) => set({ location })} changed={marked('location')} />
-            <Field
-              label={`${t('event.with')} ${t('item.commaSeparated')}`}
-              value={form.people}
-              onChangeText={(people) => set({ people })}
-              changed={marked('people')}
-            />
-          </>
-        )}
+          )}
+        </View>
+        <Field label={t('event.location')} value={form.location} onChangeText={(location) => set({ location })} changed={marked('location')} />
+        <Field
+          label={`${t('event.with')} ${t('item.commaSeparated')}`}
+          value={form.people}
+          onChangeText={(people) => set({ people })}
+          changed={marked('people')}
+        />
 
         {form.type !== 'Note' && (
           <View style={ring('recurrence')}>
@@ -154,7 +151,6 @@ export function ItemFields({
           multiline
           changed={marked('details')}
         />
-        {!isNote && <Field label={t('item.notes')} value={form.notes} onChangeText={(notes) => set({ notes })} multiline changed={marked('notes')} />}
     </>
   )
 }

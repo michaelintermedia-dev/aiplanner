@@ -69,8 +69,9 @@ export const formFromTask = (task: Task, tz: string): ItemForm => ({
   ongoing: task.status === 'Ongoing',
   tags: task.tags,
   reminders: task.reminders ?? [],
-  details: task.description ?? '',
-  notes: task.notes ?? '',
+  details: oneText(task.description, task.notes),
+  location: task.location ?? '',
+  people: (task.people ?? []).join(', '),
   recurrence: task.recurrence ?? null,
 })
 
@@ -83,10 +84,10 @@ export const formFromAppointment = (a: Appointment, tz: string): ItemForm => ({
   endTime: timeKey(a.endUtc, tz),
   location: a.location ?? '',
   people: a.participants.map((p) => p.name).join(', '),
+  priority: a.priority ?? 'None',
   tags: a.tags ?? [],
   reminders: a.reminders ?? [],
-  details: a.description ?? '',
-  notes: a.notes ?? '',
+  details: oneText(a.description, a.notes),
   recurrence: a.recurrence ?? null,
 })
 
@@ -94,10 +95,17 @@ export const formFromNote = (n: Note): ItemForm => ({
   ...BLANK,
   type: 'Note',
   title: n.title ?? '',
+  priority: n.priority ?? 'None',
+  location: n.location ?? '',
+  people: (n.people ?? []).join(', '),
   tags: n.tags ?? [],
   reminders: n.reminders,
   details: n.content,
 })
+
+/** One text field (user's call, 2026-10-09): older items' separate "Notes" join the details. */
+const oneText = (details: string | null, notes: string | null) =>
+  [details?.trim(), notes?.trim()].filter((x): x is string => !!x).join('\n\n')
 
 /** Whether the item has its own time - what a "before" reminder counts back from. */
 export const formHasTime = (f: ItemForm) => f.type !== 'Note' && !(f.type === 'Task' && f.ongoing) && !!f.date && !!f.time
@@ -261,7 +269,7 @@ async function writeFields(api: Api, itemType: ItemType, id: string, form: ItemF
     await api.tasks.update(id, {
       title: form.title.trim(),
       description: form.details.trim() || null,
-      notes: form.notes.trim() || null,
+      notes: null, // one text field now - joined into the details
       dueDateUtc: due,
       hasDueTime: !!due && !!form.time,
       priority: form.priority,
@@ -269,18 +277,21 @@ async function writeFields(api: Api, itemType: ItemType, id: string, form: ItemF
       reminders: form.reminders,
       tags: form.tags,
       recurrence: due && !form.ongoing ? form.recurrence : null,
+      location: form.location.trim(), // "" clears it (null would mean "unchanged")
+      people: list(form.people),
     })
   } else if (itemType === 'Appointment') {
     await api.appointments.update(id, {
       title: form.title.trim(),
       description: form.details.trim() || null,
-      notes: form.notes.trim() || null,
+      notes: null, // one text field now - joined into the details
       ...eventTimes(form, tz),
       location: form.location.trim() || null,
       participantNames: list(form.people),
       reminders: form.reminders,
       recurrence: form.recurrence,
       tags: form.tags,
+      priority: form.priority,
     })
   } else {
     await api.notes.update(id, {
@@ -288,6 +299,9 @@ async function writeFields(api: Api, itemType: ItemType, id: string, form: ItemF
       content: form.details.trim() || form.title.trim(),
       reminders: form.reminders,
       tags: form.tags,
+      priority: form.priority,
+      location: form.location.trim(), // "" clears it (null would mean "unchanged")
+      people: list(form.people),
     })
   }
 }
@@ -324,8 +338,8 @@ export function applyProposal(form: ItemForm, saved: ItemForm, item: CaptureItem
     date: d.date ?? '',
     time: d.time ?? '',
     endTime: type === 'Appointment' ? (d.endTime ?? '') : saved.endTime,
-    location: type === 'Appointment' ? (d.location ?? '') : saved.location,
-    priority: type === 'Task' ? (d.priority ?? 'None') : saved.priority,
+    location: d.location ?? '',
+    priority: d.priority ?? 'None',
   }
   const next: ItemForm = { ...form }
   const changed: FormField[] = []
@@ -385,16 +399,7 @@ const join = (existing: string, addition: string) => (existing.trim() ? `${exist
  * dropped when the item has no time to count back from).
  */
 export function switchType(f: ItemForm, type: ItemType, tz: string): ItemForm {
-  // Only an event has a place and people: going elsewhere, they're kept in the text.
-  if (f.type === 'Appointment' && type !== 'Appointment' && (f.location.trim() || f.people.trim())) {
-    const lines = [
-      f.location.trim() && `${t('event.location')}: ${f.location.trim()}`,
-      f.people.trim() && `${t('event.with')}: ${f.people.trim()}`,
-    ].filter(Boolean)
-    f = { ...f, details: join(f.details, lines.join('\n')), location: '', people: '' }
-  }
-  // ...and back to an event: lines folded that way go back into their fields.
-  if (type === 'Appointment' && f.type !== 'Appointment' && !f.location.trim() && !f.people.trim()) f = unfold(f)
+  // Every type has a place, people and priority (2026-10-09): they stay in their fields.
   if (type !== 'Note' || !f.reminders.some((r) => r.kind === 'Before')) return { ...f, type }
   const at = formHasTime(f) ? new Date(zonedToUtc(f.date, f.time, tz)).getTime() : null
   return {
@@ -420,8 +425,8 @@ export function formAsAiItem(f: ItemForm, tz: string): string {
     date: f.type === 'Note' || (f.type === 'Task' && f.ongoing) ? null : f.date || null,
     time: f.type === 'Note' || (f.type === 'Task' && f.ongoing) ? null : f.time || null,
     endTime: f.type === 'Appointment' ? f.endTime || null : null,
-    location: f.type === 'Appointment' ? f.location.trim() || null : null,
-    priority: f.type === 'Task' && f.priority !== 'None' ? f.priority.toLowerCase() : null,
+    location: f.location.trim() || null,
+    priority: f.priority !== 'None' ? f.priority.toLowerCase() : null,
     reminders: f.reminders.map((r) => ({
       kind: r.kind.toLowerCase(),
       minutesBefore: r.kind === 'Before' ? (r.minutesBefore ?? 0) : null,
@@ -434,23 +439,6 @@ export function formAsAiItem(f: ItemForm, tz: string): string {
     recurrenceInterval: f.type !== 'Note' && f.recurrence && f.recurrence.interval > 1 ? f.recurrence.interval : null,
     tags: f.tags,
   })
-}
-
-/** "Location: …" / "With: …" lines at the end of the text (as switchType writes them) back into the fields. */
-function unfold(f: ItemForm): ItemForm {
-  const lines = f.details.split('\n')
-  let location = ''
-  let people = ''
-  while (lines.length) {
-    const last = lines[lines.length - 1].trim()
-    const where = `${t('event.location')}: `
-    const who = `${t('event.with')}: `
-    if (!location && last.startsWith(where)) location = last.slice(where.length)
-    else if (!people && last.startsWith(who)) people = last.slice(who.length)
-    else break
-    lines.pop()
-  }
-  return location || people ? { ...f, details: lines.join('\n').trim(), location, people } : f
 }
 
 // ---- The review of a new entry is this same form (user's call, 2026-10-09) ----
@@ -489,13 +477,13 @@ export function formToConfirm(f: ItemForm, id: string, tz: string): ConfirmCaptu
     endUtc: times?.endUtc ?? null,
     dueUtc: due,
     hasTime: f.type === 'Appointment' || (!!due && !!f.time),
-    location: f.type === 'Appointment' ? f.location.trim() || null : null,
-    priority: f.type === 'Task' && f.priority !== 'None' ? f.priority : null,
+    location: f.location.trim() || null,
+    priority: f.priority !== 'None' ? f.priority : null,
     reminders: f.reminders,
     recurrence: f.type === 'Note' || (f.type === 'Task' && !due) ? null : f.recurrence,
     tags: f.tags,
-    notes: f.type === 'Note' ? null : f.notes.trim() || null,
-    participantNames: f.type === 'Appointment' ? list(f.people) : null,
+    notes: null, // one text field - the details
+    participantNames: list(f.people),
     isOngoing: f.type === 'Task' && f.ongoing,
   }
 }

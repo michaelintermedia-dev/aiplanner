@@ -1,3 +1,4 @@
+using AiPlanner.Domain.Enums;
 using AiPlanner.Application.Recurrence;
 using AiPlanner.Application.Reminders;
 
@@ -16,4 +17,6 @@ public record CreateAppointmentRequest(
     /// <summary>How it repeats; StartUtc/EndUtc are the first occurrence.</summary>
     RecurrenceDto? Recurrence = null,
     /// <summary>Its tags (null: none on create).</summary>
-    IReadOnlyList<string>? Tags = null);
+    IReadOnlyList<string>? Tags = null,
+    /// <summary>Every type has a priority (null: None).</summary>
+    TaskPriority? Priority = null);

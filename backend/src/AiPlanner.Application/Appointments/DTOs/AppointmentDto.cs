@@ -30,4 +30,5 @@ public record AppointmentDto(
     // In Calendar/Today: this row is one occurrence of a repeating event (StartUtc/EndUtc are its times).
     bool IsOccurrence = false,
     // Its tags (filled on single-item reads).
-    IReadOnlyList<string>? Tags = null);
+    IReadOnlyList<string>? Tags = null,
+    TaskPriority Priority = TaskPriority.None);

@@ -15,4 +15,8 @@ public record UpdateTaskRequest(
     bool IsOngoing,
     IReadOnlyList<ReminderDto>? Reminders,
     IReadOnlyList<string>? Tags,
-    RecurrenceDto? Recurrence = null);
+    RecurrenceDto? Recurrence = null,
+    /// <summary>Null: unchanged; "" clears it.</summary>
+    string? Location = null,
+    /// <summary>Null: unchanged; [] clears them.</summary>
+    IReadOnlyList<string>? People = null);

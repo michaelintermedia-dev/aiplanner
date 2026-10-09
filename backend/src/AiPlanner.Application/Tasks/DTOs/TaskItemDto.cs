@@ -24,4 +24,6 @@ public record TaskItemDto(
     // The capture this task was created from (open it to see the transcript/recording).
     Guid? SourceCaptureId = null,
     // How it repeats (null: it doesn't). Completing a repeating task moves it to its next date.
-    RecurrenceDto? Recurrence = null);
+    RecurrenceDto? Recurrence = null,
+    string? Location = null,
+    IReadOnlyList<string>? People = null);

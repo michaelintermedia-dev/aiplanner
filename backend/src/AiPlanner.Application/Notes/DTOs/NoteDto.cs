@@ -1,3 +1,4 @@
+using AiPlanner.Domain.Enums;
 using AiPlanner.Application.Reminders;
 
 namespace AiPlanner.Application.Notes.DTOs;
@@ -12,4 +13,7 @@ public record NoteDto(
     IReadOnlyList<ReminderDto> Reminders, // "remind me about this"
     DateTime CreatedAtUtc,
     DateTime UpdatedAtUtc,
-    IReadOnlyList<string>? Tags = null);
+    IReadOnlyList<string>? Tags = null,
+    TaskPriority Priority = TaskPriority.None,
+    string? Location = null,
+    IReadOnlyList<string>? People = null);

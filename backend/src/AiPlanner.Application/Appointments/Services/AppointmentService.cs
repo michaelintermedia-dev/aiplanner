@@ -76,7 +76,8 @@ public class AppointmentService : IAppointmentService
             StartUtc = request.StartUtc,
             EndUtc = request.EndUtc,
             Location = request.Location,
-            Status = AppointmentStatus.Scheduled
+            Status = AppointmentStatus.Scheduled,
+            Priority = request.Priority ?? TaskPriority.None,
         };
 
         ApplyParticipants(appointment, request.ParticipantNames);
@@ -105,6 +106,7 @@ public class AppointmentService : IAppointmentService
         appointment.StartUtc = request.StartUtc;
         appointment.EndUtc = request.EndUtc;
         appointment.Location = request.Location;
+        if (request.Priority is { } priority) appointment.Priority = priority;
 
         ApplyParticipants(appointment, request.ParticipantNames);
         await ApplyTagsAsync(appointment, request.Tags, ct);
@@ -316,5 +318,6 @@ public class AppointmentService : IAppointmentService
         a.SourceAiExtractionId,
         RecurrencePlanner.ToDto(a.RecurrenceRule),
         a.RecurrenceRule is null ? null : a.SkippedOccurrencesUtc,
-        Tags: a.AppointmentTags.Select(at => at.Tag.Name).OrderBy(n => n).ToList());
+        Tags: a.AppointmentTags.Select(at => at.Tag.Name).OrderBy(n => n).ToList(),
+        Priority: a.Priority);
 }

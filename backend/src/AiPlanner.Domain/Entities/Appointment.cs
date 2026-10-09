@@ -13,6 +13,8 @@ public class Appointment : BaseEntity
     public DateTime EndUtc { get; set; }
     public string? Location { get; set; }
     public AppointmentStatus Status { get; set; } = AppointmentStatus.Scheduled;
+    /// <summary>Every type has a priority (user's call, 2026-10-09).</summary>
+    public TaskPriority Priority { get; set; } = TaskPriority.None;
 
     public Guid? RecurrenceRuleId { get; set; }
     public RecurrenceRule? RecurrenceRule { get; set; }

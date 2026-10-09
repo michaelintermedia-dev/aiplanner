@@ -45,6 +45,9 @@ export interface Task {
   sourceCaptureId?: string | null
   /** How it repeats (null: it doesn't). Completing it moves it to its next date. */
   recurrence?: Recurrence | null
+  /** Every type has a place and people (2026-10-09). */
+  location?: string | null
+  people?: string[] | null
 }
 
 export interface SaveTaskRequest {
@@ -60,6 +63,9 @@ export interface SaveTaskRequest {
   tags?: string[] | null
   /** Needs a due date; not for an ongoing task. */
   recurrence?: Recurrence | null
+  location?: string | null
+  /** Omitted: unchanged on update; [] clears them. */
+  people?: string[] | null
 }
 
 export interface Appointment {
@@ -87,6 +93,8 @@ export interface Appointment {
   /** In Today: this is one occurrence of a repeating event (startUtc/endUtc are its times). */
   isOccurrence?: boolean
   tags?: string[] | null
+  /** Every type has a priority (2026-10-09). */
+  priority?: TaskPriority
 }
 
 /** Also the PUT body: an update replaces all fields. */
@@ -103,6 +111,8 @@ export interface CreateAppointmentRequest {
   recurrence?: Recurrence | null
   /** Omitted: none on create, unchanged on update; [] clears them. */
   tags?: string[] | null
+  /** Omitted: None on create, unchanged on update. */
+  priority?: TaskPriority
 }
 
 // ---- Unified feed ------------------------------------------------------------
@@ -156,6 +166,10 @@ export interface Note {
   createdAtUtc: string
   updatedAtUtc: string
   tags?: string[] | null
+  /** Every type has priority, a place and people (2026-10-09). */
+  priority?: TaskPriority
+  location?: string | null
+  people?: string[] | null
 }
 
 export interface SaveNoteRequest {
@@ -165,6 +179,11 @@ export interface SaveNoteRequest {
   reminders?: Reminder[]
   /** Omitted: none on create, unchanged on update; [] clears them. */
   tags?: string[] | null
+  /** Omitted: None on create / unchanged on update. */
+  priority?: TaskPriority
+  location?: string | null
+  /** Omitted: unchanged on update; [] clears them. */
+  people?: string[] | null
 }
 
 export interface UpcomingReminder {

@@ -21,7 +21,7 @@ import { Badge, Button } from '@/components/ui'
 import { useAction } from '@/lib/useAction'
 import { useColors } from '@/theme'
 import { t } from '@shared/i18n'
-import { statusLabel } from '@shared/labels'
+import { priorityLabel, statusLabel } from '@shared/labels'
 
 export default function AppointmentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -93,6 +93,12 @@ export default function AppointmentDetailScreen() {
                 <Badge label={t('status.passed')} />
               ) : (
                 <Badge label={statusLabel(appt.status)} color={appt.status === 'Completed' ? c.task : appt.status === 'Cancelled' ? c.danger : undefined} />
+              )}
+              {appt.priority && appt.priority !== 'None' && (
+                <Badge
+                  label={t('task.priorityBadge', { priority: priorityLabel(appt.priority) })}
+                  color={appt.priority === 'High' ? c.danger : appt.priority === 'Medium' ? c.warn : undefined}
+                />
               )}
               {appt.tags?.map((tag) => (
                 <Text key={tag} style={{ color: c.muted }}>#{tag}</Text>

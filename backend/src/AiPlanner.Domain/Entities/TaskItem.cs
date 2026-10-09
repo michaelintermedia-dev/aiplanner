@@ -16,6 +16,10 @@ public class TaskItem : BaseEntity
     public TaskPriority Priority { get; set; } = TaskPriority.None;
     public DateTime? CompletedAtUtc { get; set; }
 
+    // Every type has the same attributes (user's call, 2026-10-09): a place and people too.
+    public string? Location { get; set; }
+    public List<string> People { get; set; } = [];
+
     public Guid? RecurrenceRuleId { get; set; }
     public RecurrenceRule? RecurrenceRule { get; set; }
 

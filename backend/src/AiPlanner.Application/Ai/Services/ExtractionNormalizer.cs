@@ -190,7 +190,7 @@ public static class ExtractionNormalizer
             endUtc,
             dueUtc,
             hasTime,
-            intent == ExtractionIntent.Note ? null : Clean(raw.Location, 300),
+            Clean(raw.Location, 300), // every type can have a place (user's call, 2026-10-09)
             ParsePriority(raw.Priority),
             reminders,
             ParseRecurrence(raw.Recurrence),

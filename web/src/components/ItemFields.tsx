@@ -67,15 +67,6 @@ export function ItemFields({
             <Field label={t('item.time')} changed={mark('time')}>
               <input type="time" value={form.time} onChange={(e) => set({ time: e.target.value })} disabled={form.ongoing || !form.date} />
             </Field>
-            <Field label={t('task.priority')} changed={mark('priority')}>
-              <select value={form.priority} onChange={(e) => set({ priority: e.target.value as TaskPriority })}>
-                {['None', 'Low', 'Medium', 'High'].map((p) => (
-                  <option key={p} value={p}>
-                    {priorityLabel(p)}
-                  </option>
-                ))}
-              </select>
-            </Field>
           </div>
           <label className="inline-check">
             <input type="checkbox" checked={form.ongoing} onChange={(e) => set({ ongoing: e.target.checked })} />
@@ -98,14 +89,25 @@ export function ItemFields({
               {endsNextDay(form.time, form.endTime) && <span className="hint warn">{t('event.endsNextDay')}</span>}
             </Field>
           </div>
-          <Field label={t('event.location')} changed={mark('location')}>
-            <input value={form.location} onChange={(e) => set({ location: e.target.value })} />
-          </Field>
-          <Field label={<>{t('event.with')} <span className="muted">{t('item.commaSeparated')}</span></>} changed={mark('people')}>
-            <input value={form.people} onChange={(e) => set({ people: e.target.value })} />
-          </Field>
         </>
       )}
+
+      {/* Every type has the same attributes (user's call, 2026-10-09): priority, place, people. */}
+      <Field label={t('task.priority')} changed={mark('priority')}>
+        <select value={form.priority} onChange={(e) => set({ priority: e.target.value as TaskPriority })}>
+          {['None', 'Low', 'Medium', 'High'].map((p) => (
+            <option key={p} value={p}>
+              {priorityLabel(p)}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label={t('event.location')} changed={mark('location')}>
+        <input value={form.location} onChange={(e) => set({ location: e.target.value })} />
+      </Field>
+      <Field label={<>{t('event.with')} <span className="muted">{t('item.commaSeparated')}</span></>} changed={mark('people')}>
+        <input value={form.people} onChange={(e) => set({ people: e.target.value })} />
+      </Field>
 
       {form.type !== 'Note' && (
         <div className={`field${mark('recurrence')}`} title={changed.includes('recurrence') ? t('form.changedByAi') : undefined}>
@@ -125,14 +127,10 @@ export function ItemFields({
 
       <TagPicker value={form.tags} onChange={(tags) => set({ tags })} changed={!!mark('tags')} />
 
+      {/* One text field for every type (the old separate "Notes" joined it). */}
       <Field label={isNote ? t('kind.note') : t('item.description')} changed={mark('details')}>
-        <textarea rows={isNote ? 6 : 3} value={form.details} onChange={(e) => set({ details: e.target.value })} />
+        <textarea rows={isNote ? 6 : 4} value={form.details} onChange={(e) => set({ details: e.target.value })} />
       </Field>
-      {!isNote && (
-        <Field label={t('item.notes')} changed={mark('notes')}>
-          <textarea rows={2} value={form.notes} onChange={(e) => set({ notes: e.target.value })} />
-        </Field>
-      )}
     </>
   )
 }

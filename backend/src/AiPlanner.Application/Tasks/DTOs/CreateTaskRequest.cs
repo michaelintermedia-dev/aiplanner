@@ -22,4 +22,8 @@ public record CreateTaskRequest(
     IReadOnlyList<ReminderDto>? Reminders,
     IReadOnlyList<string>? Tags,
     /// <summary>How it repeats (needs a due date). Completing it moves it to the next date.</summary>
-    RecurrenceDto? Recurrence = null);
+    RecurrenceDto? Recurrence = null,
+    /// <summary>Where (every type can have a place).</summary>
+    string? Location = null,
+    /// <summary>Who's involved (every type can have people).</summary>
+    IReadOnlyList<string>? People = null);

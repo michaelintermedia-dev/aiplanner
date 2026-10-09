@@ -9,13 +9,14 @@ import { useState } from 'react'
 import { Alert, Text, View } from 'react-native'
 import { notesApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
-import { detailStyles as s } from '@/components/detail'
+import { detailStyles as s, Facts } from '@/components/detail'
 import { DraftNotice, EditButtons, FollowUpReview, useEditMode } from '@/components/ItemEditMode'
 import { hasEditDraft, ItemEditor } from '@/components/ItemEditor'
 import { Screen } from '@/components/Screen'
 import { ItemMedia } from '@/components/ItemMedia'
 import { SourceCapture } from '@/components/SourceCapture'
-import { Button } from '@/components/ui'
+import { Badge, Button } from '@/components/ui'
+import { priorityLabel } from '@shared/labels'
 import { useAction } from '@/lib/useAction'
 import { useColors } from '@/theme'
 import { t } from '@shared/i18n'
@@ -68,9 +69,15 @@ export default function NoteDetailScreen() {
           <View style={{ gap: 8 }}>
             <Text style={[s.kind, { color: c.muted, borderLeftColor: c.warn }]}>{t('kind.note').toUpperCase()}</Text>
             {note.title && note.title !== note.content && <Text style={[s.title, { color: c.text }]}>{note.title}</Text>}
-            {!!note.tags?.length && (
+            {(!!note.tags?.length || (note.priority && note.priority !== 'None')) && (
               <View style={s.badges}>
-                {note.tags.map((tag) => (
+                {note.priority && note.priority !== 'None' && (
+                  <Badge
+                    label={t('task.priorityBadge', { priority: priorityLabel(note.priority) })}
+                    color={note.priority === 'High' ? c.danger : note.priority === 'Medium' ? c.warn : undefined}
+                  />
+                )}
+                {note.tags?.map((tag) => (
                   <Text key={tag} style={{ color: c.muted }}>#{tag}</Text>
                 ))}
               </View>
@@ -79,6 +86,14 @@ export default function NoteDetailScreen() {
           <Text style={{ color: c.text, fontSize: 17, lineHeight: 25 }} selectable>
             {note.content}
           </Text>
+          {(note.location || !!note.people?.length) && (
+            <Facts
+              rows={[
+                ...(note.location ? [[t('event.where'), note.location] as [string, string]] : []),
+                ...(note.people?.length ? [[t('event.with'), note.people.join(', ')] as [string, string]] : []),
+              ]}
+            />
+          )}
           {note.reminders.map((r, i) => (
             <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Ionicons name={repeats(r) ? 'repeat' : 'notifications-outline'} size={16} color={c.text} />

@@ -14,6 +14,7 @@ import { ItemMedia } from '../components/ItemMedia'
 import { SourceCapture } from '../components/SourceCapture'
 import { useAction } from '../lib/useAction'
 import { t } from '@shared/i18n'
+import { priorityLabel } from '@shared/labels'
 
 export function NoteDetailPage() {
   const { id = '' } = useParams()
@@ -50,15 +51,34 @@ export function NoteDetailPage() {
           <header className="detail-header">
             <span className="kind note">{t('kind.note')}</span>
             {note.title && note.title !== note.content && <h1>{note.title}</h1>}
-            {!!note.tags?.length && (
+            {(!!note.tags?.length || (note.priority && note.priority !== 'None')) && (
               <div className="row-meta">
-                {note.tags.map((tag) => (
+                {note.priority && note.priority !== 'None' && (
+                  <span className={`badge prio-${note.priority.toLowerCase()}`}>{t('task.priorityBadge', { priority: priorityLabel(note.priority) })}</span>
+                )}
+                {note.tags?.map((tag) => (
                   <span key={tag} className="tag">#{tag}</span>
                 ))}
               </div>
             )}
           </header>
           <p className="note-body">{note.content}</p>
+          {(note.location || !!note.people?.length) && (
+            <dl className="facts">
+              {note.location && (
+                <>
+                  <dt>{t('event.where')}</dt>
+                  <dd>{note.location}</dd>
+                </>
+              )}
+              {!!note.people?.length && (
+                <>
+                  <dt>{t('event.with')}</dt>
+                  <dd>{note.people.join(', ')}</dd>
+                </>
+              )}
+            </dl>
+          )}
           {note.reminders.map((r, i) => (
             <p key={i} className="note-reminder">
               {repeats(r) ? <IoRepeat aria-hidden /> : <IoNotificationsOutline aria-hidden />} {t('note.remindMe', { reminder: describeReminder(r, zone) })}

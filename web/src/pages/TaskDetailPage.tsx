@@ -76,6 +76,18 @@ export function TaskDetailPage() {
                 </dd>
               </>
             )}
+            {task.location && (
+              <>
+                <dt>{t('event.where')}</dt>
+                <dd>{task.location}</dd>
+              </>
+            )}
+            {!!task.people?.length && (
+              <>
+                <dt>{t('event.with')}</dt>
+                <dd>{task.people.join(', ')}</dd>
+              </>
+            )}
             <dt>{t('item.reminder')}</dt>
             <dd>{task.reminders?.length ? task.reminders.map((r) => describeReminder(r, zone)).join(' · ') : t('item.none')}</dd>
             {task.completedAtUtc && (

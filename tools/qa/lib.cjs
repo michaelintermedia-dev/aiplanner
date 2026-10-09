@@ -84,11 +84,13 @@ function audioForm(files, extra = {}) {
  * Chrome on the web app (Vite dev server, :5173) with its API calls sent to the QA API, signed in
  * as the QA account. width 420 = phone, 1280 = desktop. Collects page errors and console errors.
  */
-async function openApp({ width = 420, height = 900, signIn = true } = {}) {
+// `micWav`: a WAV file the fake microphone plays (loops) - for voice flows.
+async function openApp({ width = 420, height = 900, signIn = true, micWav = null } = {}) {
   const { chromium } = require('playwright-core')
   const browser = await chromium.launch({
     executablePath: CHROME,
-    args: ['--autoplay-policy=no-user-gesture-required', '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'],
+    args: ['--autoplay-policy=no-user-gesture-required', '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream',
+      ...(micWav ? [`--use-file-for-fake-audio-capture=${micWav}`] : [])],
   })
   const context = await browser.newContext({ viewport: { width, height }, permissions: ['microphone', 'notifications'] })
   const page = await context.newPage()

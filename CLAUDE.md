@@ -552,6 +552,9 @@ Local dev notes:
   details that lost the old text or the new words get both back. A new
   "Add more" on an item rejects earlier unsaved ones of that capture, and the
   review shows only the item's own proposal (`reviewItems`).
+  A note takes everything said - nothing is ever split off it (user's rule,
+  2026-10-10; prompt + `ContinuedItem.Keep` clears `Unrelated` for notes); for
+  tasks/events more about the same thing is never unrelated either.
   Words that aren't about the item come back as `unrelated` (prompt + schema,
   `AIExtractionItem.Unrelated`) and stay out of its details; the review offers
   "Also capture “...” as a new entry" (on by default), and after Save the

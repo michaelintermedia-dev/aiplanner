@@ -184,4 +184,17 @@ public class ContinuedItemTests
         ContinuedItem.Describe("note", "Ideas", "x", null, false, null, null, null, [], Moscow, tags: ["work"])
             .Should().Contain("\"tags\":[\"work\"]");
     }
+
+    [Fact]
+    public void A_note_keeps_everything_said_nothing_is_split_off()
+    {
+        var note = Item(ExtractionIntent.Note, "Cabin wifi", "The wifi password is blue-cactus-42.");
+        var words = "Also the router is in the hallway cupboard, next to the fuse box.";
+        var proposal = Item(ExtractionIntent.Note, "Cabin wifi", "The wifi password is blue-cactus-42.", addsToCurrent: true) with { Unrelated = words };
+
+        var kept = ContinuedItem.Keep([proposal], note, words);
+
+        kept.Unrelated.Should().BeNull("more thoughts are more of the note, not a new entry");
+        kept.Description.Should().Contain("blue-cactus-42").And.Contain("hallway cupboard");
+    }
 }

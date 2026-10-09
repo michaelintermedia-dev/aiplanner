@@ -99,6 +99,9 @@ public static class ContinuedItem
         }
 
         var kept = proposal with { AddsToCurrent = true };
+        // A note takes everything said (user's rule, 2026-10-10): more thoughts are more of the
+        // note, never split off as a separate entry - whatever the AI made of them.
+        if (current.Intent == ExtractionIntent.Note) kept = kept with { Unrelated = null };
         if (kept.Intent == current.Intent)
         {
             if (kept.Intent == ExtractionIntent.Task && kept.DueUtc is null && current.DueUtc is not null)

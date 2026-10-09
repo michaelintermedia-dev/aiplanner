@@ -3,7 +3,7 @@ using AiPlanner.Domain.Enums;
 
 namespace AiPlanner.Domain.Entities;
 
-public class Note : BaseEntity
+public class Note : ItemBase
 {
     public string? Title { get; set; }
     public string Content { get; set; } = default!;

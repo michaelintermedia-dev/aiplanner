@@ -328,6 +328,22 @@ Local dev notes:
   `INTENT_OPTIONS` in `shared/captureDraft.ts`) plus editable dates,
   time, priority, reminder and details, so the user can turn anything into
   anything and fill in what's missing before saving.
+- **One kind of item underneath** (user's call, 2026-10-10): tasks, events and
+  notes are rows of ONE table "Items" (EF table-per-hierarchy: `ItemBase`, the
+  `Kind` discriminator 0 Task / 1 Event / 2 Note; `ItemBaseConfiguration`;
+  shared columns Title/Text/Notes/DateUtc/Status/Priority/Location/People/...,
+  `ItemColumns`). `TaskItem`/`Appointment`/`Note` and their services are its
+  three faces, so the API is unchanged. The label follows the fields (user's
+  pick): an event has a time slot, a task is a to-do, else a note - the form's
+  Type buttons set those fields (`switchType`). **A type change is in place**
+  (`ItemConversionService`): same id, created date and capture link; Kind +
+  status mapped by SQL (`IApplicationDbContext.ExecuteSqlAsync`), reminders /
+  tags / snoozes moved to the new type's link columns, the loaded copies
+  detached (`Detach`, only those - a capture saving around it keeps its own),
+  then the target service writes the fields. Clients treat "same id, other
+  type" as moved (`isMoved`). Attachments are found by item id alone.
+  Soft-delete filter on hierarchy roots only. Migration ItemsTable copied
+  events/notes into Items (ids kept) before dropping their tables.
 - **Every type has the same attributes** (user's call, 2026-10-09): priority,
   place, people, reminders, tags, media, one text field - on tasks, events and
   notes. What differs: an event has its time slot (required), a task can be
@@ -390,10 +406,10 @@ Local dev notes:
   the AI asks about isn't applied, and those words don't become details.
   Opening Edit without a stored draft rejects the item's held proposals left
   by a lost draft.
-- **Saved items can change type too** (2026-10-02): the Type chips in the
-  Edit page call `POST /api/items/convert` (on Save).
-  `ItemConversionService` creates the new item through the normal services
-  and soft-deletes the old one in one transaction, carrying over title, text,
+- **Saved items can change type too** (2026-10-02; in place since 2026-10-10,
+  see "One kind of item underneath"): the Type chips in the Edit page call
+  `POST /api/items/convert` (on Save). Originally `ItemConversionService`
+  created a new item and soft-deleted the old one, carrying over title, text,
   date, reminders and the capture link (location goes into the text where the
   type has no field for it). The new item keeps the old one's `CreatedAtUtc`
   (set after the insert so the SaveChanges stamp doesn't overwrite it), so the

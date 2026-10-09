@@ -9,6 +9,8 @@ public interface IApplicationDbContext
     DbSet<UserSettings> UserSettings { get; }
     DbSet<RefreshToken> RefreshTokens { get; }
 
+    /// <summary>Every task, event and note (one table; Kind tells them apart).</summary>
+    DbSet<ItemBase> Items { get; }
     DbSet<TaskItem> TaskItems { get; }
     DbSet<Appointment> Appointments { get; }
     DbSet<AppointmentParticipant> AppointmentParticipants { get; }
@@ -36,4 +38,10 @@ public interface IApplicationDbContext
     /// connection's retry-on-failure strategy (the whole operation is retried).
     /// </summary>
     Task<T> ExecuteInTransactionAsync<T>(Func<CancellationToken, Task<T>> operation, CancellationToken cancellationToken = default);
+
+    /// <summary>Runs one SQL statement (parameters from the interpolation) - for changes EF can't express, like an item's type.</summary>
+    Task<int> ExecuteSqlAsync(FormattableString sql, CancellationToken cancellationToken = default);
+
+    /// <summary>Stops tracking these loaded entities (they're stale after an ExecuteSqlAsync on their rows).</summary>
+    void Detach(IEnumerable<object> entities);
 }

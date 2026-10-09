@@ -24,6 +24,8 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<UserSettings> UserSettings => Set<UserSettings>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
+    /// <summary>Every task, event and note (one table; Kind tells them apart).</summary>
+    public DbSet<ItemBase> Items => Set<ItemBase>();
     public DbSet<TaskItem> TaskItems => Set<TaskItem>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<AppointmentParticipant> AppointmentParticipants => Set<AppointmentParticipant>();
@@ -51,7 +53,8 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
-            if (typeof(BaseEntity).IsAssignableFrom(entityType.ClrType))
+            // On the root of a hierarchy only (tasks, events and notes share ItemBase's filter).
+            if (typeof(BaseEntity).IsAssignableFrom(entityType.ClrType) && entityType.BaseType is null)
             {
                 var method = typeof(ApplicationDbContext)
                     .GetMethod(nameof(SetSoftDeleteFilter), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
@@ -121,5 +124,13 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             await transaction.CommitAsync(ct);
             return result;
         }, cancellationToken);
+    }
+
+    public Task<int> ExecuteSqlAsync(FormattableString sql, CancellationToken cancellationToken = default) =>
+        Database.ExecuteSqlInterpolatedAsync(sql, cancellationToken);
+
+    public void Detach(IEnumerable<object> entities)
+    {
+        foreach (var entity in entities) Entry(entity).State = EntityState.Detached;
     }
 }

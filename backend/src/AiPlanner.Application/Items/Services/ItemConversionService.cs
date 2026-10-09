@@ -11,21 +11,18 @@ using AiPlanner.Application.Notes.Interfaces;
 using AiPlanner.Application.Reminders;
 using AiPlanner.Application.Tasks.DTOs;
 using AiPlanner.Application.Tasks.Interfaces;
-using AiPlanner.Domain.Common;
-using AiPlanner.Domain.Entities;
 using AiPlanner.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiPlanner.Application.Items.Services;
 
 /// <summary>
-/// Any item can become any type (user's rule), after saving too. The new item
-/// is created through the normal services (so the usual validation and
-/// reminder rules apply) and the old one is soft-deleted, all in one
-/// transaction. Carried over: title, details, notes, reminders, attachments, the source
-/// capture, the date where both types have one (task due &lt;-&gt; event start),
-/// and the creation time - it is the same item to the user, so "Created" and
-/// the newest/oldest sorts keep placing it where it was.
+/// Any item can become any type (user's rule), after saving too - and it stays
+/// the SAME item (user's call, 2026-10-09: tasks, events and notes are one kind
+/// of item, see ItemBase). Its row's Kind changes in place, its reminders, tags
+/// and media are re-pointed, and then the target type's own service writes the
+/// fields (so the usual validation and reminder rules apply) - one transaction.
+/// Same id, same creation time, same capture link; nothing is copied.
 /// </summary>
 public class ItemConversionService : IItemConversionService
 {
@@ -61,45 +58,46 @@ public class ItemConversionService : IItemConversionService
         {
             return Result<ConvertedItemDto>.Failure("Item not found.");
         }
+        if (request.ToType == request.FromType)
+        {
+            return Result<ConvertedItemDto>.Success(new ConvertedItemDto(request.ToType, request.Id, false));
+        }
 
         var zone = await _reminders.ZoneAsync(userId, ct);
         try
         {
             return await _db.ExecuteInTransactionAsync(async innerCt =>
             {
-                var (created, needsDetails) = await CreateTargetAsync(request, source, zone, innerCt);
-                if (!created.Succeeded)
-                {
-                    throw new ConversionException(string.Join(" ", created.Errors));
-                }
-                var newId = created.Value;
+                var target = Target(request, source, zone);
+                // Saved first, so the row is as EF last saw it before it changes underneath.
+                await _db.SaveChangesAsync(innerCt);
+                await ChangeKindAsync(request.FromType, request.ToType, source.Id, target, source, innerCt);
+                // The loaded copies are the old type now: forget them (only these - a
+                // capture being saved around this keeps its own tracked changes).
+                _db.Detach(source.Loaded);
 
-                // Keep when it was first created and the link to the capture it came
-                // from, and repoint the capture's item.
-                await CarryOverAsync(request.ToType, newId, source, innerCt);
-                // Its photos and documents go with it.
-                var attachments = await _db.Attachments
-                    .Where(x => x.UserId == userId && x.ItemType == request.FromType && x.ItemId == request.Id)
-                    .ToListAsync(innerCt);
-                foreach (var attachment in attachments)
+                var written = await WriteFieldsAsync(request.ToType, source.Id, target, source, innerCt);
+                if (!written.Succeeded)
+                {
+                    throw new ConversionException(string.Join(" ", written.Errors));
+                }
+
+                // Its photos and documents, and the capture items that made it, now name the new type.
+                foreach (var attachment in await _db.Attachments.Where(x => x.UserId == userId && x.ItemId == source.Id).ToListAsync(innerCt))
                 {
                     attachment.ItemType = request.ToType;
-                    attachment.ItemId = newId;
                 }
                 var captureItems = await _db.AIExtractionItems
                     .Where(i => i.ResultingTaskItemId == source.Id || i.ResultingAppointmentId == source.Id || i.ResultingNoteId == source.Id)
                     .ToListAsync(innerCt);
                 foreach (var i in captureItems)
                 {
-                    i.ResultingTaskItemId = request.ToType == "Task" ? newId : null;
-                    i.ResultingAppointmentId = request.ToType == "Appointment" ? newId : null;
-                    i.ResultingNoteId = request.ToType == "Note" ? newId : null;
+                    i.ResultingTaskItemId = request.ToType == "Task" ? source.Id : null;
+                    i.ResultingAppointmentId = request.ToType == "Appointment" ? source.Id : null;
+                    i.ResultingNoteId = request.ToType == "Note" ? source.Id : null;
                 }
-
-                // Replace the old item.
-                source.Delete();
                 await _db.SaveChangesAsync(innerCt);
-                return Result<ConvertedItemDto>.Success(new ConvertedItemDto(request.ToType, newId, needsDetails));
+                return Result<ConvertedItemDto>.Success(new ConvertedItemDto(request.ToType, source.Id, target.NeedsDetails));
             }, ct);
         }
         catch (ConversionException ex)
@@ -108,8 +106,10 @@ public class ItemConversionService : IItemConversionService
         }
     }
 
-    private async Task<(Result<Guid> Created, bool NeedsDetails)> CreateTargetAsync(
-        ConvertItemRequest r, Source s, TimeZoneInfo zone, CancellationToken ct)
+    /// <summary>What the item becomes: its date/time for the new type (an event needs a time slot).</summary>
+    private sealed record Plan(DateTime? WhenUtc, bool HasTime, DateTime? EndUtc, bool NeedsDetails);
+
+    private Plan Target(ConvertItemRequest r, Source s, TimeZoneInfo zone)
     {
         switch (r.ToType)
         {
@@ -117,12 +117,7 @@ public class ItemConversionService : IItemConversionService
             {
                 var due = r.DueUtc ?? s.WhenUtc;
                 var hasTime = due is not null && (r.HasDueTime ?? (r.DueUtc is null ? s.HasTime : true));
-                // Every type has the same attributes (user's call, 2026-10-09): place, people, priority carry over as they are.
-                var created = await _tasks.CreateAsync(new CreateTaskRequest(
-                    s.Title, s.Details, s.Notes, StartDateUtc: null, due, hasTime, s.Priority, IsOngoing: false,
-                    Reminders(s, targetHasTime: due is not null && hasTime), Tags: s.Tags, Recurrence: due is null ? null : s.Recurrence,
-                    Location: s.Location, People: s.People), ct);
-                return (created.Succeeded ? Result<Guid>.Success(created.Value!.Id) : Result<Guid>.Failure(created.Errors.ToArray()), false);
+                return new Plan(due, hasTime, null, false);
             }
             case "Appointment":
             {
@@ -133,17 +128,88 @@ public class ItemConversionService : IItemConversionService
                     ? UserTimeZoneHelper.LocalToUtc(DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(dateOnly, zone)).ToDateTime(DefaultEventTime), zone)
                     : UserTimeZoneHelper.LocalToUtc(UserTimeZoneHelper.TodayInTimeZone(zone, _clock.UtcNow).AddDays(1).ToDateTime(DefaultEventTime), zone);
                 var end = r.EndUtc ?? (s.EndUtc is { } e && e > start ? e : start.Value + DefaultEventLength);
-                var created = await _appointments.CreateAsync(new CreateAppointmentRequest(
-                    s.Title, s.Details, s.Notes, start.Value, end, s.Location, ParticipantNames: s.People,
+                return new Plan(start, true, end, guessed);
+            }
+            default:
+                return new Plan(null, false, null, false);
+        }
+    }
+
+    // The link columns per type, and the item's status in the new type's terms.
+    private static readonly Dictionary<string, (ItemKind Kind, string ReminderColumn, string TagTable, string TagColumn)> Types = new()
+    {
+        ["Task"] = (ItemKind.Task, "TaskItemId", "TaskTags", "TaskItemId"),
+        ["Appointment"] = (ItemKind.Event, "AppointmentId", "AppointmentTags", "AppointmentId"),
+        ["Note"] = (ItemKind.Note, "NoteId", "NoteTags", "NoteId"),
+    };
+
+    /// <summary>
+    /// The row becomes the new type: its Kind, a status that type knows, the
+    /// date columns it needs (an event can't be loaded without a start), and
+    /// its reminders, tags and snoozes moved to the new type's link columns.
+    /// </summary>
+    private async Task ChangeKindAsync(string from, string to, Guid id, Plan target, Source s, CancellationToken ct)
+    {
+        var (kind, reminderColumn, tagTable, tagColumn) = Types[to];
+        var (_, fromReminderColumn, fromTagTable, fromTagColumn) = Types[from];
+        int? status = to switch
+        {
+            "Task" => s.Done ? (int)TaskItemStatus.Completed : s.Cancelled ? (int)TaskItemStatus.Cancelled : (int)TaskItemStatus.Inbox,
+            "Appointment" => s.Done ? (int)AppointmentStatus.Completed : s.Cancelled ? (int)AppointmentStatus.Cancelled : (int)AppointmentStatus.Scheduled,
+            _ => null,
+        };
+        bool? hasTime = to == "Task" ? target.HasTime : null;
+        await _db.ExecuteSqlAsync(
+            $"""
+            UPDATE "Items" SET "Kind" = {(int)kind}, "Status" = {status}, "DateUtc" = {target.WhenUtc}, "HasTime" = {hasTime},
+                "EndUtc" = {target.EndUtc}, "Title" = COALESCE("Title", {s.Title})
+            WHERE "Id" = {id}
+            """, ct);
+        // Column names can't be parameters: they come from the fixed table above.
+        await _db.ExecuteSqlAsync(FormattableStringFactory(
+            $"UPDATE \"Reminders\" SET \"{fromReminderColumn}\" = NULL, \"{reminderColumn}\" = {{0}} WHERE \"{fromReminderColumn}\" = {{0}}", id), ct);
+        await _db.ExecuteSqlAsync(FormattableStringFactory(
+            $"UPDATE \"Notifications\" SET \"{fromReminderColumn}\" = NULL, \"{reminderColumn}\" = {{0}} WHERE \"{fromReminderColumn}\" = {{0}}", id), ct);
+        await _db.ExecuteSqlAsync(FormattableStringFactory(
+            $"INSERT INTO \"{tagTable}\" (\"{tagColumn}\", \"TagId\") SELECT \"{fromTagColumn}\", \"TagId\" FROM \"{fromTagTable}\" WHERE \"{fromTagColumn}\" = {{0}} ON CONFLICT DO NOTHING", id), ct);
+        await _db.ExecuteSqlAsync(FormattableStringFactory($"DELETE FROM \"{fromTagTable}\" WHERE \"{fromTagColumn}\" = {{0}}", id), ct);
+        if (from == "Appointment")
+        {
+            // People are carried in the new type's own field (written next).
+            await _db.ExecuteSqlAsync($"""DELETE FROM "AppointmentParticipants" WHERE "AppointmentId" = {id}""", ct);
+        }
+    }
+
+    private static FormattableString FormattableStringFactory(string format, params object?[] args) =>
+        System.Runtime.CompilerServices.FormattableStringFactory.Create(format, args);
+
+    /// <summary>The new type's service writes every field, as an ordinary edit would.</summary>
+    private async Task<Result> WriteFieldsAsync(string to, Guid id, Plan target, Source s, CancellationToken ct)
+    {
+        switch (to)
+        {
+            case "Task":
+            {
+                var due = target.WhenUtc;
+                var updated = await _tasks.UpdateAsync(id, new UpdateTaskRequest(
+                    s.Title, s.Details, s.Notes, StartDateUtc: null, due, target.HasTime, s.Priority, IsOngoing: false,
+                    Reminders(s, targetHasTime: due is not null && target.HasTime), s.Tags, due is null ? null : s.Recurrence,
+                    s.Location ?? "", s.People ?? []), ct);
+                return updated.Succeeded ? Result.Success() : Result.Failure(updated.Errors.ToArray());
+            }
+            case "Appointment":
+            {
+                var updated = await _appointments.UpdateAsync(id, new UpdateAppointmentRequest(
+                    s.Title, s.Details, s.Notes, target.WhenUtc!.Value, target.EndUtc!.Value, s.Location, s.People ?? [],
                     Reminders(s, targetHasTime: true), s.Recurrence, s.Tags, s.Priority), ct);
-                return (created.Succeeded ? Result<Guid>.Success(created.Value!.Id) : Result<Guid>.Failure(created.Errors.ToArray()), guessed);
+                return updated.Succeeded ? Result.Success() : Result.Failure(updated.Errors.ToArray());
             }
             default:
             {
                 var content = JoinText(s.Details, s.Notes);
-                var created = await _notes.CreateAsync(new SaveNoteRequest(
-                    s.Title, content ?? s.Title, Reminders(s, targetHasTime: false), s.Tags, s.Priority, s.Location, s.People), ct);
-                return (created.Succeeded ? Result<Guid>.Success(created.Value!.Id) : Result<Guid>.Failure(created.Errors.ToArray()), false);
+                var updated = await _notes.UpdateAsync(id, new SaveNoteRequest(
+                    s.NoteTitle, content ?? s.Title, Reminders(s, targetHasTime: false), s.Tags, s.Priority, s.Location ?? "", s.People ?? []), ct);
+                return updated.Succeeded ? Result.Success() : Result.Failure(updated.Errors.ToArray());
             }
         }
     }
@@ -163,12 +229,12 @@ public class ItemConversionService : IItemConversionService
 
     // ---- source items ----
 
-    /// <summary>The fields every type can give, plus how to delete it.</summary>
+    /// <summary>The fields every type can give, and the loaded entities (stale once the row changes type).</summary>
     private sealed record Source(
-        Guid Id, string Title, string? Details, string? Notes, DateTime? WhenUtc, bool HasTime, DateTime? EndUtc,
-        string? Location, Guid? SourceCaptureId, DateTime CreatedAtUtc, IReadOnlyList<ReminderDto> Reminders, Action Delete,
+        Guid Id, string Title, string? NoteTitle, string? Details, string? Notes, DateTime? WhenUtc, bool HasTime, DateTime? EndUtc,
+        string? Location, IReadOnlyList<ReminderDto> Reminders, IReadOnlyList<object> Loaded,
         RecurrenceDto? Recurrence = null, IReadOnlyList<string>? Tags = null,
-        TaskPriority Priority = TaskPriority.None, IReadOnlyList<string>? People = null);
+        TaskPriority Priority = TaskPriority.None, IReadOnlyList<string>? People = null, bool Done = false, bool Cancelled = false);
 
     private async Task<Source?> LoadAsync(Guid userId, string type, Guid id, CancellationToken ct)
     {
@@ -178,18 +244,20 @@ public class ItemConversionService : IItemConversionService
             {
                 var t = await _db.TaskItems.Include(x => x.Reminders).Include(x => x.RecurrenceRule).Include(x => x.TaskTags).ThenInclude(x => x.Tag).FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId, ct);
                 return t is null ? null : new Source(
-                    t.Id, t.Title, t.Description, t.Notes, t.DueDateUtc, t.HasDueTime, null, t.Location, t.SourceAiExtractionId, t.CreatedAtUtc,
-                    ReminderPlanner.ToDtos(t.Reminders), () => { t.IsDeleted = true; ReminderPlanner.TurnOff(t.Reminders); },
-                    RecurrencePlanner.ToDto(t.RecurrenceRule), t.TaskTags.Select(x => x.Tag.Name).ToList(), t.Priority, t.People);
+                    t.Id, t.Title, t.Title, t.Description, t.Notes, t.DueDateUtc, t.HasDueTime, null, t.Location,
+                    ReminderPlanner.ToDtos(t.Reminders), [t, .. t.Reminders, .. t.TaskTags],
+                    RecurrencePlanner.ToDto(t.RecurrenceRule), t.TaskTags.Select(x => x.Tag.Name).ToList(), t.Priority, t.People,
+                    t.Status == TaskItemStatus.Completed, t.Status == TaskItemStatus.Cancelled);
             }
             case "Appointment":
             {
                 var a = await _db.Appointments.Include(x => x.Reminders).Include(x => x.RecurrenceRule).Include(x => x.Participants).Include(x => x.AppointmentTags).ThenInclude(x => x.Tag).FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId, ct);
                 return a is null ? null : new Source(
-                    a.Id, a.Title, a.Description, a.Notes, a.StartUtc, true, a.EndUtc, a.Location, a.SourceAiExtractionId, a.CreatedAtUtc,
-                    ReminderPlanner.ToDtos(a.Reminders), () => { a.IsDeleted = true; ReminderPlanner.TurnOff(a.Reminders); },
+                    a.Id, a.Title, a.Title, a.Description, a.Notes, a.StartUtc, true, a.EndUtc, a.Location,
+                    ReminderPlanner.ToDtos(a.Reminders), [a, .. a.Reminders, .. a.AppointmentTags, .. a.Participants],
                     RecurrencePlanner.ToDto(a.RecurrenceRule), a.AppointmentTags.Select(x => x.Tag.Name).ToList(), a.Priority,
-                    a.Participants.Select(p => p.Name).ToList());
+                    a.Participants.Select(p => p.Name).ToList(),
+                    a.Status == AppointmentStatus.Completed, a.Status == AppointmentStatus.Cancelled);
             }
             default:
             {
@@ -199,34 +267,9 @@ public class ItemConversionService : IItemConversionService
                 var title = n.Title ?? Shorten(n.Content);
                 var details = n.Title is null && title == n.Content ? null : n.Content;
                 return new Source(
-                    n.Id, title, details, null, null, false, null, n.Location, n.SourceAiExtractionId, n.CreatedAtUtc,
-                    ReminderPlanner.ToDtos(n.Reminders), () => { n.IsDeleted = true; ReminderPlanner.TurnOff(n.Reminders); },
+                    n.Id, title, n.Title, details, null, null, false, null, n.Location,
+                    ReminderPlanner.ToDtos(n.Reminders), [n, .. n.Reminders, .. n.NoteTags],
                     Tags: n.NoteTags.Select(x => x.Tag.Name).ToList(), Priority: n.Priority, People: n.People);
-            }
-        }
-    }
-
-    /// <summary>
-    /// The new item keeps the old one's creation time and source capture. Set
-    /// after the create, so SaveChanges sees a modification (which only touches
-    /// UpdatedAtUtc) rather than an insert (which stamps CreatedAtUtc).
-    /// </summary>
-    private async Task CarryOverAsync(string type, Guid id, Source source, CancellationToken ct)
-    {
-        BaseEntity created = type switch
-        {
-            "Task" => (await _db.TaskItems.FindAsync([id], ct))!,
-            "Appointment" => (await _db.Appointments.FindAsync([id], ct))!,
-            _ => (await _db.Notes.FindAsync([id], ct))!,
-        };
-        created.CreatedAtUtc = source.CreatedAtUtc;
-        if (source.SourceCaptureId is { } captureId)
-        {
-            switch (created)
-            {
-                case TaskItem t: t.SourceAiExtractionId = captureId; break;
-                case Appointment ap: ap.SourceAiExtractionId = captureId; break;
-                case Note n: n.SourceAiExtractionId = captureId; break;
             }
         }
     }

@@ -39,7 +39,7 @@ public class AttachmentService : IAttachmentService
             return Result<IReadOnlyList<AttachmentDto>>.Failure(ItemNotFound);
         }
         var rows = await _db.Attachments.AsNoTracking()
-            .Where(a => a.UserId == userId && a.ItemType == itemType && a.ItemId == itemId)
+            .Where(a => a.UserId == userId && a.ItemId == itemId)
             .OrderBy(a => a.CreatedAtUtc)
             .ToListAsync(ct);
         return Result<IReadOnlyList<AttachmentDto>>.Success(rows.Select(ToDto).ToList());
@@ -55,7 +55,7 @@ public class AttachmentService : IAttachmentService
 
         var name = AttachmentRules.CleanFileName(fileName);
         var used = await _db.Attachments.Where(a => a.UserId == userId).SumAsync(a => (long?)a.SizeBytes, ct) ?? 0;
-        var count = await _db.Attachments.CountAsync(a => a.UserId == userId && a.ItemType == itemType && a.ItemId == itemId, ct);
+        var count = await _db.Attachments.CountAsync(a => a.UserId == userId && a.ItemId == itemId, ct);
         if (AttachmentRules.Problem(name, sizeBytes, used, count) is { } problem)
         {
             return Result<AttachmentDto>.Failure(problem);
@@ -119,13 +119,10 @@ public class AttachmentService : IAttachmentService
         return Result.Success();
     }
 
-    private async Task<bool> ItemExistsAsync(Guid userId, string itemType, Guid itemId, CancellationToken ct) => itemType switch
-    {
-        "Task" => await _db.TaskItems.AnyAsync(x => x.Id == itemId && x.UserId == userId, ct),
-        "Appointment" => await _db.Appointments.AnyAsync(x => x.Id == itemId && x.UserId == userId, ct),
-        "Note" => await _db.Notes.AnyAsync(x => x.Id == itemId && x.UserId == userId, ct),
-        _ => false,
-    };
+    // One kind of item underneath (ItemBase): the id is enough - a type change keeps it, so a
+    // page still showing the old type finds the item's media too.
+    private async Task<bool> ItemExistsAsync(Guid userId, string itemType, Guid itemId, CancellationToken ct) =>
+        itemType is "Task" or "Appointment" or "Note" && await _db.Items.AnyAsync(x => x.Id == itemId && x.UserId == userId, ct);
 
     private static AttachmentDto ToDto(Attachment a) =>
         new(a.Id, a.Kind, a.FileName, a.ContentType, a.SizeBytes, a.CreatedAtUtc, string.IsNullOrEmpty(a.Description) ? null : a.Description);

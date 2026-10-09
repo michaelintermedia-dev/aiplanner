@@ -94,6 +94,8 @@ export function ItemEditor({
   const resolvedCapture = useRef<string | null>(captureId)
   // A type change went through but the rest of Save failed: Save carries on with the new item.
   const [current, setCurrent] = useState(item)
+  // A type change keeps the id (one kind of item underneath) but not the page: it moved.
+  const isMoved = (r: { itemType: ItemType; id: string }) => r.id !== item.id || r.itemType !== item.itemType
   // The form as it was when the last words were sent - what the AI's answer is compared with.
   const sent = useRef<ItemForm | null>(null)
   // Save stopped: the item was changed somewhere else meanwhile.
@@ -156,7 +158,7 @@ export function ItemEditor({
         // As it was when editing started (the page's copy refreshes under the form).
         saved: draft.saved,
         // After a half-done type change the item is new (and differs from `saved` by design).
-        force: force || current.id !== item.id,
+        force: force || isMoved(current),
         tz: zone.timeZone,
         proposals,
         deleteRecordingOf: deleteRecording ? captureId : null,
@@ -173,10 +175,10 @@ export function ItemEditor({
       // The recording is gone: don't let the item's page fetch it from the stale capture (404s).
       if (deleteRecording && captureId) queryClient.setQueryData<Capture>(['capture', captureId], (c) => c && { ...c, audioParts: 0 })
       // The old item is gone after a type change: refresh everything but it (it would 404).
-      const gone = result.id !== item.id ? [DETAIL_KEY[item.itemType], item.id] : null
+      const gone = isMoved(result) ? [DETAIL_KEY[item.itemType], item.id] : null
       void queryClient.invalidateQueries({ predicate: (q) => !gone || q.queryKey[0] !== gone[0] || q.queryKey[1] !== gone[1] })
       const followUp = unrelated.filter((u) => u.capture).map((u) => u.text).join(' ') || undefined
-      onDone({ moved: result.id !== item.id ? result : undefined, followUp })
+      onDone({ moved: isMoved(result) ? result : undefined, followUp })
     } catch (err) {
       setBusy(false)
       if (err instanceof SaveConflict) {
@@ -194,10 +196,10 @@ export function ItemEditor({
     await discardProposals(api, proposals).catch(() => {}) // left pending at worst - cleared next time Edit opens
     editDrafts.clear(item.id)
     // Reload the item (after "Discard my changes" the page's copy is stale).
-    const gone = current.id !== item.id ? [DETAIL_KEY[item.itemType], item.id] : null
+    const gone = isMoved(current) ? [DETAIL_KEY[item.itemType], item.id] : null
     await queryClient.invalidateQueries({ predicate: (q) => !gone || q.queryKey[0] !== gone[0] || q.queryKey[1] !== gone[1] })
     // A type change already went through: the item is the new one now.
-    onDone(current.id !== item.id ? { moved: { itemType: current.itemType, id: current.id } } : null)
+    onDone(isMoved(current) ? { moved: { itemType: current.itemType, id: current.id } } : null)
   }
 
   const recording = capture.data && capture.data.source === 'Voice' && capture.data.audioParts > 0 ? capture.data : null

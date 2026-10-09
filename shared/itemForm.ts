@@ -231,7 +231,7 @@ export async function saveItemForm(
     await writeFields(api, itemType, id, form, tz)
   } catch (err) {
     // The type change went through (the old item is gone): the form carries on with the new one.
-    if (id !== item.id) throw Object.assign(err instanceof Error ? err : new Error(String(err)), { moved: { itemType, id } })
+    if (id !== item.id || itemType !== item.itemType) throw Object.assign(err instanceof Error ? err : new Error(String(err)), { moved: { itemType, id } })
     throw err
   }
 

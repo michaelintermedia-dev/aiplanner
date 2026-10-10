@@ -73,13 +73,13 @@ export default function SettingsScreen() {
     Notifications.getPermissionsAsync().then((p) => setOsAllowed(p.granted))
   }, [])
 
-  if (error) return <Screen><Text style={{ color: c.danger }}>{error.message}</Text></Screen>
-  if (!settings) return <Screen><Text style={{ color: c.muted }}>{t('common.loading')}</Text></Screen>
+  if (error) return <Screen panel><Text style={{ color: c.danger }}>{error.message}</Text></Screen>
+  if (!settings) return <Screen panel><Text style={{ color: c.muted }}>{t('common.loading')}</Text></Screen>
 
   const change = (patch: Partial<NotificationSettings>) => save.mutate({ ...settings, ...patch })
 
   return (
-    <Screen>
+    <Screen panel>
       <Text style={[styles.heading, { color: c.muted }]}>{t('settings.language').toUpperCase()}</Text>
       <View style={styles.languages} accessibilityRole="radiogroup" accessibilityLabel={t('settings.language')}>
         {LANGUAGES.map((l) => {

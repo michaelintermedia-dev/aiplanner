@@ -34,7 +34,7 @@ export function AuthScreen() {
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: c.page }]}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.center}>
-        <View style={styles.form}>
+        <View style={[styles.form, c.panel]}>
           <Text style={[styles.brand, { color: c.text }]}>{t('app.name')}</Text>
           <Text style={{ color: c.muted, marginBottom: 12 }}>
             {mode === 'login' ? t('auth.signInPrompt') : t('auth.registerPrompt')}

@@ -157,10 +157,10 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
               />
               <SortChips chips={sortChips} onChange={setSortChips} />
             </View>
-            {deletion.error && <Text style={{ color: c.danger }}>{deletion.error.message}</Text>}
-            {feed.isPending && <Text style={{ color: c.muted }}>{t('common.loading')}</Text>}
-            {feed.error && <Text style={{ color: c.danger }}>{feed.error.message}</Text>}
-            {feed.data && entries.length === 0 && <Text style={{ color: c.muted }}>{filtering ? t('feed.noMatches') : emptyText}</Text>}
+            {deletion.error && <Text style={[{ color: c.danger }, c.pillStart]}>{deletion.error.message}</Text>}
+            {feed.isPending && <Text style={[{ color: c.muted }, c.pillStart]}>{t('common.loading')}</Text>}
+            {feed.error && <Text style={[{ color: c.danger }, c.pillStart]}>{feed.error.message}</Text>}
+            {feed.data && entries.length === 0 && <Text style={[{ color: c.muted }, c.pillStart]}>{filtering ? t('feed.noMatches') : emptyText}</Text>}
           </View>
         }
         ListFooterComponent={

@@ -41,8 +41,8 @@ export default function AppointmentDetailScreen() {
   const busy = complete.isPending || cancel.isPending || reopen.isPending || remove.isPending
   const actionError = complete.error ?? cancel.error ?? reopen.error ?? remove.error
 
-  if (isPending) return <Screen><Text style={{ color: c.muted }}>{t('common.loading')}</Text></Screen>
-  if (error || !appt) return <Screen><Text style={{ color: c.danger }}>{error?.message ?? t('event.notFound')}</Text></Screen>
+  if (isPending) return <Screen panel><Text style={{ color: c.muted }}>{t('common.loading')}</Text></Screen>
+  if (error || !appt) return <Screen panel><Text style={{ color: c.danger }}>{error?.message ?? t('event.notFound')}</Text></Screen>
 
   const closed = appt.status !== 'Scheduled'
   // A repeating event: shown at its next date; "passed" once the whole series is over.
@@ -71,7 +71,7 @@ export default function AppointmentDetailScreen() {
     ])
 
   return (
-    <Screen>
+    <Screen panel>
       <Stack.Screen options={{ title: edit.editing ? t('common.edit') : t('kind.event') }} />
       {edit.followUp && <FollowUpReview text={edit.followUp} onDone={edit.clearFollowUp} />}
       <DraftNotice show={!edit.editing && hasEditDraft(appt.id, formFromAppointment(appt, zone.timeZone))} onContinue={edit.edit} />

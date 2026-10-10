@@ -37,8 +37,8 @@ export default function TaskDetailScreen() {
   const busy = complete.isPending || cancel.isPending || reopen.isPending || remove.isPending
   const actionError = complete.error ?? cancel.error ?? reopen.error ?? remove.error
 
-  if (isPending) return <Screen><Text style={{ color: c.muted }}>{t('common.loading')}</Text></Screen>
-  if (error || !task) return <Screen><Text style={{ color: c.danger }}>{error?.message ?? t('task.notFound')}</Text></Screen>
+  if (isPending) return <Screen panel><Text style={{ color: c.muted }}>{t('common.loading')}</Text></Screen>
+  if (error || !task) return <Screen panel><Text style={{ color: c.danger }}>{error?.message ?? t('task.notFound')}</Text></Screen>
 
   const closed = task.status === 'Completed' || task.status === 'Cancelled'
 
@@ -56,7 +56,7 @@ export default function TaskDetailScreen() {
     ])
 
   return (
-    <Screen>
+    <Screen panel>
       <Stack.Screen options={{ title: edit.editing ? t('common.edit') : t('kind.task') }} />
       {edit.followUp && <FollowUpReview text={edit.followUp} onDone={edit.clearFollowUp} />}
       <DraftNotice show={!edit.editing && hasEditDraft(task.id, formFromTask(task, zone.timeZone))} onContinue={edit.edit} />

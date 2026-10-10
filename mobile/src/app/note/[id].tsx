@@ -32,8 +32,8 @@ export default function NoteDetailScreen() {
   const { data: note, isPending, error } = useQuery({ queryKey: ['note', id], queryFn: () => notesApi.get(id), enabled: !deleting })
   const remove = useAction(notesApi.remove)
 
-  if (isPending) return <Screen><Text style={{ color: c.muted }}>{t('common.loading')}</Text></Screen>
-  if (error || !note) return <Screen><Text style={{ color: c.danger }}>{error?.message ?? t('note.notFound')}</Text></Screen>
+  if (isPending) return <Screen panel><Text style={{ color: c.muted }}>{t('common.loading')}</Text></Screen>
+  if (error || !note) return <Screen panel><Text style={{ color: c.danger }}>{error?.message ?? t('note.notFound')}</Text></Screen>
 
   const when = (utc: string) =>
     `${formatDateKey(dateKey(utc, zone.timeZone), zone.locale, { month: 'short', day: 'numeric' })}, ${formatTime(utc, zone)}`
@@ -52,7 +52,7 @@ export default function NoteDetailScreen() {
     ])
 
   return (
-    <Screen>
+    <Screen panel>
       <Stack.Screen options={{ title: edit.editing ? t('common.edit') : t('kind.note') }} />
       {edit.followUp && <FollowUpReview text={edit.followUp} onDone={edit.clearFollowUp} />}
       <DraftNotice show={!edit.editing && hasEditDraft(note.id, formFromNote(note))} onContinue={edit.edit} />

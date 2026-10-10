@@ -64,6 +64,8 @@ export default function CalendarScreen() {
 
   return (
     <Screen>
+      {/* The calendar itself (views, period, grid) on one frosted panel when there's a wallpaper. */}
+      <View style={[styles.calendar, c.panel]}>
       <View style={[styles.segmented, { borderColor: c.border }]}>
         {CALENDAR_VIEWS.map((v) => (
           <Pressable
@@ -122,9 +124,10 @@ export default function CalendarScreen() {
           </View>
         </View>
       )}
+      </View>
 
       <View style={{ gap: 6 }}>
-        <Text style={[styles.dayTitle, { color: selected === today ? c.accent : c.muted }]}>
+        <Text style={[styles.dayTitle, { color: selected === today ? c.accent : c.muted }, c.pillStart]}>
           {formatDateKey(selected, zone.locale, { weekday: 'long', day: 'numeric', month: 'long' })}
           {selected === today ? ` · ${t('date.today')}` : ''}
         </Text>
@@ -159,13 +162,13 @@ export default function CalendarScreen() {
             ))}
           </View>
         ) : (
-          <Text style={{ color: c.muted, fontSize: 14 }}>{t('calendar.nothingPlanned')}</Text>
+          <Text style={[{ color: c.muted, fontSize: 14 }, c.pillStart]}>{t('calendar.nothingPlanned')}</Text>
         )}
       </View>
 
       {data && data.ongoingTasks.length > 0 && (
         <View style={{ gap: 6 }}>
-          <Text style={[styles.dayTitle, { color: c.muted }]}>{t('today.ongoing').toUpperCase()}</Text>
+          <Text style={[styles.dayTitle, { color: c.muted }, c.pillStart]}>{t('today.ongoing').toUpperCase()}</Text>
           <View style={styles.chips}>
             {data.ongoingTasks.map((t) => (
               <Pressable
@@ -240,6 +243,7 @@ function DayCell({
 }
 
 const styles = StyleSheet.create({
+  calendar: { gap: 20 },
   segmented: { flexDirection: 'row', borderWidth: 1, borderRadius: 10, overflow: 'hidden' },
   segment: { flex: 1, alignItems: 'center', paddingVertical: 8 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 10 },

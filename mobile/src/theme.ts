@@ -17,7 +17,11 @@ export function useColors() {
   const pill = wallpaper ? { backgroundColor: `${colors.surface}D9`, paddingHorizontal: 10, paddingVertical: 2, borderRadius: 999, overflow: 'hidden' as const } : null
   // Several lines (Today's greeting and date): one block.
   const block = wallpaper ? { backgroundColor: `${colors.surface}D9`, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 14 } : null
-  return { ...colors, page: wallpaper ? 'transparent' : colors.bg, scheme, pill, block }
+  // A loose line of text (loading, errors, "nothing planned"): a pill at its start.
+  const pillStart = pill && { ...pill, alignSelf: 'flex-start' as const }
+  // A whole screen of text and controls (an item, Settings, sign-in): one frosted panel.
+  const panel = wallpaper ? { backgroundColor: `${colors.surface}E6`, padding: 14, borderRadius: 18 } : null
+  return { ...colors, page: wallpaper ? 'transparent' : colors.bg, scheme, pill, pillStart, block, panel }
 }
 
 export type Colors = ReturnType<typeof useColors>

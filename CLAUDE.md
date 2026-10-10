@@ -750,7 +750,12 @@ Local dev notes:
   (portrait + `-wide` for landscape screens); re-run it after changing a
   skin. Text that sits right on the wallpaper gets a frosted pill (web:
   `html[data-wallpaper]` rules in index.css; mobile: `c.pill` / `c.block` from
-  useColors) - add new on-page headings to those.
+  useColors) - add new on-page headings to those. Every text must have something
+  behind it (user's rule, 2026-10-10): whole screens of text sit on one frosted
+  panel (mobile `<Screen panel>` / `c.panel` - item pages, Settings, sign-in, the
+  calendar grid; web `.page.detail`), loose lines get `c.pillStart`.
+  `tools/qa/wallpaper-text.cjs` lists any web text/icon with no background
+  behind it on every page (phone + desktop, light + dark).
   Your own photo as the wallpaper (user's request, 2026-10-08): `PUT
   /api/settings/wallpaper` (form field "file", JPG/PNG/WebP, 15 MB; shrunk on
   the device first), `DELETE` (back to the skin's), `GET .../wallpaper/{id}`

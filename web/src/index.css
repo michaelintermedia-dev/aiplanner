@@ -2935,6 +2935,16 @@ html[data-wallpaper] .feed-end:not(:empty) {
   margin-inline: auto;
 }
 
+/* An item's page (title, type, details, actions) sits on one
+   frosted panel (an item's Edit form is a card of its own already). */
+html[data-wallpaper] .page.detail:not(:has(.item-editor)) {
+  padding: 16px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
 /* Today's greeting and date: one frosted block rather than separate pills. */
 html[data-wallpaper] .page-header > div:first-child {
   padding: 8px 14px;

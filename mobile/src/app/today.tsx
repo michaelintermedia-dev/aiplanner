@@ -29,8 +29,8 @@ export default function TodayScreen() {
         <Text style={[styles.clock, { color: c.muted }]}>{formatTime(now.toISOString(), zone)}</Text>
       </View>
 
-      {isPending && <Text style={{ color: c.muted }}>{t('common.loading')}</Text>}
-      {error && <Text style={{ color: c.danger }}>{error.message}</Text>}
+      {isPending && <Text style={[{ color: c.muted }, c.pillStart]}>{t('common.loading')}</Text>}
+      {error && <Text style={[{ color: c.danger }, c.pillStart]}>{error.message}</Text>}
       {data && (
         <>
           <Section title={t('today.schedule')} empty={t('today.scheduleEmpty')}>

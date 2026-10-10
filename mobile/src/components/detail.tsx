@@ -1,13 +1,15 @@
 import type { ReactNode } from 'react'
 import { Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native'
 import { useColors } from '@/theme'
+import { useCardStyle } from './panel'
 
 /** Building blocks shared by the task and appointment detail screens. */
 
 export function Facts({ rows }: { rows: [string, ReactNode][] }) {
   const c = useColors()
+  const flat = useCardStyle()
   return (
-    <View style={[styles.facts, { backgroundColor: c.surface, borderColor: c.border }]}>
+    <View style={[styles.facts, { backgroundColor: c.surface, borderColor: c.border }, flat]}>
       {rows.map(([label, value]) => (
         <View key={label} style={styles.fact}>
           <Text style={[styles.factLabel, { color: c.muted }]}>{label}</Text>

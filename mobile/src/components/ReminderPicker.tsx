@@ -80,7 +80,7 @@ export function ReminderPicker({
       </View>
 
       {open && (
-        <View style={[styles.editor, { borderColor: c.border, backgroundColor: c.surface2 }]}>
+        <View style={[styles.editor, { borderColor: c.border }]}>
           <Text style={[styles.caption, { color: c.muted }]}>{t('reminder.quick').toUpperCase()}</Text>
           <View style={styles.wrap}>
             {reminderPresets(zone, itemHasTime && !isNote).map((p) => (

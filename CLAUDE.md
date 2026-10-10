@@ -754,6 +754,12 @@ Local dev notes:
   behind it (user's rule, 2026-10-10): whole screens of text sit on one frosted
   panel (mobile `<Screen panel>` / `c.panel` - item pages, Settings, sign-in, the
   calendar grid; web `.page.detail`), loose lines get `c.pillStart`.
+  One layer only (user's rule, same day): no panel on a panel - inside a
+  screen's panel cards go flat (mobile `useCardStyle()` / `useInPanel()` from
+  components/panel.ts; web `html[data-wallpaper] .page.detail :is(.facts, .card,
+  .note-body)`); the capture bar inside a form/review is an outline only; quoted
+  words ("What you typed", transcripts) are a side line, not a box.
+  `tools/qa/nested-panels.cjs` lists boxes inside boxes on the web.
   `tools/qa/wallpaper-text.cjs` lists any web text/icon with no background
   behind it on every page (phone + desktop, light + dark).
   Your own photo as the wallpaper (user's request, 2026-10-08): `PUT

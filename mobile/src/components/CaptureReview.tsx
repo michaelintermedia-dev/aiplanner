@@ -123,7 +123,7 @@ export function CaptureReview({
             </Text>
           </Pressable>
           {showTranscript && (
-            <Text style={[styles.transcript, { color: c.text, backgroundColor: c.surface2 }]}>{capture.inputText}</Text>
+            <Text style={[styles.transcript, { color: c.text, borderColor: c.border }]}>{capture.inputText}</Text>
           )}
         </>
       )}
@@ -348,7 +348,8 @@ const styles = StyleSheet.create({
   lockedTitleText: { fontSize: 16, fontWeight: '600', flexShrink: 1 },
   card: { borderWidth: 1, borderRadius: 16, padding: 14, gap: 10 },
   title: { fontSize: 20, fontWeight: '700' },
-  transcript: { padding: 10, borderRadius: 8, fontSize: 14, lineHeight: 20 },
+  // A quote (a line at its side), not a box inside the card.
+  transcript: { paddingVertical: 2, paddingLeft: 10, borderLeftWidth: 3, fontSize: 14, lineHeight: 20 },
   item: { borderWidth: 1, borderLeftWidth: 4, borderRadius: 12, padding: 10, gap: 10 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   itemTitle: { flex: 1, fontSize: 16, fontWeight: '500', borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, minHeight: 42 },

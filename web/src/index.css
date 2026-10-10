@@ -725,11 +725,12 @@ label.inline-check {
   font-size: 0.85rem;
 }
 
+/* A quote (a line at its side), not a box inside the card. */
 .transcript p {
   margin-top: 6px;
-  padding: 10px 12px;
-  background: var(--surface-2);
-  border-radius: 8px;
+  padding-block: 2px;
+  padding-inline: 10px 0;
+  border-inline-start: 3px solid var(--border);
   white-space: pre-wrap;
   font-size: 0.92rem;
 }
@@ -1246,9 +1247,9 @@ textarea {
 
 .source-text {
   margin-top: 6px;
-  padding: 10px 12px;
-  background: var(--surface-2);
-  border-radius: 8px;
+  padding-block: 2px;
+  padding-inline: 10px 0;
+  border-inline-start: 3px solid var(--border);
   white-space: pre-wrap;
   font-size: 0.92rem;
 }
@@ -1601,7 +1602,6 @@ button.kind-icon:hover:not(:disabled) {
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: var(--surface-2);
 }
 
 .reminder-presets {
@@ -2943,6 +2943,23 @@ html[data-wallpaper] .page.detail:not(:has(.item-editor)) {
   background: color-mix(in srgb, var(--surface) 90%, transparent);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+}
+
+/* One layer only (user's rule, 2026-10-10): on that panel the item's cards drop their
+   own background and frame. */
+html[data-wallpaper] .page.detail:not(:has(.item-editor)) :is(.facts, .card, .note-body) {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Adding to an item / changing a new entry: the bar sits inside the form or review -
+   an outline, not a second card on top of it. */
+.card .capture {
+  background: transparent;
+  box-shadow: none;
 }
 
 /* Today's greeting and date: one frosted block rather than separate pills. */

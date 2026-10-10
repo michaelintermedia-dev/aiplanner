@@ -7,6 +7,7 @@ import { Linking, Pressable, StyleSheet, Switch, Text, View } from 'react-native
 import { settingsApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
 import { DateTimeField } from '@/components/DateTimeField'
+import { flatCard } from '@/components/panel'
 import { Screen } from '@/components/Screen'
 import { Button } from '@/components/ui'
 import { useAction } from '@/lib/useAction'
@@ -24,6 +25,8 @@ import { File } from 'expo-file-system'
 /** Settings - Language, Notifications (same as web's Settings page). Changes save immediately. */
 export default function SettingsScreen() {
   const c = useColors()
+  // On the panel (with a wallpaper) the cards are flat: one layer only.
+  const flat = c.panel && flatCard
   const { zone, changeLanguage } = useAuth()
   const [languageError, setLanguageError] = useState<string | null>(null)
   const { data: settings, error } = useQuery({ queryKey: ['settings', 'notifications'], queryFn: settingsApi.notifications })
@@ -142,7 +145,7 @@ export default function SettingsScreen() {
           )
         })}
       </View>
-      <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.border }]}>
+      <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.border }, flat]}>
         <Row label={t('settings.wallpaper')} hint={t('settings.wallpaperHint')} value={look.wallpaper} onChange={(wallpaper) => changeLook({ wallpaper })} />
         <View style={styles.photoRow}>
           {look.wallpaperPhoto && <Image source={wallpaperPhotoSource(look.wallpaperPhoto)} style={[styles.photoThumb, { borderColor: c.border }]} contentFit="cover" cachePolicy="disk" />}
@@ -195,7 +198,7 @@ export default function SettingsScreen() {
           <Button title={t('settings.openPhoneSettings')} onPress={() => void Linking.openSettings()} />
         </View>
       )}
-      <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.border }]}>
+      <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.border }, flat]}>
         <Row label={t('settings.notifications')} hint={t('settings.notificationsHint')} value={settings.enabled} onChange={(enabled) => change({ enabled })} />
         <Row label={t('settings.taskReminders')} value={settings.taskReminders} onChange={(taskReminders) => change({ taskReminders })} disabled={!settings.enabled} />
         <Row
@@ -222,7 +225,7 @@ export default function SettingsScreen() {
 
       <Text style={[styles.heading, { color: c.muted }]}>{t('settings.recordings').toUpperCase()}</Text>
       {recordings.data && (
-        <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.border }]}>
+        <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.border }, flat]}>
           <Row
             label={t('settings.keepRecordings')}
             hint={t('settings.keepRecordingsHint')}

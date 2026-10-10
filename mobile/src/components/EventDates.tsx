@@ -9,6 +9,7 @@ import { appointmentsApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
 import { useAction } from '@/lib/useAction'
 import { useColors } from '@/theme'
+import { useInPanel } from './panel'
 import { Button } from './ui'
 
 /**
@@ -18,6 +19,7 @@ import { Button } from './ui'
  */
 export function EventDates({ appt }: { appt: Appointment }) {
   const c = useColors()
+  const inPanel = useInPanel()
   const { zone } = useAuth()
   const { at } = useLocalSearchParams<{ at?: string }>()
   const skip = useAction((start: string) => appointmentsApi.skip(appt.id, start))
@@ -39,13 +41,13 @@ export function EventDates({ appt }: { appt: Appointment }) {
       {next.map((start) => (
         <View
           key={start}
-          style={[styles.row, { backgroundColor: c.surface, borderColor: at && Date.parse(at) === Date.parse(start) ? c.accent : c.border }]}>
+          style={[styles.row, { backgroundColor: inPanel ? 'transparent' : c.surface, borderColor: at && Date.parse(at) === Date.parse(start) ? c.accent : c.border }]}>
           <Text style={{ color: c.text, flex: 1 }}>{when(start)}</Text>
           <Button title={t('repeat.skip')} variant="link" disabled={busy} onPress={() => skip.mutate(start)} />
         </View>
       ))}
       {skipped.map((start) => (
-        <View key={`s${start}`} style={[styles.row, { backgroundColor: c.surface, borderColor: c.border }]}>
+        <View key={`s${start}`} style={[styles.row, { backgroundColor: inPanel ? 'transparent' : c.surface, borderColor: c.border }]}>
           <Text style={{ color: c.muted, flex: 1 }}>
             <Text style={{ textDecorationLine: 'line-through' }}>{when(start)}</Text> · {t('repeat.skipped')}
           </Text>

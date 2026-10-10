@@ -9,6 +9,7 @@ import { capturesApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
 import { usePlaybackSpeed } from '@/lib/playbackSpeed'
 import { useColors } from '@/theme'
+import { useCardStyle } from './panel'
 import { SpeedChips } from './SpeedChips'
 import { Button } from './ui'
 import { t } from '@shared/i18n'
@@ -20,6 +21,7 @@ import { t } from '@shared/i18n'
  */
 export function SourceCapture({ captureId }: { captureId: string }) {
   const c = useColors()
+  const flat = useCardStyle()
   const { zone } = useAuth()
   const { data: capture, error } = useQuery({ queryKey: ['capture', captureId], queryFn: () => capturesApi.get(captureId) })
   const [showText, setShowText] = useState(true)
@@ -32,7 +34,7 @@ export function SourceCapture({ captureId }: { captureId: string }) {
   const when = `${formatDateKey(dateKey(capture.createdAtUtc, zone.timeZone), zone.locale, { month: 'short', day: 'numeric' })}, ${formatTime(capture.createdAtUtc, zone)}`
 
   return (
-    <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.border }]}>
+    <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.border }, flat]}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
         <Ionicons name={capture.source === 'Voice' ? 'mic-outline' : 'keypad-outline'} size={14} color={c.muted} />
         <Text style={[styles.heading, { color: c.muted }]}>
@@ -48,7 +50,7 @@ export function SourceCapture({ captureId }: { captureId: string }) {
           {showText ? '▾' : I18nManager.isRTL ? '◂' : '▸'} {capture.source === 'Voice' ? t('capture.fullTranscription') : t('capture.whatYouTyped')}
         </Text>
       </Pressable>
-      {showText && <Text style={[styles.text, { color: c.text, backgroundColor: c.surface2 }]}>{capture.inputText}</Text>}
+      {showText && <Text style={[styles.text, { color: c.text, borderColor: c.border }]}>{capture.inputText}</Text>}
 
       {capture.source === 'Voice' &&
         (capture.audioParts > 0 ? (
@@ -130,7 +132,8 @@ export function RecordingPlayer({ captureId, parts }: { captureId: string; parts
 const styles = StyleSheet.create({
   card: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 14, padding: 14, gap: 8 },
   heading: { fontSize: 12, fontWeight: '600', letterSpacing: 0.8 },
-  text: { padding: 10, borderRadius: 8, fontSize: 14, lineHeight: 20 },
+  // A quote (a line at its side), not a box inside the card.
+  text: { paddingVertical: 2, paddingLeft: 10, borderLeftWidth: 3, fontSize: 14, lineHeight: 20 },
   continue: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', borderWidth: 1, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
   audio: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
 })

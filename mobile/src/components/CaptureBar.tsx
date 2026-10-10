@@ -329,7 +329,8 @@ export function CaptureBar({
   const hasAudio = recorder.state !== 'idle'
 
   return (
-    <View style={[styles.card, { backgroundColor: c.surface, borderColor: hasAudio ? c.accent : c.border }]}>
+    // Inside a form or review (adding to it): an outline, not a second card on top of it.
+    <View style={[styles.card, { backgroundColor: continueFrom ? 'transparent' : c.surface, borderColor: hasAudio ? c.accent : c.border }]}>
       {pending.capture && !hasAudio && busy === null && (
         // A review left unfinished earlier: never silently lost.
         <View style={[styles.pending, { borderColor: c.warn }]} accessibilityRole="alert">

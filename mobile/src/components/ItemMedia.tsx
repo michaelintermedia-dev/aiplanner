@@ -8,6 +8,7 @@ import { ActivityIndicator, FlatList, I18nManager, Modal, Pressable, StyleSheet,
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { attachmentSource, openAttachment, pickDocuments, pickPhotos, useAttachments, type Picked, type PendingMedia } from '@/lib/media'
 import { useColors } from '@/theme'
+import { useCardStyle } from './panel'
 
 const COLUMNS = 3
 const GAP = 6
@@ -44,12 +45,13 @@ function StoredImage({ id, fit = 'cover' }: { id: string; fit?: 'cover' | 'conta
 export function ItemMedia({ itemType, id }: { itemType: ItemType; id: string }) {
   const c = useColors()
   const { data } = useAttachments(itemType, id)
+  const flat = useCardStyle()
   const [open, setOpen] = useState<number | null>(null)
   if (!data?.length) return null
   const { images, files } = splitMedia(data)
 
   return (
-    <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.border }]}>
+    <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.border }, flat]}>
       <View style={styles.head}>
         <Ionicons name="images-outline" size={14} color={c.muted} />
         <Text style={[styles.heading, { color: c.muted }]}>{t('media.title').toUpperCase()}</Text>

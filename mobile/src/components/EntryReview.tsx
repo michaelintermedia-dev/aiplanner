@@ -152,7 +152,7 @@ export function EntryReview({
           {showTranscript ? '▾' : I18nManager.isRTL ? '◂' : '▸'} {capture.source === 'Voice' ? t('capture.fullTranscription') : t('capture.whatYouTyped')}
         </Text>
       </Pressable>
-      {showTranscript && <Text style={[styles.transcript, { color: c.text, backgroundColor: c.surface2 }]}>{capture.inputText}</Text>}
+      {showTranscript && <Text style={[styles.transcript, { color: c.text, borderColor: c.border }]}>{capture.inputText}</Text>}
 
       {clarifications.map((x) => (
         <View key={x} style={styles.row}>
@@ -231,7 +231,8 @@ export function EntryReview({
 const styles = StyleSheet.create({
   card: { borderWidth: 1, borderRadius: 16, padding: 14, gap: 10 },
   title: { fontSize: 20, fontWeight: '700' },
-  transcript: { padding: 10, borderRadius: 8, fontSize: 14, lineHeight: 20 },
+  // A quote (a line at its side), not a box inside the card.
+  transcript: { paddingVertical: 2, paddingLeft: 10, borderLeftWidth: 3, fontSize: 14, lineHeight: 20 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   section: { gap: 8, borderBottomWidth: 1, paddingBottom: 12 },
   recording: { gap: 8, borderTopWidth: 1, paddingTop: 12 },

@@ -3,6 +3,7 @@ import { useState, type ReactNode } from 'react'
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native'
 import { useColors } from '@/theme'
 import { DOCK_SPACE } from './CaptureDock'
+import { InPanel } from './panel'
 
 /** Scrollable screen body with pull-to-refresh that refetches all data. */
 /** Room at the end so the content can scroll clear of the floating new-entry toolbar. */
@@ -24,7 +25,13 @@ export function Screen({ children, bottomSpace = DOCK_SPACE, panel }: { children
       contentContainerStyle={[styles.content, { paddingBottom: bottomSpace }]}
       keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.muted} />}>
-      {panel && c.panel ? <View style={[styles.panel, c.panel]}>{children}</View> : children}
+      {panel && c.panel ? (
+        <InPanel.Provider value={true}>
+          <View style={[styles.panel, c.panel]}>{children}</View>
+        </InPanel.Provider>
+      ) : (
+        children
+      )}
     </ScrollView>
   )
 }

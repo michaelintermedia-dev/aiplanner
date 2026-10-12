@@ -65,6 +65,10 @@ export function createApi(request: RequestFn) {
       external: (body: ExternalSignIn, timeZoneId: string, locale: string) =>
         request<AuthResponse>('POST', '/auth/external', { ...body, timeZoneId, locale }, { anonymous: true }),
       me: () => request<User>('GET', '/users/me'),
+      /** Everything in the account as a ZIP (data.json + files). */
+      exportData: () => request<Blob>('GET', '/users/me/export', undefined, { as: 'blob' }),
+      /** Deletes the account and everything in it, for good - the account's email confirms it. */
+      deleteAccount: (confirmEmail: string) => request<void>('DELETE', '/users/me', { confirmEmail }),
       /** Change the language/locale (BCP 47). */
       updateProfile: (body: { locale?: string }) => request<User>('PATCH', '/users/me', body),
     },

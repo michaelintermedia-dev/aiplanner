@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { Linking, Pressable, StyleSheet, Switch, Text, View } from 'react-native'
 import { settingsApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
+import { AccountCard } from '@/components/AccountCard'
 import { DateTimeField } from '@/components/DateTimeField'
 import { flatCard } from '@/components/panel'
 import { Screen } from '@/components/Screen'
@@ -241,6 +242,8 @@ export default function SettingsScreen() {
         </View>
       )}
       {(recordings.error ?? saveRecordings.error) && <Text style={{ color: c.danger }}>{(recordings.error ?? saveRecordings.error)!.message}</Text>}
+
+      <AccountCard />
     </Screen>
   )
 }

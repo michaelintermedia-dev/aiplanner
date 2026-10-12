@@ -46,6 +46,7 @@ public static class DependencyInjection
         services.AddScoped<AppearanceSettingsService>();
         services.AddScoped<CalendarSettingsService>();
         services.AddScoped<IUserProfileService, UserProfileService>();
+        services.AddScoped<AccountService>();
         services.AddScoped<ICalendarService, CalendarService>();
         services.AddScoped<ICaptureService, CaptureService>();
         services.AddScoped<INoteService, NoteService>();

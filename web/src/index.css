@@ -3274,3 +3274,37 @@ html[data-wallpaper] .page-header > div:first-child {
 .apple-button svg {
   font-size: 1.2rem;
 }
+
+/* Settings - Account (AccountCard). */
+.account-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.account-action > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.account-delete {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--danger);
+  border-radius: 12px;
+}
+
+.account-delete p {
+  margin: 0;
+}
+
+.account-delete-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

@@ -912,6 +912,19 @@ SPA routes, allow-list, rate limit, ffmpeg, backup).
   QA: provider "test" (`ExternalAuth:AllowTestProvider`, Development only) -
   `tools/qa/social-sign-in.cjs`.
 
+- **Download my data / Delete my account** (2026-10-12, required by Google Play,
+  the App Store and privacy law; Settings - Account, web + app `AccountCard`).
+  `GET /api/users/me/export` = a ZIP: data.json (account, settings, every live
+  task/event/note with reminders, repeat rule, tags; every capture with its words)
+  + files/ (attachments) + recordings/ + the wallpaper photo + README
+  (`AccountService.ExportAsync`, built in a temp file). `DELETE /api/users/me`
+  { confirmEmail } (typed email confirms, any case): every row of the user - soft-
+  deleted ones too - in one transaction (children first: notifications point at
+  items without cascading), then the files (known keys + the `{id}` and `{id:N}`
+  folders, `IFileStorageService.DeleteFolderAsync`); AI usage rows stay with UserId
+  null so the cost totals stay right. Backups keep it up to 14 days (privacy page).
+  A new table holding user data must be added to both. `tools/qa/account-delete-export.cjs`.
+
 ## QA agent
 
 `.claude/agents/qa-explorer.md` - exploratory QA, report only (never edits code).

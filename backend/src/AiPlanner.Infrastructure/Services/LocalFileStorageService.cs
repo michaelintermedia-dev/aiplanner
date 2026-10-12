@@ -45,6 +45,16 @@ public class LocalFileStorageService : IFileStorageService
         return Task.CompletedTask;
     }
 
+    public Task DeleteFolderAsync(string folder, CancellationToken ct = default)
+    {
+        var path = Resolve(folder);
+        if (Directory.Exists(path))
+        {
+            Directory.Delete(path, recursive: true);
+        }
+        return Task.CompletedTask;
+    }
+
     /// <summary>Maps a key to a file path, refusing keys that would escape the storage folder.</summary>
     private string Resolve(string key)
     {

@@ -15,4 +15,7 @@ public interface IFileStorageService
 
     /// <summary>Deletes the file; does nothing if it doesn't exist.</summary>
     Task DeleteAsync(string key, CancellationToken ct = default);
+
+    /// <summary>Deletes everything under a folder (e.g. "{userId}") - an account being deleted; does nothing if it doesn't exist.</summary>
+    Task DeleteFolderAsync(string folder, CancellationToken ct = default);
 }

@@ -3458,3 +3458,46 @@ html[data-wallpaper] .page-header > div:first-child {
   padding-inline: 14px;
   font-size: 0.95rem;
 }
+
+/* "Confirm your email" (EmailConfirmBanner) and the password form (AccountCard). */
+.email-confirm {
+  max-width: 760px;
+  margin: 0 auto 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.email-confirm strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.email-confirm p {
+  margin: 0;
+}
+
+.email-confirm-row {
+  display: flex;
+  gap: 8px;
+}
+
+.email-confirm-row input {
+  flex: 1;
+  min-width: 0;
+  letter-spacing: 0.2em;
+  font-size: 1.1rem;
+}
+
+.email-confirm .link {
+  align-self: flex-start;
+  padding: 0;
+}
+
+.account-password {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}

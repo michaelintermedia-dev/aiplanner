@@ -23,6 +23,10 @@ export interface User {
   createdAtUtc: string
   /** May open the operator pages (AI costs) - only on GET /users/me. */
   isAdmin?: boolean
+  /** Its email was confirmed (a code, or Google/Apple vouching). */
+  emailConfirmed?: boolean
+  /** It has a password (Google/Apple-only accounts don't). */
+  hasPassword?: boolean
 }
 
 export interface Task {
@@ -412,6 +416,8 @@ export interface ExternalProviders {
   appleRedirectUri: string | null
   /** Sign in with Apple on iPhone. */
   appleNative: boolean
+  /** The server sends email: "Forgot password?" and email confirmation are on. */
+  emailEnabled?: boolean
 }
 
 export type ExternalProvider = 'google' | 'apple'

@@ -15,6 +15,7 @@ import { useAccountAppearance } from './lib/appearance'
 import { useAccountFirstDayOfWeek } from './lib/weekStart'
 import { NoteDetailPage } from './pages/NoteDetailPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { EmailConfirmBanner } from './components/EmailConfirmBanner'
 import { SharePage } from './pages/SharePage'
 import { TaskDetailPage } from './pages/TaskDetailPage'
 import { TodayPage } from './pages/TodayPage'
@@ -70,6 +71,7 @@ function Layout() {
       </header>
       <main className="content">
         <PullToRefresh />
+        <EmailConfirmBanner />
         <Outlet />
       </main>
       {/* Phone width: new entries float over every page (desktop: inline on Feed / Today). */}

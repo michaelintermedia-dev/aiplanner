@@ -23,7 +23,11 @@ builder.AddServiceDefaults();
 // ---- Services -------------------------------------------------------------
 
 builder.Services
-    .AddControllers(o => o.Filters.Add<ValidationFilter>())
+    .AddControllers(o =>
+    {
+        o.Filters.Add<ValidationFilter>();
+        o.Filters.Add<VerifiedEmailForAiFilter>(); // AI needs a confirmed email once email is set up
+    })
     .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 // The "aiplannerdb" connection string is injected by AiPlanner.AppHost when run

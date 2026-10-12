@@ -7,6 +7,7 @@ using AiPlanner.Application.Auth.Services;
 using AiPlanner.Application.Common.Interfaces;
 using AiPlanner.Application.Ai.Usage;
 using AiPlanner.Infrastructure.Ai;
+using AiPlanner.Infrastructure.Email;
 using AiPlanner.Infrastructure.Ai.Usage;
 using AiPlanner.Infrastructure.Identity;
 using AiPlanner.Infrastructure.Persistence;
@@ -33,6 +34,16 @@ public static class DependencyInjection
         services.AddSingleton<ITokenService, TokenService>();
         services.AddSingleton<IRegistrationPolicy, ConfigRegistrationPolicy>();
         services.AddSingleton<IAdminPolicy, ConfigAdminPolicy>();
+        // The app's emails (codes): Resend when Email:ApiKey + From are set, else off (or the log in Development).
+        services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.SectionName));
+        if (!string.IsNullOrWhiteSpace(configuration["Email:ApiKey"]) && !string.IsNullOrWhiteSpace(configuration["Email:From"]))
+        {
+            services.AddHttpClient<IEmailSender, ResendEmailSender>(c => c.Timeout = TimeSpan.FromSeconds(15));
+        }
+        else
+        {
+            services.AddSingleton<IEmailSender, LogEmailSender>();
+        }
         // Sign in with Google / Apple: their ID tokens are checked here.
         services.Configure<ExternalAuthOptions>(configuration.GetSection(ExternalAuthOptions.SectionName));
         services.AddSingleton<IExternalTokenValidator, OidcExternalTokenValidator>();

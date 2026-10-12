@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiPlanner.Application.Auth.Services;
 
-public class AuthService : IAuthService
+public partial class AuthService : IAuthService
 {
     private readonly IApplicationDbContext _db;
     private readonly IPasswordHasher _passwordHasher;
@@ -18,6 +18,7 @@ public class AuthService : IAuthService
     private readonly RefreshTokenOptions _refreshOptions;
     private readonly IRegistrationPolicy _registration;
     private readonly IExternalTokenValidator _external;
+    private readonly IEmailSender _email;
 
     public AuthService(
         IApplicationDbContext db,
@@ -26,8 +27,10 @@ public class AuthService : IAuthService
         IDateTime dateTime,
         IOptions<RefreshTokenOptions> refreshOptions,
         IRegistrationPolicy registration,
-        IExternalTokenValidator external)
+        IExternalTokenValidator external,
+        IEmailSender email)
     {
+        _email = email;
         _registration = registration;
         _external = external;
         _db = db;
@@ -66,6 +69,8 @@ public class AuthService : IAuthService
 
         _db.Users.Add(user);
         await _db.SaveChangesAsync(ct);
+        // A code to confirm the address (when email is set up); the app shows where to type it.
+        if (_email.IsConfigured) await SendCodeAsync(user, Domain.Enums.EmailCodePurpose.VerifyEmail, ct);
 
         return Result<AuthResponse>.Success(await IssueTokensAsync(user, deviceInfo: null, ct));
     }
@@ -120,7 +125,15 @@ public class AuthService : IAuthService
             case ExternalAccountAction.LinkExisting:
                 user = byEmail!;
                 if (user.IsDeleted) return Result<AuthResponse>.Failure("This account was deleted.");
-                if (!user.EmailConfirmed) user.EmailConfirmed = true; // the provider vouched for it
+                if (!user.EmailConfirmed)
+                {
+                    // Nobody had proven this inbox: someone else may have signed up with it and a
+                    // password they know. The provider proves it's this person's - so that password
+                    // and every session go; only the provider (or a reset by email) gets in now.
+                    user.PasswordHash = string.Empty;
+                    await RevokeAllAsync(user.Id, ct);
+                    user.EmailConfirmed = true;
+                }
                 AddLink(user, who, email);
                 break;
             case ExternalAccountAction.CreateNew:
@@ -154,7 +167,7 @@ public class AuthService : IAuthService
         return Result<AuthResponse>.Success(await IssueTokensAsync(user, request.DeviceInfo, ct));
     }
 
-    public ExternalProvidersDto ExternalProviders => _external.Providers;
+    public ExternalProvidersDto ExternalProviders => _external.Providers with { EmailEnabled = _email.IsConfigured };
 
     private void AddLink(User user, ExternalIdentity who, string? email) =>
         _db.ExternalLogins.Add(new ExternalLogin

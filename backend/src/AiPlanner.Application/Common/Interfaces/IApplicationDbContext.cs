@@ -9,6 +9,7 @@ public interface IApplicationDbContext
     DbSet<UserSettings> UserSettings { get; }
     DbSet<RefreshToken> RefreshTokens { get; }
     DbSet<ExternalLogin> ExternalLogins { get; }
+    DbSet<EmailCode> EmailCodes { get; }
 
     /// <summary>Every task, event and note (one table; Kind tells them apart).</summary>
     DbSet<ItemBase> Items { get; }

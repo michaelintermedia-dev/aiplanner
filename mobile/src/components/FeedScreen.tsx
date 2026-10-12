@@ -15,6 +15,7 @@ import { useDebounced } from '@/lib/useDebounced'
 import { useItemDeletion } from '@/lib/useItemDeletion'
 import { useSortChips } from '@/lib/sortChips'
 import { DOCK_SPACE } from './CaptureDock'
+import { EmailConfirmBanner } from './EmailConfirmBanner'
 import { FeedFilterBar } from './FeedFilterBar'
 import { FeedRow } from './FeedRow'
 import { SortChips } from './SortChips'
@@ -139,6 +140,7 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
         }
         ListHeaderComponent={
           <View style={styles.top}>
+            <EmailConfirmBanner />
             <View style={[styles.controls, selected && styles.dimmed]} pointerEvents={selected ? 'none' : 'auto'}>
               <FeedFilterBar
                 filters={filters}

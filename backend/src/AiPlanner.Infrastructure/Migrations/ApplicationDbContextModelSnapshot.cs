@@ -377,6 +377,42 @@ namespace AiPlanner.Infrastructure.Migrations
                     b.ToTable("Attachments", (string)null);
                 });
 
+            modelBuilder.Entity("AiPlanner.Domain.Entities.EmailCode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Purpose")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UsedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Purpose", "CreatedAtUtc");
+
+                    b.ToTable("EmailCodes", (string)null);
+                });
+
             modelBuilder.Entity("AiPlanner.Domain.Entities.ExternalLogin", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1293,6 +1329,15 @@ namespace AiPlanner.Infrastructure.Migrations
                     b.Navigation("Appointment");
 
                     b.Navigation("Tag");
+                });
+
+            modelBuilder.Entity("AiPlanner.Domain.Entities.EmailCode", b =>
+                {
+                    b.HasOne("AiPlanner.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("AiPlanner.Domain.Entities.ExternalLogin", b =>

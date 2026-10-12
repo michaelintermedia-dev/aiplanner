@@ -7,6 +7,7 @@ import { Linking, Pressable, StyleSheet, Switch, Text, View } from 'react-native
 import { settingsApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
 import { AccountCard } from '@/components/AccountCard'
+import { EmailConfirmBanner } from '@/components/EmailConfirmBanner'
 import { DateTimeField } from '@/components/DateTimeField'
 import { flatCard } from '@/components/panel'
 import { Screen } from '@/components/Screen'
@@ -84,6 +85,7 @@ export default function SettingsScreen() {
 
   return (
     <Screen panel>
+      <EmailConfirmBanner />
       <Text style={[styles.heading, { color: c.muted }]}>{t('settings.language').toUpperCase()}</Text>
       <View style={styles.languages} accessibilityRole="radiogroup" accessibilityLabel={t('settings.language')}>
         {LANGUAGES.map((l) => {

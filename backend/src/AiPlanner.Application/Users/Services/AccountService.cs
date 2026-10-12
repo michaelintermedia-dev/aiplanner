@@ -17,6 +17,7 @@ namespace AiPlanner.Application.Users.Services;
 public class AccountService
 {
     public const string WrongEmail = "Type your account's email to confirm.";
+    public const string WrongPassword = "Your password isn't right.";
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
@@ -28,11 +29,13 @@ public class AccountService
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUserService _currentUser;
     private readonly IFileStorageService _storage;
+    private readonly IPasswordHasher _passwords;
     private readonly IDateTime _clock;
     private readonly ILogger<AccountService> _logger;
 
-    public AccountService(IApplicationDbContext db, ICurrentUserService currentUser, IFileStorageService storage, IDateTime clock, ILogger<AccountService> logger)
+    public AccountService(IApplicationDbContext db, ICurrentUserService currentUser, IFileStorageService storage, IDateTime clock, ILogger<AccountService> logger, IPasswordHasher passwords)
     {
+        _passwords = passwords;
         _db = db;
         _currentUser = currentUser;
         _storage = storage;
@@ -46,12 +49,13 @@ public class AccountService
     /// no longer point at anyone (the operator's cost totals stay right).
     /// Backups still hold it until they expire (14 days) - the privacy page says so.
     /// </summary>
-    public async Task<Result> DeleteAsync(string confirmEmail, CancellationToken ct = default)
+    public async Task<Result> DeleteAsync(string confirmEmail, string? password, CancellationToken ct = default)
     {
         if (_currentUser.UserId is not { } id) return Result.Failure("Not signed in.");
         var user = await _db.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Id == id, ct);
         if (user is null) return Result.Failure("Not signed in.");
         if (!string.Equals(confirmEmail?.Trim(), user.Email, StringComparison.OrdinalIgnoreCase)) return Result.Failure(WrongEmail);
+        if (!string.IsNullOrEmpty(user.PasswordHash) && !_passwords.Verify(password ?? "", user.PasswordHash)) return Result.Failure(WrongPassword);
 
         // The files to remove once the rows are gone.
         var keys = new List<string>();
@@ -76,6 +80,7 @@ public class AccountService
             await _db.AIExtractions.IgnoreQueryFilters().Where(x => x.UserId == id).ExecuteDeleteAsync(t);
             await _db.Transcripts.IgnoreQueryFilters().Where(x => x.UserId == id).ExecuteDeleteAsync(t);
             await _db.VoiceCaptures.IgnoreQueryFilters().Where(x => x.UserId == id).ExecuteDeleteAsync(t);
+            await _db.EmailCodes.Where(x => x.UserId == id).ExecuteDeleteAsync(t);
             await _db.AiUsages.Where(x => x.UserId == id).ExecuteUpdateAsync(s => s.SetProperty(x => x.UserId, (Guid?)null), t);
             await _db.Users.IgnoreQueryFilters().Where(x => x.Id == id).ExecuteDeleteAsync(t); // + settings, sessions, Google/Apple links
             return true;

@@ -16,6 +16,8 @@ Set-Location $api # content root: appsettings + App_Data live here
 $env:ConnectionStrings__aiplannerdb = (Get-Content $conn -Raw).Trim()
 $env:ASPNETCORE_ENVIRONMENT = 'Development'
 $env:Admin__Emails = 'feedtest@test.local' # the QA account may open the AI cost report
+$env:RateLimits__AuthPerMinute = '300' # QA scripts sign in a lot
+$env:Email__DevLog = 'true' # emails (codes) go to the API log
 $env:ExternalAuth__AllowTestProvider = 'true' # the unsigned "test" sign-in provider (Development only)
 $env:Recordings__CleanupDryRun = 'true' # the cleanup job must never delete anything during QA
 $ffmpeg = Join-Path $local 'ffmpeg.exe'

@@ -962,6 +962,25 @@ SPA routes, allow-list, rate limit, ffmpeg, backup).
   null so the cost totals stay right. Backups keep it up to 14 days (privacy page).
   A new table holding user data must be added to both. `tools/qa/account-delete-export.cjs`.
 
+- **Passwords, email codes, sessions** (2026-10-12, production prep; Settings - Account
+  + the sign-in screen, web + app). `POST /api/auth/password` changes it (current one
+  required) or sets one on a Google/Apple-only account; any password change revokes
+  every session and returns new tokens for this device (`adoptSession`).
+  `POST /api/auth/sign-out-everywhere`. Delete account also needs the password when
+  the account has one. **Email** (`IEmailSender`: Resend when `Email:ApiKey` + `From`
+  are set - prod env RESEND_API_KEY / EMAIL_FROM; else off, the apps hide it via
+  `providers.emailEnabled`; `Email:DevLog` in Development writes the mails to the
+  log - QA reads codes there): 6-digit codes (`EmailCodes`: hashed per user and
+  purpose, 15 min, 5 tries, one resend a minute, newest only; `EmailTexts` in the 17
+  languages). Sign-up mails one; "Confirm your email" box (`EmailConfirmBanner`) until
+  `POST /auth/email/verify`; while unconfirmed the AI endpoints (rate-limited "ai")
+  answer 403 email_unconfirmed (`VerifiedEmailForAiFilter`, only when email is on).
+  "Forgot password?": `POST /auth/password/forgot` (always 204 - no account check) ->
+  `/auth/password/reset` {email, code, newPassword} signs in. Accounts from before
+  were marked confirmed (migration EmailCodes). **Takeover fix**: Google/Apple linking
+  to an account whose email nobody confirmed wipes its password and sessions first.
+  `tools/qa/account-security.cjs` (30 checks) + `account-security-ui.cjs`.
+
 ## QA agent
 
 `.claude/agents/qa-explorer.md` - exploratory QA, report only (never edits code).

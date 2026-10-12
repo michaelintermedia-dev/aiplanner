@@ -53,6 +53,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (refreshToken) await authApi.logout(refreshToken).catch(() => {})
         signOutLocally()
       },
+      adoptSession: startSession,
+      reloadUser: async () => setUser(await authApi.me()),
       changeLanguage: async (language) => setUser(await authApi.updateProfile({ locale: localeFor(language, browserZone.locale) })),
     }),
     [user, startSession, signOutLocally],

@@ -35,6 +35,8 @@ services:
       AiProvider__ApiKey: ${OPENAI_API_KEY:?set OPENAI_API_KEY in .env}
       Auth__AllowedEmails: ${ALLOWED_EMAILS:-}
       Admin__Emails: ${ADMIN_EMAILS:-}
+      Email__ApiKey: ${RESEND_API_KEY:-}
+      Email__From: ${EMAIL_FROM:-}
       ExternalAuth__Google__WebClientId: ${GOOGLE_WEB_CLIENT_ID:-}
       ExternalAuth__Apple__ServicesId: ${APPLE_SERVICES_ID:-}
       ExternalAuth__Apple__RedirectUri: ${APPLE_REDIRECT_URI:-}

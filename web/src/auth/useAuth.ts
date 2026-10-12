@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
-import type { ExternalSignIn, User } from '@shared/types'
+import type { AuthResponse, ExternalSignIn, User } from '@shared/types'
 import type { ZoneContext } from '@shared/dates'
 import type { Language } from '@shared/i18n'
 
@@ -13,6 +13,10 @@ export interface AuthState {
   /** Sign in (or up, the first time) with Google / Apple. */
   signInWith: (signIn: ExternalSignIn) => Promise<void>
   logout: () => Promise<void>
+  /** New tokens from the server (a changed or reset password): keep going with them. */
+  adoptSession: (auth: AuthResponse) => Promise<void>
+  /** Reads the account again (e.g. after confirming the email). */
+  reloadUser: () => Promise<void>
   /** Saves the UI language on the account (all devices follow it). */
   changeLanguage: (language: Language) => Promise<void>
 }

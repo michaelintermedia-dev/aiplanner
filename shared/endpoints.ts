@@ -67,8 +67,20 @@ export function createApi(request: RequestFn) {
       me: () => request<User>('GET', '/users/me'),
       /** Everything in the account as a ZIP (data.json + files). */
       exportData: () => request<Blob>('GET', '/users/me/export', undefined, { as: 'blob' }),
-      /** Deletes the account and everything in it, for good - the account's email confirms it. */
-      deleteAccount: (confirmEmail: string) => request<void>('DELETE', '/users/me', { confirmEmail }),
+      /** Deletes the account and everything in it, for good - the account's email (and its password, if it has one) confirms it. */
+      deleteAccount: (confirmEmail: string, password?: string) => request<void>('DELETE', '/users/me', { confirmEmail, password }),
+      /** Change the password (or set one on a Google/Apple-only account): other sessions end, this one gets new tokens. */
+      changePassword: (newPassword: string, currentPassword?: string) => request<AuthResponse>('POST', '/auth/password', { currentPassword, newPassword }),
+      /** Every session ends, this one too. */
+      signOutEverywhere: () => request<void>('POST', '/auth/sign-out-everywhere'),
+      /** A new code to confirm the account's email. */
+      sendVerification: () => request<void>('POST', '/auth/email/send'),
+      verifyEmail: (code: string) => request<void>('POST', '/auth/email/verify', { code }),
+      /** "Forgot password?": a reset code to that address (looks the same whether or not it has an account). */
+      forgotPassword: (email: string) => request<void>('POST', '/auth/password/forgot', { email }, { anonymous: true }),
+      /** A new password with the emailed code - signs in. */
+      resetPassword: (email: string, code: string, newPassword: string) =>
+        request<AuthResponse>('POST', '/auth/password/reset', { email, code, newPassword }, { anonymous: true }),
       /** Change the language/locale (BCP 47). */
       updateProfile: (body: { locale?: string }) => request<User>('PATCH', '/users/me', body),
     },

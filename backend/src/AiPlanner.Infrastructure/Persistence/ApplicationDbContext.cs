@@ -24,6 +24,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<UserSettings> UserSettings => Set<UserSettings>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<ExternalLogin> ExternalLogins => Set<ExternalLogin>();
+    public DbSet<EmailCode> EmailCodes => Set<EmailCode>();
 
     /// <summary>Every task, event and note (one table; Kind tells them apart).</summary>
     public DbSet<ItemBase> Items => Set<ItemBase>();

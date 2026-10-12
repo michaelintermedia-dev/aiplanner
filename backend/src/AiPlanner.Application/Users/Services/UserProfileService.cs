@@ -35,6 +35,6 @@ public class UserProfileService : IUserProfileService
         }
         user.UpdatedAtUtc = _clock.UtcNow;
         await _db.SaveChangesAsync(ct);
-        return Result<UserDto>.Success(new UserDto(user.Id, user.Email, user.DisplayName, user.TimeZoneId, user.Locale, user.CreatedAtUtc));
+        return Result<UserDto>.Success(new UserDto(user.Id, user.Email, user.DisplayName, user.TimeZoneId, user.Locale, user.CreatedAtUtc, false, user.EmailConfirmed, !string.IsNullOrEmpty(user.PasswordHash)));
     }
 }

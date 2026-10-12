@@ -38,7 +38,7 @@ public class UsersController : ControllerBase
         var user = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, ct);
         if (user is null) return NotFound();
 
-        return Ok(new UserDto(user.Id, user.Email, user.DisplayName, user.TimeZoneId, user.Locale, user.CreatedAtUtc, _admins.IsAdmin(user.Email)));
+        return Ok(new UserDto(user.Id, user.Email, user.DisplayName, user.TimeZoneId, user.Locale, user.CreatedAtUtc, _admins.IsAdmin(user.Email), user.EmailConfirmed, !string.IsNullOrEmpty(user.PasswordHash)));
     }
 
     /// <summary>
@@ -64,7 +64,7 @@ public class UsersController : ControllerBase
     [EnableRateLimiting("auth")]
     public async Task<IActionResult> Delete(DeleteAccountRequest request, CancellationToken ct)
     {
-        var result = await _account.DeleteAsync(request.ConfirmEmail, ct);
+        var result = await _account.DeleteAsync(request.ConfirmEmail, request.Password, ct);
         return result.Succeeded ? NoContent() : BadRequest(new { errors = result.Errors });
     }
 

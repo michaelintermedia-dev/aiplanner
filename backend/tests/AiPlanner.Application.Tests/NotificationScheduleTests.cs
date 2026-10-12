@@ -104,7 +104,7 @@ public class NotificationScheduleTests
         NotificationSchedule.Humanize(5, ru).Should().Be("5 минут");
         NotificationSchedule.Humanize(21, ru).Should().Be("21 минуту");
         NotificationSchedule.Humanize(120, NotificationTexts.For("he")).Should().Be("שעתיים");
-        NotificationTexts.For("fr-FR").Should().BeSameAs(NotificationTexts.English);
+        NotificationTexts.For("sw-KE").Should().BeSameAs(NotificationTexts.English); // a language the apps don't have
         NotificationTexts.For(null).Should().BeSameAs(NotificationTexts.English);
     }
 }

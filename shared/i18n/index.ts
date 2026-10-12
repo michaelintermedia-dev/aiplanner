@@ -1,6 +1,19 @@
+import { ar } from './ar'
+import { de } from './de'
 import { en } from './en'
+import { es } from './es'
+import { fr } from './fr'
 import { he } from './he'
+import { hi } from './hi'
+import { it } from './it'
+import { ja } from './ja'
+import { ko } from './ko'
+import { pl } from './pl'
+import { pt } from './pt'
 import { ru } from './ru'
+import { tr } from './tr'
+import { uk } from './uk'
+import { zh } from './zh'
 
 /**
  * UI language for web and mobile. Each language is one dictionary file with
@@ -14,20 +27,34 @@ import { ru } from './ru'
  */
 
 /** Plural forms, picked by count (vars.count). Only the forms the language uses. */
-export type Plural = { one: string; other: string; two?: string; few?: string; many?: string }
+export type Plural = { one: string; other: string; zero?: string; two?: string; few?: string; many?: string }
 export type Message = string | Plural
 export type MessageKey = keyof typeof en
 export type Messages = Record<MessageKey, Message>
 export type Vars = Record<string, string | number>
 
+// The main languages (user's request, 2026-10-12, for going to production), each in its own name.
 export const LANGUAGES = [
   { code: 'en', name: 'English', rtl: false, locale: 'en-US' },
+  { code: 'es', name: 'Español', rtl: false, locale: 'es-ES' },
+  { code: 'fr', name: 'Français', rtl: false, locale: 'fr-FR' },
+  { code: 'de', name: 'Deutsch', rtl: false, locale: 'de-DE' },
+  { code: 'pt', name: 'Português', rtl: false, locale: 'pt-BR' },
+  { code: 'it', name: 'Italiano', rtl: false, locale: 'it-IT' },
+  { code: 'pl', name: 'Polski', rtl: false, locale: 'pl-PL' },
+  { code: 'uk', name: 'Українська', rtl: false, locale: 'uk-UA' },
   { code: 'ru', name: 'Русский', rtl: false, locale: 'ru-RU' },
+  { code: 'tr', name: 'Türkçe', rtl: false, locale: 'tr-TR' },
   { code: 'he', name: 'עברית', rtl: true, locale: 'he-IL' },
+  { code: 'ar', name: 'العربية', rtl: true, locale: 'ar' },
+  { code: 'hi', name: 'हिन्दी', rtl: false, locale: 'hi-IN' },
+  { code: 'zh', name: '中文（简体）', rtl: false, locale: 'zh-CN' },
+  { code: 'ja', name: '日本語', rtl: false, locale: 'ja-JP' },
+  { code: 'ko', name: '한국어', rtl: false, locale: 'ko-KR' },
 ] as const
 export type Language = (typeof LANGUAGES)[number]['code']
 
-const MESSAGES: Record<Language, Messages> = { en, ru, he }
+const MESSAGES: Record<Language, Messages> = { en, es, fr, de, pt, it, pl, uk, ru, tr, he, ar, hi, zh, ja, ko }
 
 /** "ru-RU" -> "ru"; unknown languages -> "en". ("iw" is Hebrew's old code, still sent by some Android versions.) */
 export function languageOf(locale: string | null | undefined): Language {
@@ -44,19 +71,42 @@ export function localeFor(lang: Language, deviceLocale: string): string {
 }
 
 /** CLDR plural category (Hermes has no Intl.PluralRules, so the rules are here). */
-function pluralOf(lang: Language, n: number): keyof Plural {
+export function pluralOf(lang: Language, n: number): keyof Plural {
   const i = Math.floor(Math.abs(n))
   const fraction = n % 1 !== 0
   switch (lang) {
     case 'ru':
+    case 'uk':
       if (fraction) return 'other'
       if (i % 10 === 1 && i % 100 !== 11) return 'one'
+      if (i % 10 >= 2 && i % 10 <= 4 && (i % 100 < 12 || i % 100 > 14)) return 'few'
+      return 'many'
+    case 'pl':
+      if (fraction) return 'other'
+      if (i === 1) return 'one'
       if (i % 10 >= 2 && i % 10 <= 4 && (i % 100 < 12 || i % 100 > 14)) return 'few'
       return 'many'
     case 'he':
       if (i === 1 && !fraction) return 'one'
       if (i === 2 && !fraction) return 'two'
       return 'other'
+    case 'ar':
+      if (fraction) return 'other'
+      if (i === 0) return 'zero'
+      if (i === 1) return 'one'
+      if (i === 2) return 'two'
+      if (i % 100 >= 3 && i % 100 <= 10) return 'few'
+      if (i % 100 >= 11) return 'many'
+      return 'other'
+    case 'fr':
+    case 'pt':
+    case 'hi':
+      // 0 and 1 take the singular.
+      return i <= 1 && !fraction ? 'one' : 'other'
+    case 'zh':
+    case 'ja':
+    case 'ko':
+      return 'other' // no plural forms
     default:
       return i === 1 && !fraction ? 'one' : 'other'
   }

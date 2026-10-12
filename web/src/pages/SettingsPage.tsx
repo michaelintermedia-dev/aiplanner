@@ -88,15 +88,17 @@ export function SettingsPage() {
     <div className="page settings">
       <section className="card form">
         <h3>{t('settings.language')}</h3>
-        <div className="segmented" role="radiogroup" aria-label={t('settings.language')}>
+        {/* 16 languages: chips that wrap, like the app (a segmented row can't hold them). */}
+        <div className="language-grid" role="radiogroup" aria-label={t('settings.language')}>
           {LANGUAGES.map((l) => (
             <button
               key={l.code}
               type="button"
               role="radio"
               lang={l.code}
+              dir={l.rtl ? 'rtl' : 'ltr'}
               aria-checked={languageOf(zone.locale) === l.code}
-              className={languageOf(zone.locale) === l.code ? 'active' : undefined}
+              className={`chip-button${languageOf(zone.locale) === l.code ? ' selected' : ''}`}
               onClick={() => {
                 setLanguageError(null)
                 changeLanguage(l.code as Language).catch((e: Error) => setLanguageError(e.message))

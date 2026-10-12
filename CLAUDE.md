@@ -769,8 +769,16 @@ Local dev notes:
   `UserSettings.WallpaperPhotoKey` in IFileStorageService; the DTO exposes only
   the id (`wallpaperPhoto`). Shown (with a faint page-colour veil) instead of
   the skin's while Wallpaper is on - only once signed in (it needs the token).
-- **UI languages: English, Russian, Hebrew; Hebrew is right-to-left**
-  (2026-10-02, web + mobile). All UI text goes through `t('key', vars)` from
+- **UI languages: 16 - English, Spanish, French, German, Portuguese (Brazil),
+  Italian, Polish, Ukrainian, Russian, Turkish, Hebrew, Arabic, Hindi, Chinese
+  (Simplified), Japanese, Korean; Hebrew and Arabic are right-to-left** (2026-10-02;
+  the main languages added 2026-10-12 for production, user's request). Plural
+  rules per language in `pluralOf` (Arabic zero/one/two/few/many, Polish and
+  Ukrainian one/few/many, CJK none); the server's texts follow (`NotificationTexts`,
+  `ClarificationTexts`, the "already asked about the time" words, the AI's
+  `AppLanguage`) - LanguagesTests. `tools/qa/languages.cjs` renders the web in
+  every language (no untranslated keys, RTL). Settings shows them as wrapping chips.
+  (Originally English, Russian, Hebrew - web + mobile). All UI text goes through `t('key', vars)` from
   `shared/i18n` - never write user-visible English in a component. `en.ts`
   is the reference; `ru.ts`/`he.ts` are typed `Messages`, so a missing key
   is a compile error. Plurals are `{ one, few, many, two, other }` objects

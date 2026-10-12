@@ -3445,3 +3445,16 @@ html[data-wallpaper] .page-header > div:first-child {
   width: auto;
   font-size: 0.95rem;
 }
+
+/* Settings - Language: all the languages as wrapping chips (same as the app). */
+.language-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.language-grid .chip-button {
+  min-height: 38px;
+  padding-inline: 14px;
+  font-size: 0.95rem;
+}

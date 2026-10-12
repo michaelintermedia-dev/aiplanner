@@ -84,7 +84,9 @@ export function FeedRow({
       <Pressable
         style={styles.main}
         onPress={() => (selection ? selection.onToggle() : openDetail(item))}
-        onLongPress={selection ? undefined : onLongPress}
+        // Never undefined: the long press that starts selecting re-renders this row in select mode, and a
+        // Pressable whose onLongPress is gone treats the finger lifting as a tap - which unselected it again.
+        onLongPress={selection ? selection.onToggle : onLongPress}
         accessibilityRole="button"
         accessibilityHint={selection ? (selected ? t('select.hintUnselect') : t('select.hintSelect')) : t('feed.rowHint')}>
         <Text style={[styles.title, { color: done || passed ? c.muted : c.text }, (done || passed) && styles.struck]} numberOfLines={2}>

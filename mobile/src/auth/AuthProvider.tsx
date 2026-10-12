@@ -47,6 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login: async (email, password) => startSession(await authApi.login(email, password)),
       register: async (email, password, displayName) =>
         startSession(await authApi.register(email, password, displayName, deviceZone.timeZone, deviceZone.locale)),
+      signInWith: async (signIn) => startSession(await authApi.external(signIn, deviceZone.timeZone, deviceZone.locale)),
       logout: async () => {
         const refreshToken = await getStoredRefreshToken()
         if (refreshToken) await authApi.logout(refreshToken).catch(() => {})

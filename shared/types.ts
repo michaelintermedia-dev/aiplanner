@@ -401,6 +401,29 @@ export type ItemType = 'Task' | 'Appointment' | 'Note'
  * One notification to show at atUtc (Phase 4). The backend decides what goes
  * off when; clients schedule these locally. The key is stable per occurrence.
  */
+/** Which "Sign in with ..." buttons to show (GET /auth/providers; null = not set up). */
+export interface ExternalProviders {
+  /** Google's web client id (the web button; the phone's webClientId). */
+  googleClientId: string | null
+  /** Sign in with Apple on the web. */
+  appleServicesId: string | null
+  appleRedirectUri: string | null
+  /** Sign in with Apple on iPhone. */
+  appleNative: boolean
+}
+
+export type ExternalProvider = 'google' | 'apple'
+
+/** Sign in or up with a provider's ID token (POST /auth/external). */
+export interface ExternalSignIn {
+  provider: ExternalProvider
+  idToken: string
+  /** The nonce given to the provider (checked against the token). */
+  nonce?: string
+  /** A new account's name (Apple tells only the app, and only the first time). */
+  displayName?: string
+}
+
 /** What AI cost over a period (admins only, GET /admin/ai-usage). Money in US dollars. */
 export interface AiUsageTotals {
   calls: number

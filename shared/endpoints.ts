@@ -1,5 +1,7 @@
 import type {
   AiUsageReport,
+  ExternalProviders,
+  ExternalSignIn,
   Appointment,
   Attachment,
   AuthResponse,
@@ -57,6 +59,11 @@ export function createApi(request: RequestFn) {
           { anonymous: true },
         ),
       logout: (refreshToken: string) => request<void>('POST', '/auth/logout', { refreshToken }),
+      /** Which "Sign in with ..." buttons to show. */
+      providers: () => request<ExternalProviders>('GET', '/auth/providers', undefined, { anonymous: true }),
+      /** Sign in - or up, the first time - with Google / Apple. */
+      external: (body: ExternalSignIn, timeZoneId: string, locale: string) =>
+        request<AuthResponse>('POST', '/auth/external', { ...body, timeZoneId, locale }, { anonymous: true }),
       me: () => request<User>('GET', '/users/me'),
       /** Change the language/locale (BCP 47). */
       updateProfile: (body: { locale?: string }) => request<User>('PATCH', '/users/me', body),

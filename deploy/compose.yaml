@@ -35,6 +35,10 @@ services:
       AiProvider__ApiKey: ${OPENAI_API_KEY:?set OPENAI_API_KEY in .env}
       Auth__AllowedEmails: ${ALLOWED_EMAILS:-}
       Admin__Emails: ${ADMIN_EMAILS:-}
+      ExternalAuth__Google__WebClientId: ${GOOGLE_WEB_CLIENT_ID:-}
+      ExternalAuth__Apple__ServicesId: ${APPLE_SERVICES_ID:-}
+      ExternalAuth__Apple__RedirectUri: ${APPLE_REDIRECT_URI:-}
+      ExternalAuth__Apple__BundleId: ${APPLE_BUNDLE_ID:-}
       RateLimits__AiPerDay: ${AI_PER_DAY:-200}
     volumes:
       - recordings:/data

@@ -101,6 +101,10 @@ export const en = {
   'auth.createAccount': 'Create account',
   'auth.toRegister': 'New here? Create an account',
   'auth.toSignIn': 'Already have an account? Sign in',
+  'auth.or': 'or',
+  'auth.withGoogle': 'Continue with Google',
+  'auth.withApple': 'Continue with Apple',
+  'auth.socialFailed': 'That didn’t work. Please try again.',
 
   // ---- settings ----
   'settings.language': 'Language',

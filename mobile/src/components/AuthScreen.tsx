@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput,
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/auth/useAuth'
 import { useColors } from '@/theme'
+import { SocialSignIn } from './SocialSignIn'
 import { Button } from './ui'
 import { t } from '@shared/i18n'
 
@@ -87,6 +88,7 @@ export function AuthScreen() {
               {mode === 'login' ? t('auth.toRegister') : t('auth.toSignIn')}
             </Text>
           </Pressable>
+          <SocialSignIn onError={setError} />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

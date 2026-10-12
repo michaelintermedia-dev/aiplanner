@@ -33,6 +33,9 @@ public static class DependencyInjection
         services.AddSingleton<ITokenService, TokenService>();
         services.AddSingleton<IRegistrationPolicy, ConfigRegistrationPolicy>();
         services.AddSingleton<IAdminPolicy, ConfigAdminPolicy>();
+        // Sign in with Google / Apple: their ID tokens are checked here.
+        services.Configure<ExternalAuthOptions>(configuration.GetSection(ExternalAuthOptions.SectionName));
+        services.AddSingleton<IExternalTokenValidator, OidcExternalTokenValidator>();
 
         services.AddScoped<IAuthService, AuthService>();
 

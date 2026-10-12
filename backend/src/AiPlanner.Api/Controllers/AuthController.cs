@@ -37,6 +37,22 @@ public class AuthController : ControllerBase
         return Ok(result.Value);
     }
 
+    /// <summary>POST /api/auth/external - sign in or up with a Google/Apple ID token.</summary>
+    [HttpPost("external")]
+    [AllowAnonymous]
+    [EnableRateLimiting("auth")]
+    public async Task<ActionResult<AuthResponse>> External(ExternalLoginRequest request, CancellationToken ct)
+    {
+        var result = await _authService.ExternalLoginAsync(request, ct);
+        if (!result.Succeeded) return Unauthorized(new { errors = result.Errors });
+        return Ok(result.Value);
+    }
+
+    /// <summary>GET /api/auth/providers - which "Sign in with ..." buttons to show (public ids only).</summary>
+    [HttpGet("providers")]
+    [AllowAnonymous]
+    public ActionResult<ExternalProvidersDto> Providers() => Ok(_authService.ExternalProviders);
+
     [HttpPost("refresh")]
     [AllowAnonymous]
     [EnableRateLimiting("auth")]

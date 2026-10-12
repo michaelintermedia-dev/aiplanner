@@ -97,6 +97,10 @@ export const he: Messages = {
   'auth.createAccount': 'יצירת חשבון',
   'auth.toRegister': 'חדשים כאן? יצירת חשבון',
   'auth.toSignIn': 'כבר יש לך חשבון? כניסה',
+  'auth.or': 'או',
+  'auth.withGoogle': 'המשך עם Google',
+  'auth.withApple': 'המשך עם Apple',
+  'auth.socialFailed': 'זה לא הצליח. נסו שוב.',
 
   // ---- settings ----
   'settings.language': 'שפה',

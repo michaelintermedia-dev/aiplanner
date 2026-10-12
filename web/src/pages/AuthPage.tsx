@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { t } from '@shared/i18n'
 import { useAuth } from '../auth/useAuth'
+import { SocialSignIn } from '../components/SocialSignIn'
 
 export function AuthPage() {
   const { login, register } = useAuth()
@@ -65,6 +66,7 @@ export function AuthPage() {
         >
           {mode === 'login' ? t('auth.toRegister') : t('auth.toSignIn')}
         </button>
+        <SocialSignIn onError={setError} />
       </form>
     </main>
   )

@@ -893,6 +893,25 @@ SPA routes, allow-list, rate limit, ffmpeg, backup).
   $0.0015 a message (gpt-5.4-mini, ~2.9k tokens in, no cache hits yet).
   `tools/qa/ai-usage.cjs` checks it live.
 
+- **Sign in with Google / Apple** (user's request, 2026-10-12; Facebook and
+  Microsoft dropped by the user). The client gets the provider's ID token and
+  posts it to `POST /api/auth/external` (rate-limited "auth"); `OidcExternalTokenValidator`
+  checks it against the provider's published keys (issuer, audience = our client
+  ids, lifetime, nonce raw or SHA-256), then `ExternalAccount.Decide` (pure, tested):
+  a linked account (`ExternalLogins`: provider + subject, never the email) signs
+  in; a provider-verified email of an existing account links it; else a new
+  account (no password - `PasswordHash` "" and password login says "signs in
+  with Google or Apple"; the sign-up allow-list applies); an unverified email
+  that's taken is refused. Ids in `ExternalAuth` (prod env GOOGLE_WEB_CLIENT_ID,
+  APPLE_SERVICES_ID, APPLE_REDIRECT_URI, APPLE_BUNDLE_ID); empty = that button
+  is hidden (`GET /api/auth/providers`). Web: `SocialSignIn` (Google Identity
+  Services button, Apple JS popup). App: `SocialSignIn` - Google on Android
+  (@react-native-google-signin, webClientId; needs an Android OAuth client with the
+  signing key's SHA-1), Apple on iPhone (expo-apple-authentication). iPhone Google
+  needs an iOS client id + the library's config plugin (iosUrlScheme) first.
+  QA: provider "test" (`ExternalAuth:AllowTestProvider`, Development only) -
+  `tools/qa/social-sign-in.cjs`.
+
 ## QA agent
 
 `.claude/agents/qa-explorer.md` - exploratory QA, report only (never edits code).

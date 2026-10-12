@@ -3225,3 +3225,52 @@ html[data-wallpaper] .page-header > div:first-child {
   font-weight: 600;
   font-size: 0.8rem;
 }
+
+/* "Continue with Google / Apple" under the sign-in form (SocialSignIn). */
+.social-sign-in {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.social-or {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.social-or::before,
+.social-or::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--border);
+}
+
+.google-button {
+  display: flex;
+  justify-content: center;
+  min-height: 44px;
+}
+
+.apple-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  border-radius: 999px;
+  background: #000;
+  color: #fff;
+  border: 1px solid #000;
+  font-weight: 600;
+}
+
+.apple-button:hover:not(:disabled) {
+  background: #222;
+}
+
+.apple-button svg {
+  font-size: 1.2rem;
+}

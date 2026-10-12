@@ -97,6 +97,10 @@ export const ru: Messages = {
   'auth.createAccount': 'Создать аккаунт',
   'auth.toRegister': 'Впервые здесь? Создайте аккаунт',
   'auth.toSignIn': 'Уже есть аккаунт? Войдите',
+  'auth.or': 'или',
+  'auth.withGoogle': 'Войти через Google',
+  'auth.withApple': 'Войти через Apple',
+  'auth.socialFailed': 'Не получилось. Попробуйте ещё раз.',
 
   // ---- settings ----
   'settings.language': 'Язык',

@@ -17,6 +17,7 @@ public class AuthService : IAuthService
     private readonly IDateTime _dateTime;
     private readonly RefreshTokenOptions _refreshOptions;
     private readonly IRegistrationPolicy _registration;
+    private readonly IExternalTokenValidator _external;
 
     public AuthService(
         IApplicationDbContext db,
@@ -24,9 +25,11 @@ public class AuthService : IAuthService
         ITokenService tokenService,
         IDateTime dateTime,
         IOptions<RefreshTokenOptions> refreshOptions,
-        IRegistrationPolicy registration)
+        IRegistrationPolicy registration,
+        IExternalTokenValidator external)
     {
         _registration = registration;
+        _external = external;
         _db = db;
         _passwordHasher = passwordHasher;
         _tokenService = tokenService;
@@ -72,6 +75,11 @@ public class AuthService : IAuthService
         var email = request.Email.Trim().ToLowerInvariant();
 
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == email, ct);
+        if (user is not null && string.IsNullOrEmpty(user.PasswordHash))
+        {
+            // Made with Google/Apple: no password to check (and BCrypt can't read an empty hash).
+            return Result<AuthResponse>.Failure("This account signs in with Google or Apple.");
+        }
         if (user is null || !_passwordHasher.Verify(request.Password, user.PasswordHash))
         {
             return Result<AuthResponse>.Failure("Invalid email or password.");
@@ -82,6 +90,82 @@ public class AuthService : IAuthService
 
         return Result<AuthResponse>.Success(await IssueTokensAsync(user, request.DeviceInfo, ct));
     }
+
+    /// <summary>
+    /// Sign in or up with Google/Apple (user's request, 2026-10-12): the provider's
+    /// token is checked, then ExternalAccount decides which account it is.
+    /// </summary>
+    public async Task<Result<AuthResponse>> ExternalLoginAsync(ExternalLoginRequest request, CancellationToken ct = default)
+    {
+        var provider = request.Provider.Trim().ToLowerInvariant();
+        var who = await _external.ValidateAsync(provider, request.IdToken, request.Nonce, ct);
+        if (who is null)
+        {
+            return Result<AuthResponse>.Failure("Could not verify the sign-in. Please try again.");
+        }
+
+        var link = await _db.ExternalLogins.Include(l => l.User)
+            .FirstOrDefaultAsync(l => l.Provider == who.Provider && l.Subject == who.Subject, ct);
+        var email = who.Email?.Trim().ToLowerInvariant();
+        var byEmail = link is null && email is not null ? await _db.Users.FirstOrDefaultAsync(u => u.Email == email, ct) : null;
+
+        User user;
+        switch (ExternalAccount.Decide(link is not null, email, who.EmailVerified, byEmail is not null))
+        {
+            case ExternalAccountAction.UseLinked:
+                user = link!.User;
+                if (user.IsDeleted) return Result<AuthResponse>.Failure("This account was deleted.");
+                link.LastUsedAtUtc = _dateTime.UtcNow;
+                break;
+            case ExternalAccountAction.LinkExisting:
+                user = byEmail!;
+                if (user.IsDeleted) return Result<AuthResponse>.Failure("This account was deleted.");
+                if (!user.EmailConfirmed) user.EmailConfirmed = true; // the provider vouched for it
+                AddLink(user, who, email);
+                break;
+            case ExternalAccountAction.CreateNew:
+                if (!_registration.IsAllowed(email!))
+                {
+                    return Result<AuthResponse>.Failure("Sign-up is by invitation only.");
+                }
+                user = new User
+                {
+                    Email = email!,
+                    DisplayName = ExternalAccount.NameFor(request.DisplayName, who.Name, email!),
+                    PasswordHash = string.Empty, // no password - signs in with the provider
+                    EmailConfirmed = who.EmailVerified,
+                    TimeZoneId = string.IsNullOrWhiteSpace(request.TimeZoneId) ? "UTC" : request.TimeZoneId!,
+                    Locale = LocaleHelper.IsValid(request.Locale) ? request.Locale! : "en-US",
+                    CreatedAtUtc = _dateTime.UtcNow,
+                    UpdatedAtUtc = _dateTime.UtcNow,
+                };
+                user.Settings = new UserSettings { UserId = user.Id };
+                _db.Users.Add(user);
+                AddLink(user, who, email);
+                break;
+            case ExternalAccountAction.RefuseUnverifiedEmail:
+                return Result<AuthResponse>.Failure("An account with this email already exists - sign in with your password.");
+            default:
+                return Result<AuthResponse>.Failure("The sign-in didn't share an email address.");
+        }
+
+        user.LastLoginAtUtc = _dateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        return Result<AuthResponse>.Success(await IssueTokensAsync(user, request.DeviceInfo, ct));
+    }
+
+    public ExternalProvidersDto ExternalProviders => _external.Providers;
+
+    private void AddLink(User user, ExternalIdentity who, string? email) =>
+        _db.ExternalLogins.Add(new ExternalLogin
+        {
+            UserId = user.Id,
+            Provider = who.Provider,
+            Subject = who.Subject,
+            Email = email,
+            CreatedAtUtc = _dateTime.UtcNow,
+            LastUsedAtUtc = _dateTime.UtcNow,
+        });
 
     public async Task<Result<AuthResponse>> RefreshAsync(string refreshToken, CancellationToken ct = default)
     {

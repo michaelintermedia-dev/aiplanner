@@ -1,6 +1,6 @@
 import type { ZoneContext } from '@shared/dates'
 import type { Language } from '@shared/i18n'
-import type { User } from '@shared/types'
+import type { ExternalSignIn, User } from '@shared/types'
 import { createContext, useContext } from 'react'
 
 export interface AuthState {
@@ -10,6 +10,8 @@ export interface AuthState {
   zone: ZoneContext
   login: (email: string, password: string) => Promise<void>
   register: (email: string, password: string, displayName: string) => Promise<void>
+  /** Sign in (or up, the first time) with Google / Apple. */
+  signInWith: (signIn: ExternalSignIn) => Promise<void>
   logout: () => Promise<void>
   /** Saves the UI language on the account (all devices follow it). */
   changeLanguage: (language: Language) => Promise<void>

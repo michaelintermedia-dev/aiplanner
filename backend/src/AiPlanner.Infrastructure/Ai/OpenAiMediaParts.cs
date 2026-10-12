@@ -18,6 +18,7 @@ internal static class OpenAiMediaParts
         "pt" => "Portuguese (Brazil)",
         "it" => "Italian",
         "pl" => "Polish",
+        "ro" => "Romanian",
         "uk" => "Ukrainian",
         "tr" => "Turkish",
         "ar" => "Arabic",

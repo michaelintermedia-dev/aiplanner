@@ -2,7 +2,7 @@
 // Hebrew are right-to-left, and the server's notification texts follow the language too.
 const { api, openApp } = require('./lib.cjs')
 const check = (name, ok, detail = '') => console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  -- ' + detail : ''}`)
-const LOCALES = ['en-US', 'es-ES', 'fr-FR', 'de-DE', 'pt-BR', 'it-IT', 'pl-PL', 'uk-UA', 'ru-RU', 'tr-TR', 'he-IL', 'ar', 'hi-IN', 'zh-CN', 'ja-JP', 'ko-KR']
+const LOCALES = ['en-US', 'es-ES', 'fr-FR', 'de-DE', 'pt-BR', 'it-IT', 'pl-PL', 'ro-RO', 'uk-UA', 'ru-RU', 'tr-TR', 'he-IL', 'ar', 'hi-IN', 'zh-CN', 'ja-JP', 'ko-KR']
 const SHOTS = new Set(['ar', 'ja-JP', 'hi-IN', 'de-DE'])
 // A key that slipped through untranslated looks like "feed.tab.all" (t() returns the key itself).
 const KEY = /\b(?:kind|date|feed|filter|draft|calendar|reminder|app|common|nav|auth|settings|today|select|task|status|priority|changeType|item|tags|event|note|capture|mic|review|source|dock|player|notifications|sort|repeat|pull|form|media|consent|widget|theme|skin|place|account|admin)\.[a-zA-Z.]+\b/

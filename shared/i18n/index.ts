@@ -10,6 +10,7 @@ import { ja } from './ja'
 import { ko } from './ko'
 import { pl } from './pl'
 import { pt } from './pt'
+import { ro } from './ro'
 import { ru } from './ru'
 import { tr } from './tr'
 import { uk } from './uk'
@@ -42,6 +43,7 @@ export const LANGUAGES = [
   { code: 'pt', name: 'Português', rtl: false, locale: 'pt-BR' },
   { code: 'it', name: 'Italiano', rtl: false, locale: 'it-IT' },
   { code: 'pl', name: 'Polski', rtl: false, locale: 'pl-PL' },
+  { code: 'ro', name: 'Română', rtl: false, locale: 'ro-RO' },
   { code: 'uk', name: 'Українська', rtl: false, locale: 'uk-UA' },
   { code: 'ru', name: 'Русский', rtl: false, locale: 'ru-RU' },
   { code: 'tr', name: 'Türkçe', rtl: false, locale: 'tr-TR' },
@@ -54,7 +56,7 @@ export const LANGUAGES = [
 ] as const
 export type Language = (typeof LANGUAGES)[number]['code']
 
-const MESSAGES: Record<Language, Messages> = { en, es, fr, de, pt, it, pl, uk, ru, tr, he, ar, hi, zh, ja, ko }
+const MESSAGES: Record<Language, Messages> = { en, es, fr, de, pt, it, pl, ro, uk, ru, tr, he, ar, hi, zh, ja, ko }
 
 /** "ru-RU" -> "ru"; unknown languages -> "en". ("iw" is Hebrew's old code, still sent by some Android versions.) */
 export function languageOf(locale: string | null | undefined): Language {
@@ -86,6 +88,11 @@ export function pluralOf(lang: Language, n: number): keyof Plural {
       if (i === 1) return 'one'
       if (i % 10 >= 2 && i % 10 <= 4 && (i % 100 < 12 || i % 100 > 14)) return 'few'
       return 'many'
+    case 'ro':
+      // 1 · 0, 2–19 (also 101–119…) · 20 and more ("20 de minute")
+      if (i === 1 && !fraction) return 'one'
+      if (fraction || i === 0 || (i % 100 >= 1 && i % 100 <= 19)) return 'few'
+      return 'other'
     case 'he':
       if (i === 1 && !fraction) return 'one'
       if (i === 2 && !fraction) return 'two'

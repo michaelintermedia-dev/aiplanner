@@ -41,6 +41,7 @@ public sealed class NotificationTexts
             "pt" => Portuguese,
             "it" => Italian,
             "pl" => Polish,
+            "ro" => Romanian,
             "uk" => Ukrainian,
             "tr" => Turkish,
             "ar" => Arabic,
@@ -288,6 +289,36 @@ public sealed class NotificationTexts
         Important = n => $" (ważne: {n})",
         Overdue = n => $"zaległe: {n}",
         Events = n => Pl(n, "wydarzenie", "wydarzenia", "wydarzeń"),
+    };
+
+    // Romanian: 1 minut, 2–19 minute, 20+ de minute (101–119 like 1–19).
+    private static string Ro(int n, string one, string few)
+    {
+        if (n == 1) return $"1 {one}";
+        return n == 0 || n % 100 is >= 1 and <= 19 ? $"{n} {few}" : $"{n} de {few}";
+    }
+
+    public static readonly NotificationTexts Romanian = new()
+    {
+        Culture = CultureInfo.GetCultureInfo("ro-RO"),
+        Minutes = n => Ro(n, "minut", "minute"),
+        Hours = n => Ro(n, "oră", "ore"),
+        Days = n => Ro(n, "zi", "zile"),
+        HoursMinutes = (h, m) => $"{h} h {m} min",
+        StartingNow = "Începe acum",
+        StartsIn = x => $"Începe în {x}",
+        DueNow = "Termenul e acum",
+        DueIn = x => $"Termen în {x}",
+        StartsAt = x => $"Începe: {x}",
+        DueAt = x => $"Termen: {x}",
+        TaskReminder = "Memento pentru sarcină",
+        EventReminder = "Memento pentru eveniment",
+        NoteReminder = "Memento pentru notiță",
+        YourDay = "Ziua ta",
+        TasksDueToday = n => Ro(n, "sarcină", "sarcini") + " de făcut azi",
+        Important = n => $" (importante: {n})",
+        Overdue = n => $"întârziate: {n}",
+        Events = n => Ro(n, "eveniment", "evenimente"),
     };
 
     public static readonly NotificationTexts Ukrainian = new()

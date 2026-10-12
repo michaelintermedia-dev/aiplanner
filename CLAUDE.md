@@ -769,7 +769,7 @@ Local dev notes:
   `UserSettings.WallpaperPhotoKey` in IFileStorageService; the DTO exposes only
   the id (`wallpaperPhoto`). Shown (with a faint page-colour veil) instead of
   the skin's while Wallpaper is on - only once signed in (it needs the token).
-- **UI languages: 16 - English, Spanish, French, German, Portuguese (Brazil),
+- **UI languages: 17 - English, Spanish, French, German, Portuguese (Brazil), Romanian,
   Italian, Polish, Ukrainian, Russian, Turkish, Hebrew, Arabic, Hindi, Chinese
   (Simplified), Japanese, Korean; Hebrew and Arabic are right-to-left** (2026-10-02;
   the main languages added 2026-10-12 for production, user's request). Plural

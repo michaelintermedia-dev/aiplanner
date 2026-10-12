@@ -33,6 +33,7 @@ public sealed class ClarificationTexts
             "pt" => Portuguese,
             "it" => Italian,
             "pl" => Polish,
+            "ro" => Romanian,
             "uk" => Ukrainian,
             "tr" => Turkish,
             "ar" => Arabic,
@@ -196,6 +197,23 @@ public sealed class ClarificationTexts
         MediaDocument = "Dokument",
     };
 
+    public static readonly ClarificationTexts Romanian = new()
+    {
+        WhenIsAppointment = "Când este acest eveniment?",
+        WhatTimeStarts = "La ce oră începe?",
+        TimePassed = "Ora aceasta a trecut deja - verifică data.",
+        WhatTimeRemind = "La ce oră să-ți amintesc?",
+        WhenRemind = "Când să-ți amintesc?",
+        ReminderPassed = "Ora acestui memento a trecut deja - verific-o.",
+        WhichDays = "În ce zile să-ți amintesc?",
+        CheckDate = "Verifică data.",
+        DefaultCaptureTitle = "Notare",
+        DefaultNoteTitle = "Notiță",
+        MediaPhoto = "Poză",
+        MediaPdf = "PDF",
+        MediaDocument = "Document",
+    };
+
     public static readonly ClarificationTexts Ukrainian = new()
     {
         WhenIsAppointment = "Коли ця подія?",
@@ -331,7 +349,7 @@ public sealed class Questions(ClarificationTexts texts)
     private static readonly System.Text.RegularExpressions.Regex AboutTime = new(
         @"\b(when|what time|which day|what day|date|time)\b|когда|во сколько|в котор|какого числа|время|дат|מתי|שעה|תאריך|באיזה יום"
         + @"|cuándo|qué hora|qué día|fecha|quand|quelle heure|quel jour|wann|uhrzeit|welche[mn]? tag|datum|quando|que horas|que dia|che ora|che giorno|data"
-        + @"|kiedy|o której|któr\w* dzień|godzin|коли|о котрій|котр\w* дн|годин|ne zaman|saat kaç|hangi gün|tarih"
+        + @"|când|ce oră|ce zi|kiedy|o której|któr\w* dzień|godzin|коли|о котрій|котр\w* дн|годин|ne zaman|saat kaç|hangi gün|tarih"
         + @"|متى|أي ساعة|أي يوم|تاريخ|الوقت|कब|कितने बजे|किस दिन|तारीख|समय|什么时候|几点|哪天|日期|时间|いつ|何時|何日|日付|時刻|언제|몇 시|무슨 요일|날짜|시간",
         System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
 

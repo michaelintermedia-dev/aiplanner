@@ -11,7 +11,7 @@ public class LanguagesTests
 {
     public static readonly TheoryData<string> AppLocales = new()
     {
-        "es-ES", "fr-FR", "de-DE", "pt-BR", "it-IT", "pl-PL", "uk-UA", "ru-RU", "tr-TR", "he-IL", "ar", "hi-IN", "zh-CN", "ja-JP", "ko-KR",
+        "es-ES", "fr-FR", "de-DE", "pt-BR", "it-IT", "pl-PL", "ro-RO", "uk-UA", "ru-RU", "tr-TR", "he-IL", "ar", "hi-IN", "zh-CN", "ja-JP", "ko-KR",
     };
 
     [Theory]
@@ -50,6 +50,10 @@ public class LanguagesTests
     [InlineData("ar", 2, "دقيقتين")]
     [InlineData("ar", 3, "3 دقائق")]
     [InlineData("ar", 15, "15 دقيقة")]
+    [InlineData("ro", 1, "1 minut")]
+    [InlineData("ro", 5, "5 minute")]
+    [InlineData("ro", 20, "20 de minute")]
+    [InlineData("ro", 105, "105 minute")]
     [InlineData("de", 3, "3 Minuten")]
     [InlineData("fr", 0, "0 minute")]
     public void Minutes_take_the_right_plural_form(string language, int minutes, string expected)
@@ -68,6 +72,7 @@ public class LanguagesTests
     [Theory]
     [InlineData("¿A qué hora empieza la reunión?")]
     [InlineData("Wann genau?")]
+    [InlineData("La ce oră începe?")]
     [InlineData("O której godzinie?")]
     [InlineData("几点开始？")]
     [InlineData("何時ですか？")]

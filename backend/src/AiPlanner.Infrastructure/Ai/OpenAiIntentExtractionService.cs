@@ -155,7 +155,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             - Top-level "search": null, unless the "FIND" section below says otherwise.
 
             Never return nothing: if the input is a question, an idea, or anything that isn't clearly a task or appointment, return it as a single "note" whose "description" keeps the user's words. The user can change any item's type in the review.
-            """ + OneEntry(c) + Continuing(c) + AttachedFiles(c) + Find(c);
+            """ + OneEntry(c) + Continuing(c) + AttachedFiles(c) + LinksSection(c) + Find(c);
     }
 
     /// <summary>A new capture can be a search instead ("find the photo of the wifi password").</summary>
@@ -210,6 +210,17 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
         - Language (user's rule): what comes from a file is written in the language of the text in it - a document, or a picture with writing on it (a flyer, a label, a screenshot). A picture with no text (a plain photo) is described in {{OpenAiMediaParts.AppLanguage(c.Locale)}} (the app's language). Names, addresses, codes and amounts stay as written. The "title" follows the user's words when there are any; with no words, the same language as the description.
         - Never invent what isn't in the files or the words; if a date or time is unreadable, ask in "clarification".
         - "sourceText": the user's words only ("" when there are none).
+        """;
+
+    /// <summary>Web links in the words, with what they are (looked up by the app): a shared link becomes a real entry.</summary>
+    private static string LinksSection(ExtractionContext c) => c.Links is not { Count: > 0 } links ? "" : $$"""
+
+
+        LINKS. The message has web links; what each one is (looked up by the app - may be missing):
+        {{string.Join("\n", links.Select(l => $"- {l.Url}" + (l.Title is null ? " (title unknown)" : $" - \"{l.Title}\"") + (l.Site is null ? "" : $" ({l.Site})")))}}
+        - A message that is only a link, or a link with a few words (something shared from another app): ONE note. "title" says what it is - the page title, with the site when that helps ("YouTube: <video title>", "Article: <title>") - in the language of that title. "description": the link exactly as written, on its own line, then any words of the user's.
+        - A link inside a longer message stays in the "description" of the item it belongs to.
+        - Never change, shorten or leave out a link. Never invent what a page says beyond its title.
         """;
 
     private static string KnownTags(ExtractionContext c) =>

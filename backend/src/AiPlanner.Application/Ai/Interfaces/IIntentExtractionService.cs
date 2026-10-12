@@ -23,9 +23,10 @@ public interface IIntentExtractionService
 /// <param name="OneEntry">"One entry per message" (Settings): everything said becomes one item.</param>
 /// <param name="KnownTags">The user's tags so far - a tag asked for reuses one of these when it means the same.</param>
 /// <param name="Media">Photos and documents attached to the capture (see MediaReader) - read with the words. Text may be empty then.</param>
+/// <param name="Links">The web links in the words with their page titles (ILinkPreviewService).</param>
 public record ExtractionContext(
     string Text, DateTime LocalNow, string TimeZoneId, string Locale, string? PreviousText = null, string? CurrentItem = null, bool OneEntry = false,
-    IReadOnlyList<string>? KnownTags = null, IReadOnlyList<MediaInput>? Media = null);
+    IReadOnlyList<string>? KnownTags = null, IReadOnlyList<MediaInput>? Media = null, IReadOnlyList<LinkPreview>? Links = null);
 
 public enum MediaInputKind { Image, Pdf, Text }
 

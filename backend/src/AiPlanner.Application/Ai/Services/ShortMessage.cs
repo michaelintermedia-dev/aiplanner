@@ -16,6 +16,8 @@ public static class ShortMessage
     public static NormalizedExtraction Fix(NormalizedExtraction extraction, string input)
     {
         if (extraction.Items.Count != 1) return extraction;
+        // A link is never a title: it belongs in the details, where it stays clickable.
+        if (Links.Find(input).Count > 0) return extraction;
         var words = Words(input);
         if (words.Count == 0 || words.Count > MaxMessageWords) return extraction;
         var item = extraction.Items[0];

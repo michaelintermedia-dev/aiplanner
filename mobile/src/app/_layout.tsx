@@ -1,5 +1,6 @@
 import { languageOf, setLocale, t } from '@shared/i18n'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
+import { ShareIntentProvider } from 'expo-share-intent'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
@@ -10,6 +11,7 @@ import { AuthProvider } from '@/auth/AuthProvider'
 import { useAuth } from '@/auth/useAuth'
 import { AuthScreen } from '@/components/AuthScreen'
 import { CaptureDock } from '@/components/CaptureDock'
+import { ShareIntake } from '@/components/ShareIntake'
 import { applyLayoutDirection } from '@/lib/layoutDirection'
 import { useNotifications } from '@/lib/useNotifications'
 import { useColors } from '@/theme'
@@ -36,6 +38,8 @@ export default function RootLayout() {
   return (
     // Gesture handler root: the floating toolbar's drag/swipe is a native pan gesture.
     <GestureHandlerRootView style={{ flex: 1 }}>
+      {/* Shares from other apps (Android share sheet) - kept here until signed in (ShareIntake). */}
+      <ShareIntentProvider>
       <ThemeProvider value={{ ...base, colors: { ...base.colors, background: 'transparent', primary: c.accent } }}>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
@@ -46,6 +50,7 @@ export default function RootLayout() {
           </AuthProvider>
         </QueryClientProvider>
       </ThemeProvider>
+      </ShareIntentProvider>
     </GestureHandlerRootView>
   )
 }
@@ -88,6 +93,7 @@ function SignedIn() {
 
   return (
     <CaptureDock>
+      <ShareIntake />
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: c.surface },

@@ -807,6 +807,20 @@ Local dev notes:
   a map link without coordinates). The form's place has "Use my location"
   (`PlaceField`): the app looks up the street address (expo-location
   reverseGeocode), the web saves coordinates ("32.08530, 34.78180").
+- **Sharing into AI Planner** (user's request, 2026-10-12): from any app's share sheet
+  - a link (YouTube...), text, photos - straight to a new entry with the smart Save
+  (the review only when unclear; "Saved as Note: ... Open"). App: Android share target
+  (expo-share-intent: text/* and image/*, several images; iOS extension off - needs a
+  Mac) -> `ShareIntentProvider` (root) -> `ShareIntake` (signed in; photos shrunk like
+  picked ones, `prepareSharedFiles`) -> `lib/sharedIn` -> the dock opens and its
+  CaptureBar fills in and saves. Web: the installed PWA is a share target (manifest
+  `share_target` GET /share?title&text&url -> `SharePage` -> `lib/sharedIn`; text and
+  links only). Server: links in the words get their page titles first
+  (`ILinkPreviewService`, `HttpLinkPreviewService`: YouTube oEmbed, else og:title /
+  <title>; public addresses only - `PublicAddress`, checked on every connect incl.
+  redirects; 5 s, 256 KB, 3 links) -> the prompt's LINKS section: a bare link = one
+  note named after the page ("YouTube: <video>"), the link as written in the text;
+  `Links.Keep` puts back a link the AI dropped; `ShortMessage.Fix` leaves links alone.
 - **The feed's mic means "spoken"** (`FeedItemDto.FromVoice` = its capture has a
   recording); typed captures and hand-made items have none.
 - **Tag picker** (redone at the user's request, 2026-10-12, web + app): the item's

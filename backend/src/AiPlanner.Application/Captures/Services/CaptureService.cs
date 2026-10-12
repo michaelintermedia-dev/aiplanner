@@ -48,6 +48,7 @@ public class CaptureService : ICaptureService
     private readonly IDateTime _dateTime;
     private readonly ITranscriptionService _transcription;
     private readonly IIntentExtractionService _extraction;
+    private readonly ILinkPreviewService _linkPreviews;
     private readonly IFileStorageService _storage;
     private readonly ITaskService _tasks;
     private readonly IAppointmentService _appointments;
@@ -74,8 +75,10 @@ public class CaptureService : ICaptureService
         IValidator<CreateTaskRequest> taskValidator,
         IValidator<CreateAppointmentRequest> appointmentValidator,
         ReminderPlanner reminders,
+        ILinkPreviewService linkPreviews,
         ILogger<CaptureService> logger)
     {
+        _linkPreviews = linkPreviews;
         _reminders = reminders;
         _db = db;
         _currentUser = currentUser;
@@ -437,8 +440,11 @@ public class CaptureService : ICaptureService
         var knownTags = await _db.Tags.AsNoTracking().Where(t => t.UserId == userId).OrderBy(t => t.Name).Select(t => t.Name).Take(200).ToListAsync(ct);
 
         var started = _dateTime.UtcNow;
+        // Links in the words: what they are (page titles), so a bare shared link gets a real name.
+        var urls = Links.Find(wordsForAi ?? text).Take(Links.MaxLookups).ToList();
+        var links = urls.Count > 0 ? await _linkPreviews.PreviewAsync(urls, ct) : null;
         var raw = await _extraction.ExtractAsync(
-            new ExtractionContext(wordsForAi ?? text, localNow, timeZone.Id, user.Locale, previousText, currentItem, oneEntry, knownTags, media), ct);
+            new ExtractionContext(wordsForAi ?? text, localNow, timeZone.Id, user.Locale, previousText, currentItem, oneEntry, knownTags, media, links), ct);
         var normalized = ExtractionNormalizer.Normalize(raw, text, localNow, timeZone, user.Locale, knownTags);
         if (oneEntry) normalized = SingleEntry.Merge(normalized);
         // A tag the user already has is shown and saved with their spelling ("family" -> "Family").
@@ -456,6 +462,8 @@ public class CaptureService : ICaptureService
         };
         // A short message stays whole in the title, never cut into title + a scrap (a new entry only).
         if (currentItem is null && wordsForAi != "") normalized = ShortMessage.Fix(normalized, text);
+        // Every link the user gave stays in the entry, exactly as written (clickable).
+        if (currentItem is null) normalized = Links.Keep(normalized, wordsForAi ?? text);
         // Only files, no words: the titles say what kind of file it is ("Photo: ...").
         if (wordsForAi == "" && media is { Count: > 0 })
         {

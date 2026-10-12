@@ -56,6 +56,27 @@ async function shrink(asset: ImagePicker.ImagePickerAsset, name: string): Promis
   return { uri: saved.uri, name: name.replace(/\.[^.]+$/, '') + '.jpg' }
 }
 
+/**
+ * Files another app shared into AI Planner (ShareIntake): photos shrunk like
+ * picked ones, everything checked like picked files (kind, size).
+ */
+export async function prepareSharedFiles(
+  files: { uri: string; name: string; isImage: boolean; width?: number | null; height?: number | null }[],
+): Promise<Picked> {
+  const picked: Picked = { added: [], problems: [] }
+  for (const f of files) {
+    if (f.isImage && f.width && f.height) {
+      const photo = await shrink({ uri: f.uri, width: f.width, height: f.height } as ImagePicker.ImagePickerAsset, f.name).catch(() => null)
+      if (photo) {
+        await check(photo.uri, photo.name, true, picked)
+        continue
+      }
+    }
+    await check(f.uri, f.name, f.isImage, picked)
+  }
+  return picked
+}
+
 /** Picked files, or the problems that kept some out (wrong kind, too big). */
 export interface Picked {
   added: PendingMedia[]

@@ -6,6 +6,7 @@ import { IoArrowUp, IoAttachOutline, IoCheckmark, IoEyeOutline } from 'react-ico
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { searchFilters } from '@shared/feedFilter'
 import { setFeedFilters } from '../lib/feedFilters'
+import { takeShared, useSharedIn } from '../lib/sharedIn'
 import { capturesApi, settingsApi } from '../api/endpoints'
 import { itemPath } from '../lib/itemPath'
 import { applyMedia, attachmentsKey, type PendingMedia } from '../lib/media'
@@ -317,6 +318,25 @@ export function CaptureBar({
     void startRecording().catch(onMicError)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the form opens
   }, [quick])
+
+  // Shared from another app (the web app as a share target - user's request, 2026-10-12):
+  // its words go in and it's saved like a tap on Save; the review opens only if something's unclear.
+  const shared = useSharedIn()
+  const [sendShared, setSendShared] = useState(0)
+  useEffect(() => {
+    if (!shared || continueFrom || busy !== null || recorder.state === 'recording' || recorder.state === 'paused' || capture) return
+    takeShared(shared.id)
+    setSavedMessage(null)
+    setText(shared.text)
+    setSendShared(shared.id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- a new share, or the bar became free
+  }, [shared?.id, busy, recorder.state, capture])
+  useEffect(() => {
+    if (!sendShared) return
+    setSendShared(0)
+    submitText(undefined, true) // this render has the shared words
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per share
+  }, [sendShared])
 
   // Switching input mid-recording restarts it on the new mic: the old take is
   // usually the silent one the user is trying to fix.

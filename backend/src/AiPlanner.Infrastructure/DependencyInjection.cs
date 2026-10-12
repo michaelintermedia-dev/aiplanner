@@ -69,6 +69,15 @@ public static class DependencyInjection
             .RemoveAllResilienceHandlers();
         services.AddHttpClient<IMediaDescriptionService, OpenAiMediaDescriptionService>(ConfigureOpenAiClient)
             .RemoveAllResilienceHandlers();
+        // What shared links are (page titles) - public addresses only, see HttpLinkPreviewService.Handler.
+        services.AddHttpClient<ILinkPreviewService, HttpLinkPreviewService>(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(6);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (compatible; AiPlannerBot/1.0; +https://aiplanner.duckdns.org)");
+                client.DefaultRequestHeaders.AcceptLanguage.ParseAdd("en;q=0.8,*;q=0.5");
+            })
+            .ConfigurePrimaryHttpMessageHandler(HttpLinkPreviewService.Handler)
+            .RemoveAllResilienceHandlers();
 #pragma warning restore EXTEXP0001
 
         return services;

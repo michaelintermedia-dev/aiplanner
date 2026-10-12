@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { capturesApi, settingsApi } from '@/api/endpoints'
 import { itemPath } from '@/lib/itemPath'
+import { takeShared, type SharedContent } from '@/lib/sharedIn'
 import { setFeedFilters } from '@/lib/feedFilters'
 import { searchFilters } from '@shared/feedFilter'
 import { applyMedia, attachmentsKey, type PendingMedia } from '@/lib/media'
@@ -74,7 +75,10 @@ export function CaptureBar({
   onEngagedChange,
   talkSignal: quickSignal,
   onFinished,
+  shared,
 }: {
+  /** Something shared from another app (lib/sharedIn): filled in and saved as soon as the bar is free. */
+  shared?: SharedContent | null
   /** A capture is done - saved (what it became) or cancelled (null): the dock folds into its bubble. */
   onFinished?: (saved: SavedNotice | null) => void
   continueFrom?: ContinueFrom
@@ -262,6 +266,25 @@ export function CaptureBar({
     queueMicrotask(() => startRecording().catch(onMicError))
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the signal changes
   }, [talkSignal])
+
+  // Shared from another app (user's request, 2026-10-12): its words and files go in
+  // and it's saved like a tap on Save - the review opens only if something's unclear.
+  const [sendShared, setSendShared] = useState(0)
+  useEffect(() => {
+    if (!shared || continueFrom || busy !== null || recorder.state !== 'idle' || capture) return
+    takeShared(shared.id)
+    setSavedMessage(null)
+    setText(shared.text)
+    if (shared.files.length > 0) setMedia((m) => [...m, ...shared.files])
+    setSendShared(shared.id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- a new share, or the bar became free
+  }, [shared?.id, busy, recorder.state, capture])
+  useEffect(() => {
+    if (!sendShared) return
+    setSendShared(0)
+    submitText(true) // this render has the shared words and files
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per share
+  }, [sendShared])
 
   // A new entry: its review is the full Edit form (user's call, 2026-10-09).
   if (capture && !continueFrom && !resumedTarget && entryProposal(capture)) {

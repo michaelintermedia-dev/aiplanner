@@ -15,6 +15,7 @@ import { useAccountAppearance } from './lib/appearance'
 import { useAccountFirstDayOfWeek } from './lib/weekStart'
 import { NoteDetailPage } from './pages/NoteDetailPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { SharePage } from './pages/SharePage'
 import { TaskDetailPage } from './pages/TaskDetailPage'
 import { TodayPage } from './pages/TodayPage'
 
@@ -143,6 +144,7 @@ export function App() {
       <Routes>
         <Route element={<Layout />}>
           <Route path="/feed" element={<FeedPage />} />
+          <Route path="/share" element={<SharePage />} />
           <Route path="/today" element={<TodayPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/tasks/:id" element={<TaskDetailPage />} />

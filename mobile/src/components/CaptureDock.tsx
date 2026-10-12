@@ -18,6 +18,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useDockHidden } from '@/lib/dockTarget'
 import { requestQuickRecording, useQuickRecording } from '@/lib/quickRecord'
+import { useSharedIn } from '@/lib/sharedIn'
 import * as Haptics from 'expo-haptics'
 import { useReduceMotion } from '@/lib/useReduceMotion'
 import { itemPath } from '@/lib/itemPath'
@@ -113,6 +114,13 @@ export function CaptureDock({ children }: { children: ReactNode }) {
     if (!open) queueMicrotask(expand)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only on a new request
   }, [quick])
+
+  // Something shared from another app: open up; the bar saves it.
+  const shared = useSharedIn()
+  useEffect(() => {
+    if (shared && !open) queueMicrotask(expand)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on a new share
+  }, [shared?.id])
 
   // Something started in the bar while folded: open up (same as the web).
   useEffect(() => {
@@ -215,7 +223,7 @@ export function CaptureDock({ children }: { children: ReactNode }) {
           onLayout={(e) => (panelHeight.current = e.nativeEvent.layout.height)}
           pointerEvents={open ? 'auto' : 'none'}>
           <ScrollView style={{ maxHeight: Math.max(160, (height - bottom - insets.top) * 0.85) }} keyboardShouldPersistTaps="handled">
-            <CaptureBar onEngagedChange={setEngaged} talkSignal={quick} onFinished={finished} />
+            <CaptureBar onEngagedChange={setEngaged} talkSignal={quick} onFinished={finished} shared={shared} />
           </ScrollView>
           {/* The grab handle: drag to move it up or down, swipe down to fold it away. */}
           <View style={styles.handleArea} pointerEvents="none" accessible accessibilityLabel={t('dock.handle')}>

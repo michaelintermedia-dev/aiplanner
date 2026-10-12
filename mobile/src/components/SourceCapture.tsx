@@ -13,6 +13,7 @@ import { useCardStyle } from './panel'
 import { SpeedChips } from './SpeedChips'
 import { Button } from './ui'
 import { t } from '@shared/i18n'
+import { LinkedText } from './LinkedText'
 
 /**
  * "Where this came from": the capture an item was created from, with the
@@ -50,7 +51,7 @@ export function SourceCapture({ captureId }: { captureId: string }) {
           {showText ? '▾' : I18nManager.isRTL ? '◂' : '▸'} {capture.source === 'Voice' ? t('capture.fullTranscription') : t('capture.whatYouTyped')}
         </Text>
       </Pressable>
-      {showText && <Text style={[styles.text, { color: c.text, borderColor: c.border }]}>{capture.inputText}</Text>}
+      {showText && <LinkedText text={capture.inputText} style={[styles.text, { color: c.text, borderColor: c.border }]} />}
 
       {capture.source === 'Voice' &&
         (capture.audioParts > 0 ? (

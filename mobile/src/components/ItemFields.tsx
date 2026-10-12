@@ -11,6 +11,7 @@ import { useColors } from '@/theme'
 import { DateTimeField } from './DateTimeField'
 import { CycleChip, detailStyles as s, Field } from './detail'
 import { KIND_ICON } from './kindIcons'
+import { PlaceField } from './PlaceField'
 import { RecurrencePicker } from './RecurrencePicker'
 import { ReminderList } from './ReminderList'
 import { TagPicker } from './TagPicker'
@@ -122,7 +123,7 @@ export function ItemFields({
             />
           )}
         </View>
-        <Field label={t('event.location')} value={form.location} onChangeText={(location) => set({ location })} changed={marked('location')} />
+        <PlaceField value={form.location} onChange={(location) => set({ location })} changed={marked('location')} />
         <Field
           label={`${t('event.with')} ${t('item.commaSeparated')}`}
           value={form.people}

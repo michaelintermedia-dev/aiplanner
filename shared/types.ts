@@ -146,6 +146,8 @@ export interface FeedItem {
   tags: string[]
   /** Created by the AI from a capture. */
   fromCapture: boolean
+  /** Its capture has a recording (spoken) - the mic on the row; typed captures have none. */
+  fromVoice?: boolean
   createdAtUtc: string
   updatedAtUtc: string
 }

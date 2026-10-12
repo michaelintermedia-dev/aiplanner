@@ -5,7 +5,7 @@ import { formFromNote } from '@shared/itemForm'
 import { describeReminder, repeats } from '@shared/reminders'
 import { useQuery } from '@tanstack/react-query'
 import { router, Stack, useLocalSearchParams } from 'expo-router'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Alert, Text, View } from 'react-native'
 import { notesApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
@@ -15,6 +15,8 @@ import { hasEditDraft, ItemEditor } from '@/components/ItemEditor'
 import { Screen } from '@/components/Screen'
 import { ItemMedia } from '@/components/ItemMedia'
 import { SourceCapture } from '@/components/SourceCapture'
+import { LinkedText } from '@/components/LinkedText'
+import { PlaceLink } from '@/components/PlaceLink'
 import { Badge, Button } from '@/components/ui'
 import { priorityLabel } from '@shared/labels'
 import { useAction } from '@/lib/useAction'
@@ -83,13 +85,11 @@ export default function NoteDetailScreen() {
               </View>
             )}
           </View>
-          <Text style={{ color: c.text, fontSize: 17, lineHeight: 25 }} selectable>
-            {note.content}
-          </Text>
+          <LinkedText text={note.content} style={{ color: c.text, fontSize: 17, lineHeight: 25 }} />
           {(note.location || !!note.people?.length) && (
             <Facts
               rows={[
-                ...(note.location ? [[t('event.where'), note.location] as [string, string]] : []),
+                ...(note.location ? [[t('event.where'), <PlaceLink place={note.location} />] as [string, ReactNode]] : []),
                 ...(note.people?.length ? [[t('event.with'), note.people.join(', ')] as [string, string]] : []),
               ]}
             />

@@ -123,7 +123,7 @@ export function FeedRow({
           {item.tags.map((t) => (
             <Text key={t} style={[styles.metaText, { color: c.muted }]}>#{t}</Text>
           ))}
-          {item.fromCapture && <Ionicons name="mic-outline" size={14} color={c.muted} accessibilityLabel={t('feed.fromCapture')} />}
+          {item.fromVoice && <Ionicons name="mic-outline" size={14} color={c.muted} accessibilityLabel={t('feed.fromVoice')} />}
         </View>
       </Pressable>
     </View>

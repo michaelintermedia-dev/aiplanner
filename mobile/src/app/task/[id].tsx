@@ -4,7 +4,7 @@ import { formFromTask } from '@shared/itemForm'
 import { describeReminder } from '@shared/reminders'
 import { useQuery } from '@tanstack/react-query'
 import { router, Stack, useLocalSearchParams } from 'expo-router'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Alert, Text, View } from 'react-native'
 import { tasksApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
@@ -14,6 +14,7 @@ import { hasEditDraft, ItemEditor } from '@/components/ItemEditor'
 import { Screen } from '@/components/Screen'
 import { ItemMedia } from '@/components/ItemMedia'
 import { SourceCapture } from '@/components/SourceCapture'
+import { PlaceLink } from '@/components/PlaceLink'
 import { Badge, Button } from '@/components/ui'
 import { useAction } from '@/lib/useAction'
 import { useColors } from '@/theme'
@@ -90,7 +91,7 @@ export default function TaskDetailScreen() {
           <Facts
             rows={[
               [t('task.due'), task.dueDateUtc ? formatDue(task.dueDateUtc, task.hasDueTime, zone) : task.status === 'Ongoing' ? t('task.ongoingNoDeadline') : t('task.noDueDate')],
-              ...(task.location ? [[t('event.where'), task.location] as [string, string]] : []),
+              ...(task.location ? [[t('event.where'), <PlaceLink place={task.location} />] as [string, ReactNode]] : []),
               ...(task.people?.length ? [[t('event.with'), task.people.join(', ')] as [string, string]] : []),
               [t('filter.reminders'), task.reminders?.length ? task.reminders.map((r) => describeReminder(r, zone)).join(' · ') : t('item.none')],
               ...(task.recurrence ? [[t('repeat.repeats'), describeRecurrence(task.recurrence, zone)] as [string, string]] : []),

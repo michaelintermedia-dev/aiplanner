@@ -11,6 +11,8 @@ import { useAuth } from '../auth/useAuth'
 import { DraftNotice, EditButtons, FollowUpReview, useEditMode } from '../components/ItemEditMode'
 import { hasEditDraft, ItemEditor } from '../components/ItemEditor'
 import { ItemMedia } from '../components/ItemMedia'
+import { LinkedText } from '../components/LinkedText'
+import { PlaceLink } from '../components/PlaceLink'
 import { SourceCapture } from '../components/SourceCapture'
 import { useAction } from '../lib/useAction'
 import { t } from '@shared/i18n'
@@ -62,13 +64,17 @@ export function NoteDetailPage() {
               </div>
             )}
           </header>
-          <p className="note-body">{note.content}</p>
+          <p className="note-body">
+            <LinkedText text={note.content} />
+          </p>
           {(note.location || !!note.people?.length) && (
             <dl className="facts">
               {note.location && (
                 <>
                   <dt>{t('event.where')}</dt>
-                  <dd>{note.location}</dd>
+                  <dd>
+                    <PlaceLink place={note.location} />
+                  </dd>
                 </>
               )}
               {!!note.people?.length && (

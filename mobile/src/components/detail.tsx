@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native'
 import { useColors } from '@/theme'
+import { LinkedText } from './LinkedText'
 import { useCardStyle } from './panel'
 
 /** Building blocks shared by the task and appointment detail screens. */
@@ -13,7 +14,11 @@ export function Facts({ rows }: { rows: [string, ReactNode][] }) {
       {rows.map(([label, value]) => (
         <View key={label} style={styles.fact}>
           <Text style={[styles.factLabel, { color: c.muted }]}>{label}</Text>
-          <Text style={[styles.factValue, { color: c.text }]}>{value}</Text>
+          {typeof value === 'string' || typeof value === 'number' ? (
+            <Text style={[styles.factValue, { color: c.text }]}>{value}</Text>
+          ) : (
+            <View style={styles.factNode}>{value}</View>
+          )}
         </View>
       ))}
     </View>
@@ -26,7 +31,7 @@ export function TextBlock({ title, text }: { title: string; text: string | null 
   return (
     <View style={{ gap: 4 }}>
       <Text style={[styles.blockTitle, { color: c.muted }]}>{title.toUpperCase()}</Text>
-      <Text style={{ color: c.text, fontSize: 16, lineHeight: 22 }}>{text}</Text>
+      <LinkedText text={text} style={{ color: c.text, fontSize: 16, lineHeight: 22 }} />
     </View>
   )
 }
@@ -93,6 +98,7 @@ const styles = StyleSheet.create({
   fact: { flexDirection: 'row', gap: 12 },
   factLabel: { width: 84, fontSize: 14 },
   factValue: { flex: 1, fontSize: 15 },
+  factNode: { flex: 1 },
   blockTitle: { fontSize: 12, fontWeight: '600', letterSpacing: 0.8 },
   input: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, minHeight: 46, fontSize: 16 },
   multiline: { minHeight: 90, paddingTop: 10, textAlignVertical: 'top' },

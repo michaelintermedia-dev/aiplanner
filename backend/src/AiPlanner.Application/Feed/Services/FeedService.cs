@@ -182,6 +182,7 @@ public class FeedService : IFeedService
                     Repeats = t.RecurrenceRuleId != null,
                     Tags = t.TaskTags.Select(tt => tt.Tag.Name).ToList(),
                     t.SourceAiExtractionId, t.CreatedAtUtc, t.UpdatedAtUtc,
+                    FromVoice = t.SourceAiExtraction != null && t.SourceAiExtraction.TranscriptId != null,
                 })
                 .ToListAsync(ct);
             foreach (var t in tasks)
@@ -191,7 +192,7 @@ public class FeedService : IFeedService
                     t.DueDateUtc is not null && t.HasDueTime,
                     t.Priority == Domain.Enums.TaskPriority.None ? null : t.Priority.ToString(), t.Location,
                     t.Tags.OrderBy(n => n).ToList(), t.SourceAiExtractionId is not null, t.CreatedAtUtc, t.UpdatedAtUtc,
-                    Repeats: t.Repeats);
+                    Repeats: t.Repeats, FromVoice: t.FromVoice);
             }
         }
 
@@ -204,6 +205,7 @@ public class FeedService : IFeedService
                 {
                     a.Id, a.Title, a.Description, a.Status, a.StartUtc, a.EndUtc, a.Location, a.Priority, a.SourceAiExtractionId, a.CreatedAtUtc, a.UpdatedAtUtc,
                     Repeats = a.RecurrenceRuleId != null,
+                    FromVoice = a.SourceAiExtraction != null && a.SourceAiExtraction.TranscriptId != null,
                     Tags = a.AppointmentTags.Select(at => at.Tag.Name).ToList(),
                 })
                 .ToListAsync(ct);
@@ -215,7 +217,7 @@ public class FeedService : IFeedService
                 details[a.Id] = new FeedItemDto(
                     a.Id, FeedKind.Appointment, a.Title, Snippet(a.Description), a.Status.ToString(), start, end,
                     true, a.Priority == Domain.Enums.TaskPriority.None ? null : a.Priority.ToString(), a.Location, a.Tags.OrderBy(t => t).ToList(), a.SourceAiExtractionId is not null, a.CreatedAtUtc, a.UpdatedAtUtc,
-                    Repeats: a.Repeats);
+                    Repeats: a.Repeats, FromVoice: a.FromVoice);
             }
         }
 
@@ -224,7 +226,12 @@ public class FeedService : IFeedService
         {
             var notes = await _db.Notes.AsNoTracking()
                 .Where(n => n.UserId == userId && noteIds.Contains(n.Id))
-                .Select(n => new { n.Id, n.Title, n.Content, n.Priority, n.Location, n.SourceAiExtractionId, n.CreatedAtUtc, n.UpdatedAtUtc, Tags = n.NoteTags.Select(nt => nt.Tag.Name).ToList() })
+                .Select(n => new
+                {
+                    n.Id, n.Title, n.Content, n.Priority, n.Location, n.SourceAiExtractionId, n.CreatedAtUtc, n.UpdatedAtUtc,
+                    FromVoice = n.SourceAiExtraction != null && n.SourceAiExtraction.TranscriptId != null,
+                    Tags = n.NoteTags.Select(nt => nt.Tag.Name).ToList(),
+                })
                 .ToListAsync(ct);
             foreach (var n in notes)
             {
@@ -234,7 +241,7 @@ public class FeedService : IFeedService
                 details[n.Id] = new FeedItemDto(
                     n.Id, FeedKind.Note, title, snippet, null, null, null, false,
                     n.Priority == Domain.Enums.TaskPriority.None ? null : n.Priority.ToString(), n.Location, n.Tags.OrderBy(t => t).ToList(),
-                    n.SourceAiExtractionId is not null, n.CreatedAtUtc, n.UpdatedAtUtc);
+                    n.SourceAiExtractionId is not null, n.CreatedAtUtc, n.UpdatedAtUtc, FromVoice: n.FromVoice);
             }
         }
 

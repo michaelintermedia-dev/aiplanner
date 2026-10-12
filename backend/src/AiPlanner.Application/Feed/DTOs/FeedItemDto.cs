@@ -21,4 +21,5 @@ public record FeedItemDto(
     DateTime UpdatedAtUtc,
     DateTime? NextReminderUtc = null, // when its next reminder goes off (null = none coming)
     bool ReminderRepeats = false, // that reminder repeats (daily / weekdays / weekly)
-    bool Repeats = false); // a repeating task or event (DateUtc/EndUtc: its current / next date)
+    bool Repeats = false, // a repeating task or event (DateUtc/EndUtc: its current / next date)
+    bool FromVoice = false); // its capture has a recording (spoken, not only typed) - the mic on the row

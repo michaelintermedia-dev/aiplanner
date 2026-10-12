@@ -72,7 +72,7 @@ export function FeedRow({
         {item.tags.map((t) => (
           <span key={t} className="tag">#{t}</span>
         ))}
-        {item.fromCapture && <IoMicOutline className="muted" title={t('feed.fromCapture')} aria-label={t('feed.fromCapture')} />}
+        {item.fromVoice && <IoMicOutline className="muted" title={t('feed.fromVoice')} aria-label={t('feed.fromVoice')} />}
       </span>
     </>
   )

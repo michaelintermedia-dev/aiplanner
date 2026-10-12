@@ -798,6 +798,21 @@ Local dev notes:
   out weeks call `useFirstDayOfWeek()` to re-render. Counting "every N weeks"
   in RecurrenceSchedule stays Monday-based on purpose (changing it would shift
   existing schedules).
+- **Links and places** (user's request, 2026-10-12, web + app). Web addresses in an
+  item's text, a note and "What you typed/said" are clickable (`LinkedText`;
+  `linkify` in `shared/links.ts` - trailing punctuation stays out, "www." gets
+  https). An item's place is a button that offers Google Maps / Waze (+ Apple Maps
+  on the web and iPhone) (`PlaceLink`, `placeLinks`: an address is searched,
+  coordinates and coordinates inside a map link open exactly; Waze is left out for
+  a map link without coordinates). The form's place has "Use my location"
+  (`PlaceField`): the app looks up the street address (expo-location
+  reverseGeocode), the web saves coordinates ("32.08530, 34.78180").
+- **The feed's mic means "spoken"** (`FeedItemDto.FromVoice` = its capture has a
+  recording); typed captures and hand-made items have none.
+- **Tag picker** (redone at the user's request, 2026-10-12, web + app): the item's
+  tags as chips with an x, one "Add a tag" box suggesting the 6 most used, then the
+  matching ones while typing (`tagSuggestions`) and "Create ..." (`newTagName`);
+  "All tags (N)" opens the whole list only when asked.
 - Icons are standard Ionicons, never emoji, for UI controls (the mic button
   is `mic`/`pause`). Each item type has ONE icon (`KIND_ICON` in
   `components/kindIcons.ts` in each app): the filter tab, feed rows and calendar

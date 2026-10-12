@@ -1,5 +1,7 @@
 import { useNow } from '../lib/useNow'
 import { EventDates } from '../components/EventDates'
+import { LinkedText } from '../components/LinkedText'
+import { PlaceLink } from '../components/PlaceLink'
 import { IoRepeat } from 'react-icons/io5'
 import { describeRecurrence, occurrences } from '@shared/recurrence'
 import { dateKey, formatDateKey, formatTime } from '@shared/dates'
@@ -103,7 +105,9 @@ export function AppointmentDetailPage() {
             {appt.location && (
               <>
                 <dt>{t('event.where')}</dt>
-                <dd>{appt.location}</dd>
+                <dd>
+                  <PlaceLink place={appt.location} />
+                </dd>
               </>
             )}
             {appt.participants.length > 0 && (
@@ -119,13 +123,17 @@ export function AppointmentDetailPage() {
           {appt.description && (
             <section className="text-block">
               <h2>{t('item.description')}</h2>
-              <p>{appt.description}</p>
+              <p>
+                <LinkedText text={appt.description} />
+              </p>
             </section>
           )}
           {appt.notes && (
             <section className="text-block">
               <h2>{t('item.notes')}</h2>
-              <p>{appt.notes}</p>
+              <p>
+                <LinkedText text={appt.notes} />
+              </p>
             </section>
           )}
 

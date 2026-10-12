@@ -31,6 +31,31 @@ export function addTypedTags(tags: readonly string[], typed: string, known: read
   return next
 }
 
+/** How many suggestions the pickers show at once (the rest behind "All tags"). */
+export const SUGGESTIONS = 6
+
+/**
+ * What the "Add a tag" box offers (user's call, 2026-10-12 - the old picker
+ * showed every tag ever used): nothing typed - the most used tags not on the
+ * item yet; something typed - the tags containing it, those starting with it
+ * first (the server's order - most used - within each group).
+ */
+export function tagSuggestions(known: readonly string[], selected: readonly string[], typed: string, limit = SUGGESTIONS): string[] {
+  const q = typed.trim().replace(/^#+/, '').trim().toLocaleLowerCase()
+  const free = known.filter((k) => !hasTag(selected, k))
+  if (!q) return free.slice(0, limit)
+  const starts = free.filter((k) => k.toLocaleLowerCase().startsWith(q))
+  const contains = free.filter((k) => !k.toLocaleLowerCase().startsWith(q) && k.toLocaleLowerCase().includes(q))
+  return [...starts, ...contains].slice(0, limit)
+}
+
+/** The typed name as a new tag, when it isn't one of the user's tags or the item's already ("Create “x”"). */
+export function newTagName(known: readonly string[], selected: readonly string[], typed: string): string | null {
+  const name = typed.trim().replace(/^#+/, '').trim().slice(0, MAX_TAG_LENGTH).trim()
+  if (!name || name.includes(',') || hasTag(known, name) || hasTag(selected, name)) return null
+  return name
+}
+
 /**
  * The chips to offer: the user's tags (most used first, as the server sends
  * them) plus any on the item that aren't in that list yet (new, unsaved).

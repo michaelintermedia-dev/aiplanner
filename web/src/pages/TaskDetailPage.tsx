@@ -10,6 +10,8 @@ import { useAuth } from '../auth/useAuth'
 import { DraftNotice, EditButtons, FollowUpReview, useEditMode } from '../components/ItemEditMode'
 import { hasEditDraft, ItemEditor } from '../components/ItemEditor'
 import { ItemMedia } from '../components/ItemMedia'
+import { LinkedText } from '../components/LinkedText'
+import { PlaceLink } from '../components/PlaceLink'
 import { SourceCapture } from '../components/SourceCapture'
 import { describeReminder } from '@shared/reminders'
 import { useAction } from '../lib/useAction'
@@ -79,7 +81,9 @@ export function TaskDetailPage() {
             {task.location && (
               <>
                 <dt>{t('event.where')}</dt>
-                <dd>{task.location}</dd>
+                <dd>
+                  <PlaceLink place={task.location} />
+                </dd>
               </>
             )}
             {!!task.people?.length && (
@@ -147,7 +151,9 @@ function TextBlock({ title, text }: { title: string; text: string }) {
   return (
     <section className="text-block">
       <h2>{title}</h2>
-      <p>{text}</p>
+      <p>
+        <LinkedText text={text} />
+      </p>
     </section>
   )
 }

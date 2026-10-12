@@ -7,7 +7,7 @@ import { formFromAppointment } from '@shared/itemForm'
 import { describeReminder } from '@shared/reminders'
 import { useQuery } from '@tanstack/react-query'
 import { router, Stack, useLocalSearchParams } from 'expo-router'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Alert, Text, View } from 'react-native'
 import { appointmentsApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
@@ -17,6 +17,7 @@ import { hasEditDraft, ItemEditor } from '@/components/ItemEditor'
 import { Screen } from '@/components/Screen'
 import { ItemMedia } from '@/components/ItemMedia'
 import { SourceCapture } from '@/components/SourceCapture'
+import { PlaceLink } from '@/components/PlaceLink'
 import { Badge, Button } from '@/components/ui'
 import { useAction } from '@/lib/useAction'
 import { useColors } from '@/theme'
@@ -110,7 +111,7 @@ export default function AppointmentDetailScreen() {
             rows={[
               [t('event.when'), `${formatDateKey(dateKey(shownStart, zone.timeZone), zone.locale, { weekday: 'long', month: 'long', day: 'numeric' })}\n${formatTime(shownStart, zone)} – ${formatTime(shownEnd, zone)}`],
               ...(appt.recurrence ? [[t('repeat.repeats'), describeRecurrence(appt.recurrence, zone)] as [string, string]] : []),
-              ...(appt.location ? [[t('event.where'), appt.location] as [string, string]] : []),
+              ...(appt.location ? [[t('event.where'), <PlaceLink place={appt.location} />] as [string, ReactNode]] : []),
               ...(appt.participants.length ? [[t('event.with'), appt.participants.map((p) => p.name).join(', ')] as [string, string]] : []),
               [t('filter.reminders'), appt.reminders?.length ? appt.reminders.map((r) => describeReminder(r, zone)).join(' · ') : t('item.none')],
             ]}

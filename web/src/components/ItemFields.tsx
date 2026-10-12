@@ -6,6 +6,7 @@ import { priorityLabel } from '@shared/labels'
 import type { ItemType, TaskPriority } from '@shared/types'
 import type { ReactNode } from 'react'
 import { KIND_ICON } from './kindIcons'
+import { PlaceField } from './PlaceField'
 import { ReminderList } from './ReminderList'
 import { RecurrencePicker } from './RecurrencePicker'
 import { TagPicker } from './TagPicker'
@@ -102,9 +103,7 @@ export function ItemFields({
           ))}
         </select>
       </Field>
-      <Field label={t('event.location')} changed={mark('location')}>
-        <input value={form.location} onChange={(e) => set({ location: e.target.value })} />
-      </Field>
+      <PlaceField value={form.location} onChange={(location) => set({ location })} changed={mark('location')} />
       <Field label={<>{t('event.with')} <span className="muted">{t('item.commaSeparated')}</span></>} changed={mark('people')}>
         <input value={form.people} onChange={(e) => set({ people: e.target.value })} />
       </Field>

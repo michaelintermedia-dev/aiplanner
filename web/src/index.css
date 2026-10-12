@@ -2246,6 +2246,7 @@ button.kind-icon:hover:not(:disabled) {
 .item-editor .changed > input,
 .item-editor .changed > select,
 .item-editor .changed > textarea,
+.item-editor .place-field.changed input,
 .item-editor .field.changed,
 .item-editor .intent-chips.changed {
   outline: 2px solid var(--accent);
@@ -3307,4 +3308,140 @@ html[data-wallpaper] .page-header > div:first-child {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+/* Links in an item's text, and its place with the map-app choice (LinkedText, PlaceLink). */
+.text-link {
+  color: var(--accent);
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}
+
+.place-link {
+  position: relative;
+  display: inline-block;
+}
+
+.place-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  text-align: start;
+  font: inherit;
+  cursor: pointer;
+}
+
+.place-button:hover:not(:disabled) {
+  background: none;
+  text-decoration: underline;
+}
+
+.place-menu {
+  position: absolute;
+  inset-inline-start: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 170px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+
+.place-menu a {
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.place-menu a:hover {
+  background: var(--surface-2);
+}
+
+/* An item's place in the form, with "Use my location" (PlaceField). */
+.place-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.place-field-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.place-field-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The tag picker (redone 2026-10-12): the item's tags, one box with suggestions, "All tags" on demand. */
+.tag-chips,
+.tag-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px 4px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: var(--accent-soft, var(--surface-2));
+  color: var(--accent);
+  font-size: 0.9rem;
+}
+
+.tag-chip button {
+  display: inline-flex;
+  padding: 2px;
+  border: 0;
+  background: none;
+  color: inherit;
+  border-radius: 999px;
+}
+
+.tag-create {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent);
+}
+
+.tag-all {
+  align-self: flex-start;
+  padding: 0;
+  font-size: 0.9rem;
+}
+
+.tag-all-list {
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.tag-picker .tag-new {
+  display: flex;
+  border-style: solid;
+  border-radius: 10px;
+  min-height: 40px;
+  padding-inline-end: 4px;
+  background: var(--surface);
+}
+
+.tag-picker .tag-new input {
+  flex: 1;
+  width: auto;
+  font-size: 0.95rem;
 }

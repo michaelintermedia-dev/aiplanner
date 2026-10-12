@@ -402,7 +402,11 @@ function DraggableMic({
             transform: [{ scale: progress.interpolate({ inputRange: [0, 1], outputRange: [1, 0.4] }) }],
           },
         ]}>
-        <Ionicons name="mic" size={26} color="#fff" />
+        {/* Speak or write (user's call, 2026-10-13 - a mic alone said "voice only"). */}
+        <View style={styles.glyph} accessible={false}>
+          <Ionicons name="mic" size={22} color="#fff" style={styles.glyphMic} />
+          <Ionicons name="pencil" size={15} color="#fff" style={styles.glyphPen} />
+        </View>
       </Animated.View>
     </Animated.View>
   )
@@ -412,6 +416,9 @@ function DraggableMic({
 export const DOCK_SPACE = 220
 
 const styles = StyleSheet.create({
+  glyph: { width: 34, height: 34 },
+  glyphMic: { position: 'absolute', left: 1, top: 1 },
+  glyphPen: { position: 'absolute', right: 0, bottom: 1 },
   fill: { flex: 1 },
   dock: { position: 'absolute', left: 12, right: 12 },
   panel: {

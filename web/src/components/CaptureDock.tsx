@@ -1,6 +1,6 @@
 import { t } from '@shared/i18n'
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react'
-import { IoClose, IoMic } from 'react-icons/io5'
+import { IoClose, IoMic, IoPencil } from 'react-icons/io5'
 import { Link, useLocation, useSearchParams } from 'react-router'
 import type { SavedNotice } from '@shared/captureDraft'
 import { itemPath } from '../lib/itemPath'
@@ -310,7 +310,11 @@ function Bubble({
       aria-hidden={!shown}
       aria-label={t('dock.newEntry')}
       title={t('dock.dragHint')}>
-      <IoMic aria-hidden />
+      {/* Speak or write (user's call, 2026-10-13 - a mic alone said "voice only"). */}
+      <span className="dock-glyph" aria-hidden>
+        <IoMic className="dock-glyph-mic" />
+        <IoPencil className="dock-glyph-pen" />
+      </span>
     </button>
   )
 }

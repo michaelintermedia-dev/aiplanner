@@ -3501,3 +3501,24 @@ html[data-wallpaper] .page-header > div:first-child {
   gap: 10px;
   width: 100%;
 }
+
+/* The bubble's glyph: a mic and a pencil - speak or write. */
+.dock-glyph {
+  position: relative;
+  width: 34px;
+  height: 34px;
+}
+
+.dock-glyph-mic {
+  position: absolute;
+  inset-inline-start: 1px;
+  top: 1px;
+  font-size: 22px;
+}
+
+.dock-glyph-pen {
+  position: absolute;
+  inset-inline-end: 0;
+  bottom: 1px;
+  font-size: 15px;
+}

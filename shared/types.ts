@@ -21,6 +21,8 @@ export interface User {
   timeZoneId: string
   locale: string
   createdAtUtc: string
+  /** May open the operator pages (AI costs) - only on GET /users/me. */
+  isAdmin?: boolean
 }
 
 export interface Task {
@@ -399,6 +401,30 @@ export type ItemType = 'Task' | 'Appointment' | 'Note'
  * One notification to show at atUtc (Phase 4). The backend decides what goes
  * off when; clients schedule these locally. The key is stable per occurrence.
  */
+/** What AI cost over a period (admins only, GET /admin/ai-usage). Money in US dollars. */
+export interface AiUsageTotals {
+  calls: number
+  /** Messages the AI read (new entries and additions). */
+  messages: number
+  transcriptions: number
+  mediaDescriptions: number
+  inputTokens: number
+  outputTokens: number
+  costUsd: number
+}
+
+export interface AiUsageReport {
+  fromUtc: string
+  toUtc: string
+  days: number
+  total: AiUsageTotals
+  users: { userId: string | null; email: string | null; displayName: string | null; totals: AiUsageTotals; activeDays: number; costPerMessageUsd: number | null }[]
+  /** UTC dates. */
+  perDay: { date: string; calls: number; messages: number; costUsd: number }[]
+  /** Models with no price configured - their calls count as $0. */
+  unpricedModels: string[]
+}
+
 export interface UpcomingNotification {
   key: string
   kind: 'Reminder' | 'Snoozed' | 'DailySummary'

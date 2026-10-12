@@ -3179,3 +3179,49 @@ html[data-wallpaper] .page-header > div:first-child {
   background: var(--muted);
   opacity: 0.5;
 }
+
+/* The operator's AI cost report (AdminUsagePage). */
+.admin-totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px;
+}
+
+.admin-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-stat-big {
+  font-size: 1.6rem;
+}
+
+.admin-stat-value {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.admin-table-wrap {
+  overflow-x: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 8px 10px;
+  text-align: start;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.admin-table th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.8rem;
+}

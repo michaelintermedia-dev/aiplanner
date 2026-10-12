@@ -220,6 +220,50 @@ namespace AiPlanner.Infrastructure.Migrations
                     b.ToTable("AIExtractionItems", (string)null);
                 });
 
+            modelBuilder.Entity("AiPlanner.Domain.Entities.AiUsage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("AudioInputTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<double?>("AudioSeconds")
+                        .HasColumnType("double precision");
+
+                    b.Property<int>("CachedInputTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("InputTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("OutputTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AtUtc");
+
+                    b.HasIndex("UserId", "AtUtc");
+
+                    b.ToTable("AiUsage", (string)null);
+                });
+
             modelBuilder.Entity("AiPlanner.Domain.Entities.AppointmentParticipant", b =>
                 {
                     b.Property<Guid>("Id")

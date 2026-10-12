@@ -1,3 +1,4 @@
+using AiPlanner.Application.Ai.Usage;
 using AiPlanner.Application.Ai.Interfaces;
 using AiPlanner.Application.Ai.Services;
 using AiPlanner.Application.Common.Exceptions;
@@ -76,7 +77,11 @@ public class AttachmentDescriber
             {
                 try
                 {
-                    var text = (await _ai.DescribeAsync(media, row.Locale, ct)).Trim();
+                    string text;
+                    using (AiUsageScope.For(a.UserId)) // no signed-in user here: the cost is the file owner's
+                    {
+                        text = (await _ai.DescribeAsync(media, row.Locale, ct)).Trim();
+                    }
                     a.Description = text.Length > MaxLength ? text[..MaxLength] : text;
                     a.DescribedAtUtc = _clock.UtcNow;
                     described++;

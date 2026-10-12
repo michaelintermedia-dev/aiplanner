@@ -1,7 +1,9 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
 using AiPlanner.Application.Ai.Interfaces;
+using AiPlanner.Application.Ai.Usage;
 using AiPlanner.Application.Common.Exceptions;
+using AiPlanner.Infrastructure.Ai.Usage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -16,9 +18,11 @@ public class OpenAiTranscriptionService : ITranscriptionService
     private readonly HttpClient _http;
     private readonly OpenAiOptions _options;
     private readonly ILogger<OpenAiTranscriptionService> _logger;
+    private readonly IAiUsageMeter _meter;
 
-    public OpenAiTranscriptionService(HttpClient http, IOptions<OpenAiOptions> options, ILogger<OpenAiTranscriptionService> logger)
+    public OpenAiTranscriptionService(HttpClient http, IOptions<OpenAiOptions> options, ILogger<OpenAiTranscriptionService> logger, IAiUsageMeter meter)
     {
+        _meter = meter;
         _http = http;
         _options = options.Value;
         _logger = logger;
@@ -41,6 +45,7 @@ public class OpenAiTranscriptionService : ITranscriptionService
         using var response = await OpenAiHttp.SendAsync(_http, new HttpRequestMessage(HttpMethod.Post, "audio/transcriptions") { Content = form }, _logger, ct);
         await using var body = await response.Content.ReadAsStreamAsync(ct);
         using var json = await JsonDocument.ParseAsync(body, cancellationToken: ct);
+        _meter.Record(OpenAiUsage.FromTranscription(_options.TranscriptionModel, json.RootElement));
 
         var text = json.RootElement.TryGetProperty("text", out var t) ? t.GetString() : null;
         if (text is null)

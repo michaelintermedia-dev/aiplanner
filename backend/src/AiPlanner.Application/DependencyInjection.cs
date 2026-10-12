@@ -51,6 +51,7 @@ public static class DependencyInjection
         services.AddScoped<INoteService, NoteService>();
         services.AddScoped<IFeedService, FeedService>();
         services.AddScoped<IAttachmentService, AttachmentService>();
+        services.AddScoped<AiPlanner.Application.Admin.Services.AiUsageReportService>();
 
         return services;
     }

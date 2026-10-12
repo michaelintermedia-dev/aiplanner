@@ -5,7 +5,9 @@ using AiPlanner.Application.Ai.Interfaces;
 using AiPlanner.Application.Auth.Interfaces;
 using AiPlanner.Application.Auth.Services;
 using AiPlanner.Application.Common.Interfaces;
+using AiPlanner.Application.Ai.Usage;
 using AiPlanner.Infrastructure.Ai;
+using AiPlanner.Infrastructure.Ai.Usage;
 using AiPlanner.Infrastructure.Identity;
 using AiPlanner.Infrastructure.Persistence;
 using AiPlanner.Infrastructure.Services;
@@ -30,6 +32,7 @@ public static class DependencyInjection
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<ITokenService, TokenService>();
         services.AddSingleton<IRegistrationPolicy, ConfigRegistrationPolicy>();
+        services.AddSingleton<IAdminPolicy, ConfigAdminPolicy>();
 
         services.AddScoped<IAuthService, AuthService>();
 
@@ -46,6 +49,11 @@ public static class DependencyInjection
         // AI provider (spec section 16). Swapping providers means new implementations
         // of these two interfaces - nothing above Infrastructure changes.
         services.Configure<OpenAiOptions>(configuration.GetSection(OpenAiOptions.SectionName));
+        // What each AI call used, per user (AiUsage rows, written in the background).
+        services.Configure<AiPricingOptions>(configuration.GetSection(AiPricingOptions.SectionName));
+        services.AddSingleton<AiUsageQueue>();
+        services.AddScoped<IAiUsageMeter, AiUsageMeter>();
+        services.AddHostedService<AiUsageWriter>();
         // The default resilience handler (from ServiceDefaults) has a 10s attempt
         // timeout and retries; transcription can take longer, and a multipart
         // upload can't be replayed. These clients use one long timeout instead.

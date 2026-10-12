@@ -5,6 +5,7 @@ import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigat
 import { useAuth } from './auth/useAuth'
 import { CaptureDock } from './components/CaptureDock'
 import { PullToRefresh } from './components/PullToRefresh'
+import { AdminUsagePage } from './pages/AdminUsagePage'
 import { AppointmentDetailPage } from './pages/AppointmentDetailPage'
 import { AuthPage } from './pages/AuthPage'
 import { CalendarPage } from './pages/CalendarPage'
@@ -25,6 +26,7 @@ function titleFor(path: string): string {
   if (path.startsWith('/appointments/')) return t('kind.event')
   if (path.startsWith('/notes/')) return t('kind.note')
   if (path.startsWith('/settings')) return t('nav.settings')
+  if (path.startsWith('/admin/usage')) return t('admin.aiCosts')
   return t('app.name')
 }
 
@@ -147,6 +149,7 @@ export function App() {
           <Route path="/appointments/:id" element={<AppointmentDetailPage />} />
           <Route path="/notes/:id" element={<NoteDetailPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/admin/usage" element={<AdminUsagePage />} />
           {/* The old list pages are now filters of the feed. */}
           <Route path="/tasks" element={<Navigate to="/feed?show=tasks" replace />} />
           <Route path="/notes" element={<Navigate to="/feed?show=notes" replace />} />

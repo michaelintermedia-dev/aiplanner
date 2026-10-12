@@ -44,6 +44,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<NoteTag> NoteTags => Set<NoteTag>();
     public DbSet<RecurrenceRule> RecurrenceRules => Set<RecurrenceRule>();
     public DbSet<Attachment> Attachments => Set<Attachment>();
+    public DbSet<AiUsage> AiUsages => Set<AiUsage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

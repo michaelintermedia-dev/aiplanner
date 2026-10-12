@@ -29,6 +29,7 @@ public interface IApplicationDbContext
     DbSet<NoteTag> NoteTags { get; }
     DbSet<RecurrenceRule> RecurrenceRules { get; }
     DbSet<Attachment> Attachments { get; }
+    DbSet<AiUsage> AiUsages { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 

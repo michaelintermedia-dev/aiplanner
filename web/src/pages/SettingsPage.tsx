@@ -1,6 +1,7 @@
 import type { NotificationSettings } from '@shared/types'
 import { LANGUAGES, languageOf, t, type Language } from '@shared/i18n'
 import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import { useEffect, useRef, useState } from 'react'
 import { settingsApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
@@ -15,7 +16,7 @@ import { browserNotificationsSupported, onPermissionChange, requestBrowserPermis
 
 /** Settings - Language, Notifications (spec "Settings"). Changes save immediately. */
 export function SettingsPage() {
-  const { zone, changeLanguage } = useAuth()
+  const { zone, changeLanguage, user } = useAuth()
   const [languageError, setLanguageError] = useState<string | null>(null)
   const { data: settings, error } = useQuery({ queryKey: ['settings', 'notifications'], queryFn: settingsApi.notifications })
   const save = useAction(settingsApi.updateNotifications)
@@ -262,6 +263,16 @@ export function SettingsPage() {
         )}
         {(recordings.error ?? saveRecordings.error) && <p className="error">{(recordings.error ?? saveRecordings.error)!.message}</p>}
       </section>
+
+      {user?.isAdmin && (
+        <section className="card form">
+          <h3>{t('admin.aiCosts')}</h3>
+          <p className="muted small">{t('admin.aiCostsHint')}</p>
+          <Link to="/admin/usage" className="button">
+            {t('admin.aiCosts')}
+          </Link>
+        </section>
+      )}
     </div>
   )
 }

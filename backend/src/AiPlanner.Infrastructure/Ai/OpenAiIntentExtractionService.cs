@@ -1,6 +1,9 @@
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json;
+using AiPlanner.Application.Ai.Usage;
+using AiPlanner.Domain.Enums;
+using AiPlanner.Infrastructure.Ai.Usage;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using AiPlanner.Application.Ai.Interfaces;
@@ -23,9 +26,11 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
     private readonly HttpClient _http;
     private readonly OpenAiOptions _options;
     private readonly ILogger<OpenAiIntentExtractionService> _logger;
+    private readonly IAiUsageMeter _meter;
 
-    public OpenAiIntentExtractionService(HttpClient http, IOptions<OpenAiOptions> options, ILogger<OpenAiIntentExtractionService> logger)
+    public OpenAiIntentExtractionService(HttpClient http, IOptions<OpenAiOptions> options, ILogger<OpenAiIntentExtractionService> logger, IAiUsageMeter meter)
     {
+        _meter = meter;
         _http = http;
         _options = options.Value;
         _logger = logger;
@@ -61,6 +66,8 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
         using var response = await OpenAiHttp.SendAsync(_http, request, _logger, ct);
         var completion = await response.Content.ReadFromJsonAsync<ChatCompletion>(JsonOptions, ct)
             ?? throw new AiProviderException("Empty response from the AI provider.");
+        // Paid for whatever comes next (even an answer we can't use).
+        _meter.Record(OpenAiUsage.FromChat(AiUsageKind.Extraction, completion.Model ?? _options.Model, completion.Usage));
 
         var choice = completion.Choices?.FirstOrDefault();
         if (choice?.Message?.Refusal is { Length: > 0 })
@@ -369,7 +376,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
 
     // ---- Wire formats ------------------------------------------------------
 
-    private sealed record ChatCompletion(string? Model, List<Choice>? Choices);
+    private sealed record ChatCompletion(string? Model, List<Choice>? Choices, JsonObject? Usage);
 
     private sealed record Choice(Message? Message, [property: JsonPropertyName("finish_reason")] string? FinishReason);
 

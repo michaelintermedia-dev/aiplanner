@@ -15,6 +15,7 @@ if ($LASTEXITCODE -ne 0) { throw 'API build failed' }
 Set-Location $api # content root: appsettings + App_Data live here
 $env:ConnectionStrings__aiplannerdb = (Get-Content $conn -Raw).Trim()
 $env:ASPNETCORE_ENVIRONMENT = 'Development'
+$env:Admin__Emails = 'feedtest@test.local' # the QA account may open the AI cost report
 $env:Recordings__CleanupDryRun = 'true' # the cleanup job must never delete anything during QA
 $ffmpeg = Join-Path $local 'ffmpeg.exe'
 if (Test-Path $ffmpeg) { $env:Recordings__FfmpegPath = $ffmpeg }

@@ -2,7 +2,10 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using AiPlanner.Application.Ai.Interfaces;
+using AiPlanner.Application.Ai.Usage;
 using AiPlanner.Application.Common.Exceptions;
+using AiPlanner.Domain.Enums;
+using AiPlanner.Infrastructure.Ai.Usage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -16,9 +19,11 @@ public class OpenAiMediaDescriptionService : IMediaDescriptionService
     private readonly HttpClient _http;
     private readonly OpenAiOptions _options;
     private readonly ILogger<OpenAiMediaDescriptionService> _logger;
+    private readonly IAiUsageMeter _meter;
 
-    public OpenAiMediaDescriptionService(HttpClient http, IOptions<OpenAiOptions> options, ILogger<OpenAiMediaDescriptionService> logger)
+    public OpenAiMediaDescriptionService(HttpClient http, IOptions<OpenAiOptions> options, ILogger<OpenAiMediaDescriptionService> logger, IAiUsageMeter meter)
     {
+        _meter = meter;
         _http = http;
         _options = options.Value;
         _logger = logger;
@@ -44,6 +49,7 @@ public class OpenAiMediaDescriptionService : IMediaDescriptionService
         using var response = await OpenAiHttp.SendAsync(_http, request, _logger, ct);
         var json = await response.Content.ReadFromJsonAsync<JsonObject>(JsonOptions, ct)
             ?? throw new AiProviderException("Empty response from the AI provider.");
+        _meter.Record(OpenAiUsage.FromChat(AiUsageKind.MediaDescription, json["model"]?.GetValue<string>() ?? _options.Model, json["usage"]));
         var text = json["choices"]?[0]?["message"]?["content"]?.GetValue<string>();
         return string.IsNullOrWhiteSpace(text) ? throw new AiProviderException("The AI provider returned no description.") : text;
     }

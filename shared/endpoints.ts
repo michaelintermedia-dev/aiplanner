@@ -1,4 +1,5 @@
 import type {
+  AiUsageReport,
   Appointment,
   Attachment,
   AuthResponse,
@@ -161,6 +162,10 @@ export function createApi(request: RequestFn) {
       removeWallpaper: () => request<AppearanceSettings>('DELETE', '/settings/wallpaper'),
       /** The wallpaper photo itself (needs the sign-in, so it's fetched). */
       wallpaperPhoto: (id: string) => request<Blob>('GET', `/settings/wallpaper/${id}`, undefined, { as: 'blob' }),
+    },
+    /** The operator pages (accounts in the server's Admin:Emails only - others get 403). */
+    admin: {
+      aiUsage: (days = 30) => request<AiUsageReport>('GET', `/admin/ai-usage?days=${days}`),
     },
     calendar: {
       get: (view: CalendarView, date: string) =>

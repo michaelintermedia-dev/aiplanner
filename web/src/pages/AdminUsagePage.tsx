@@ -2,7 +2,7 @@ import type { AiUsageTotals } from '@shared/types'
 import { t } from '@shared/i18n'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate } from 'react-router'
 import { adminApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 

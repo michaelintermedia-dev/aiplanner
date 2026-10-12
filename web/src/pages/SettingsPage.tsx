@@ -1,7 +1,7 @@
 import type { NotificationSettings } from '@shared/types'
 import { LANGUAGES, languageOf, t, type Language } from '@shared/i18n'
 import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { useEffect, useRef, useState } from 'react'
 import { settingsApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'

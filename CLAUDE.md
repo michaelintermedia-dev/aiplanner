@@ -879,18 +879,19 @@ Verified 2026-10-06 by running the whole compose stack locally (migrations,
 SPA routes, allow-list, rate limit, ffmpeg, backup).
 
 - **AI cost per user** (2026-10-12, production prep): every OpenAI call records what
-  the provider says it used ( rows: kind, model, input/cached/audio/output
-  tokens or audio seconds - never content) through , queued and
-  written in the background (), for the signed-in user or the one
-  an  names (background jobs - the describer). Money
-  is worked out when reported, from the  section of appsettings
-  (per model, a dated model name uses its base name's price; keep it in line with
-  OpenAI's price list) - /, unit tested.
-   (403 unless the account is in ,
-  prod env ;  says ) -> web
-   (Settings shows the link to admins; web only - an operator tool).
+  the provider says it used (`AiUsage` rows: kind, model, input/cached/audio/output
+  tokens or audio seconds - never content) through `IAiUsageMeter`, queued and
+  written in the background (`AiUsageWriter`), for the signed-in user or the one
+  an `AiUsageScope.For(userId)` names (background jobs - the describer). Money
+  is worked out when reported, from the `AiPricing` section of appsettings
+  (per model; a dated model name uses its base name's price; keep it in line with
+  OpenAI's price list) - `AiPricing` / `AiUsageSummary`, unit tested.
+  `GET /api/admin/ai-usage?days=` (403 unless the account is in `Admin:Emails`,
+  prod env `ADMIN_EMAILS`; `/users/me` says `isAdmin`) -> web
+  `/admin/usage` (Settings shows the link to admins; web only - an operator tool).
   Any new OpenAI call must record its usage too. Measured 2026-10-12: about
-  /usr/bin/bash.0015 a message (gpt-5.4-mini, ~2.9k tokens in, no cache hits yet).
+  $0.0015 a message (gpt-5.4-mini, ~2.9k tokens in, no cache hits yet).
+  `tools/qa/ai-usage.cjs` checks it live.
 
 ## QA agent
 

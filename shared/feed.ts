@@ -43,8 +43,10 @@ function groupInstant(item: FeedItem, sort: FeedSort): string | null {
  */
 export function feedGroupKey(item: FeedItem, sorts: FeedSort | FeedSort[], timeZone: string): string {
   const list = Array.isArray(sorts) ? sorts : [sorts]
+  // Searching: one list, best match first - no day headers.
+  if (list[0] === 'Relevance') return 'results'
   if (list[0] === 'PriorityHigh' && item.priority === 'High') return 'high'
-  const instant = groupInstant(item, list.find((s) => s !== 'PriorityHigh') ?? 'CreatedDesc')
+  const instant = groupInstant(item, list.find((s) => s !== 'PriorityHigh' && s !== 'Relevance') ?? 'CreatedDesc')
   return instant ? dateKey(instant, timeZone) : 'none'
 }
 
@@ -52,6 +54,7 @@ export function feedGroupKey(item: FeedItem, sorts: FeedSort | FeedSort[], timeZ
 export function feedGroupLabel(key: string, zone: ZoneContext): string {
   if (key === 'none') return t('date.none')
   if (key === 'high') return t('feed.group.high')
+  if (key === 'results') return t('feed.group.results')
   const today = todayKey(zone.timeZone)
   if (key === today) return t('date.today')
   if (key === addDays(today, -1)) return t('date.yesterday')

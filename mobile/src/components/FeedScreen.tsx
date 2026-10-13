@@ -2,9 +2,11 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import { feedGroupLabel, feedItemKey, groupFeed } from '@shared/feed'
 import { activeSorts } from '@shared/sortCriteria'
 import { activeFilterCount, feedFilterParams } from '@shared/feedFilter'
+import { feedSorts } from '@shared/feedViews'
+import { searchWords } from '@shared/highlight'
 import type { FeedItem, FeedKind } from '@shared/types'
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
-import { useFocusEffect } from 'expo-router'
+import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, BackHandler, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
 import { feedApi } from '@/api/endpoints'
@@ -39,14 +41,16 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
   const queryClient = useQueryClient()
   // Sort criteria as coloured chips, shared by all tabs.
   const [sortChips, setSortChips] = useSortChips()
-  const sort = useMemo(() => activeSorts(sortChips), [sortChips])
   const [refreshing, setRefreshing] = useState(false)
   // One set of filters for every tab (switching tabs keeps them).
   const [filters, setFilters] = useFeedFilters()
   // Search as you type, but only ask the server once typing pauses.
   const text = useDebounced(filters.text)
+  // Searching = best match first; a quick view brings its own order; else the chips.
+  const sort = useMemo(() => feedSorts({ ...filters, text }, activeSorts(sortChips)), [filters, text, sortChips])
   const filterParams = feedFilterParams({ ...filters, text }, zone.timeZone)
-  const filtering = activeFilterCount(filters) > 0
+  const words = useMemo(() => searchWords(text), [text])
+  const filtering = activeFilterCount(filters) > 0 || filters.view !== null
   // null = not selecting; otherwise the picked rows by feedItemKey.
   const [selected, setSelected] = useState<Map<string, FeedItem> | null>(null)
   const deletion = useItemDeletion()
@@ -122,7 +126,7 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
       <FlatList
         style={{ backgroundColor: c.page }}
         // Rows depend on the selection too, not only on `data`.
-        extraData={selected}
+        extraData={[selected, words]}
         contentContainerStyle={styles.content}
         data={entries}
         keyExtractor={(e) => e.key}
@@ -133,6 +137,7 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
           ) : (
             <FeedRow
               item={entry.item}
+              words={words}
               selection={selected ? { selected: selected.has(feedItemKey(entry.item)), onToggle: () => toggle(entry.item) } : undefined}
               onLongPress={() => setSelected(new Map([[feedItemKey(entry.item), entry.item]]))}
             />
@@ -145,6 +150,10 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
               <FeedFilterBar
                 filters={filters}
                 onChange={setFilters}
+                onView={(view, next) => {
+                  setFilters(next)
+                  if (next.view && view.show) router.navigate(`/${view.show}` as never)
+                }}
                 selectChip={
                   <Pressable
                     onPress={() => setSelected(new Map())}
@@ -157,7 +166,8 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
                   </Pressable>
                 }
               />
-              <SortChips chips={sortChips} onChange={setSortChips} />
+              {/* A quick view or a search orders the list itself. */}
+              {!filters.sort && !text.trim() && <SortChips chips={sortChips} onChange={setSortChips} />}
             </View>
             {deletion.error && <Text style={[{ color: c.danger }, c.pillStart]}>{deletion.error.message}</Text>}
             {feed.isPending && <Text style={[{ color: c.muted }, c.pillStart]}>{t('common.loading')}</Text>}

@@ -19,6 +19,7 @@ const SORT_ICON: Record<FeedSort, IconName> = {
   CreatedAsc: 'hourglass-outline',
   UpdatedDesc: 'create-outline',
   DateAsc: 'calendar-outline',
+  Relevance: 'search', // while searching - not a chip
 }
 
 /**

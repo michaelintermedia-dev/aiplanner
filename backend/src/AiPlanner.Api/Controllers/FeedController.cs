@@ -44,6 +44,11 @@ public class FeedController : ControllerBase
         [FromQuery] bool noDate = false,
         [FromQuery] bool fromVoice = false,
         [FromQuery] string? tags = null,
+        [FromQuery] FeedOrigin origin = FeedOrigin.Any,
+        [FromQuery] bool hasPhoto = false,
+        [FromQuery] bool hasFile = false,
+        [FromQuery] bool hasLink = false,
+        [FromQuery] bool hasPlace = false,
         CancellationToken ct = default)
     {
         var parsed = new List<FeedKind>();
@@ -73,7 +78,7 @@ public class FeedController : ControllerBase
 
         static DateTime? Utc(DateTime? d) => d is { } v ? (v.Kind == DateTimeKind.Utc ? v : v.ToUniversalTime()) : null;
         var tagList = (tags ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var filter = new FeedFilter(q, Utc(createdFrom), Utc(createdTo), reminders, status, Utc(dateFrom), Utc(dateTo), noDate, fromVoice, tagList);
+        var filter = new FeedFilter(q, Utc(createdFrom), Utc(createdTo), reminders, status, Utc(dateFrom), Utc(dateTo), noDate, fromVoice, tagList, origin, hasPhoto, hasFile, hasLink, hasPlace);
         return Ok(await _feed.GetPageAsync(new FeedQueryParameters(parsed, sorts, cursor, take, filter), ct));
     }
 

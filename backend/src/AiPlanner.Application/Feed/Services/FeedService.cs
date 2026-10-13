@@ -43,6 +43,7 @@ public class FeedService : IFeedService
         var now = _clock.UtcNow;
         var dated = f.DateFromUtc is not null || f.DateToUtc is not null;
         var tags = f.Tags?.Select(t => t.Trim()).Where(t => t.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList() ?? [];
+        var origin = f.Origin == FeedOrigin.Any && f.FromVoice ? FeedOrigin.Voice : f.Origin;
         // Notes have no status or date of their own, so those filters leave them out.
         bool Wants(FeedKind k) => (query.Kinds.Count == 0 || query.Kinds.Contains(k))
             && !(k == FeedKind.Note && (f.Status != FeedStatusFilter.Any || dated));
@@ -81,8 +82,19 @@ public class FeedService : IFeedService
             if (f.DateFromUtc is { } dFrom) q = q.Where(t => t.DueDateUtc >= dFrom);
             if (f.DateToUtc is { } dTo) q = q.Where(t => t.DueDateUtc < dTo);
             if (f.NoDate) q = q.Where(t => t.DueDateUtc == null);
-            if (f.FromVoice) q = q.Where(t => t.SourceAiExtraction != null && t.SourceAiExtraction.TranscriptId != null);
+            q = origin switch
+            {
+                FeedOrigin.Voice => q.Where(t => t.SourceAiExtraction != null && t.SourceAiExtraction.TranscriptId != null),
+                FeedOrigin.Typed => q.Where(t => t.SourceAiExtraction != null && t.SourceAiExtraction.TranscriptId == null),
+                FeedOrigin.Manual => q.Where(t => t.SourceAiExtractionId == null),
+                _ => q,
+            };
             if (tags.Count > 0) q = q.Where(t => t.TaskTags.Any(tt => tags.Contains(tt.Tag.Name)));
+            if (f.HasPhoto) q = q.Where(t => _db.Attachments.Any(x => x.ItemId == t.Id && x.Kind == AttachmentKind.Image));
+            if (f.HasFile) q = q.Where(t => _db.Attachments.Any(x => x.ItemId == t.Id && x.Kind == AttachmentKind.File));
+            if (f.HasPlace) q = q.Where(t => t.Location != null && t.Location != "");
+            if (f.HasLink) q = q.Where(t => t.Title.ToLower().Contains("http") || t.Title.ToLower().Contains("www.")
+                || (t.Description != null && (t.Description.ToLower().Contains("http") || t.Description.ToLower().Contains("www."))));
             keys.AddRange(await q.Select(t => new FeedKeyRow(t.Id, FeedKind.Task, t.CreatedAtUtc, t.UpdatedAtUtc, t.DueDateUtc, t.Priority == TaskPriority.High)).ToListAsync(ct));
         }
         if (Wants(FeedKind.Appointment) && !f.NoDate) // every event has a date
@@ -118,8 +130,19 @@ public class FeedService : IFeedService
             };
             if (f.DateFromUtc is { } dFrom) q = q.Where(a => a.StartUtc >= dFrom || a.RecurrenceRuleId != null);
             if (f.DateToUtc is { } dTo) q = q.Where(a => a.StartUtc < dTo);
-            if (f.FromVoice) q = q.Where(a => a.SourceAiExtraction != null && a.SourceAiExtraction.TranscriptId != null);
+            q = origin switch
+            {
+                FeedOrigin.Voice => q.Where(a => a.SourceAiExtraction != null && a.SourceAiExtraction.TranscriptId != null),
+                FeedOrigin.Typed => q.Where(a => a.SourceAiExtraction != null && a.SourceAiExtraction.TranscriptId == null),
+                FeedOrigin.Manual => q.Where(a => a.SourceAiExtractionId == null),
+                _ => q,
+            };
             if (tags.Count > 0) q = q.Where(a => a.AppointmentTags.Any(at => tags.Contains(at.Tag.Name)));
+            if (f.HasPhoto) q = q.Where(a => _db.Attachments.Any(x => x.ItemId == a.Id && x.Kind == AttachmentKind.Image));
+            if (f.HasFile) q = q.Where(a => _db.Attachments.Any(x => x.ItemId == a.Id && x.Kind == AttachmentKind.File));
+            if (f.HasPlace) q = q.Where(a => a.Location != null && a.Location != "");
+            if (f.HasLink) q = q.Where(a => a.Title.ToLower().Contains("http") || a.Title.ToLower().Contains("www.")
+                || (a.Description != null && (a.Description.ToLower().Contains("http") || a.Description.ToLower().Contains("www."))));
             var rows = await q.Select(a => new { a.Id, a.CreatedAtUtc, a.UpdatedAtUtc, a.StartUtc, Repeats = a.RecurrenceRuleId != null, High = a.Priority == TaskPriority.High }).ToListAsync(ct);
 
             // A repeating event is dated by its next occurrence (sorting, "Today", date filters).
@@ -160,9 +183,31 @@ public class FeedService : IFeedService
                 FeedReminderFilter.Without => q.Where(n => !n.Reminders.Any(r => !r.IsCancelled)),
                 _ => q,
             };
-            if (f.FromVoice) q = q.Where(n => n.SourceAiExtraction != null && n.SourceAiExtraction.TranscriptId != null);
+            q = origin switch
+            {
+                FeedOrigin.Voice => q.Where(n => n.SourceAiExtraction != null && n.SourceAiExtraction.TranscriptId != null),
+                FeedOrigin.Typed => q.Where(n => n.SourceAiExtraction != null && n.SourceAiExtraction.TranscriptId == null),
+                FeedOrigin.Manual => q.Where(n => n.SourceAiExtractionId == null),
+                _ => q,
+            };
             if (tags.Count > 0) q = q.Where(n => n.NoteTags.Any(nt => tags.Contains(nt.Tag.Name)));
+            if (f.HasPhoto) q = q.Where(n => _db.Attachments.Any(x => x.ItemId == n.Id && x.Kind == AttachmentKind.Image));
+            if (f.HasFile) q = q.Where(n => _db.Attachments.Any(x => x.ItemId == n.Id && x.Kind == AttachmentKind.File));
+            if (f.HasPlace) q = q.Where(n => n.Location != null && n.Location != "");
+            if (f.HasLink) q = q.Where(n => n.Content.ToLower().Contains("http") || n.Content.ToLower().Contains("www.")
+                || (n.Title != null && (n.Title.ToLower().Contains("http") || n.Title.ToLower().Contains("www."))));
             keys.AddRange(await q.Select(n => new FeedKeyRow(n.Id, FeedKind.Note, n.CreatedAtUtc, n.UpdatedAtUtc, (DateTime?)null, n.Priority == TaskPriority.High)).ToListAsync(ct));
+        }
+
+        // Searching: how well each one matches (its title), for the Relevance sort.
+        if (words.Count > 0 && query.Sorts.Contains(FeedSort.Relevance) && keys.Count > 0)
+        {
+            var found = keys.Select(k => k.Id).ToList();
+            var titles = new Dictionary<Guid, string?>();
+            foreach (var r in await _db.TaskItems.AsNoTracking().Where(t => found.Contains(t.Id)).Select(t => new { t.Id, Title = (string?)t.Title }).ToListAsync(ct)) titles[r.Id] = r.Title;
+            foreach (var r in await _db.Appointments.AsNoTracking().Where(a => found.Contains(a.Id)).Select(a => new { a.Id, Title = (string?)a.Title }).ToListAsync(ct)) titles[r.Id] = r.Title;
+            foreach (var r in await _db.Notes.AsNoTracking().Where(n => found.Contains(n.Id)).Select(n => new { n.Id, Title = n.Title ?? n.Content }).ToListAsync(ct)) titles[r.Id] = r.Title;
+            keys = keys.Select(k => k with { Score = FeedRelevance.Score(titles.GetValueOrDefault(k.Id), words) }).ToList();
         }
 
         var (page, nextCursor) = FeedPager.Page(keys, query.Sorts, query.Cursor, query.Take);

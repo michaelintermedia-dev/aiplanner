@@ -4,7 +4,8 @@ using AiPlanner.Application.Feed.DTOs;
 namespace AiPlanner.Application.Feed.Services;
 
 /// <summary>The minimum about an item needed to order and page the feed.</summary>
-public record FeedKeyRow(Guid Id, FeedKind Kind, DateTime CreatedAtUtc, DateTime UpdatedAtUtc, DateTime? DateUtc, bool HighPriority = false);
+/// <param name="Score">How well it matches the search words (FeedRelevance) - for the Relevance sort.</param>
+public record FeedKeyRow(Guid Id, FeedKind Kind, DateTime CreatedAtUtc, DateTime UpdatedAtUtc, DateTime? DateUtc, bool HighPriority = false, int Score = 0);
 
 /// <summary>
 /// Orders feed rows by one or more criteria (the first decides, later ones
@@ -50,6 +51,7 @@ public static class FeedPager
     private static int CompareBy(FeedKeyRow a, FeedKeyRow b, FeedSort sort) => sort switch
     {
         FeedSort.PriorityHigh => -a.HighPriority.CompareTo(b.HighPriority),
+        FeedSort.Relevance => -a.Score.CompareTo(b.Score),
         FeedSort.CreatedDesc or FeedSort.UpdatedDesc => -SortKey(a, sort).CompareTo(SortKey(b, sort)),
         _ => SortKey(a, sort).CompareTo(SortKey(b, sort)),
     };
@@ -71,7 +73,7 @@ public static class FeedPager
     // Cursor = the last row's ordering fields. Base64url so it's opaque and URL-safe.
     private static string Encode(FeedKeyRow r)
     {
-        var raw = string.Join('|', r.Kind, r.Id, r.CreatedAtUtc.Ticks, r.UpdatedAtUtc.Ticks, r.DateUtc?.Ticks ?? -1, r.HighPriority ? 1 : 0);
+        var raw = string.Join('|', r.Kind, r.Id, r.CreatedAtUtc.Ticks, r.UpdatedAtUtc.Ticks, r.DateUtc?.Ticks ?? -1, r.HighPriority ? 1 : 0, r.Score);
         return Convert.ToBase64String(Encoding.UTF8.GetBytes(raw)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
     }
 
@@ -90,7 +92,8 @@ public static class FeedPager
                 new DateTime(long.Parse(parts[2]), DateTimeKind.Utc),
                 new DateTime(long.Parse(parts[3]), DateTimeKind.Utc),
                 date < 0 ? null : new DateTime(date, DateTimeKind.Utc),
-                parts[5] == "1");
+                parts[5] == "1",
+                parts.Length > 6 ? int.Parse(parts[6]) : 0);
         }
         catch (Exception e) when (e is FormatException or ArgumentException or IndexOutOfRangeException or OverflowException)
         {

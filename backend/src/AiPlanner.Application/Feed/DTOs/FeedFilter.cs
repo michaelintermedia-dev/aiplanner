@@ -13,6 +13,11 @@ namespace AiPlanner.Application.Feed.DTOs;
 /// <param name="NoDate">Only undated items (undated tasks, notes).</param>
 /// <param name="FromVoice">Only items created from a voice capture.</param>
 /// <param name="Tags">Any of these tags (case-insensitive) - on any kind of item.</param>
+/// <param name="Origin">How the item was made: spoken, typed to the AI, or by hand (FromVoice = Voice).</param>
+/// <param name="HasPhoto">Has a photo attached.</param>
+/// <param name="HasFile">Has a document attached.</param>
+/// <param name="HasLink">Has a web link in its title or text.</param>
+/// <param name="HasPlace">Has a place.</param>
 public record FeedFilter(
     string? Text = null,
     DateTime? CreatedFromUtc = null,
@@ -23,12 +28,20 @@ public record FeedFilter(
     DateTime? DateToUtc = null,
     bool NoDate = false,
     bool FromVoice = false,
-    IReadOnlyList<string>? Tags = null)
+    IReadOnlyList<string>? Tags = null,
+    FeedOrigin Origin = FeedOrigin.Any,
+    bool HasPhoto = false,
+    bool HasFile = false,
+    bool HasLink = false,
+    bool HasPlace = false)
 {
     public static readonly FeedFilter None = new();
 }
 
 public enum FeedReminderFilter { Any, With, Repeating, Without }
+
+/// <summary>How an item was made (filters, 2026-10-13): spoken, typed to the AI, or by hand.</summary>
+public enum FeedOrigin { Any, Voice, Typed, Manual }
 
 /// <summary>
 /// Open: tasks not completed/cancelled, events still ahead. Done: completed or

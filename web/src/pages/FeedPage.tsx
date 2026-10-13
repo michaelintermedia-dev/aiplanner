@@ -1,6 +1,8 @@
 import { FEED_FILTERS, feedGroupLabel, feedItemKey, groupFeed } from '@shared/feed'
 import { activeSorts, parseSortChips, SORT_CHIPS_KEY, type SortChip } from '@shared/sortCriteria'
 import { activeFilterCount, feedFilterParams } from '@shared/feedFilter'
+import { feedSorts } from '@shared/feedViews'
+import { searchWords } from '@shared/highlight'
 import { useFeedFilters } from '../lib/feedFilters'
 import type { FeedItem } from '@shared/types'
 import { useInfiniteQuery } from '@tanstack/react-query'
@@ -56,13 +58,15 @@ export function FeedPage() {
       // Storage blocked: the choice just won't survive a reload.
     }
   }
-  const sort = activeSorts(sortChips)
   // One set of filters for every tab: switching tabs keeps them.
   const [filters, setFilters] = useFeedFilters()
   // Search as you type, but only ask the server once typing pauses.
   const text = useDebounced(filters.text)
+  // Searching = best match first; a quick view brings its own order; else the chips.
+  const sort = feedSorts({ ...filters, text }, activeSorts(sortChips))
   const filterParams = feedFilterParams({ ...filters, text }, zone.timeZone)
-  const filtering = activeFilterCount(filters) > 0
+  const words = searchWords(text)
+  const filtering = activeFilterCount(filters) > 0 || filters.view !== null
   // null = not selecting; otherwise the picked rows by feedItemKey.
   const [selected, setSelected] = useState<Map<string, FeedItem> | null>(null)
   const deletion = useItemDeletion()
@@ -139,13 +143,19 @@ export function FeedPage() {
         <FeedFilterBar
           filters={filters}
           onChange={setFilters}
+          onView={(view, next) => {
+            setFilters(next)
+            if (next.view && view.show) setParams({ show: view.show })
+            window.scrollTo({ top: 0 })
+          }}
           sortChip={
             <button type="button" className="chip filter-toggle" onClick={() => setSelected(new Map())} disabled={items.length === 0}>
               <IoCheckmarkCircleOutline aria-hidden /> {t('select.start')}
             </button>
           }
         />
-        <SortChips chips={sortChips} onChange={changeSortChips} />
+        {/* A quick view or a search orders the list itself. */}
+        {!filters.sort && !text.trim() && <SortChips chips={sortChips} onChange={changeSortChips} />}
       </div>
       {deletion.error && <p className="error">{deletion.error.message}</p>}
 
@@ -165,6 +175,7 @@ export function FeedPage() {
               <FeedRow
                 key={feedItemKey(item)}
                 item={item}
+                words={words}
                 selection={selected ? { selected: selected.has(feedItemKey(item)), onToggle: () => toggle(item) } : undefined}
                 onDelete={() => deletion.deleteItems([item])}
                 onLongPress={selected ? undefined : () => setSelected(new Map([[feedItemKey(item), item]]))}

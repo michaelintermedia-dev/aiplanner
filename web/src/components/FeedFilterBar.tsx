@@ -1,30 +1,100 @@
 import {
   CREATED_OPTIONS,
   filterChips,
+  filterTagsShown,
+  HAS_OPTIONS,
+  ORIGIN_OPTIONS,
   REMINDER_OPTIONS,
   STATUS_OPTIONS,
   WHEN_OPTIONS,
   NO_FILTERS,
   type FeedFilters,
 } from '@shared/feedFilter'
+import { QUICK_VIEWS, toggleView, viewLabel, type QuickView, type QuickViewId } from '@shared/feedViews'
 import { useQuery } from '@tanstack/react-query'
-import { useState, type ReactNode } from 'react'
-import { IoClose, IoFunnelOutline, IoSearch } from 'react-icons/io5'
+import { useState, type ComponentType, type ReactNode } from 'react'
+import {
+  IoAlertCircleOutline,
+  IoCalendarOutline,
+  IoCheckmarkDoneOutline,
+  IoClose,
+  IoCreateOutline,
+  IoFunnelOutline,
+  IoImageOutline,
+  IoMicOutline,
+  IoSearch,
+  IoSquareOutline,
+  IoTodayOutline,
+} from 'react-icons/io5'
 import { feedApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { t } from '@shared/i18n'
 
+/** Same icons as the mobile app's quick views. */
+const VIEW_ICON: Record<QuickViewId, ComponentType> = {
+  today: IoTodayOutline,
+  upcoming: IoCalendarOutline,
+  overdue: IoAlertCircleOutline,
+  openTasks: IoSquareOutline,
+  done: IoCheckmarkDoneOutline,
+  photos: IoImageOutline,
+  voice: IoMicOutline,
+  changed: IoCreateOutline,
+}
+
 /**
- * Filter button + panel + active-filter chips above the feed (same as the
- * mobile app). The filters apply to whichever tab is showing.
+ * Above the feed (same as the mobile app): the search box, the quick views
+ * (one tap = a common question with its own order), the Filter button + panel
+ * and the active filters as removable chips. They apply to whichever tab is showing.
  */
-export function FeedFilterBar({ filters, onChange, sortChip }: { filters: FeedFilters; onChange: (f: FeedFilters) => void; sortChip: ReactNode }) {
+export function FeedFilterBar({
+  filters,
+  onChange,
+  onView,
+  sortChip,
+}: {
+  filters: FeedFilters
+  onChange: (f: FeedFilters) => void
+  /** A quick view was tapped (the page may switch tabs for it). */
+  onView: (view: QuickView, next: FeedFilters) => void
+  sortChip: ReactNode
+}) {
   const { zone } = useAuth()
   const [open, setOpen] = useState(false)
-  const chips = filterChips(filters, zone.locale)
+  // The search box shows the text; a quick view's chip shows what it set.
+  const chips = filterChips(filters, zone.locale).filter((c) => c.key !== 'text')
+  const shownChips = filters.view ? [] : chips
 
   return (
     <div className="feed-filters">
+      <label className="filter-search feed-search">
+        <IoSearch aria-hidden />
+        <input
+          type="search"
+          value={filters.text}
+          onChange={(e) => onChange({ ...filters, text: e.target.value })}
+          placeholder={t('filter.searchPlaceholder')}
+          aria-label={t('filter.search')}
+        />
+        {filters.text && (
+          <button type="button" className="icon-button" onClick={() => onChange({ ...filters, text: '' })} aria-label={t('filter.searchClear')}>
+            <IoClose aria-hidden />
+          </button>
+        )}
+      </label>
+
+      <div className="quick-views" role="group" aria-label={t('view.label')}>
+        {QUICK_VIEWS.map((v) => {
+          const Icon = VIEW_ICON[v.id]
+          const on = filters.view === v.id
+          return (
+            <button key={v.id} type="button" className={`chip quick-view${on ? ' active' : ''}`} aria-pressed={on} onClick={() => onView(v, toggleView(filters, v))}>
+              <Icon aria-hidden /> {viewLabel(v)}
+            </button>
+          )
+        })}
+      </div>
+
       <div className="feed-tools">
         <button
           type="button"
@@ -38,14 +108,14 @@ export function FeedFilterBar({ filters, onChange, sortChip }: { filters: FeedFi
 
       {open && <FilterPanel filters={filters} onChange={onChange} onClose={() => setOpen(false)} />}
 
-      {chips.length > 0 && (
+      {shownChips.length > 0 && (
         <div className="filter-chips">
-          {chips.map((c) => (
+          {shownChips.map((c) => (
             <button key={c.key} type="button" className="chip filter-chip" onClick={() => onChange(c.clear(filters))} aria-label={t('filter.remove', { label: c.label })}>
               {c.label} <IoClose aria-hidden />
             </button>
           ))}
-          <button type="button" className="link" onClick={() => onChange(NO_FILTERS)}>
+          <button type="button" className="link" onClick={() => onChange({ ...NO_FILTERS, text: filters.text })}>
             {t('filter.clearAll')}
           </button>
         </div>
@@ -54,48 +124,36 @@ export function FeedFilterBar({ filters, onChange, sortChip }: { filters: FeedFi
   )
 }
 
+/** Grouped like the mobile app: What it is / has, When, Status, Where it came from. */
 function FilterPanel({ filters: f, onChange, onClose }: { filters: FeedFilters; onChange: (f: FeedFilters) => void; onClose: () => void }) {
   const tags = useQuery({ queryKey: ['feed', 'tags'], queryFn: feedApi.tags })
-  const set = (patch: Partial<FeedFilters>) => onChange({ ...f, ...patch })
+  // A change by hand ends the quick view (and its own order).
+  const set = (patch: Partial<FeedFilters>) => onChange({ ...f, ...patch, view: null, sort: null })
+  const [allTags, setAllTags] = useState(false)
+  const usedCount = tags.data?.filter((tag) => tag.count > 0 || f.tags.includes(tag.name)).length ?? 0
+  const usedTags = filterTagsShown(tags.data ?? [], f.tags, allTags)
 
   return (
     <section className="card filter-panel" aria-label={t('filter.panel')}>
-      <label className="filter-search">
-        <IoSearch aria-hidden />
-        <input value={f.text} onChange={(e) => set({ text: e.target.value })} placeholder={t('filter.searchPlaceholder')} autoFocus />
-      </label>
-
-      <Options label={t('filter.created')} options={CREATED_OPTIONS} value={f.created} onChange={(created) => set({ created })} />
-      {f.created === 'custom' && (
-        <div className="form-row">
-          <label>
-            {t('filter.from')}
-            <input type="date" value={f.createdFrom ?? ''} onChange={(e) => set({ createdFrom: e.target.value || null })} />
-          </label>
-          <label>
-            {t('filter.to')}
-            <input type="date" value={f.createdTo ?? ''} onChange={(e) => set({ createdTo: e.target.value || null })} />
-          </label>
-        </div>
-      )}
-      <Options label={t('filter.when')} options={WHEN_OPTIONS} value={f.when} onChange={(when) => set({ when })} />
-      <Options label={t('filter.status')} options={STATUS_OPTIONS} value={f.status} onChange={(status) => set({ status })} />
-      <Options label={t('filter.reminders')} options={REMINDER_OPTIONS} value={f.reminders} onChange={(reminders) => set({ reminders })} />
-
-      <div className="filter-group">
-        <span className="caption">{t('filter.more')}</span>
+      <Group title={t('filter.group.what')}>
         <div className="reminder-presets">
-          <button type="button" className={`chip-button${f.fromVoice ? ' selected' : ''}`} aria-pressed={f.fromVoice} onClick={() => set({ fromVoice: !f.fromVoice })}>
-            {t('filter.fromVoice')}
-          </button>
+          {HAS_OPTIONS.map((o) => {
+            const on = f.has.includes(o.value)
+            return (
+              <button
+                key={o.value}
+                type="button"
+                className={`chip-button${on ? ' selected' : ''}`}
+                aria-pressed={on}
+                onClick={() => set({ has: on ? f.has.filter((x) => x !== o.value) : [...f.has, o.value] })}>
+                {o.label}
+              </button>
+            )
+          })}
         </div>
-      </div>
-
-      {tags.data && tags.data.some((tag) => tag.count > 0) && (
-        <div className="filter-group">
-          <span className="caption">{t('filter.tags')}</span>
-          <div className="reminder-presets">
-            {tags.data.filter((tag) => tag.count > 0 || f.tags.includes(tag.name)).map((tag) => {
+        {usedTags.length > 0 && (
+          <div className="reminder-presets" aria-label={t('filter.tags')}>
+            {usedTags.map((tag) => {
               const on = f.tags.includes(tag.name)
               return (
                 <button
@@ -108,9 +166,40 @@ function FilterPanel({ filters: f, onChange, onClose }: { filters: FeedFilters; 
                 </button>
               )
             })}
+            {usedCount > usedTags.length || allTags ? (
+              <button type="button" className="link" onClick={() => setAllTags((a) => !a)}>
+                {allTags ? t('tags.fewer') : t('tags.all', { count: usedCount })}
+              </button>
+            ) : null}
           </div>
-        </div>
-      )}
+        )}
+      </Group>
+
+      <Group title={t('filter.group.when')}>
+        <Options label={t('filter.when')} options={WHEN_OPTIONS} value={f.when} onChange={(when) => set({ when })} />
+      </Group>
+
+      <Group title={t('filter.group.status')}>
+        <Options label={t('filter.status')} options={STATUS_OPTIONS} value={f.status} onChange={(status) => set({ status })} />
+        <Options caption label={t('filter.reminders')} options={REMINDER_OPTIONS} value={f.reminders} onChange={(reminders) => set({ reminders })} />
+      </Group>
+
+      <Group title={t('filter.group.origin')}>
+        <Options label={t('filter.group.origin')} options={ORIGIN_OPTIONS} value={f.origin} onChange={(origin) => set({ origin })} />
+        <Options caption label={t('filter.created')} options={CREATED_OPTIONS} value={f.created} onChange={(created) => set({ created })} />
+        {f.created === 'custom' && (
+          <div className="form-row">
+            <label>
+              {t('filter.from')}
+              <input type="date" value={f.createdFrom ?? ''} onChange={(e) => set({ createdFrom: e.target.value || null })} />
+            </label>
+            <label>
+              {t('filter.to')}
+              <input type="date" value={f.createdTo ?? ''} onChange={(e) => set({ createdTo: e.target.value || null })} />
+            </label>
+          </div>
+        )}
+      </Group>
 
       <div className="form-actions">
         <button type="button" className="primary" onClick={onClose}>
@@ -121,23 +210,30 @@ function FilterPanel({ filters: f, onChange, onClose }: { filters: FeedFilters; 
   )
 }
 
-function Options<T extends string>({ label, options, value, onChange }: { label: string; options: { value: T; label: string }[]; value: T; onChange: (v: T) => void }) {
+function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="filter-group">
-      <span className="caption">{label}</span>
-      <div className="reminder-presets" role="radiogroup" aria-label={label}>
-        {options.map((o) => (
-          <button
-            key={o.value}
-            type="button"
-            role="radio"
-            aria-checked={value === o.value}
-            className={`chip-button${value === o.value ? ' selected' : ''}`}
-            onClick={() => onChange(o.value)}>
-            {o.label}
-          </button>
-        ))}
-      </div>
+      <span className="caption">{title}</span>
+      {children}
+    </div>
+  )
+}
+
+function Options<T extends string>({ label, caption, options, value, onChange }: { label: string; caption?: boolean; options: { value: T; label: string }[]; value: T; onChange: (v: T) => void }) {
+  return (
+    <div className="reminder-presets" role="radiogroup" aria-label={label}>
+      {caption && <span className="sub-caption">{label}</span>}
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          role="radio"
+          aria-checked={value === o.value}
+          className={`chip-button${value === o.value ? ' selected' : ''}`}
+          onClick={() => onChange(o.value)}>
+          {o.label}
+        </button>
+      ))}
     </div>
   )
 }

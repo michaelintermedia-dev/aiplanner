@@ -7,6 +7,7 @@ import { useAuth } from '../auth/useAuth'
 import { useLongPress } from '../lib/useLongPress'
 import { useAction } from '../lib/useAction'
 import { KIND_ICON } from './kindIcons'
+import { highlight } from '@shared/highlight'
 import { t } from '@shared/i18n'
 import { priorityLabel, statusLabel } from '@shared/labels'
 
@@ -24,8 +25,11 @@ export function FeedRow({
   selection,
   onDelete,
   onLongPress,
+  words = [],
 }: {
   item: FeedItem
+  /** Search words to mark in the title and snippet. */
+  words?: string[]
   selection?: { selected: boolean; onToggle: () => void }
   onDelete?: () => void
   /** Touch: a long-press starts selecting (with this row), like the mobile app. */
@@ -43,8 +47,8 @@ export function FeedRow({
 
   const content = (
     <>
-      <span className="feed-title">{item.title}</span>
-      {item.snippet && <span className="feed-snippet">{item.snippet}</span>}
+      <span className="feed-title"><Marked text={item.title} words={words} /></span>
+      {item.snippet && <span className="feed-snippet"><Marked text={item.snippet} words={words} /></span>}
       <span className="row-meta">
         <span className="kind-label">{KIND_LABEL[item.kind]}</span>
         {when && (
@@ -123,4 +127,10 @@ export function FeedRow({
       )}
     </li>
   )
+}
+
+/** The text with the search words marked. */
+function Marked({ text, words }: { text: string; words: string[] }) {
+  if (!words.length) return <>{text}</>
+  return <>{highlight(text, words).map((p, i) => (p.hit ? <mark key={i}>{p.text}</mark> : p.text))}</>
 }

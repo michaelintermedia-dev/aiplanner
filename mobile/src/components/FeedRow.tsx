@@ -8,6 +8,7 @@ import { useAuth } from '@/auth/useAuth'
 import { useAction } from '@/lib/useAction'
 import { useColors, type Colors } from '@/theme'
 import { KIND_ICON } from './kindIcons'
+import { highlight } from '@shared/highlight'
 import { Badge } from './ui'
 import { t } from '@shared/i18n'
 import { priorityLabel, statusLabel } from '@shared/labels'
@@ -32,10 +33,13 @@ export function FeedRow({
   item,
   selection,
   onLongPress,
+  words = [],
 }: {
   item: FeedItem
   selection?: { selected: boolean; onToggle: () => void }
   onLongPress?: () => void
+  /** Search words to mark in the title and snippet. */
+  words?: string[]
 }) {
   const c = useColors()
   const { zone } = useAuth()
@@ -90,11 +94,11 @@ export function FeedRow({
         accessibilityRole="button"
         accessibilityHint={selection ? (selected ? t('select.hintUnselect') : t('select.hintSelect')) : t('feed.rowHint')}>
         <Text style={[styles.title, { color: done || passed ? c.muted : c.text }, (done || passed) && styles.struck]} numberOfLines={2}>
-          {item.title}
+          <Marked text={item.title} words={words} c={c} />
         </Text>
         {item.snippet && (
           <Text style={{ color: c.muted, fontSize: 14 }} numberOfLines={2}>
-            {item.snippet}
+            <Marked text={item.snippet} words={words} c={c} />
           </Text>
         )}
         <View style={styles.meta}>
@@ -150,3 +154,9 @@ const styles = StyleSheet.create({
   metaText: { fontSize: 13 },
   reminder: { flexDirection: 'row', alignItems: 'center', gap: 3 },
 })
+
+/** The text with the search words marked (nested Text keeps the line wrapping). */
+function Marked({ text, words, c }: { text: string; words: string[]; c: Colors }) {
+  if (!words.length) return <>{text}</>
+  return <>{highlight(text, words).map((p, i) => (p.hit ? <Text key={i} style={{ backgroundColor: c.accentSoft, color: c.text }}>{p.text}</Text> : p.text))}</>
+}

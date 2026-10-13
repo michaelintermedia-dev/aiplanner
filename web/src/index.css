@@ -1780,6 +1780,61 @@ button.kind-icon:hover:not(:disabled) {
   color: var(--muted);
 }
 
+/* Search on top of the feed, then the quick views (filters strategy, 2026-10-13) */
+.feed-search {
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 0 6px 0 14px;
+}
+
+.feed-search input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.feed-search .icon-button {
+  min-height: 32px;
+  min-width: 32px;
+}
+
+.quick-views {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+
+.quick-views::-webkit-scrollbar {
+  display: none;
+}
+
+.quick-view {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  white-space: nowrap;
+}
+
+.quick-view.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.filter-group .sub-caption {
+  flex-basis: 100%;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.feed-row mark {
+  background: var(--accent-soft, rgba(255, 220, 0, 0.35));
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
 .filter-chips {
   display: flex;
   flex-wrap: wrap;

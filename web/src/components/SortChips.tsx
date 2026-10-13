@@ -2,7 +2,7 @@ import { t } from '@shared/i18n'
 import { SORT_CRITERIA, sortLabel, sortShortLabel, type SortChip } from '@shared/sortCriteria'
 import type { FeedSort } from '@shared/types'
 import { useState, type ComponentType } from 'react'
-import { IoCalendarOutline, IoCreateOutline, IoFlag, IoHourglassOutline, IoSparklesOutline, IoSwapVertical } from 'react-icons/io5'
+import { IoCalendarOutline, IoCreateOutline, IoFlag, IoHourglassOutline, IoSearch, IoSparklesOutline, IoSwapVertical } from 'react-icons/io5'
 
 /** One icon per criterion (same as mobile). */
 const SORT_ICON: Record<FeedSort, ComponentType<{ 'aria-hidden'?: boolean }>> = {
@@ -11,6 +11,7 @@ const SORT_ICON: Record<FeedSort, ComponentType<{ 'aria-hidden'?: boolean }>> = 
   CreatedAsc: IoHourglassOutline,
   UpdatedDesc: IoCreateOutline,
   DateAsc: IoCalendarOutline,
+  Relevance: IoSearch, // while searching - not a chip
 }
 
 /**

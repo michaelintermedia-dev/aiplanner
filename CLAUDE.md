@@ -292,6 +292,20 @@ Local dev notes:
   paging still works; `shared/feedFilter.ts` turns choices into UTC ranges in
   the user's timezone. Notes drop out of status/date filters (they have no
   status/date).
+  **Search first** (user's pick of 3 strategies, 2026-10-13): the search box
+  sits on top of the feed (not in the panel); while searching the feed is
+  "Best matches" - `FeedSort.Relevance` (`FeedRelevance.Score`, pure, tested:
+  the phrase in the title > each word in the title > text-only; the cursor
+  carries the score), one group, the sort chips step aside - and the words are
+  marked in titles/snippets (`shared/highlight.ts`). Below it the **quick
+  views** row (`shared/feedViews.ts`): Today, Upcoming, Overdue, Open tasks
+  (opens the Tasks tab), Done, With photos, Voice notes, Recently changed -
+  each sets filters + its own order (`FeedFilters.sort`, `view`); a tap again
+  clears it; any change in the panel ends the view. The panel is grouped
+  What (has photo/document/link/place - `hasPhoto/hasFile/hasLink/hasPlace` -
+  + tags, top 8 then "All tags") / When (+ upcoming = `dateFrom` now) / Status
+  (+ reminders) / Made (`origin` = Voice / Typed / Manual, + created).
+  `fromVoice` is still accepted from old apps. QA: `tools/qa/feed-filters.cjs`.
 - **Sort criteria as round chips** (2026-10-02, web + mobile; replaced the
   single "⇅ Newest" menu). The ⇅ "Sort by" chip opens an editor: pick
   criteria (High priority first, Newest, Oldest, Recently updated, By date)

@@ -14,4 +14,6 @@ public enum FeedSort
     DateAsc = 3,
     /// <summary>Tasks with High priority before everything else.</summary>
     PriorityHigh = 4,
+    /// <summary>Best match for the search words first (FeedRelevance) - the default while searching.</summary>
+    Relevance = 5,
 }

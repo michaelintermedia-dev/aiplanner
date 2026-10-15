@@ -331,9 +331,15 @@ public class FeedService : IFeedService
         var timeZoneId = await _db.Users.Where(u => u.Id == userId).Select(u => u.TimeZoneId).FirstAsync(ct);
         var zone = UserTimeZoneHelper.ResolveTimeZone(timeZoneId);
         var horizon = now.AddYears(1);
+        // An event's reminders stop once it's over (same rule as the notifications).
+        var eventIds = reminders.Where(r => r.AppointmentId is not null).Select(r => r.AppointmentId!.Value).Distinct().ToList();
+        var eventEnds = eventIds.Count == 0 ? [] : (await _db.Appointments.AsNoTracking().Include(a => a.RecurrenceRule)
+                .Where(a => a.UserId == userId && eventIds.Contains(a.Id)).ToListAsync(ct))
+            .ToDictionary(a => a.Id, a => EventOccurrences.SeriesEnd(a, zone));
         var next = reminders
             .Select(r => (ItemId: r.TaskItemId ?? r.AppointmentId ?? r.NoteId!.Value, Repeats: ReminderSchedule.Repeats(r.Kind),
-                At: NotificationSchedule.Occurrences(r, now, horizon, zone).Cast<DateTime?>().FirstOrDefault()))
+                At: NotificationSchedule.Occurrences(r, now, horizon, zone,
+                    r.AppointmentId is { } e ? eventEnds.GetValueOrDefault(e) : null).Cast<DateTime?>().FirstOrDefault()))
             .Where(x => x.At is not null)
             .GroupBy(x => x.ItemId)
             .Select(g => g.OrderBy(x => x.At).First());

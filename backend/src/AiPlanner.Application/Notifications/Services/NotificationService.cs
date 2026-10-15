@@ -94,6 +94,15 @@ public class NotificationService : INotificationService
             .AsNoTracking()
             .Where(n => n.UserId == userId && n.Status == NotificationStatus.Snoozed && n.ScheduledForUtc >= from && n.ScheduledForUtc < to)
             .ToListAsync(ct);
+        // A snooze that would go off after its event is over is dropped too.
+        var snoozedEventIds = snoozed.Where(n => n.AppointmentId is not null).Select(n => n.AppointmentId!.Value).Distinct().ToList();
+        if (snoozedEventIds.Count > 0)
+        {
+            var ends = (await _db.Appointments.AsNoTracking().Include(a => a.RecurrenceRule)
+                    .Where(a => a.UserId == userId && snoozedEventIds.Contains(a.Id)).ToListAsync(ct))
+                .ToDictionary(a => a.Id, a => EventOccurrences.SeriesEnd(a, zone));
+            snoozed = snoozed.Where(n => n.AppointmentId is not { } id || !ends.TryGetValue(id, out var end) || end is null || n.ScheduledForUtc <= end).ToList();
+        }
         result.AddRange(snoozed.Select(n => new UpcomingNotificationDto(
             $"s:{n.Id:N}",
             "Snoozed",
@@ -184,7 +193,9 @@ public class NotificationService : INotificationService
                 .Select(o => (At: o.Start.AddMinutes(-minutes), ItemTime: (DateTime?)o.Start))
                 .Where(x => x.At >= from && x.At < to);
         }
-        return NotificationSchedule.Occurrences(r, from, to, zone).Select(at => (at, itemTime));
+        // An event's reminders stop once the event is over (a repeating one: its last date).
+        var stop = r.Appointment is { } ev ? EventOccurrences.SeriesEnd(ev, zone) : null;
+        return NotificationSchedule.Occurrences(r, from, to, zone, stop).Select(at => (at, itemTime));
     }
 
     private async Task<IEnumerable<UpcomingNotificationDto>> DailySummariesAsync(

@@ -466,6 +466,12 @@ Local dev notes:
   (`Reminders` lists everywhere; "remind me at 3 and at 4" = two).
   Completing/cancelling an item pauses its reminders (`PausedWithItem`) and
   reopening restores them; ones the user removed stay off.
+  **An event's reminders end with the event** (user's rule, 2026-10-15): none
+  goes off after it's over - a one-off event's end, a repeating one's last date
+  (until / N times; one without an end never stops) - `EventOccurrences.SeriesEnd`
+  -> `NotificationSchedule.Occurrences(stopAtUtc)`, in the notifications, Today,
+  the feed's bell and snoozes. Worked out, not stored: moving the event later
+  brings them back. Tests: PassedEventRemindersTests, tools/qa/passed-event-reminders.cjs.
   Wire format `ReminderDto` / shared `Reminder` is the same on tasks,
   appointments, notes and capture items. All writes go through
   `ReminderPlanner` (Application/Reminders): unchanged = kept, changed = old

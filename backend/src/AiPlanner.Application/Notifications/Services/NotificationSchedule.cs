@@ -8,12 +8,19 @@ namespace AiPlanner.Application.Notifications.Services;
 /// <summary>Pure notification rules (unit tested): when reminders go off, and what they say.</summary>
 public static class NotificationSchedule
 {
-    /// <summary>Every time <paramref name="r"/> goes off in [fromUtc, toUtc).</summary>
-    public static IEnumerable<DateTime> Occurrences(Reminder r, DateTime fromUtc, DateTime toUtc, TimeZoneInfo zone)
+    /// <summary>
+    /// Every time <paramref name="r"/> goes off in [fromUtc, toUtc) - never after
+    /// <paramref name="stopAtUtc"/> (its event is over: EventOccurrences.SeriesEnd).
+    /// </summary>
+    public static IEnumerable<DateTime> Occurrences(Reminder r, DateTime fromUtc, DateTime toUtc, TimeZoneInfo zone, DateTime? stopAtUtc = null)
     {
         if (r.IsCancelled)
         {
             yield break;
+        }
+        if (stopAtUtc is { } stop && stop.AddTicks(1) < toUtc)
+        {
+            toUtc = stop.AddTicks(1);
         }
         if (!ReminderSchedule.Repeats(r.Kind))
         {

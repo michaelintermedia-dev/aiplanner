@@ -1,5 +1,6 @@
-# One address for everything: the web app, and the API under /api.
-# Caddy gets and renews the HTTPS certificate for {$DOMAIN} by itself.
+# The app's addresses (DOMAIN may list several, comma-separated - e.g. the new
+# one and an old one still in use): the web app, and the API under /api.
+# Caddy gets and renews the HTTPS certificates by itself.
 {$DOMAIN} {
 	encode zstd gzip
 
@@ -38,4 +39,11 @@
 		Referrer-Policy "strict-origin-when-cross-origin"
 		-Server
 	}
+}
+
+# The brand's own addresses (e.g. "gatazee.com, www.gatazee.com") send people to
+# the app until there's a landing page there. Unset: a local name that never
+# asks for a certificate.
+{$HOME_DOMAINS:www.localhost} {
+	redir https://{$HOME_REDIRECT:localhost}{uri} 302
 }

@@ -54,6 +54,8 @@ services:
       - api
     environment:
       DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+      HOME_DOMAINS: ${HOME_DOMAINS:-www.localhost}
+      HOME_REDIRECT: ${HOME_REDIRECT:-localhost}
     ports:
       - "80:80"
       - "443:443"

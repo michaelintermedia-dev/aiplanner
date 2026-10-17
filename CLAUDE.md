@@ -927,6 +927,15 @@ app (web + /api); gatazee.com and www redirect there (`HOME_DOMAINS` /
 `HOME_REDIRECT` in deploy/.env) until a landing page exists;
 aiplanner.duckdns.org still serves the app for older installs (`DOMAIN` lists
 both). APKs are built with EXPO_PUBLIC_API_URL=https://app.gatazee.com.
+gatazee.com itself serves the small static site in `deploy/site` (home page,
+/privacy, /terms - Caddy's HOME_DOMAINS block; other paths go on to the app).
+Keep the privacy policy true to the app: change it when data handling changes.
+Live in production since 2026-10-17: email codes through Resend (domain
+gatazee.com, Tokyo region, sender "Gatazee <hello@gatazee.com>"; replies to it
+go nowhere yet) and Google sign-in (Google Cloud project "Gatazee", consent
+screen in production; Web client for app.gatazee.com, Android client for
+com.aiplanner.app with the debug keystore's SHA-1 - a real release key needs its
+own Android client before Google Play). Not yet: Apple sign-in.
 
 ## Production (2026-10-06)
 

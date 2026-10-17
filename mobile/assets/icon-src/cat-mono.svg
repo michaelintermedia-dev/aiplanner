@@ -1,0 +1,20 @@
+<!-- The cat as one shape with the eyes and smile cut out - Android's themed (monochrome) icon. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <mask id="face">
+      <rect width="512" height="512" fill="#fff"/>
+      <g fill="none" stroke="#000" stroke-width="22" stroke-linecap="round">
+        <path d="M172 268q30-34 60 0"/>
+        <path d="M280 268q30-34 60 0"/>
+      </g>
+      <path d="M212 326l30 30 60-62" fill="none" stroke="#000" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+    </mask>
+  </defs>
+  <g mask="url(#face)" fill="#fff">
+    <g stroke="#fff" stroke-width="28" stroke-linejoin="round">
+      <path d="M128 228L142 96 238 160Z"/>
+      <path d="M384 228L370 96 274 160Z"/>
+    </g>
+    <ellipse cx="256" cy="282" rx="150" ry="136"/>
+  </g>
+</svg>

@@ -649,8 +649,12 @@ Local dev notes:
   - **Quick recording**: Android home-screen widget `QuickRecord`
     (react-native-android-widget, `src/widgets/`, registered in
     `mobile/index.ts` - the app's entry, not expo-router/entry) opens
-    `aiplanner://record` -> `app/record.tsx` -> `lib/quickRecord` signal -> the
-    dock unfolds and its CaptureBar starts recording (`talkSignal`). Web: the
+    `aiplanner://record?t=<ticket>` -> `app/record.tsx` -> `lib/quickRecord` signal -> the
+    dock unfolds and its CaptureBar starts recording (`talkSignal`). The ticket
+    (`widgets/recordTicket.ts`, a file) is one-time: Android can replay the
+    widget's link when the app is later opened from its icon, and a used ticket
+    then only opens the app (bug fix, 2026-10-17); the widget is redrawn with a
+    new ticket after each use. Web: the
     PWA manifest shortcut "Quick recording" -> `/feed?record=1` (CaptureBar
     starts at once). No iOS widget (needs a Mac). The widget follows Settings -
     Appearance (2026-10-08): the skin's accent, light/dark ("System" hands
@@ -930,6 +934,10 @@ both). APKs are built with EXPO_PUBLIC_API_URL=https://app.gatazee.com.
 gatazee.com itself serves the small static site in `deploy/site` (home page,
 /privacy, /terms - Caddy's HOME_DOMAINS block; other paths go on to the app).
 Keep the privacy policy true to the app: change it when data handling changes.
+The icon is a happy cat whose smile is a tick (user's pick, 2026-10-17;
+*gata* = cat in Spanish): drawn once in `mobile/assets/icon-src/cat.svg` (+ a
+monochrome cut-out and the Indigo tile); `node tools/qa/icons.cjs` renders the
+web favicon/PWA icons and the app's icon, adaptive layers and splash from it.
 Live in production since 2026-10-17: email codes through Resend (domain
 gatazee.com, Tokyo region, sender "Gatazee <hello@gatazee.com>"; replies to it
 go to the owner's Gmail via ImprovMX - MX on @; the site's contact address) and Google sign-in (Google Cloud project "Gatazee", consent

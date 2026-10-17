@@ -47,6 +47,9 @@ export function applyAppearance(settings: AppearanceSettings) {
   void redrawWidget(settings)
 }
 
+/** Redraws the home-screen widget as it is now (e.g. with its next Quick-recording ticket). */
+export const refreshWidget = () => void redrawWidget(current)
+
 /** Settings - Appearance as it is now (the home-screen widget draws itself from it). */
 export const currentAppearance = () => current
 

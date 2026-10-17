@@ -2,6 +2,7 @@ import { setLocale, t } from '@shared/i18n'
 import type { WidgetTaskHandlerProps } from 'react-native-android-widget'
 import { currentAppearance } from '@/lib/appearance'
 import { QuickRecordWidget } from './QuickRecordWidget'
+import { widgetTicket } from './recordTicket'
 import { widgetLook } from './widgetLook'
 
 /**
@@ -13,8 +14,9 @@ export function renderQuickRecord() {
   setLocale(Intl.DateTimeFormat().resolvedOptions().locale)
   const label = t('widget.record')
   const settings = currentAppearance()
-  const light = <QuickRecordWidget label={label} look={widgetLook(settings, 'light')} />
-  const dark = <QuickRecordWidget label={label} look={widgetLook(settings, 'dark')} />
+  const ticket = widgetTicket()
+  const light = <QuickRecordWidget label={label} look={widgetLook(settings, 'light')} ticket={ticket} />
+  const dark = <QuickRecordWidget label={label} look={widgetLook(settings, 'dark')} ticket={ticket} />
   return settings.theme === 'Light' ? light : settings.theme === 'Dark' ? dark : { light, dark }
 }
 

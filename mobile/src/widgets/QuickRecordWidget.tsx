@@ -5,7 +5,8 @@ import { FlexWidget, ImageWidget, OverlapWidget, SvgWidget, TextWidget } from 'r
 const mic = (color: string) =>
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="${color}" d="M256 352a96 96 0 0 0 96-96V96a96 96 0 0 0-192 0v160a96 96 0 0 0 96 96z"/><path fill="none" stroke="${color}" stroke-linecap="round" stroke-linejoin="round" stroke-width="32" d="M400 192v64c0 79.4-64.6 144-144 144s-144-64.6-144-144v-64M256 400v80M192 480h128"/></svg>`
 
-const OPEN = { clickAction: 'OPEN_URI', clickActionData: { uri: 'aiplanner://record' } } as const
+/** Opens the app recording; the ticket tells a real tap from Android replaying the link (recordTicket.ts). */
+const open = (ticket: string) => ({ clickAction: 'OPEN_URI', clickActionData: { uri: `aiplanner://record?t=${ticket}` } }) as const
 const SIZE = 64
 
 /** How the widget looks: the skin's accent (light or dark) and, when the wallpaper is on, the wallpaper inside the circle. */
@@ -21,9 +22,10 @@ export interface WidgetLook {
  * under it, like the app icons around it. It follows Settings - Appearance:
  * the skin's accent, light or dark, and the wallpaper inside the circle (with
  * a smaller accent disc carrying the mic, so it reads on any picture).
- * Tapping it opens the app recording (aiplanner://record).
+ * Tapping it opens the app recording (aiplanner://record?t=<ticket>).
  */
-export function QuickRecordWidget({ label, look }: { label: string; look: WidgetLook }) {
+export function QuickRecordWidget({ label, look, ticket }: { label: string; look: WidgetLook; ticket: string }) {
+  const OPEN = open(ticket)
   return (
     <FlexWidget
       {...OPEN}

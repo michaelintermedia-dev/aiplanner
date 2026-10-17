@@ -1,0 +1,14 @@
+<!-- The Gatazee cat (user's pick, 2026-10-17): a happy cat whose smile is a tick.
+     The one drawing every icon is made from - tools/qa/icons.cjs renders them all. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <g fill="#fff" stroke="#fff" stroke-width="28" stroke-linejoin="round">
+    <path d="M128 228L142 96 238 160Z"/>
+    <path d="M384 228L370 96 274 160Z"/>
+  </g>
+  <ellipse cx="256" cy="282" rx="150" ry="136" fill="#fff"/>
+  <g fill="none" stroke="#3f48b8" stroke-width="22" stroke-linecap="round">
+    <path d="M172 268q30-34 60 0"/>
+    <path d="M280 268q30-34 60 0"/>
+  </g>
+  <path d="M212 326l30 30 60-62" fill="none" stroke="#ff9f2e" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

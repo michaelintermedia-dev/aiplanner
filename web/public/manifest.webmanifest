@@ -1,6 +1,6 @@
 {
-  "name": "AI Planner",
-  "short_name": "Planner",
+  "name": "Gatazee",
+  "short_name": "Gatazee",
   "description": "Say or type what's on your mind - tasks, events and notes, with reminders.",
   "start_url": "/feed",
   "scope": "/",

@@ -225,7 +225,7 @@ public class AccountService
             await using (var readme = await archive.CreateEntry("README.txt").OpenAsync(ct))
             {
                 await readme.WriteAsync(Encoding.UTF8.GetBytes(
-                    "AI Planner - your data\r\n\r\n" +
+                    "Gatazee - your data\r\n\r\n" +
                     "data.json   your account, settings, every task, event and note (with reminders, repeat rules and tags)\r\n" +
                     "            and every capture with the words you typed or said. Times are UTC.\r\n" +
                     "files/      photos and documents attached to your items\r\n" +

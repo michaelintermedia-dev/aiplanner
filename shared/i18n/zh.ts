@@ -78,7 +78,7 @@ export const zh: Messages = {
   'reminder.problem.pickTime': '请为提醒选择时间。',
 
   // ---- app, navigation, auth, common ----
-  'app.name': 'AI Planner',
+  'app.name': 'Gatazee',
   'common.loading': '加载中…',
   'common.error': '出了点问题。',
   'nav.today': '今天',
@@ -507,8 +507,8 @@ export const zh: Messages = {
   'form.draftNotice': '此项有未保存的修改。',
   'form.continueEditing': '继续编辑',
   // ---- media (photos, documents) ----
-  'media.needPhotoAccess': '要添加你拍的照片，请允许 AI Planner 访问所有照片（设置 - 应用 - AI Planner - 权限）。',
-  'media.noNewPhotos': '没有找到新照片。拍一张照片后回到 AI Planner - 它会被添加到这里。',
+  'media.needPhotoAccess': '要添加你拍的照片，请允许 Gatazee 访问所有照片（设置 - 应用 - Gatazee - 权限）。',
+  'media.noNewPhotos': '没有找到新照片。拍一张照片后回到 Gatazee - 它会被添加到这里。',
   'media.title': '媒体',
   'media.takePhoto': '拍照',
   'media.addImage': '添加图片',

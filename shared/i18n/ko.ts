@@ -78,7 +78,7 @@ export const ko: Messages = {
   'reminder.problem.pickTime': '알림 시간을 선택하세요.',
 
   // ---- app, navigation, auth, common ----
-  'app.name': 'AI Planner',
+  'app.name': 'Gatazee',
   'common.loading': '불러오는 중…',
   'common.error': '문제가 발생했습니다.',
   'nav.today': '오늘',
@@ -507,8 +507,8 @@ export const ko: Messages = {
   'form.draftNotice': '이 항목에 저장하지 않은 변경 사항이 있습니다.',
   'form.continueEditing': '계속 편집',
   // ---- media (photos, documents) ----
-  'media.needPhotoAccess': '찍은 사진을 추가하려면 AI Planner에 모든 사진 접근을 허용하세요(설정 - 앱 - AI Planner - 권한).',
-  'media.noNewPhotos': '새 사진을 찾지 못했습니다. 사진을 찍고 AI Planner로 돌아오면 여기에 추가됩니다.',
+  'media.needPhotoAccess': '찍은 사진을 추가하려면 Gatazee에 모든 사진 접근을 허용하세요(설정 - 앱 - Gatazee - 권한).',
+  'media.noNewPhotos': '새 사진을 찾지 못했습니다. 사진을 찍고 Gatazee로 돌아오면 여기에 추가됩니다.',
   'media.title': '미디어',
   'media.takePhoto': '사진 찍기',
   'media.addImage': '이미지 추가',

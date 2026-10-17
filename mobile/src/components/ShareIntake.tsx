@@ -5,7 +5,7 @@ import { prepareSharedFiles } from '@/lib/media'
 import { offerShared } from '@/lib/sharedIn'
 
 /**
- * Takes what another app shared into AI Planner (Android share sheet; user's
+ * Takes what another app shared into Gatazee (Android share sheet; user's
  * request, 2026-10-12) and hands it to the floating toolbar (lib/sharedIn),
  * which saves it as a new entry. Mounted only when signed in - a share that
  * arrives before sign-in waits in ShareIntentProvider until then.

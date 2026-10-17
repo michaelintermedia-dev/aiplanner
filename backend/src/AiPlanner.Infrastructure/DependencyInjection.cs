@@ -84,7 +84,7 @@ public static class DependencyInjection
         services.AddHttpClient<ILinkPreviewService, HttpLinkPreviewService>(client =>
             {
                 client.Timeout = TimeSpan.FromSeconds(6);
-                client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (compatible; AiPlannerBot/1.0; +https://aiplanner.duckdns.org)");
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (compatible; GatazeeBot/1.0; +https://gatazee.com)");
                 client.DefaultRequestHeaders.AcceptLanguage.ParseAdd("en;q=0.8,*;q=0.5");
             })
             .ConfigurePrimaryHttpMessageHandler(HttpLinkPreviewService.Handler)

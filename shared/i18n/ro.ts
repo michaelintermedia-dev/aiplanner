@@ -78,7 +78,7 @@ export const ro: Messages = {
   'reminder.problem.pickTime': 'Alege o oră pentru memento.',
 
   // ---- app, navigation, auth, common ----
-  'app.name': 'AI Planner',
+  'app.name': 'Gatazee',
   'common.loading': 'Se încarcă…',
   'common.error': 'Ceva n-a mers bine.',
   'nav.today': 'Azi',
@@ -507,8 +507,8 @@ export const ro: Messages = {
   'form.draftNotice': 'Ai modificări nesalvate la acest element.',
   'form.continueEditing': 'Continuă editarea',
   // ---- media (photos, documents) ----
-  'media.needPhotoAccess': 'Ca să adaugi pozele pe care le faci, permite-i lui AI Planner accesul la toate pozele (Setări – Aplicații – AI Planner – Permisiuni).',
-  'media.noNewPhotos': 'Nu am găsit nicio poză nouă. Fă o poză, apoi revino în AI Planner – va fi adăugată aici.',
+  'media.needPhotoAccess': 'Ca să adaugi pozele pe care le faci, permite-i lui Gatazee accesul la toate pozele (Setări – Aplicații – Gatazee – Permisiuni).',
+  'media.noNewPhotos': 'Nu am găsit nicio poză nouă. Fă o poză, apoi revino în Gatazee – va fi adăugată aici.',
   'media.title': 'Media',
   'media.takePhoto': 'Fă o poză',
   'media.addImage': 'Adaugă imagine',

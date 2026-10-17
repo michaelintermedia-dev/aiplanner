@@ -1,4 +1,4 @@
-// Sharing into AI Planner and links: a shared YouTube link becomes a named note with the link kept (web share
+// Sharing into Gatazee and links: a shared YouTube link becomes a named note with the link kept (web share
 // target /share), a page link gets its page title, and a link to a private address is never fetched.
 const { api, openApp } = require('./lib.cjs')
 const fs = require('fs'), path = require('path')

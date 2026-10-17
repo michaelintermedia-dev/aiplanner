@@ -19,7 +19,7 @@ public class EmailOptions
     /// <summary>Resend API key (a secret: user secrets / deploy/.env, never appsettings).</summary>
     public string ApiKey { get; set; } = string.Empty;
 
-    /// <summary>The sender, on a domain verified at Resend: "AI Planner &lt;no-reply@example.com&gt;".</summary>
+    /// <summary>The sender, on a domain verified at Resend: "Gatazee &lt;no-reply@example.com&gt;".</summary>
     public string From { get; set; } = string.Empty;
 
     public bool DevLog { get; set; }

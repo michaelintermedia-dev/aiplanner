@@ -82,7 +82,7 @@ export const en = {
   'reminder.problem.pickTime': 'Pick a time for the reminder.',
 
   // ---- app, navigation, auth, common ----
-  'app.name': 'AI Planner',
+  'app.name': 'Gatazee',
   'common.loading': 'Loading…',
   'common.error': 'Something went wrong.',
   'nav.today': 'Today',
@@ -511,8 +511,8 @@ export const en = {
   'form.draftNotice': 'You have unsaved changes to this item.',
   'form.continueEditing': 'Continue editing',
   // ---- media (photos, documents) ----
-  'media.needPhotoAccess': 'To add the photos you take, allow AI Planner access to all photos (Settings - Apps - AI Planner - Permissions).',
-  'media.noNewPhotos': 'No new photo found. Take a photo, then come back to AI Planner - it will be added here.',
+  'media.needPhotoAccess': 'To add the photos you take, allow Gatazee access to all photos (Settings - Apps - Gatazee - Permissions).',
+  'media.noNewPhotos': 'No new photo found. Take a photo, then come back to Gatazee - it will be added here.',
   'media.title': 'Media',
   'media.takePhoto': 'Take photo',
   'media.addImage': 'Add image',

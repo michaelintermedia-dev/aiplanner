@@ -78,7 +78,7 @@ export const es: Messages = {
   'reminder.problem.pickTime': 'Elige una hora para el recordatorio.',
 
   // ---- app, navigation, auth, common ----
-  'app.name': 'AI Planner',
+  'app.name': 'Gatazee',
   'common.loading': 'Cargando…',
   'common.error': 'Algo salió mal.',
   'nav.today': 'Hoy',
@@ -507,8 +507,8 @@ export const es: Messages = {
   'form.draftNotice': 'Tienes cambios sin guardar en este elemento.',
   'form.continueEditing': 'Seguir editando',
   // ---- media (photos, documents) ----
-  'media.needPhotoAccess': 'Para añadir las fotos que tomes, permite a AI Planner acceder a todas las fotos (Ajustes - Aplicaciones - AI Planner - Permisos).',
-  'media.noNewPhotos': 'No se encontró ninguna foto nueva. Haz una foto y vuelve a AI Planner: se añadirá aquí.',
+  'media.needPhotoAccess': 'Para añadir las fotos que tomes, permite a Gatazee acceder a todas las fotos (Ajustes - Aplicaciones - Gatazee - Permisos).',
+  'media.noNewPhotos': 'No se encontró ninguna foto nueva. Haz una foto y vuelve a Gatazee: se añadirá aquí.',
   'media.title': 'Multimedia',
   'media.takePhoto': 'Hacer foto',
   'media.addImage': 'Añadir imagen',

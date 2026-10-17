@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react'
 import type { PendingMedia } from './media'
 
 /**
- * Something shared into AI Planner from another app (user's request,
+ * Something shared into Gatazee from another app (user's request,
  * 2026-10-12 - a YouTube link, a web page, a photo): ShareIntake puts it here,
  * the floating toolbar opens and its CaptureBar saves it as a new entry (the
  * smart Save - the review opens only when something is unclear).

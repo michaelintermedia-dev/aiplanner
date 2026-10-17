@@ -78,7 +78,7 @@ export const ja: Messages = {
   'reminder.problem.pickTime': 'リマインダーの時刻を選んでください。',
 
   // ---- app, navigation, auth, common ----
-  'app.name': 'AI Planner',
+  'app.name': 'Gatazee',
   'common.loading': '読み込み中…',
   'common.error': '問題が発生しました。',
   'nav.today': '今日',
@@ -507,8 +507,8 @@ export const ja: Messages = {
   'form.draftNotice': 'この項目には未保存の変更があります。',
   'form.continueEditing': '編集を続ける',
   // ---- media (photos, documents) ----
-  'media.needPhotoAccess': '撮った写真を追加するには、AI Planner にすべての写真へのアクセスを許可してください（設定 - アプリ - AI Planner - 権限）。',
-  'media.noNewPhotos': '新しい写真が見つかりません。写真を撮ってから AI Planner に戻ってください - ここに追加されます。',
+  'media.needPhotoAccess': '撮った写真を追加するには、Gatazee にすべての写真へのアクセスを許可してください（設定 - アプリ - Gatazee - 権限）。',
+  'media.noNewPhotos': '新しい写真が見つかりません。写真を撮ってから Gatazee に戻ってください - ここに追加されます。',
   'media.title': 'メディア',
   'media.takePhoto': '写真を撮る',
   'media.addImage': '画像を追加',

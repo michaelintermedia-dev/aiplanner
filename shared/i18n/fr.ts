@@ -78,7 +78,7 @@ export const fr: Messages = {
   'reminder.problem.pickTime': 'Choisissez une heure pour le rappel.',
 
   // ---- app, navigation, auth, common ----
-  'app.name': 'AI Planner',
+  'app.name': 'Gatazee',
   'common.loading': 'Chargement…',
   'common.error': 'Une erreur s’est produite.',
   'nav.today': 'Aujourd’hui',
@@ -507,8 +507,8 @@ export const fr: Messages = {
   'form.draftNotice': 'Vous avez des modifications non enregistrées sur cet élément.',
   'form.continueEditing': 'Continuer la modification',
   // ---- media (photos, documents) ----
-  'media.needPhotoAccess': 'Pour ajouter les photos que vous prenez, autorisez AI Planner à accéder à toutes les photos (Réglages - Applications - AI Planner - Autorisations).',
-  'media.noNewPhotos': 'Aucune nouvelle photo trouvée. Prenez une photo puis revenez à AI Planner : elle sera ajoutée ici.',
+  'media.needPhotoAccess': 'Pour ajouter les photos que vous prenez, autorisez Gatazee à accéder à toutes les photos (Réglages - Applications - Gatazee - Autorisations).',
+  'media.noNewPhotos': 'Aucune nouvelle photo trouvée. Prenez une photo puis revenez à Gatazee : elle sera ajoutée ici.',
   'media.title': 'Médias',
   'media.takePhoto': 'Prendre une photo',
   'media.addImage': 'Ajouter une image',

@@ -78,7 +78,7 @@ export const uk: Messages = {
   'reminder.problem.pickTime': 'Виберіть час нагадування.',
 
   // ---- app, navigation, auth, common ----
-  'app.name': 'AI Planner',
+  'app.name': 'Gatazee',
   'common.loading': 'Завантаження…',
   'common.error': 'Щось пішло не так.',
   'nav.today': 'Сьогодні',
@@ -507,8 +507,8 @@ export const uk: Messages = {
   'form.draftNotice': 'У вас є незбережені зміни в цьому записі.',
   'form.continueEditing': 'Продовжити редагування',
   // ---- media (photos, documents) ----
-  'media.needPhotoAccess': 'Щоб додавати зроблені фото, дозвольте AI Planner доступ до всіх фото (Налаштування — Застосунки — AI Planner — Дозволи).',
-  'media.noNewPhotos': 'Нових фото не знайдено. Зробіть фото й поверніться в AI Planner — його буде додано сюди.',
+  'media.needPhotoAccess': 'Щоб додавати зроблені фото, дозвольте Gatazee доступ до всіх фото (Налаштування — Застосунки — Gatazee — Дозволи).',
+  'media.noNewPhotos': 'Нових фото не знайдено. Зробіть фото й поверніться в Gatazee — його буде додано сюди.',
   'media.title': 'Медіа',
   'media.takePhoto': 'Зробити фото',
   'media.addImage': 'Додати зображення',

@@ -915,6 +915,19 @@ Client-side (web and mobile - keep them consistent):
   `{ uri, name, type }` FormData parts ("Unsupported FormDataPart
   implementation").
 
+## Name and addresses (2026-10-17)
+
+The app is called **Gatazee** (user's pick: Romanian "gata azi", "all done for
+today", spelled as it sounds). Users see it everywhere ('app.name' in the 17
+dictionaries, email texts, the export README, the web title/manifest, the
+Android label); code names stay AiPlanner (namespaces, package
+`com.aiplanner.app`, the `aiplanner://` scheme - changing those would make it a
+new app on phones). Domain gatazee.com (GoDaddy DNS): **app.gatazee.com** = the
+app (web + /api); gatazee.com and www redirect there (`HOME_DOMAINS` /
+`HOME_REDIRECT` in deploy/.env) until a landing page exists;
+aiplanner.duckdns.org still serves the app for older installs (`DOMAIN` lists
+both). APKs are built with EXPO_PUBLIC_API_URL=https://app.gatazee.com.
+
 ## Production (2026-10-06)
 
 One server (target: Oracle Cloud Always Free, Ampere ARM), Docker Compose in

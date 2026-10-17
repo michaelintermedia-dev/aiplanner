@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "AI Planner",
+    "name": "Gatazee",
     "slug": "ai-planner",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -47,13 +47,13 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "AI Planner uses your location only when you tap \"Use my location\", to fill in an item's place."
+          "locationWhenInUsePermission": "Gatazee uses your location only when you tap \"Use my location\", to fill in an item's place."
         }
       ],
       [
         "expo-audio",
         {
-          "microphonePermission": "AI Planner uses the microphone so you can capture tasks and appointments by voice."
+          "microphonePermission": "Gatazee uses the microphone so you can capture tasks and appointments by voice."
         }
       ],
       "expo-notifications",
@@ -80,8 +80,8 @@
       [
         "expo-media-library",
         {
-          "photosPermission": "AI Planner adds the photos you just took with the camera to your entry.",
-          "savePhotosPermission": "AI Planner adds the photos you just took with the camera to your entry.",
+          "photosPermission": "Gatazee adds the photos you just took with the camera to your entry.",
+          "savePhotosPermission": "Gatazee adds the photos you just took with the camera to your entry.",
           "isAccessMediaLocationEnabled": false,
           "granularPermissions": [
             "photo"
@@ -91,8 +91,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "AI Planner lets you add photos from your library to your tasks, events and notes.",
-          "cameraPermission": "AI Planner uses the camera so you can add photos to your tasks, events and notes."
+          "photosPermission": "Gatazee lets you add photos from your library to your tasks, events and notes.",
+          "cameraPermission": "Gatazee uses the camera so you can add photos to your tasks, events and notes."
         }
       ],
       [

@@ -78,7 +78,7 @@ export const he: Messages = {
   'reminder.problem.pickTime': 'יש לבחור שעה לתזכורת.',
 
   // ---- app, navigation, auth, common ----
-  'app.name': 'AI Planner',
+  'app.name': 'Gatazee',
   'common.loading': 'טוען…',
   'common.error': 'משהו השתבש.',
   'nav.today': 'היום',
@@ -507,8 +507,8 @@ export const he: Messages = {
   'form.draftNotice': 'יש לפריט הזה שינויים שלא נשמרו.',
   'form.continueEditing': 'להמשיך לערוך',
   // ---- media (photos, documents) ----
-  'media.needPhotoAccess': 'כדי להוסיף את התמונות שצילמתם, אפשרו ל-AI Planner גישה לכל התמונות (הגדרות - אפליקציות - AI Planner - הרשאות).',
-  'media.noNewPhotos': 'לא נמצאה תמונה חדשה. צלמו ואז חזרו ל-AI Planner - היא תתווסף כאן.',
+  'media.needPhotoAccess': 'כדי להוסיף את התמונות שצילמתם, אפשרו ל-Gatazee גישה לכל התמונות (הגדרות - אפליקציות - Gatazee - הרשאות).',
+  'media.noNewPhotos': 'לא נמצאה תמונה חדשה. צלמו ואז חזרו ל-Gatazee - היא תתווסף כאן.',
   'media.title': 'מדיה',
   'media.takePhoto': 'לצלם תמונה',
   'media.addImage': 'להוסיף תמונה',

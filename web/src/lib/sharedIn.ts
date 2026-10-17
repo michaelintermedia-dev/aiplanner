@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react'
 
 /**
- * Something shared into AI Planner from another app (user's request,
+ * Something shared into Gatazee from another app (user's request,
  * 2026-10-12): the installed web app is a share target (manifest share_target
  * -> /share), SharePage puts it here and the new-entry CaptureBar saves it
  * (the smart Save - the review opens only when something is unclear). Same

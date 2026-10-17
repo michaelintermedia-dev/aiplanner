@@ -57,7 +57,7 @@ async function shrink(asset: ImagePicker.ImagePickerAsset, name: string): Promis
 }
 
 /**
- * Files another app shared into AI Planner (ShareIntake): photos shrunk like
+ * Files another app shared into Gatazee (ShareIntake): photos shrunk like
  * picked ones, everything checked like picked files (kind, size).
  */
 export async function prepareSharedFiles(
@@ -139,7 +139,7 @@ function backInApp(): Promise<void> {
  * Take photo on Android (user's call, 2026-10-09): the phone's full camera app,
  * opened like from the home screen - Samsung's camera, asked for a photo by
  * another app, always started on the selfie lens whatever it was told. Back
- * in AI Planner, the photos taken meanwhile are added. Null: none taken, the
+ * in Gatazee, the photos taken meanwhile are added. Null: none taken, the
  * camera couldn't open, or reading photos isn't allowed.
  */
 async function photosFromCameraApp(): Promise<Picked | null> {

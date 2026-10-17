@@ -78,7 +78,7 @@ export const tr: Messages = {
   'reminder.problem.pickTime': 'Hatırlatıcı için bir saat seçin.',
 
   // ---- app, navigation, auth, common ----
-  'app.name': 'AI Planner',
+  'app.name': 'Gatazee',
   'common.loading': 'Yükleniyor…',
   'common.error': 'Bir şeyler ters gitti.',
   'nav.today': 'Bugün',
@@ -507,8 +507,8 @@ export const tr: Messages = {
   'form.draftNotice': 'Bu öğede kaydedilmemiş değişiklikleriniz var.',
   'form.continueEditing': 'Düzenlemeye devam et',
   // ---- media (photos, documents) ----
-  'media.needPhotoAccess': 'Çektiğiniz fotoğrafları eklemek için AI Planner’a tüm fotoğraflara erişim izni verin (Ayarlar - Uygulamalar - AI Planner - İzinler).',
-  'media.noNewPhotos': 'Yeni fotoğraf bulunamadı. Bir fotoğraf çekip AI Planner’a dönün - buraya eklenecek.',
+  'media.needPhotoAccess': 'Çektiğiniz fotoğrafları eklemek için Gatazee’ye tüm fotoğraflara erişim izni verin (Ayarlar - Uygulamalar - Gatazee - İzinler).',
+  'media.noNewPhotos': 'Yeni fotoğraf bulunamadı. Bir fotoğraf çekip Gatazee’ye dönün - buraya eklenecek.',
   'media.title': 'Medya',
   'media.takePhoto': 'Fotoğraf çek',
   'media.addImage': 'Görsel ekle',

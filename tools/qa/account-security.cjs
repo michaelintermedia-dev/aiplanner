@@ -13,7 +13,7 @@ const req = async (method, p, body, token) => {
   try { data = JSON.parse(text) } catch { data = text }
   return { status: r.status, data }
 }
-/** The newest code mailed to this address (the dev log: "DEV EMAIL to x: Your AI Planner code: 123456"). */
+/** The newest code mailed to this address (the dev log: "DEV EMAIL to x: Your Gatazee code: 123456"). */
 let since = 0
 const codeFor = async (email) => {
   for (let i = 0; i < 20; i++) {

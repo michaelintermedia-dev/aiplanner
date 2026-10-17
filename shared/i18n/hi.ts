@@ -78,7 +78,7 @@ export const hi: Messages = {
   'reminder.problem.pickTime': 'रिमाइंडर के लिए समय चुनें।',
 
   // ---- app, navigation, auth, common ----
-  'app.name': 'AI Planner',
+  'app.name': 'Gatazee',
   'common.loading': 'लोड हो रहा है…',
   'common.error': 'कुछ गड़बड़ हो गई।',
   'nav.today': 'आज',
@@ -507,8 +507,8 @@ export const hi: Messages = {
   'form.draftNotice': 'इस आइटम में आपके बिना सेव किए बदलाव हैं।',
   'form.continueEditing': 'बदलना जारी रखें',
   // ---- media (photos, documents) ----
-  'media.needPhotoAccess': 'अपनी खींची फ़ोटो जोड़ने के लिए AI Planner को सभी फ़ोटो की अनुमति दें (सेटिंग्स - ऐप्स - AI Planner - अनुमतियाँ)।',
-  'media.noNewPhotos': 'कोई नई फ़ोटो नहीं मिली। फ़ोटो खींचें, फिर AI Planner पर लौटें - वह यहाँ जुड़ जाएगी।',
+  'media.needPhotoAccess': 'अपनी खींची फ़ोटो जोड़ने के लिए Gatazee को सभी फ़ोटो की अनुमति दें (सेटिंग्स - ऐप्स - Gatazee - अनुमतियाँ)।',
+  'media.noNewPhotos': 'कोई नई फ़ोटो नहीं मिली। फ़ोटो खींचें, फिर Gatazee पर लौटें - वह यहाँ जुड़ जाएगी।',
   'media.title': 'मीडिया',
   'media.takePhoto': 'फ़ोटो खींचें',
   'media.addImage': 'तस्वीर जोड़ें',

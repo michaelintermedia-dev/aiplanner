@@ -938,6 +938,17 @@ The icon is a happy cat whose smile is a tick (user's pick, 2026-10-17;
 *gata* = cat in Spanish): drawn once in `mobile/assets/icon-src/cat.svg` (+ a
 monochrome cut-out and the Indigo tile); `node tools/qa/icons.cjs` renders the
 web favicon/PWA icons and the app's icon, adaptive layers and splash from it.
+**Google Play prep** (2026-10-17): listing texts (en/he/ru), form answers (data
+safety, exact-alarm declaration, content rating) in `docs/store/google-play.md`;
+feature graphic + phone screenshots in `docs/store/` (`node tools/qa/store-screens.cjs`
+re-takes them on the QA account). Play bundle: `./gradlew.bat app:createBundleReleaseJsAndAssets
+--rerun bundleRelease -PuseUploadKey` - signed with the upload key (`plugins/withUploadSigning.js`;
+key + passwords outside the repo: C:Usersponim.gatazee and ~/.gradle/gradle.properties);
+without the flag release builds keep the debug key so hand-installed APKs still update.
+`plugins/withPlayStoreManifest.js` removes the unused background-audio/location services;
+`android.blockedPermissions` drops photo-library/storage/overlay permissions (the
+USE_FULL_CAMERA_APP route in media.ts would need READ_MEDIA_IMAGES back). Users can't change
+their time zone yet (registration sets it; UpdateProfileRequest only has Locale).
 Live in production since 2026-10-17: email codes through Resend (domain
 gatazee.com, Tokyo region, sender "Gatazee <hello@gatazee.com>"; replies to it
 go to the owner's Gmail via ImprovMX - MX on @; the site's contact address) and Google sign-in (Google Cloud project "Gatazee", consent

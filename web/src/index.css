@@ -1816,7 +1816,8 @@ button.kind-icon:hover:not(:disabled) {
   white-space: nowrap;
 }
 
-.quick-view.active {
+.quick-view.active,
+.quick-view.active:hover {
   border-color: var(--accent);
   background: var(--accent);
   color: var(--accent-text);

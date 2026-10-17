@@ -932,7 +932,7 @@ gatazee.com itself serves the small static site in `deploy/site` (home page,
 Keep the privacy policy true to the app: change it when data handling changes.
 Live in production since 2026-10-17: email codes through Resend (domain
 gatazee.com, Tokyo region, sender "Gatazee <hello@gatazee.com>"; replies to it
-go nowhere yet) and Google sign-in (Google Cloud project "Gatazee", consent
+go to the owner's Gmail via ImprovMX - MX on @; the site's contact address) and Google sign-in (Google Cloud project "Gatazee", consent
 screen in production; Web client for app.gatazee.com, Android client for
 com.aiplanner.app with the debug keystore's SHA-1 - a real release key needs its
 own Android client before Google Play). Not yet: Apple sign-in.

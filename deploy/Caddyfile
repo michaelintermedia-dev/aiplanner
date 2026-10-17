@@ -41,9 +41,26 @@
 	}
 }
 
-# The brand's own addresses (e.g. "gatazee.com, www.gatazee.com") send people to
-# the app until there's a landing page there. Unset: a local name that never
-# asks for a certificate.
+# The brand's own addresses (e.g. "gatazee.com, www.gatazee.com"): the small
+# site in deploy/site - home page, /privacy, /terms. Any other path (an old link
+# to /feed...) goes on to the app. Unset: a local name that never asks for a
+# certificate.
 {$HOME_DOMAINS:www.localhost} {
-	redir https://{$HOME_REDIRECT:localhost}{uri} 302
+	encode zstd gzip
+	root * /site
+	@page file {path} {path}.html {path}/index.html
+	handle @page {
+		try_files {path} {path}.html {path}/index.html
+		header Cache-Control "no-cache"
+		file_server
+	}
+	handle {
+		redir https://{$HOME_REDIRECT:localhost}{uri} 302
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
 }

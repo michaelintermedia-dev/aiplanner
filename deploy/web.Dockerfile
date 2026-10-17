@@ -11,3 +11,5 @@ RUN cd web && npm run build
 FROM caddy:2-alpine
 COPY deploy/Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /src/web/dist /srv
+# gatazee.com itself: home page, privacy policy, terms.
+COPY deploy/site /site

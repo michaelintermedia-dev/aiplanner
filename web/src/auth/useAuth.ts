@@ -19,6 +19,8 @@ export interface AuthState {
   reloadUser: () => Promise<void>
   /** Saves the UI language on the account (all devices follow it). */
   changeLanguage: (language: Language) => Promise<void>
+  /** Moves the account to another time zone (IANA id); all devices follow it. */
+  changeTimeZone: (timeZoneId: string) => Promise<void>
 }
 
 export const AuthContext = createContext<AuthState | null>(null)

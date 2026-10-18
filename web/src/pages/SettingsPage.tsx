@@ -1,4 +1,5 @@
 import type { NotificationSettings } from '@shared/types'
+import { TimeZoneSetting } from '../components/TimeZoneSetting'
 import { LANGUAGES, languageOf, t, type Language } from '@shared/i18n'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
@@ -110,6 +111,8 @@ export function SettingsPage() {
         <p className="muted small">{t('settings.languageHint')}</p>
         {languageError && <p className="error">{languageError}</p>}
       </section>
+
+      <TimeZoneSetting />
 
       <section className="card form">
         <h3>{t('settings.appearance')}</h3>

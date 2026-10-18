@@ -82,7 +82,7 @@ export function createApi(request: RequestFn) {
       resetPassword: (email: string, code: string, newPassword: string) =>
         request<AuthResponse>('POST', '/auth/password/reset', { email, code, newPassword }, { anonymous: true }),
       /** Change the language/locale (BCP 47). */
-      updateProfile: (body: { locale?: string }) => request<User>('PATCH', '/users/me', body),
+      updateProfile: (body: { locale?: string; timeZoneId?: string }) => request<User>('PATCH', '/users/me', body),
     },
     tasks: {
       list: (includeCompleted = false) => request<Task[]>('GET', `/tasks?includeCompleted=${includeCompleted}`),

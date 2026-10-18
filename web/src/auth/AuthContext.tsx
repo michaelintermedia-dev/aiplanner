@@ -56,8 +56,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       adoptSession: startSession,
       reloadUser: async () => setUser(await authApi.me()),
       changeLanguage: async (language) => setUser(await authApi.updateProfile({ locale: localeFor(language, browserZone.locale) })),
+      changeTimeZone: async (timeZoneId) => {
+        setUser(await authApi.updateProfile({ timeZoneId }))
+        // Every date on screen depends on it (and all-day tasks moved on the server).
+        await queryClient.invalidateQueries()
+      },
     }),
-    [user, startSession, signOutLocally],
+    [user, startSession, signOutLocally, queryClient],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

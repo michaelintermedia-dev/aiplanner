@@ -11,6 +11,7 @@ import { EmailConfirmBanner } from '@/components/EmailConfirmBanner'
 import { DateTimeField } from '@/components/DateTimeField'
 import { flatCard } from '@/components/panel'
 import { Screen } from '@/components/Screen'
+import { TimeZoneSetting } from '@/components/TimeZoneSetting'
 import { Button } from '@/components/ui'
 import { useAction } from '@/lib/useAction'
 import { useColors } from '@/theme'
@@ -107,6 +108,9 @@ export default function SettingsScreen() {
       </View>
       <Text style={{ color: c.muted, fontSize: 13 }}>{t('settings.languageHint')}</Text>
       {languageError && <Text style={{ color: c.danger }}>{languageError}</Text>}
+
+      <Text style={[styles.heading, { color: c.muted }]}>{t('settings.timeZone').toUpperCase()}</Text>
+      <TimeZoneSetting />
 
       <Text style={[styles.heading, { color: c.muted }]}>{t('settings.appearance').toUpperCase()}</Text>
       <Text style={{ color: c.text, fontWeight: '600' }}>{t('settings.theme')}</Text>

@@ -8,5 +8,6 @@ public class UpdateProfileRequestValidator : AbstractValidator<UpdateProfileRequ
     public UpdateProfileRequestValidator()
     {
         RuleFor(x => x.Locale).Must(LocaleHelper.IsValid).When(x => x.Locale is not null).WithMessage("Unknown locale.");
+        RuleFor(x => x.TimeZoneId).Must(TimeZoneMove.IsValid).When(x => x.TimeZoneId is not null).WithMessage("Unknown time zone.");
     }
 }

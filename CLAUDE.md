@@ -947,8 +947,12 @@ key + passwords outside the repo: C:Usersponim.gatazee and ~/.gradle/gradle.prop
 without the flag release builds keep the debug key so hand-installed APKs still update.
 `plugins/withPlayStoreManifest.js` removes the unused background-audio/location services;
 `android.blockedPermissions` drops photo-library/storage/overlay permissions (the
-USE_FULL_CAMERA_APP route in media.ts would need READ_MEDIA_IMAGES back). Users can't change
-their time zone yet (registration sets it; UpdateProfileRequest only has Locale).
+USE_FULL_CAMERA_APP route in media.ts would need READ_MEDIA_IMAGES back). **Time zone in Settings**
+(2026-10-18, web + app `TimeZoneSetting`): `PATCH /api/users/me { timeZoneId }` (validated,
+`TimeZoneMove`, tested); "Use this device's time zone" when the device is elsewhere + a city
+search (`shared/timeZones.ts`; the phone may lack Intl.supportedValuesOf - a built-in list).
+On a change, tasks with a date but no time move to the same day in the new zone (and their
+"before" reminders with them); timed items keep their moment. tools/qa/time-zone.cjs.
 Live in production since 2026-10-17: email codes through Resend (domain
 gatazee.com, Tokyo region, sender "Gatazee <hello@gatazee.com>"; replies to it
 go to the owner's Gmail via ImprovMX - MX on @; the site's contact address) and Google sign-in (Google Cloud project "Gatazee", consent

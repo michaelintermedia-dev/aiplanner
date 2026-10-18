@@ -95,6 +95,36 @@ services:
           sleep 82800
         done
 
+  # Off the server (2026-10-18): every night the backups above go to Backblaze B2, encrypted on
+  # this server first (rclone crypt - B2 never sees the data or the file names). Off until the
+  # B2_* settings and BACKUP_PASSPHRASE are in .env. Restore: see README.
+  offsite:
+    image: rclone/rclone:1.68
+    restart: unless-stopped
+    environment:
+      B2_KEY_ID: ${B2_KEY_ID:-}
+      B2_APP_KEY: ${B2_APP_KEY:-}
+      B2_BUCKET: ${B2_BUCKET:-}
+      BACKUP_PASSPHRASE: ${BACKUP_PASSPHRASE:-}
+    volumes:
+      - backups:/backups:ro
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        if [ -z "$$B2_KEY_ID" ] || [ -z "$$BACKUP_PASSPHRASE" ]; then
+          echo "offsite: not set up (B2_KEY_ID / BACKUP_PASSPHRASE) - sleeping"; exec sleep infinity
+        fi
+        export RCLONE_CONFIG_B2_TYPE=b2 RCLONE_CONFIG_B2_ACCOUNT="$$B2_KEY_ID" RCLONE_CONFIG_B2_KEY="$$B2_APP_KEY"
+        export RCLONE_CONFIG_SECURE_TYPE=crypt RCLONE_CONFIG_SECURE_REMOTE="b2:$$B2_BUCKET/gatazee"
+        export RCLONE_CONFIG_SECURE_PASSWORD="$$(rclone obscure "$$BACKUP_PASSPHRASE")"
+        while true; do
+          sleep 7200
+          rclone copy /backups secure: --max-age 48h -v && echo "offsite: copied" || echo "offsite: FAILED"
+          rclone delete secure: --min-age 30d -v || true
+          sleep 79200
+        done
+
 volumes:
   downloads:
   pgdata:

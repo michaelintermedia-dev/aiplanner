@@ -57,6 +57,21 @@ scp -r ubuntu@<server-ip>:/var/lib/docker/volumes/aiplanner_backups/_data ./back
 docker run --rm -v aiplanner_backups:/b -v "$PWD":/out alpine cp -r /b /out/backups
 ```
 
+**Off the server (`offsite` service):** with `B2_KEY_ID`, `B2_APP_KEY`,
+`B2_BUCKET` and `BACKUP_PASSPHRASE` in `.env`, every night's files are copied
+to Backblaze B2, encrypted on the server first (rclone crypt: neither the data
+nor the file names are readable there); copies older than 30 days are removed.
+`docker compose logs offsite` shows "offsite: copied" each night. To get them
+back (any machine with rclone):
+
+```bash
+export RCLONE_CONFIG_B2_TYPE=b2 RCLONE_CONFIG_B2_ACCOUNT=<key id> RCLONE_CONFIG_B2_KEY=<app key>
+export RCLONE_CONFIG_SECURE_TYPE=crypt RCLONE_CONFIG_SECURE_REMOTE=b2:<bucket>/gatazee
+export RCLONE_CONFIG_SECURE_PASSWORD=$(rclone obscure '<BACKUP_PASSPHRASE>')
+rclone ls secure:                      # what's there
+rclone copy secure: ./restored          # all of it, decrypted
+```
+
 Restore a dump into an empty database:
 
 ```bash

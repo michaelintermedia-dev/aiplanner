@@ -1,4 +1,5 @@
 import type { NotificationSettings } from '@shared/types'
+import { WebPushToggle } from '../components/WebPushToggle'
 import { TimeZoneSetting } from '../components/TimeZoneSetting'
 import { LANGUAGES, languageOf, t, type Language } from '@shared/i18n'
 import { useQuery } from '@tanstack/react-query'
@@ -224,6 +225,8 @@ export function SettingsPage() {
             </button>
           )}
         </div>
+
+        <WebPushToggle />
 
         <Toggle label={t('settings.notifications')} hint={t('settings.notificationsHint')} checked={settings.enabled} onChange={(enabled) => change({ enabled })} />
         <fieldset className="settings-group" disabled={!settings.enabled}>

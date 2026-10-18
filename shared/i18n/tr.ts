@@ -626,6 +626,8 @@ export const tr: Messages = {
   'settings.timeZoneDevice': 'Bu cihazın saat dilimini kullan: {zone}',
   'settings.timeZoneSearch': 'Şehir veya bölge ara',
   'settings.timeZoneHint': 'Tarihler, saatler ve hatırlatıcılar tüm cihazlarınızda buna göre olur. Tarihli ama saatsiz görevler aynı günde kalır.',
+  'settings.webPush': 'Gatazee kapalıyken bile',
+  'settings.webPushHint': 'Tüm Gatazee sekmeleri kapalıyken bile hatırlatıcılar bu tarayıcıya gelir.',
   'account.title': 'Hesap',
   'account.signedInAs': '{email} olarak giriş yapıldı',
   'account.export': 'Verilerimi indir',

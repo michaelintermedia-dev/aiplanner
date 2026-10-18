@@ -163,6 +163,12 @@ export function createApi(request: RequestFn) {
       content: (id: string) => request<Blob>('GET', `/attachments/${id}/content`, undefined, { as: 'blob' }),
       remove: (id: string) => request<void>('DELETE', `/attachments/${id}`),
     },
+    push: {
+      /** The server's web push key (null: web push is off there). */
+      key: () => request<{ publicKey: string | null }>('GET', '/push/key'),
+      subscribe: (body: { endpoint: string; p256dh: string; auth: string }) => request<void>('POST', '/push/subscriptions', body),
+      unsubscribe: (endpoint: string) => request<void>('DELETE', `/push/subscriptions?endpoint=${encodeURIComponent(endpoint)}`),
+    },
     notifications: {
       /** Everything that should go off in the next `hours` hours (Phase 4). */
       upcoming: (hours = 168) => request<UpcomingNotification[]>('GET', `/notifications/upcoming?hours=${hours}`),

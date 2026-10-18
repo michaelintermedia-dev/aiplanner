@@ -626,6 +626,8 @@ export const uk: Messages = {
   'settings.timeZoneDevice': 'Використати пояс цього пристрою: {zone}',
   'settings.timeZoneSearch': 'Пошук міста чи регіону',
   'settings.timeZoneHint': 'Дати, час і нагадування відповідають йому на всіх ваших пристроях. Завдання з датою, але без часу, лишаються того самого дня.',
+  'settings.webPush': 'Навіть коли Gatazee закрито',
+  'settings.webPushHint': 'Нагадування приходять у цей браузер, навіть коли всі вкладки Gatazee закриті.',
   'account.title': 'Обліковий запис',
   'account.signedInAs': 'Ви ввійшли як {email}',
   'account.export': 'Завантажити мої дані',

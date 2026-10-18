@@ -118,7 +118,8 @@
         }
       ],
       "./plugins/withPlayStoreManifest.js",
-      "./plugins/withUploadSigning.js"
+      "./plugins/withUploadSigning.js",
+      "expo-background-task"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -626,6 +626,8 @@ export const ja: Messages = {
   'settings.timeZoneDevice': 'この端末のタイムゾーンを使う: {zone}',
   'settings.timeZoneSearch': '都市または地域を検索',
   'settings.timeZoneHint': 'すべての端末で、日付・時刻・リマインダーはこのタイムゾーンに従います。時刻なしの日付のタスクは同じ日のままです。',
+  'settings.webPush': 'Gatazee を閉じていても',
+  'settings.webPushHint': 'Gatazee のタブをすべて閉じていても、このブラウザーにリマインダーが届きます。',
   'account.title': 'アカウント',
   'account.signedInAs': '{email} でログイン中',
   'account.export': 'データをダウンロード',

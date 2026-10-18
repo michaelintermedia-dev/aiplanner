@@ -626,6 +626,8 @@ export const ru: Messages = {
   'settings.timeZoneDevice': 'Использовать пояс этого устройства: {zone}',
   'settings.timeZoneSearch': 'Поиск города или региона',
   'settings.timeZoneHint': 'Даты, время и напоминания следуют ему на всех ваших устройствах. Задачи с датой, но без времени остаются в тот же день.',
+  'settings.webPush': 'Даже когда Gatazee закрыт',
+  'settings.webPushHint': 'Напоминания приходят в этот браузер, даже когда все вкладки Gatazee закрыты.',
   'account.title': 'Аккаунт',
   'account.signedInAs': 'Вы вошли как {email}',
   'account.export': 'Скачать мои данные',

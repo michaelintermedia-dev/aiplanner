@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using AiPlanner.Application.Common;
 using AiPlanner.Application.Common.Interfaces;
 using Microsoft.AspNetCore.Http;
 
@@ -17,11 +18,13 @@ public class CurrentUserService : ICurrentUserService
     {
         get
         {
+            // A background job acting for a user (UserScope.For) - else the signed-in caller.
+            if (UserScope.UserId is { } acting) return acting;
             var sub = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier)
                       ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub");
             return Guid.TryParse(sub, out var id) ? id : null;
         }
     }
 
-    public bool IsAuthenticated => _httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated ?? false;
+    public bool IsAuthenticated => UserScope.UserId is not null || (_httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated ?? false);
 }

@@ -626,6 +626,8 @@ export const fr: Messages = {
   'settings.timeZoneDevice': 'Utiliser le fuseau de cet appareil : {zone}',
   'settings.timeZoneSearch': 'Chercher une ville ou une région',
   'settings.timeZoneHint': 'Les dates, heures et rappels le suivent sur tous vos appareils. Les tâches datées sans heure restent le même jour.',
+  'settings.webPush': 'Même quand Gatazee est fermé',
+  'settings.webPushHint': 'Les rappels arrivent dans ce navigateur même avec tous les onglets Gatazee fermés.',
   'account.title': 'Compte',
   'account.signedInAs': 'Connecté en tant que {email}',
   'account.export': 'Télécharger mes données',

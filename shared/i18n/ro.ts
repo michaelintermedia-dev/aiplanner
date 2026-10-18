@@ -626,6 +626,8 @@ export const ro: Messages = {
   'settings.timeZoneDevice': 'Folosește fusul orar al acestui dispozitiv: {zone}',
   'settings.timeZoneSearch': 'Caută un oraș sau o regiune',
   'settings.timeZoneHint': 'Datele, orele și mementourile îl urmează, pe toate dispozitivele tale. Sarcinile cu dată, dar fără oră, rămân în aceeași zi.',
+  'settings.webPush': 'Chiar și cu Gatazee închis',
+  'settings.webPushHint': 'Mementourile ajung în acest browser chiar dacă toate filele Gatazee sunt închise.',
   'account.title': 'Cont',
   'account.signedInAs': 'Conectat ca {email}',
   'account.export': 'Descarcă datele mele',

@@ -626,6 +626,8 @@ export const zh: Messages = {
   'settings.timeZoneDevice': '使用此设备的时区：{zone}',
   'settings.timeZoneSearch': '搜索城市或地区',
   'settings.timeZoneHint': '所有设备上的日期、时间和提醒都按此时区。只有日期没有时间的任务保持在同一天。',
+  'settings.webPush': '即使 Gatazee 已关闭',
+  'settings.webPushHint': '即使关闭了所有 Gatazee 标签页，提醒也会出现在此浏览器中。',
   'account.title': '账户',
   'account.signedInAs': '已登录为 {email}',
   'account.export': '下载我的数据',

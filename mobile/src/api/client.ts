@@ -79,7 +79,9 @@ export function refreshSession(): Promise<boolean> {
       body: JSON.stringify({ refreshToken }),
     })
     if (!response.ok) {
-      await setSession(null)
+      // Only a refused token ends the session - not a server hiccup (a 502 during a deploy),
+      // which the background reminder refresh could otherwise turn into a silent sign-out.
+      if (response.status === 400 || response.status === 401) await setSession(null)
       return false
     }
     await setSession((await response.json()) as AuthResponse)

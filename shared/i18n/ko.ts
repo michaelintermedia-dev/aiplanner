@@ -626,6 +626,8 @@ export const ko: Messages = {
   'settings.timeZoneDevice': '이 기기의 시간대 사용: {zone}',
   'settings.timeZoneSearch': '도시 또는 지역 검색',
   'settings.timeZoneHint': '모든 기기에서 날짜, 시간, 알림이 이 시간대를 따릅니다. 시간 없이 날짜만 있는 할 일은 같은 날에 그대로 있습니다.',
+  'settings.webPush': 'Gatazee가 닫혀 있어도',
+  'settings.webPushHint': 'Gatazee 탭을 모두 닫아도 이 브라우저로 알림이 옵니다.',
   'account.title': '계정',
   'account.signedInAs': '{email}(으)로 로그인됨',
   'account.export': '내 데이터 다운로드',

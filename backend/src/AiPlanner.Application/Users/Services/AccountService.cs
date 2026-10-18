@@ -81,6 +81,7 @@ public class AccountService
             await _db.Transcripts.IgnoreQueryFilters().Where(x => x.UserId == id).ExecuteDeleteAsync(t);
             await _db.VoiceCaptures.IgnoreQueryFilters().Where(x => x.UserId == id).ExecuteDeleteAsync(t);
             await _db.EmailCodes.Where(x => x.UserId == id).ExecuteDeleteAsync(t);
+            await _db.PushSubscriptions.Where(x => x.UserId == id).ExecuteDeleteAsync(t);
             await _db.AiUsages.Where(x => x.UserId == id).ExecuteUpdateAsync(s => s.SetProperty(x => x.UserId, (Guid?)null), t);
             await _db.Users.IgnoreQueryFilters().Where(x => x.Id == id).ExecuteDeleteAsync(t); // + settings, sessions, Google/Apple links
             return true;

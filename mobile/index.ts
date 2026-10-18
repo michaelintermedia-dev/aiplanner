@@ -3,6 +3,8 @@
 // library is Android-only, so iOS never loads it.
 import 'expo-router/entry'
 import { Platform } from 'react-native'
+// The background reminder refresh must be defined before Android can run it, without the UI.
+import './src/lib/backgroundReminders'
 
 if (Platform.OS === 'android') {
   /* eslint-disable @typescript-eslint/no-require-imports -- loaded on Android only */

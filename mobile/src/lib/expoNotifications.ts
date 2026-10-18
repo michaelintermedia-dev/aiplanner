@@ -12,6 +12,7 @@ export { AndroidImportance } from 'expo-notifications/build/NotificationChannelM
 export { SchedulableTriggerInputTypes, type NotificationResponse } from 'expo-notifications/build/Notifications.types'
 export { setNotificationHandler } from 'expo-notifications/build/NotificationsHandler'
 export { setNotificationChannelAsync } from 'expo-notifications/build/setNotificationChannelAsync'
+export { getNotificationChannelAsync } from 'expo-notifications/build/getNotificationChannelAsync'
 export { setNotificationCategoryAsync } from 'expo-notifications/build/setNotificationCategoryAsync'
 export { getPermissionsAsync, requestPermissionsAsync } from 'expo-notifications/build/NotificationPermissions'
 export { getAllScheduledNotificationsAsync } from 'expo-notifications/build/getAllScheduledNotificationsAsync'

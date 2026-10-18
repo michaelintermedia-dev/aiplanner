@@ -12,6 +12,7 @@ export const calendarApi = api.calendar
 export const capturesApi = api.captures
 export const notesApi = api.notes
 export const feedApi = api.feed
+export const pushApi = api.push
 export const notificationsApi = api.notifications
 export const adminApi = api.admin
 export const settingsApi = api.settings

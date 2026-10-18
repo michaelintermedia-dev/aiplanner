@@ -1,3 +1,6 @@
+using AiPlanner.Application.Notifications.Push;
+using AiPlanner.Infrastructure.Push;
+using Microsoft.Extensions.Logging;
 using AiPlanner.Infrastructure.Audio;
 using AiPlanner.Infrastructure.Jobs;
 using System.Net.Http.Headers;
@@ -57,6 +60,11 @@ public static class DependencyInjection
         services.AddSingleton<AttachmentDescriptionSignal>();
         services.AddSingleton<IAttachmentDescriptionSignal>(sp => sp.GetRequiredService<AttachmentDescriptionSignal>());
         services.AddHostedService<AttachmentDescriptionWorker>();
+        // Web push: reminders in the browser with the tab closed (off without VAPID keys).
+        services.AddHttpClient("webpush", c => c.Timeout = TimeSpan.FromSeconds(15));
+        services.AddSingleton<IWebPushSender>(sp => new WebPushSender(
+            sp.GetRequiredService<IHttpClientFactory>().CreateClient("webpush"), configuration, sp.GetRequiredService<ILogger<WebPushSender>>()));
+        services.AddHostedService<PushDispatchWorker>();
         // Stored recordings: WAV -> AAC when ffmpeg is available.
         services.AddSingleton<IAudioCompressor, FfmpegAudioCompressor>();
 

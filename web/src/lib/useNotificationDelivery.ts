@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { notificationsApi } from '../api/endpoints'
 import { browserNotificationsSupported, itemPath, onPermissionChange } from './notifications'
+import { webPushOn } from './webPush'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -20,7 +21,8 @@ export function useNotificationDelivery() {
   const { data } = useQuery({
     queryKey: ['notifications', 'upcoming'],
     queryFn: () => notificationsApi.upcoming(24),
-    enabled: permission === 'granted',
+    // With web push on, the service worker shows them (also with the tab closed).
+    enabled: permission === 'granted' && !webPushOn(),
     refetchInterval: 5 * 60 * 1000,
   })
 

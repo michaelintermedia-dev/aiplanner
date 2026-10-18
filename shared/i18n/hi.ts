@@ -626,6 +626,8 @@ export const hi: Messages = {
   'settings.timeZoneDevice': 'इस डिवाइस का समय क्षेत्र इस्तेमाल करें: {zone}',
   'settings.timeZoneSearch': 'शहर या क्षेत्र खोजें',
   'settings.timeZoneHint': 'तारीख़ें, समय और रिमाइंडर आपके सभी डिवाइस पर इसी के अनुसार चलते हैं। बिना समय वाली तारीख़ के काम उसी दिन पर रहते हैं।',
+  'settings.webPush': 'Gatazee बंद होने पर भी',
+  'settings.webPushHint': 'Gatazee के सभी टैब बंद होने पर भी रिमाइंडर इस ब्राउज़र में आते हैं।',
   'account.title': 'खाता',
   'account.signedInAs': '{email} के रूप में साइन इन',
   'account.export': 'मेरा डेटा डाउनलोड करें',

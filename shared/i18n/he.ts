@@ -626,6 +626,8 @@ export const he: Messages = {
   'settings.timeZoneDevice': 'להשתמש באזור הזמן של המכשיר הזה: {zone}',
   'settings.timeZoneSearch': 'חיפוש עיר או אזור',
   'settings.timeZoneHint': 'תאריכים, שעות ותזכורות פועלים לפיו בכל המכשירים שלכם. משימות עם תאריך בלי שעה נשארות באותו יום.',
+  'settings.webPush': 'גם כש-Gatazee סגור',
+  'settings.webPushHint': 'התזכורות מגיעות לדפדפן הזה גם כשכל הלשוניות של Gatazee סגורות.',
   'account.title': 'חשבון',
   'account.signedInAs': 'מחובר/ת בתור {email}',
   'account.export': 'הורדת הנתונים שלי',

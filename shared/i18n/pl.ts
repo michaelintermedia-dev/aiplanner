@@ -626,6 +626,8 @@ export const pl: Messages = {
   'settings.timeZoneDevice': 'Użyj strefy czasowej tego urządzenia: {zone}',
   'settings.timeZoneSearch': 'Szukaj miasta lub regionu',
   'settings.timeZoneHint': 'Daty, godziny i przypomnienia działają według niej na wszystkich Twoich urządzeniach. Zadania z datą, ale bez godziny, zostają tego samego dnia.',
+  'settings.webPush': 'Nawet gdy Gatazee jest zamknięte',
+  'settings.webPushHint': 'Przypomnienia docierają do tej przeglądarki, nawet gdy wszystkie karty Gatazee są zamknięte.',
   'account.title': 'Konto',
   'account.signedInAs': 'Zalogowano jako {email}',
   'account.export': 'Pobierz moje dane',

@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { Alert, AppState, Platform } from 'react-native'
 import { notificationsApi, tasksApi } from '@/api/endpoints'
 import { currentLanguage, t } from '@shared/i18n'
+import { registerBackgroundReminders } from '@/lib/backgroundReminders'
 
 /**
  * Phase 4 delivery on the phone. The backend decides what goes off when
@@ -82,8 +83,19 @@ async function ensurePermission(): Promise<boolean> {
   return (await Notifications.requestPermissionsAsync()).granted
 }
 
-/** Makes the phone's scheduled notifications match the backend's list. */
-async function schedule(list: UpcomingNotification[]) {
+/**
+ * Makes the phone's scheduled notifications match the backend's list. Also run
+ * by the background refresh (lib/backgroundReminders), without the app open:
+ * then the channel made earlier by the app is used as it is.
+ */
+export async function schedule(list: UpcomingNotification[]) {
+  if (Platform.OS === 'android' && !channelId) {
+    try {
+      if (await Notifications.getNotificationChannelAsync(CHANNEL)) channelId = CHANNEL
+    } catch {
+      // the default channel
+    }
+  }
   const now = Date.now()
   const wanted = list.filter((n) => new Date(n.atUtc).getTime() > now + 1000).slice(0, MAX_SCHEDULED)
   const byKey = new Map(wanted.map((n) => [n.key, n]))
@@ -156,6 +168,11 @@ export function useNotifications() {
   useEffect(() => {
     ensurePermission().then(setPermitted, () => setPermitted(false))
   }, [])
+
+  // Keeps reminders coming when the app isn't opened for days (Android runs it every few hours).
+  useEffect(() => {
+    if (permitted) void registerBackgroundReminders()
+  }, [permitted])
 
   const { data } = useQuery({
     queryKey: ['notifications', 'upcoming'],

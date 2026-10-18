@@ -630,6 +630,8 @@ export const en = {
   'settings.timeZoneDevice': 'Use this device\'s time zone: {zone}',
   'settings.timeZoneSearch': 'Search a city or region',
   'settings.timeZoneHint': 'Dates, times and reminders follow it, on all your devices. Tasks with a date but no time stay on the same day.',
+  'settings.webPush': 'Even when Gatazee is closed',
+  'settings.webPushHint': 'Reminders arrive in this browser with every Gatazee tab closed.',
   'account.title': 'Account',
   'account.signedInAs': 'Signed in as {email}',
   'account.export': 'Download my data',

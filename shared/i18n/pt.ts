@@ -626,6 +626,8 @@ export const pt: Messages = {
   'settings.timeZoneDevice': 'Usar o fuso horário deste aparelho: {zone}',
   'settings.timeZoneSearch': 'Pesquise uma cidade ou região',
   'settings.timeZoneHint': 'Datas, horários e lembretes seguem o fuso em todos os seus aparelhos. Tarefas com data e sem horário ficam no mesmo dia.',
+  'settings.webPush': 'Mesmo com o Gatazee fechado',
+  'settings.webPushHint': 'Os lembretes chegam a este navegador mesmo com todas as abas do Gatazee fechadas.',
   'account.title': 'Conta',
   'account.signedInAs': 'Conectado como {email}',
   'account.export': 'Baixar meus dados',

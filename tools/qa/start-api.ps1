@@ -20,6 +20,7 @@ $env:RateLimits__AuthPerMinute = '300' # QA scripts sign in a lot
 $env:Email__DevLog = 'true' # emails (codes) go to the API log
 $env:ExternalAuth__AllowTestProvider = 'true' # the unsigned "test" sign-in provider (Development only)
 $env:Recordings__CleanupDryRun = 'true' # the cleanup job must never delete anything during QA
+$env:Purge__OnlyUserId = '9aeecf23-138f-4223-a247-e12a9fca1665' # ...except deleted items of the QA account, 30+ days old (purge.cjs)
 $ffmpeg = Join-Path $local 'ffmpeg.exe'
 if (Test-Path $ffmpeg) { $env:Recordings__FfmpegPath = $ffmpeg }
 dotnet .\AiPlanner.Api.dll --urls http://localhost:58600 2>&1 | Out-File (Join-Path $local 'api.log') -Encoding utf8

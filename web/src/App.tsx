@@ -57,7 +57,11 @@ function Layout() {
               <IoArrowBack className="flip-rtl" />
             </button>
           )}
-          <h1 className="app-title">{titleFor(pathname)}</h1>
+          <h1 className="app-title">
+            {/* The cat next to the name on the home screen, like the app. */}
+            {titleFor(pathname) === t('app.name') && <img src="/icon-192.png" alt="" className="app-logo" />}
+            {titleFor(pathname)}
+          </h1>
           <nav className="header-actions" aria-label={t('nav.views')}>
             <button className={`icon-button${pathname.startsWith('/today') ? ' active' : ''}`} onClick={() => navigate('/today')} aria-label={t('nav.today')} title={t('nav.today')}>
               <IoSunnyOutline />

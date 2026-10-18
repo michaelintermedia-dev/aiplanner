@@ -55,7 +55,9 @@ export function AuthPage() {
   return (
     <main className="auth">
       <form className="card form auth-card" onSubmit={submit}>
-        <h1 className="brand">{t('app.name')}</h1>
+        <h1 className="brand">
+          <img src="/icon-192.png" alt="" className="brand-logo" /> {t('app.name')}
+        </h1>
         <p className="muted">{prompt}</p>
         {mode === 'register' && (
           <label>

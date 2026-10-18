@@ -953,6 +953,16 @@ USE_FULL_CAMERA_APP route in media.ts would need READ_MEDIA_IMAGES back). **Time
 search (`shared/timeZones.ts`; the phone may lack Intl.supportedValuesOf - a built-in list).
 On a change, tasks with a date but no time move to the same day in the new zone (and their
 "before" reminders with them); timed items keep their moment. tools/qa/time-zone.cjs.
+**Since 2026-10-18:** `DeletedItemPurge` (with the recording cleanup, every 6 h) erases items
+deleted 30+ days ago (+ reminders, notifications, attachments and files, repeat rule) and
+captures 30+ days old that no item comes from (+ transcript, recording files) - the privacy
+policy promises it; QA runs it on the QA account only (`Purge:OnlyUserId`, tools/qa/purge.cjs).
+Reminders without opening the app: web push (Settings "Even when Gatazee is closed", `public/sw.js`,
+`PushSubscriptions`, `PushDispatchWorker` sends what NotificationService says is due -
+background jobs act for a user with `UserScope.For`; VAPID keys in deploy/.env) and, on Android,
+`lib/backgroundReminders` (expo-background-task, every ~3 h re-schedules the local
+notifications). Emails are sent as branded HTML made from the text (`EmailHtml`, tested).
+Off-server backups: the `offsite` service (rclone crypt to Backblaze B2; needs B2_* in .env).
 Live in production since 2026-10-17: email codes through Resend (domain
 gatazee.com, Tokyo region, sender "Gatazee <hello@gatazee.com>"; replies to it
 go to the owner's Gmail via ImprovMX - MX on @; the site's contact address) and Google sign-in (Google Cloud project "Gatazee", consent

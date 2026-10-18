@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using AiPlanner.Application.Auth.Services;
 using AiPlanner.Application.Common.Interfaces;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -45,7 +46,8 @@ public class ResendEmailSender : IEmailSender
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.resend.com/emails")
         {
-            Content = JsonContent.Create(new { from = _options.From, to = new[] { to }, subject, text }),
+            // The branded HTML (cat, big code, RTL) with the plain text alongside.
+            Content = JsonContent.Create(new { from = _options.From, to = new[] { to }, subject, text, html = EmailHtml.From(subject, text) }),
         };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
         try

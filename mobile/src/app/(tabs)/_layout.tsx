@@ -1,11 +1,15 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { router, Tabs } from 'expo-router'
-import { Alert, Pressable, Text, View } from 'react-native'
+import { Alert, Image, Pressable, Text, View } from 'react-native'
 import { useAuth } from '@/auth/useAuth'
 import { useColors } from '@/theme'
 import { TabIcon } from '@/components/TabIcon'
 import { KIND_ICON } from '@/components/kindIcons'
 import { t } from '@shared/i18n'
+
+/** The app icon (the Gatazee cat). */
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- a bundled image
+const CAT = require('../../../assets/images/icon.png')
 
 /**
  * The bottom bar filters one feed: All / Tasks / Events / Notes. Today and
@@ -54,7 +58,13 @@ export default function TabLayout() {
         name="index"
         options={{
           title: t('feed.tab.all'),
-          headerTitle: t('app.name'),
+          // The cat next to the name, like the web's home header.
+          headerTitle: () => (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Image source={CAT} style={{ width: 26, height: 26, borderRadius: 7 }} />
+              <Text style={{ color: c.text, fontSize: 18, fontWeight: '700' }}>{t('app.name')}</Text>
+            </View>
+          ),
           tabBarIcon: ({ color, focused }) => <TabIcon focused={focused} icon="albums-outline" activeIcon="albums" color={color} />,
         }}
       />

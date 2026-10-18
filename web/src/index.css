@@ -450,6 +450,24 @@ label.inline-check {
 .auth-card .brand {
   padding: 0;
   font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* The Gatazee cat (the app icon) - sign-in card and the home header. */
+.brand-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+}
+
+.app-logo {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  vertical-align: -5px;
+  margin-inline-end: 8px;
 }
 
 .quick-add {

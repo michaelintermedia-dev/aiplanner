@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { authApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
@@ -8,6 +8,10 @@ import { useColors } from '@/theme'
 import { SocialSignIn } from './SocialSignIn'
 import { Button } from './ui'
 import { t } from '@shared/i18n'
+
+/** The app icon (the Gatazee cat). */
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- a bundled image
+const CAT = require('../../assets/images/icon.png')
 
 type Mode = 'login' | 'register' | 'forgot' | 'reset'
 
@@ -62,7 +66,10 @@ export function AuthScreen() {
     <SafeAreaView style={[styles.screen, { backgroundColor: c.page }]}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.center}>
         <View style={[styles.form, c.panel]}>
-          <Text style={[styles.brand, { color: c.text }]}>{t('app.name')}</Text>
+          <View style={styles.brandRow}>
+            <Image source={CAT} style={styles.logo} accessibilityIgnoresInvertColors />
+            <Text style={[styles.brand, { color: c.text }]}>{t('app.name')}</Text>
+          </View>
           <Text style={{ color: c.muted, marginBottom: 12 }}>{prompt}</Text>
           {mode === 'register' && (
             <TextInput
@@ -137,6 +144,8 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', padding: 24 },
   form: { gap: 12 },
   brand: { fontSize: 30, fontWeight: '700' },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  logo: { width: 48, height: 48, borderRadius: 12 },
   input: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, minHeight: 48, fontSize: 16 },
   switch: { alignItems: 'center', paddingVertical: 8 },
 })

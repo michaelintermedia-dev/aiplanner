@@ -175,6 +175,24 @@ public static class ExtractionNormalizer
         IReadOnlyList<RawReminder> rawReminders = raw.Reminders is { Count: > 0 } given
             ? given
             : remindAtItsTime ? [new RawReminder("before", 0, null, null, null)] : [];
+
+        // A task with no date that "repeats" means a repeating reminder (DatelessRepeat).
+        var recurrence = ParseRecurrence(raw.Recurrence);
+        var rule = intent == ExtractionIntent.Note ? null : ParseRule(recurrence, raw.RecurrenceDays, raw.RecurrenceInterval);
+        if (intent == ExtractionIntent.Task && dueUtc is null && rule is not null)
+        {
+            if (DatelessRepeat.AsReminder(rule, raw.Time) is { } asReminder)
+            {
+                if (!DatelessRepeat.AlreadyRepeats(rawReminders)) rawReminders = [.. rawReminders, asReminder];
+                rule = null;
+                recurrence = null;
+            }
+            else
+            {
+                dueUtc = UserTimeZoneHelper.LocalDateStartToUtc(DateOnly.FromDateTime(localNow), timeZone); // starts today
+                hasTime = false;
+            }
+        }
         var reminders = rawReminders
             .Take(ReminderPlanner.MaxPerItem)
             .Select(r => NormalizeReminder(r, intent, hasTime, localNow, timeZone, questions))
@@ -193,13 +211,13 @@ public static class ExtractionNormalizer
             Clean(raw.Location, 300), // every type can have a place (user's call, 2026-10-09)
             ParsePriority(raw.Priority),
             reminders,
-            ParseRecurrence(raw.Recurrence),
+            recurrence,
             questions.Count > 0 ? Truncate(string.Join(" ", questions.Distinct()), 500) : null,
             raw.Confidence is { } c && double.IsFinite(c) ? Math.Clamp(c, 0, 1) : null,
             raw.AddsToCurrent,
             Clean(raw.SourceText, 4000),
             Clean(raw.Unrelated, 4000),
-            intent == ExtractionIntent.Note ? null : ParseRule(ParseRecurrence(raw.Recurrence), raw.RecurrenceDays, raw.RecurrenceInterval),
+            rule,
             TagSync.Clean(raw.Tags));
     }
 

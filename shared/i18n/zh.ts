@@ -487,7 +487,7 @@ export const zh: Messages = {
   'repeat.onDate': '在某日期',
   'repeat.after': '重复',
   'repeat.timesUnit': '次后',
-  'repeat.needsDate': '重复的项目需要日期。',
+  'repeat.needsDate': '重复的任务需要日期。如果想不设日期也反复收到提醒，请改为添加重复提醒（每天、工作日、每周）。',
   'repeat.ongoingNo': '持续中的任务不能重复。',
   'repeat.pickDays': '请至少选择一天。',
   'repeat.repeats': '重复',

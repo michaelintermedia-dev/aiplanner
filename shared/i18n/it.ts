@@ -487,7 +487,7 @@ export const it: Messages = {
   'repeat.onDate': 'In una data',
   'repeat.after': 'Dopo',
   'repeat.timesUnit': 'volte',
-  'repeat.needsDate': 'Un elemento ricorrente ha bisogno di una data.',
+  'repeat.needsDate': 'Un’attività che si ripete ha bisogno di una data. Per ricevere promemoria ripetuti senza data, aggiungi invece un promemoria che si ripete (ogni giorno, nei giorni feriali, ogni settimana).',
   'repeat.ongoingNo': 'Un’attività continua non può ripetersi.',
   'repeat.pickDays': 'Scegli almeno un giorno.',
   'repeat.repeats': 'Si ripete',

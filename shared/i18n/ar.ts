@@ -487,7 +487,7 @@ export const ar: Messages = {
   'repeat.onDate': 'في تاريخ',
   'repeat.after': 'بعد',
   'repeat.timesUnit': 'مرات',
-  'repeat.needsDate': 'يحتاج العنصر المتكرر إلى تاريخ.',
+  'repeat.needsDate': 'المهمة المتكررة تحتاج إلى تاريخ. لتلقي التذكير مرارًا من دون تاريخ، أضف بدلًا من ذلك تذكيرًا متكررًا (كل يوم، أيام العمل، أسبوعيًا).',
   'repeat.ongoingNo': 'لا يمكن للمهمة المستمرة أن تتكرر.',
   'repeat.pickDays': 'اختر يومًا واحدًا على الأقل.',
   'repeat.repeats': 'يتكرر',

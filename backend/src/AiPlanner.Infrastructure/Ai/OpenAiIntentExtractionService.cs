@@ -135,7 +135,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
               - "daily" / "weekdays": repeats every day / Monday-Friday at the reminder's "time" ("every day at 8" = daily, 08:00).
               - "weekly": repeats on "days" (English weekday names, e.g. ["Monday","Thursday"]) at "time".
               Unused reminder fields are null.
-            - "recurrence": "daily", "weekdays", "weekly" or "monthly" only if the user says it repeats; otherwise null. The item's own "date"/"time" is the first time it happens ("every Monday at 9" -> the next Monday, 09:00; "pay rent on the 1st of every month" -> the next 1st).
+            - "recurrence": "daily", "weekdays", "weekly" or "monthly" only if the THING ITSELF happens again and again on dates (a class every Monday, rent on the 1st); otherwise null. Being reminded repeatedly is NOT a repeat: "remind me every day / every morning / on weekdays to drink water" is one task with a "daily" / "weekdays" / "weekly" reminder and no recurrence; "remind me for the next 3 days" / "a few days in a row" is one "at" reminder per day (3 days -> 3 reminders) and no recurrence. The item's own "date"/"time" is the first time it happens ("every Monday at 9" -> the next Monday, 09:00; "pay rent on the 1st of every month" -> the next 1st).
             - "recurrenceDays": for "weekly", the weekdays it falls on as English names (["Monday","Thursday"]); otherwise null.
             - "recurrenceInterval": every N days/weeks/months ("every 2 weeks" = 2); null for 1.
             - "location": only if a place is mentioned.

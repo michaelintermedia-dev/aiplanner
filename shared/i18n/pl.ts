@@ -487,7 +487,7 @@ export const pl: Messages = {
   'repeat.onDate': 'W dniu',
   'repeat.after': 'Po',
   'repeat.timesUnit': 'razach',
-  'repeat.needsDate': 'Powtarzający się element potrzebuje daty.',
+  'repeat.needsDate': 'Powtarzające się zadanie potrzebuje daty. Aby dostawać przypomnienia raz po raz bez daty, dodaj zamiast tego powtarzające się przypomnienie (codziennie, w dni robocze, co tydzień).',
   'repeat.ongoingNo': 'Bieżące zadanie nie może się powtarzać.',
   'repeat.pickDays': 'Wybierz co najmniej jeden dzień.',
   'repeat.repeats': 'Powtarza się',

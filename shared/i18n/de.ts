@@ -487,7 +487,7 @@ export const de: Messages = {
   'repeat.onDate': 'An einem Datum',
   'repeat.after': 'Nach',
   'repeat.timesUnit': 'Mal',
-  'repeat.needsDate': 'Ein wiederholter Eintrag braucht ein Datum.',
+  'repeat.needsDate': 'Eine wiederkehrende Aufgabe braucht ein Datum. Um ohne Datum immer wieder erinnert zu werden, füge stattdessen eine wiederholte Erinnerung hinzu (täglich, werktags, wöchentlich).',
   'repeat.ongoingNo': 'Eine laufende Aufgabe kann sich nicht wiederholen.',
   'repeat.pickDays': 'Wähle mindestens einen Tag.',
   'repeat.repeats': 'Wiederholt sich',

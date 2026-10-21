@@ -487,7 +487,7 @@ export const fr: Messages = {
   'repeat.onDate': 'À une date',
   'repeat.after': 'Après',
   'repeat.timesUnit': 'fois',
-  'repeat.needsDate': 'Un élément récurrent a besoin d’une date.',
+  'repeat.needsDate': 'Une tâche répétée a besoin d’une date. Pour être rappelé encore et encore sans date, ajoutez plutôt un rappel répété (chaque jour, en semaine, chaque semaine).',
   'repeat.ongoingNo': 'Une tâche en continu ne peut pas se répéter.',
   'repeat.pickDays': 'Choisissez au moins un jour.',
   'repeat.repeats': 'Se répète',

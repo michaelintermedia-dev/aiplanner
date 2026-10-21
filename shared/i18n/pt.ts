@@ -487,7 +487,7 @@ export const pt: Messages = {
   'repeat.onDate': 'Em uma data',
   'repeat.after': 'Depois de',
   'repeat.timesUnit': 'vezes',
-  'repeat.needsDate': 'Um item que se repete precisa de uma data.',
+  'repeat.needsDate': 'Uma tarefa que se repete precisa de uma data. Para ser lembrado várias vezes sem data, adicione um lembrete que se repete (todo dia, dias úteis, semanal).',
   'repeat.ongoingNo': 'Uma tarefa contínua não pode se repetir.',
   'repeat.pickDays': 'Escolha pelo menos um dia.',
   'repeat.repeats': 'Repete',

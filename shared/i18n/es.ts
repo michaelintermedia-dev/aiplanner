@@ -487,7 +487,7 @@ export const es: Messages = {
   'repeat.onDate': 'En una fecha',
   'repeat.after': 'Después de',
   'repeat.timesUnit': 'veces',
-  'repeat.needsDate': 'Un elemento repetitivo necesita una fecha.',
+  'repeat.needsDate': 'Una tarea que se repite necesita una fecha. Para recibir avisos una y otra vez sin fecha, añade en su lugar un recordatorio que se repita (cada día, entre semana, semanal).',
   'repeat.ongoingNo': 'Una tarea continua no puede repetirse.',
   'repeat.pickDays': 'Elige al menos un día.',
   'repeat.repeats': 'Se repite',

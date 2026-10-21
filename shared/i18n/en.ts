@@ -491,7 +491,7 @@ export const en = {
   'repeat.onDate': 'On a date',
   'repeat.after': 'After',
   'repeat.timesUnit': 'times',
-  'repeat.needsDate': 'A repeating item needs a date.',
+  'repeat.needsDate': 'A repeating task needs a date. To be reminded again and again without one, add a reminder that repeats (every day, weekdays, weekly) instead.',
   'repeat.ongoingNo': 'An ongoing task can’t repeat.',
   'repeat.pickDays': 'Pick at least one day.',
   'repeat.repeats': 'Repeats',

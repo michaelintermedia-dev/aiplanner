@@ -487,7 +487,7 @@ export const ja: Messages = {
   'repeat.onDate': '日付で終了',
   'repeat.after': '回数',
   'repeat.timesUnit': '回',
-  'repeat.needsDate': '繰り返す項目には日付が必要です。',
+  'repeat.needsDate': '繰り返すタスクには日付が必要です。日付なしで何度もお知らせを受けるには、代わりに繰り返すリマインダー（毎日・平日・毎週）を追加してください。',
   'repeat.ongoingNo': '継続中のタスクは繰り返せません。',
   'repeat.pickDays': '曜日を1つ以上選んでください。',
   'repeat.repeats': '繰り返し',

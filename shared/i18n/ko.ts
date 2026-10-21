@@ -487,7 +487,7 @@ export const ko: Messages = {
   'repeat.onDate': '날짜 지정',
   'repeat.after': '횟수',
   'repeat.timesUnit': '회 후',
-  'repeat.needsDate': '반복하는 항목에는 날짜가 필요합니다.',
+  'repeat.needsDate': '반복되는 할 일에는 날짜가 필요합니다. 날짜 없이 계속 알림을 받으려면 대신 반복 알림(매일, 평일, 매주)을 추가하세요.',
   'repeat.ongoingNo': '계속하는 할 일은 반복할 수 없습니다.',
   'repeat.pickDays': '요일을 하나 이상 고르세요.',
   'repeat.repeats': '반복',

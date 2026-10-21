@@ -487,7 +487,7 @@ export const he: Messages = {
   'repeat.onDate': 'בתאריך',
   'repeat.after': 'אחרי',
   'repeat.timesUnit': 'פעמים',
-  'repeat.needsDate': 'לפריט חוזר צריך תאריך.',
+  'repeat.needsDate': 'למשימה חוזרת צריך תאריך. כדי לקבל תזכורת שוב ושוב בלי תאריך, הוסיפו במקום זה תזכורת חוזרת (כל יום, בימי חול, כל שבוע).',
   'repeat.ongoingNo': 'משימה מתמשכת לא יכולה לחזור.',
   'repeat.pickDays': 'בחרו לפחות יום אחד.',
   'repeat.repeats': 'חוזר',

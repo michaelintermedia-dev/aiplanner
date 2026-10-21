@@ -487,7 +487,7 @@ export const tr: Messages = {
   'repeat.onDate': 'Bir tarihte',
   'repeat.after': 'Şu kadar sonra',
   'repeat.timesUnit': 'kez',
-  'repeat.needsDate': 'Tekrarlanan bir öğenin tarihi olmalı.',
+  'repeat.needsDate': 'Tekrarlanan bir görevin tarihi olmalı. Tarihsiz tekrar tekrar hatırlatılmak için bunun yerine tekrarlanan bir hatırlatıcı ekleyin (her gün, hafta içi, haftalık).',
   'repeat.ongoingNo': 'Süregelen bir görev tekrarlanamaz.',
   'repeat.pickDays': 'En az bir gün seçin.',
   'repeat.repeats': 'Tekrarlanır',

@@ -487,7 +487,7 @@ export const ro: Messages = {
   'repeat.onDate': 'La o dată',
   'repeat.after': 'După',
   'repeat.timesUnit': 'ori',
-  'repeat.needsDate': 'Un element care se repetă are nevoie de o dată.',
+  'repeat.needsDate': 'O sarcină care se repetă are nevoie de o dată. Ca să primești mementouri iar și iar fără dată, adaugă în schimb un memento care se repetă (zilnic, în zilele lucrătoare, săptămânal).',
   'repeat.ongoingNo': 'O sarcină continuă nu se poate repeta.',
   'repeat.pickDays': 'Alege cel puțin o zi.',
   'repeat.repeats': 'Se repetă',

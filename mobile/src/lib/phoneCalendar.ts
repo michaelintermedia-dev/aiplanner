@@ -20,6 +20,8 @@ interface State {
   calendarId: string | null
   /** Our key ("a:<event>:<start>" / "t:<task>") -> the phone's event id + what was written. */
   events: Record<string, { id: string; sig: string }>
+  /** The last sync: when, how many entries, or what went wrong - shown under the switch. */
+  last?: { at: number; count: number; error?: string }
 }
 
 const stateFile = () => new File(Paths.document, 'phone-calendar.json')
@@ -54,8 +56,13 @@ export async function turnOnPhoneCalendar(): Promise<boolean> {
   state.calendarId = await ensureCalendar(state.calendarId)
   save(state)
   await syncPhoneCalendar()
+  const error = load().last?.error
+  if (error) throw new Error(error)
   return true
 }
+
+/** The last sync, for Settings ("23 entries · 10:42"). */
+export const phoneCalendarStatus = () => load().last ?? null
 
 /** Removes the "Gatazee" calendar from the phone, with everything in it. */
 export async function turnOffPhoneCalendar() {
@@ -70,7 +77,10 @@ let running: Promise<void> | null = null
 export function syncPhoneCalendar(): Promise<void> {
   if (!load().on) return Promise.resolve()
   running ??= sync()
-    .catch((e) => console.warn('Phone calendar sync failed', e))
+    .catch((e: unknown) => {
+      const state = load()
+      if (state.on) save({ ...state, last: { at: Date.now(), count: Object.keys(state.events).length, error: e instanceof Error ? e.message : String(e) } })
+    })
     .finally(() => {
       running = null
     })
@@ -80,9 +90,18 @@ export function syncPhoneCalendar(): Promise<void> {
 async function ensureCalendar(id: string | null): Promise<string> {
   const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT)
   const existing = calendars.find((c) => c.id === id) ?? calendars.find((c) => c.title === 'Gatazee' && c.source?.isLocalAccount)
-  if (existing) return existing.id
+  if (existing) {
+    // Made by an earlier version without these: calendar apps then list it but show nothing.
+    if (Platform.OS === 'android' && (!existing.isVisible || !existing.isSynced)) {
+      await Calendar.updateCalendarAsync(existing.id, { isVisible: true, isSynced: true }).catch(() => {})
+    }
+    return existing.id
+  }
   return Calendar.createCalendarAsync({
     title: 'Gatazee',
+    // Without these Android leaves them empty - the calendar is listed but its events never show.
+    isVisible: true,
+    isSynced: true,
     name: 'Gatazee',
     color: '#4f5bd5',
     entityType: Calendar.EntityTypes.EVENT,
@@ -170,5 +189,5 @@ async function sync() {
   for (const [key, old] of Object.entries(state.events)) {
     if (!target.has(key)) await Calendar.deleteEventAsync(old.id).catch(() => {})
   }
-  save({ on: true, calendarId: state.calendarId, events })
+  save({ on: true, calendarId: state.calendarId, events, last: { at: Date.now(), count: target.size } })
 }

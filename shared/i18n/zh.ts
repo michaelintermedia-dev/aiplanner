@@ -641,6 +641,8 @@ export const zh: Messages = {
   'settings.phoneCal.title': '在本机日历中显示',
   'settings.phoneCal.hint': '你的活动和有日期的任务会出现在三星日历、Google 日历和手机上的其他日历应用中，位于名为 Gatazee 的日历里。由应用自动保持更新。',
   'settings.phoneCal.denied': '未获得日历权限。请在手机设置中允许：应用 - Gatazee - 权限。',
+  'settings.phoneCal.status': '条目：{count} · {time} 更新',
+  'settings.phoneCal.failed': '无法更新手机日历：{error}',
   'account.title': '账户',
   'account.signedInAs': '已登录为 {email}',
   'account.export': '下载我的数据',

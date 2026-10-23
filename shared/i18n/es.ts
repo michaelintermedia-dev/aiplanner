@@ -641,6 +641,8 @@ export const es: Messages = {
   'settings.phoneCal.title': 'Mostrar en el calendario de este teléfono',
   'settings.phoneCal.hint': 'Tus eventos y tareas con fecha aparecen en Samsung Calendar, Google Calendar y otras apps de calendario del teléfono, en un calendario llamado Gatazee. La app lo mantiene al día.',
   'settings.phoneCal.denied': 'No se permitió el acceso al calendario. Actívalo en los ajustes del teléfono: Aplicaciones - Gatazee - Permisos.',
+  'settings.phoneCal.status': 'Entradas: {count} · actualizado a las {time}',
+  'settings.phoneCal.failed': 'No se pudo actualizar el calendario del teléfono: {error}',
   'account.title': 'Cuenta',
   'account.signedInAs': 'Sesión iniciada como {email}',
   'account.export': 'Descargar mis datos',

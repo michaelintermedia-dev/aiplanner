@@ -641,6 +641,8 @@ export const ro: Messages = {
   'settings.phoneCal.title': 'Arată în calendarul acestui telefon',
   'settings.phoneCal.hint': 'Evenimentele și sarcinile cu dată apar în Samsung Calendar, Google Calendar și alte aplicații de calendar de pe telefon, într-un calendar numit Gatazee. Aplicația îl ține la zi.',
   'settings.phoneCal.denied': 'Accesul la calendar nu a fost permis. Permite-l din setările telefonului: Aplicații - Gatazee - Permisiuni.',
+  'settings.phoneCal.status': 'Intrări: {count} · actualizat la {time}',
+  'settings.phoneCal.failed': 'Calendarul telefonului nu a putut fi actualizat: {error}',
   'account.title': 'Cont',
   'account.signedInAs': 'Conectat ca {email}',
   'account.export': 'Descarcă datele mele',

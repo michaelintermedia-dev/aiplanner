@@ -641,6 +641,8 @@ export const ar: Messages = {
   'settings.phoneCal.title': 'العرض في تقويم هذا الهاتف',
   'settings.phoneCal.hint': 'تظهر أحداثك ومهامك ذات التاريخ في تقويم Samsung وتقويم Google وتطبيقات التقويم الأخرى على الهاتف، في تقويم باسم Gatazee. يحدّثه التطبيق باستمرار.',
   'settings.phoneCal.denied': 'لم يُسمح بالوصول إلى التقويم. اسمح به من إعدادات الهاتف: التطبيقات - Gatazee - الأذونات.',
+  'settings.phoneCal.status': 'الإدخالات: {count} · حُدِّث {time}',
+  'settings.phoneCal.failed': 'تعذّر تحديث تقويم الهاتف: {error}',
   'account.title': 'الحساب',
   'account.signedInAs': 'مسجّل الدخول باسم {email}',
   'account.export': 'تنزيل بياناتي',

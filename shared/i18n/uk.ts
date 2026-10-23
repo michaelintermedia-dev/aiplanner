@@ -641,6 +641,8 @@ export const uk: Messages = {
   'settings.phoneCal.title': 'Показувати в календарі цього телефона',
   'settings.phoneCal.hint': 'Ваші події та завдання з датою з’являться в Samsung Calendar, Google Календарі та інших календарях на телефоні, у календарі з назвою Gatazee. Застосунок оновлює його сам.',
   'settings.phoneCal.denied': 'Доступ до календаря не дозволено. Дозвольте його в налаштуваннях телефона: Застосунки - Gatazee - Дозволи.',
+  'settings.phoneCal.status': 'Записів: {count} · оновлено о {time}',
+  'settings.phoneCal.failed': 'Не вдалося оновити календар телефона: {error}',
   'account.title': 'Обліковий запис',
   'account.signedInAs': 'Ви ввійшли як {email}',
   'account.export': 'Завантажити мої дані',

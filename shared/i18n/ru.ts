@@ -641,6 +641,8 @@ export const ru: Messages = {
   'settings.phoneCal.title': 'Показывать в календаре этого телефона',
   'settings.phoneCal.hint': 'Ваши события и задачи с датой появятся в Samsung Calendar, Google Календаре и других календарях на телефоне, в календаре с названием Gatazee. Приложение само его обновляет.',
   'settings.phoneCal.denied': 'Доступ к календарю не разрешён. Разрешите его в настройках телефона: Приложения - Gatazee - Разрешения.',
+  'settings.phoneCal.status': 'Записей: {count} · обновлено в {time}',
+  'settings.phoneCal.failed': 'Не удалось обновить календарь телефона: {error}',
   'account.title': 'Аккаунт',
   'account.signedInAs': 'Вы вошли как {email}',
   'account.export': 'Скачать мои данные',

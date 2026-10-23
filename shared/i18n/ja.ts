@@ -641,6 +641,8 @@ export const ja: Messages = {
   'settings.phoneCal.title': 'このスマホのカレンダーに表示',
   'settings.phoneCal.hint': '予定と日付のあるタスクが、Galaxy カレンダー、Google カレンダーなどスマホのカレンダーアプリに「Gatazee」というカレンダーとして表示されます。アプリが最新の状態に保ちます。',
   'settings.phoneCal.denied': 'カレンダーへのアクセスが許可されていません。スマホの設定で許可してください: アプリ - Gatazee - 権限。',
+  'settings.phoneCal.status': '件数: {count} · {time} に更新',
+  'settings.phoneCal.failed': 'スマホのカレンダーを更新できませんでした: {error}',
   'account.title': 'アカウント',
   'account.signedInAs': '{email} でログイン中',
   'account.export': 'データをダウンロード',

@@ -5,7 +5,9 @@ import { useState } from 'react'
 import { Linking, Share, Switch, Text, View } from 'react-native'
 import { settingsApi } from '@/api/endpoints'
 import { useColors } from '@/theme'
-import { phoneCalendarOn, turnOffPhoneCalendar, turnOnPhoneCalendar } from '@/lib/phoneCalendar'
+import { phoneCalendarOn, phoneCalendarStatus, turnOffPhoneCalendar, turnOnPhoneCalendar } from '@/lib/phoneCalendar'
+import { useAuth } from '@/auth/useAuth'
+import { formatTime } from '@shared/dates'
 import { Button } from './ui'
 
 /**
@@ -19,6 +21,8 @@ export function CalendarFeedSetting() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [phoneOn, setPhoneOn] = useState(phoneCalendarOn)
+  const [status, setStatus] = useState(phoneCalendarStatus)
+  const { zone } = useAuth()
   const url = feed.data?.url ?? null
 
   const run = async (action: () => Promise<{ url: string | null } | void>) => {
@@ -42,12 +46,15 @@ export function CalendarFeedSetting() {
       if (next) {
         if (await turnOnPhoneCalendar()) setPhoneOn(true)
         else setError(t('settings.phoneCal.denied'))
+        setStatus(phoneCalendarStatus())
       } else {
         await turnOffPhoneCalendar()
         setPhoneOn(false)
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
+      setPhoneOn(phoneCalendarOn())
+      setStatus(phoneCalendarStatus())
     } finally {
       setBusy(false)
     }
@@ -60,6 +67,13 @@ export function CalendarFeedSetting() {
         <View style={{ flex: 1, gap: 2 }}>
           <Text style={{ color: c.text, fontWeight: '600' }}>{t('settings.phoneCal.title')}</Text>
           <Text style={{ color: c.muted, fontSize: 13 }}>{t('settings.phoneCal.hint')}</Text>
+          {phoneOn && status && (
+            <Text style={{ color: status.error ? c.danger : c.muted, fontSize: 13 }}>
+              {status.error
+                ? t('settings.phoneCal.failed', { error: status.error })
+                : t('settings.phoneCal.status', { count: status.count, time: formatTime(new Date(status.at).toISOString(), zone) })}
+            </Text>
+          )}
         </View>
         <Switch value={phoneOn} disabled={busy} onValueChange={(v) => void togglePhone(v)} />
       </View>

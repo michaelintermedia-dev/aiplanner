@@ -641,6 +641,8 @@ export const hi: Messages = {
   'settings.phoneCal.title': 'इस फ़ोन के कैलेंडर में दिखाएँ',
   'settings.phoneCal.hint': 'आपके इवेंट और तारीख़ वाले काम Samsung कैलेंडर, Google कैलेंडर और फ़ोन के दूसरे कैलेंडर ऐप में Gatazee नाम के कैलेंडर में दिखेंगे। ऐप इसे अपडेट रखता है।',
   'settings.phoneCal.denied': 'कैलेंडर की अनुमति नहीं मिली। फ़ोन की सेटिंग में दें: ऐप्स - Gatazee - अनुमतियाँ।',
+  'settings.phoneCal.status': 'प्रविष्टियाँ: {count} · {time} पर अपडेट',
+  'settings.phoneCal.failed': 'फ़ोन का कैलेंडर अपडेट नहीं हो सका: {error}',
   'account.title': 'खाता',
   'account.signedInAs': '{email} के रूप में साइन इन',
   'account.export': 'मेरा डेटा डाउनलोड करें',

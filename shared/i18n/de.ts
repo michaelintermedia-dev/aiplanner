@@ -641,6 +641,8 @@ export const de: Messages = {
   'settings.phoneCal.title': 'Im Kalender dieses Handys anzeigen',
   'settings.phoneCal.hint': 'Deine Termine und Aufgaben mit Datum erscheinen in Samsung Kalender, Google Kalender und anderen Kalender-Apps auf dem Handy, in einem Kalender namens Gatazee. Die App hält ihn aktuell.',
   'settings.phoneCal.denied': 'Kalenderzugriff wurde nicht erlaubt. Erlaube ihn in den Handy-Einstellungen: Apps - Gatazee - Berechtigungen.',
+  'settings.phoneCal.status': 'Einträge: {count} · aktualisiert {time}',
+  'settings.phoneCal.failed': 'Handykalender konnte nicht aktualisiert werden: {error}',
   'account.title': 'Konto',
   'account.signedInAs': 'Angemeldet als {email}',
   'account.export': 'Meine Daten herunterladen',

@@ -641,6 +641,8 @@ export const he: Messages = {
   'settings.phoneCal.title': 'להציג ביומן של הטלפון הזה',
   'settings.phoneCal.hint': 'האירועים והמשימות עם תאריך יופיעו ביומן של Samsung, ביומן Google ובאפליקציות יומן אחרות בטלפון, ביומן בשם Gatazee. האפליקציה מעדכנת אותו.',
   'settings.phoneCal.denied': 'לא ניתנה גישה ליומן. אפשרו אותה בהגדרות הטלפון: אפליקציות - Gatazee - הרשאות.',
+  'settings.phoneCal.status': 'רשומות: {count} · עודכן ב-{time}',
+  'settings.phoneCal.failed': 'לא ניתן היה לעדכן את היומן בטלפון: {error}',
   'account.title': 'חשבון',
   'account.signedInAs': 'מחובר/ת בתור {email}',
   'account.export': 'הורדת הנתונים שלי',

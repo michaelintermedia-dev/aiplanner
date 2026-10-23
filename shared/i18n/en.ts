@@ -645,6 +645,8 @@ export const en = {
   'settings.phoneCal.title': 'Show in this phone\'s calendar',
   'settings.phoneCal.hint': 'Your events and dated tasks appear in Samsung Calendar, Google Calendar and other calendar apps on this phone, in a calendar called Gatazee. Kept up to date by the app.',
   'settings.phoneCal.denied': 'Calendar access was not allowed. Allow it in the phone settings: Apps - Gatazee - Permissions.',
+  'settings.phoneCal.status': 'Entries: {count} · updated {time}',
+  'settings.phoneCal.failed': 'Could not update the phone calendar: {error}',
   'account.title': 'Account',
   'account.signedInAs': 'Signed in as {email}',
   'account.export': 'Download my data',

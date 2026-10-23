@@ -641,6 +641,8 @@ export const tr: Messages = {
   'settings.phoneCal.title': 'Bu telefonun takviminde göster',
   'settings.phoneCal.hint': 'Etkinlikleriniz ve tarihli görevleriniz Samsung Takvim, Google Takvim ve telefondaki diğer takvim uygulamalarında Gatazee adlı bir takvimde görünür. Uygulama onu güncel tutar.',
   'settings.phoneCal.denied': 'Takvim erişimine izin verilmedi. Telefon ayarlarından izin verin: Uygulamalar - Gatazee - İzinler.',
+  'settings.phoneCal.status': 'Kayıt: {count} · {time} güncellendi',
+  'settings.phoneCal.failed': 'Telefon takvimi güncellenemedi: {error}',
   'account.title': 'Hesap',
   'account.signedInAs': '{email} olarak giriş yapıldı',
   'account.export': 'Verilerimi indir',

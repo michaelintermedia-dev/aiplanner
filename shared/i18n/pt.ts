@@ -641,6 +641,8 @@ export const pt: Messages = {
   'settings.phoneCal.title': 'Mostrar na agenda deste celular',
   'settings.phoneCal.hint': 'Seus eventos e tarefas com data aparecem no Samsung Calendar, Google Agenda e outros apps de agenda do celular, numa agenda chamada Gatazee. O app a mantém atualizada.',
   'settings.phoneCal.denied': 'O acesso à agenda não foi permitido. Permita nas configurações do celular: Apps - Gatazee - Permissões.',
+  'settings.phoneCal.status': 'Itens: {count} · atualizado às {time}',
+  'settings.phoneCal.failed': 'Não foi possível atualizar a agenda do celular: {error}',
   'account.title': 'Conta',
   'account.signedInAs': 'Conectado como {email}',
   'account.export': 'Baixar meus dados',

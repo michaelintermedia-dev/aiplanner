@@ -3,6 +3,7 @@ import * as TaskManager from 'expo-task-manager'
 import { refreshSession } from '@/api/client'
 import { notificationsApi } from '@/api/endpoints'
 import { schedule } from '@/lib/useNotifications'
+import { syncPhoneCalendar } from '@/lib/phoneCalendar'
 
 /**
  * Reminders without opening the app (2026-10-18). The phone only knows the
@@ -19,6 +20,7 @@ TaskManager.defineTask(TASK, async () => {
   try {
     if (!(await refreshSession())) return BackgroundTask.BackgroundTaskResult.Success // signed out: nothing to do
     await schedule(await notificationsApi.upcoming(168))
+    await syncPhoneCalendar()
     return BackgroundTask.BackgroundTaskResult.Success
   } catch {
     return BackgroundTask.BackgroundTaskResult.Failed

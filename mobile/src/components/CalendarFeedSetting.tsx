@@ -2,9 +2,10 @@ import { googleCalendarAddUrl, webcalUrl } from '@shared/calendarFeed'
 import { t } from '@shared/i18n'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Linking, Share, Text, View } from 'react-native'
+import { Linking, Share, Switch, Text, View } from 'react-native'
 import { settingsApi } from '@/api/endpoints'
 import { useColors } from '@/theme'
+import { phoneCalendarOn, turnOffPhoneCalendar, turnOnPhoneCalendar } from '@/lib/phoneCalendar'
 import { Button } from './ui'
 
 /**
@@ -17,6 +18,7 @@ export function CalendarFeedSetting() {
   const feed = useQuery({ queryKey: ['settings', 'calendar-feed'], queryFn: settingsApi.calendarFeed })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [phoneOn, setPhoneOn] = useState(phoneCalendarOn)
   const url = feed.data?.url ?? null
 
   const run = async (action: () => Promise<{ url: string | null } | void>) => {
@@ -33,9 +35,35 @@ export function CalendarFeedSetting() {
   }
   const open = (link: string) => Linking.openURL(link).catch((e: Error) => setError(e.message))
 
+  const togglePhone = async (next: boolean) => {
+    setBusy(true)
+    setError(null)
+    try {
+      if (next) {
+        if (await turnOnPhoneCalendar()) setPhoneOn(true)
+        else setError(t('settings.phoneCal.denied'))
+      } else {
+        await turnOffPhoneCalendar()
+        setPhoneOn(false)
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('common.error'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <View style={{ gap: 8, marginTop: 8 }}>
-      <Text style={{ color: c.text, fontWeight: '600' }}>{t('settings.feed.title')}</Text>
+      {/* On the phone: written straight into a "Gatazee" calendar (Samsung / Google Calendar can't take a link). */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={{ color: c.text, fontWeight: '600' }}>{t('settings.phoneCal.title')}</Text>
+          <Text style={{ color: c.muted, fontSize: 13 }}>{t('settings.phoneCal.hint')}</Text>
+        </View>
+        <Switch value={phoneOn} disabled={busy} onValueChange={(v) => void togglePhone(v)} />
+      </View>
+      <Text style={{ color: c.text, fontWeight: '600', marginTop: 8 }}>{t('settings.feed.title')}</Text>
       <Text style={{ color: c.muted, fontSize: 13 }}>{t('settings.feed.hint')}</Text>
       {!url ? (
         <Button title={t('settings.feed.create')} variant="primary" busy={busy || feed.isPending} onPress={() => void run(settingsApi.newCalendarFeed)} />

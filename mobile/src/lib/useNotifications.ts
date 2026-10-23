@@ -7,6 +7,7 @@ import { Alert, AppState, Platform } from 'react-native'
 import { notificationsApi, tasksApi } from '@/api/endpoints'
 import { currentLanguage, t } from '@shared/i18n'
 import { registerBackgroundReminders } from '@/lib/backgroundReminders'
+import { syncPhoneCalendar } from '@/lib/phoneCalendar'
 
 /**
  * Phase 4 delivery on the phone. The backend decides what goes off when
@@ -183,6 +184,8 @@ export function useNotifications() {
 
   useEffect(() => {
     if (data) schedule(data).catch((e) => console.warn('Scheduling notifications failed', e))
+    // Every change refetches this list - the phone's calendar follows along (when it's on).
+    if (data) void syncPhoneCalendar()
   }, [data])
 
   useEffect(() => {

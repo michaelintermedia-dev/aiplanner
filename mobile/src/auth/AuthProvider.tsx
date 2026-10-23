@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { getStoredRefreshToken, refreshSession, setOnSessionExpired, setSession } from '@/api/client'
 import { authApi } from '@/api/endpoints'
 import { AuthContext, type AuthState } from './useAuth'
+import { turnOffPhoneCalendar } from '@/lib/phoneCalendar'
 
 const deviceZone: ZoneContext = {
   timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC',
@@ -20,6 +21,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await setSession(null)
     setUser(null)
     queryClient.clear()
+    // The account's events leave this phone's calendar with it.
+    await turnOffPhoneCalendar().catch(() => {})
   }, [queryClient])
 
   // Restore the session from the stored refresh token on startup.

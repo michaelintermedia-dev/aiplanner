@@ -203,6 +203,9 @@ export function createApi(request: RequestFn) {
     calendar: {
       get: (view: CalendarView, date: string) =>
         request<CalendarRange>('GET', `/calendar?view=${view}&date=${date}`),
+      /** Any UTC range (the phone-calendar sync: a month back, half a year ahead). */
+      range: (fromUtc: string, toUtc: string) =>
+        request<CalendarRange>('GET', `/calendar?from=${encodeURIComponent(fromUtc)}&to=${encodeURIComponent(toUtc)}`),
     },
     captures: {
       /** Analyze typed text. Nothing is saved as a task/appointment until confirm(). */

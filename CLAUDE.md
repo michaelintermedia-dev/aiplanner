@@ -970,6 +970,12 @@ Settings - Calendar `CalendarFeedSetting`): a private link (`UserSettings.Calend
 TZID) and open dated tasks (all-day ones as DATE), no alarms. "Add to Google Calendar"
 (`calendar.google.com/calendar/r?cid=webcal://...`) / webcal:// for Apple and Outlook / copy;
 New link kills the old one. Read-only by design (two-way sync later if asked).
+The link only works for computers (Google Calendar's phone app can't add one, Samsung
+Calendar can't subscribe at all), so the **app writes into the phone's calendar** itself
+(`lib/phoneCalendar`, expo-calendar's legacy API): a local "Gatazee" calendar, events +
+each open dated task once, a month back / half a year ahead, no alarms, synced whenever
+the notification list refreshes and in the background job; switch in Settings - Calendar;
+turning it off or signing out deletes that calendar. Device event ids in phone-calendar.json.
 tools/qa/calendar-feed.cjs.
 Live in production since 2026-10-17: email codes through Resend (domain
 gatazee.com, Tokyo region, sender "Gatazee <hello@gatazee.com>"; replies to it

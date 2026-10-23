@@ -134,6 +134,13 @@ Gatazee работает и в браузере на app.gatazee.com, с тем 
 | Health | None |
 | Data safety | See below |
 
+### Calendar permission (READ/WRITE_CALENDAR)
+
+Only when the user turns on Settings - Calendar - "Show in this phone's calendar":
+the app creates its own local "Gatazee" calendar and writes the user's events
+into it. It never reads other calendars and sends nothing from the device's
+calendars anywhere - so for Data safety, calendar data is not collected.
+
 ### Exact alarm permission (USE_EXACT_ALARM)
 
 Declaration: "Calendar or alarm clock app". Reason: Gatazee is a calendar and

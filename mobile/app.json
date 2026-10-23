@@ -119,7 +119,13 @@
       ],
       "./plugins/withPlayStoreManifest.js",
       "./plugins/withUploadSigning.js",
-      "expo-background-task"
+      "expo-background-task",
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Gatazee shows your events and tasks in a calendar on this phone, if you turn it on in Settings."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

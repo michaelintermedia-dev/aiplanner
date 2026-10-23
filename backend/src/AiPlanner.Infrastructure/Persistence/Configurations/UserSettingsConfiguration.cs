@@ -14,6 +14,8 @@ public class UserSettingsConfiguration : IEntityTypeConfiguration<UserSettings>
         builder.Property(s => s.Theme).HasMaxLength(20);
         builder.Property(s => s.Skin).HasMaxLength(20);
         builder.Property(s => s.FirstDayOfWeek).HasMaxLength(10);
+        builder.Property(s => s.CalendarFeedToken).HasMaxLength(64);
+        builder.HasIndex(s => s.CalendarFeedToken).IsUnique();
         builder.Property(s => s.WallpaperPhotoKey).HasMaxLength(300);
         builder.Property(s => s.DateFormat).HasMaxLength(30);
         builder.Property(s => s.TimeFormat).HasMaxLength(30);

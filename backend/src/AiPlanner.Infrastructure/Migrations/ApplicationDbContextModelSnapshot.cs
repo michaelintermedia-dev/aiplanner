@@ -962,6 +962,10 @@ namespace AiPlanner.Infrastructure.Migrations
                     b.Property<bool>("AutomaticProcessing")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("CalendarFeedToken")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<bool>("DailySummaryEnabled")
                         .HasColumnType("boolean");
 
@@ -1031,6 +1035,9 @@ namespace AiPlanner.Infrastructure.Migrations
                         .HasColumnType("character varying(300)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CalendarFeedToken")
+                        .IsUnique();
 
                     b.HasIndex("UserId")
                         .IsUnique();

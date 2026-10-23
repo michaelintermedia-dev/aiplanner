@@ -1,4 +1,5 @@
 import type { NotificationSettings } from '@shared/types'
+import { CalendarFeedSetting } from '../components/CalendarFeedSetting'
 import { WebPushToggle } from '../components/WebPushToggle'
 import { TimeZoneSetting } from '../components/TimeZoneSetting'
 import { LANGUAGES, languageOf, t, type Language } from '@shared/i18n'
@@ -201,6 +202,7 @@ export function SettingsPage() {
         </div>
         <p className="muted small">{t('settings.firstDayHint')}</p>
         {saveCalendar.error && <p className="error">{saveCalendar.error.message}</p>}
+        <CalendarFeedSetting />
       </section>
 
       <section className="card form">

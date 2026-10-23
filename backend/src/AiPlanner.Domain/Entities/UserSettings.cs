@@ -38,6 +38,8 @@ public class UserSettings
     public string? WallpaperPhotoKey { get; set; }
     /// <summary>"Monday", "Sunday" or "Saturday": where the calendar's weeks begin (Settings - Calendar).</summary>
     public string FirstDayOfWeek { get; set; } = "Monday";
+    /// <summary>The private calendar subscription link's token (null: off) - Settings - Calendar.</summary>
+    public string? CalendarFeedToken { get; set; }
     public string DateFormat { get; set; } = "yyyy-MM-dd";
     public string TimeFormat { get; set; } = "HH:mm";
 

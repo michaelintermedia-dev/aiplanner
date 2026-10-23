@@ -963,6 +963,14 @@ background jobs act for a user with `UserScope.For`; VAPID keys in deploy/.env) 
 `lib/backgroundReminders` (expo-background-task, every ~3 h re-schedules the local
 notifications). Emails are sent as branded HTML made from the text (`EmailHtml`, tested).
 Off-server backups: the `offsite` service (rclone crypt to Backblaze B2; needs B2_* in .env).
+**Calendar subscription** (2026-10-23, competitor research - the biggest gap; web + app,
+Settings - Calendar `CalendarFeedSetting`): a private link (`UserSettings.CalendarFeedToken`,
+24 random bytes) to `GET /api/calendar/feed/{token}.ics` (no sign-in - the token is the key);
+`IcsCalendar` (pure, tested) writes events (repeating ones as RRULE + EXDATE in the user's
+TZID) and open dated tasks (all-day ones as DATE), no alarms. "Add to Google Calendar"
+(`calendar.google.com/calendar/r?cid=webcal://...`) / webcal:// for Apple and Outlook / copy;
+New link kills the old one. Read-only by design (two-way sync later if asked).
+tools/qa/calendar-feed.cjs.
 Live in production since 2026-10-17: email codes through Resend (domain
 gatazee.com, Tokyo region, sender "Gatazee <hello@gatazee.com>"; replies to it
 go to the owner's Gmail via ImprovMX - MX on @; the site's contact address) and Google sign-in (Google Cloud project "Gatazee", consent

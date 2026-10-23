@@ -139,6 +139,34 @@ button.primary:hover:not(:disabled) {
   filter: brightness(1.08);
 }
 
+/* A link that looks like a button (e.g. "Add to Google Calendar"). */
+a.button {
+  display: inline-flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 14px;
+  min-height: 36px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+a.button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+  font-weight: 500;
+}
+
+.calendar-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
 button.wide {
   width: 100%;
 }

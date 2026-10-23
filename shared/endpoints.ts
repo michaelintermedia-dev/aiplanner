@@ -181,6 +181,10 @@ export function createApi(request: RequestFn) {
       updateRecordings: (body: RecordingSettings) => request<RecordingSettings>('PUT', '/settings/recordings', body),
       /** Where weeks begin - on the account, every device follows. */
       calendar: () => request<{ firstDayOfWeek: string }>('GET', '/settings/calendar'),
+      /** "Show in your phone's calendar": the private feed link (null: off). */
+      calendarFeed: () => request<{ url: string | null }>('GET', '/settings/calendar-feed'),
+      newCalendarFeed: () => request<{ url: string | null }>('POST', '/settings/calendar-feed'),
+      turnOffCalendarFeed: () => request<void>('DELETE', '/settings/calendar-feed'),
       updateCalendar: (body: { firstDayOfWeek: string }) => request<{ firstDayOfWeek: string }>('PUT', '/settings/calendar', body),
       /** Light/dark and the skin - on the account, every device follows. */
       appearance: () => request<AppearanceSettings>('GET', '/settings/appearance'),

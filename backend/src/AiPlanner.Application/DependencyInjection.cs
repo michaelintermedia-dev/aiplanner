@@ -47,6 +47,7 @@ public static class DependencyInjection
         services.AddScoped<RecordingSettingsService>();
         services.AddScoped<AppearanceSettingsService>();
         services.AddScoped<CalendarSettingsService>();
+        services.AddScoped<Calendar.Feed.CalendarFeedService>();
         services.AddScoped<IUserProfileService, UserProfileService>();
         services.AddScoped<AccountService>();
         services.AddScoped<ICalendarService, CalendarService>();

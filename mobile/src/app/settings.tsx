@@ -12,6 +12,7 @@ import { DateTimeField } from '@/components/DateTimeField'
 import { flatCard } from '@/components/panel'
 import { Screen } from '@/components/Screen'
 import { TimeZoneSetting } from '@/components/TimeZoneSetting'
+import { CalendarFeedSetting } from '@/components/CalendarFeedSetting'
 import { Button } from '@/components/ui'
 import { useAction } from '@/lib/useAction'
 import { useColors } from '@/theme'
@@ -196,6 +197,7 @@ export default function SettingsScreen() {
         })}
       </View>
       <Text style={{ color: c.muted, fontSize: 13 }}>{t('settings.firstDayHint')}</Text>
+      <CalendarFeedSetting />
       {saveCalendar.error && <Text style={{ color: c.danger }}>{saveCalendar.error.message}</Text>}
 
       <Text style={[styles.heading, { color: c.muted }]}>{t('settings.notifications').toUpperCase()}</Text>

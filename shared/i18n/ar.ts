@@ -643,6 +643,7 @@ export const ar: Messages = {
   'settings.phoneCal.denied': 'لم يُسمح بالوصول إلى التقويم. اسمح به من إعدادات الهاتف: التطبيقات - Gatazee - الأذونات.',
   'settings.phoneCal.status': 'الإدخالات: {count} · حُدِّث {time}',
   'settings.phoneCal.failed': 'تعذّر تحديث تقويم الهاتف: {error}',
+  'media.description': 'الوصف',
   'account.title': 'الحساب',
   'account.signedInAs': 'مسجّل الدخول باسم {email}',
   'account.export': 'تنزيل بياناتي',

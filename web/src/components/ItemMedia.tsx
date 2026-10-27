@@ -12,7 +12,11 @@ import {
   IoDocumentTextOutline,
   IoImageOutline,
   IoImagesOutline,
+  IoInformationCircle,
+  IoInformationCircleOutline,
 } from 'react-icons/io5'
+import { ZoomView } from './ZoomView'
+import { createPortal } from 'react-dom'
 import { api } from '../api/endpoints'
 import { saveBlob, shrinkImage, useAttachments, usePictureUrl, type PendingMedia } from '../lib/media'
 import { useIsPhone } from '../lib/useIsPhone'
@@ -94,8 +98,16 @@ function RemoveToggle({ removed, onClick }: { removed: boolean; onClick: () => v
   )
 }
 
-/** One picture full screen; arrows (and ← →) step through them, Esc closes. */
+/**
+ * One picture full screen; arrows (and ← →) step through them, Esc closes.
+ * Wheel / pinch / double-click to zoom (ZoomView); a click hides or shows the
+ * controls; the description only when asked for (the i button) - it used to
+ * cover the picture (2026-10-27).
+ */
 function Lightbox({ images, index, onIndex, onClose }: { images: Attachment[]; index: number; onIndex: (i: number) => void; onClose: () => void }) {
+  const [chrome, setChrome] = useState(true)
+  const [info, setInfo] = useState(false)
+  const [, setZoomed] = useState(false)
   const step = (by: number) => onIndex((index + by + images.length) % images.length)
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
@@ -110,18 +122,28 @@ function Lightbox({ images, index, onIndex, onClose }: { images: Attachment[]; i
   })
   const a = images[index]
   return (
-    <div className="lightbox" role="dialog" aria-modal="true" aria-label={a.fileName} onClick={onClose}>
-      <div className="lightbox-image" onClick={(e) => e.stopPropagation()}>
-        <StoredImage id={a.id} alt={a.description ?? a.fileName} />
-      </div>
-      {a.description && (
-        <p className="lightbox-caption" onClick={(e) => e.stopPropagation()}>
-          {a.description}
-        </p>
-      )}
+    // On <body>: inside the item page's frosted panel (backdrop-filter) "position: fixed" would be that panel, not the screen.
+    createPortal(<div className={`lightbox${chrome ? '' : ' bare'}`} role="dialog" aria-modal="true" aria-label={a.fileName}>
+      <ZoomView resetKey={a.id} onZoomChange={setZoomed} onTap={() => setChrome((c) => !c)}>
+        <div className="lightbox-image">
+          <StoredImage id={a.id} alt={a.description ?? a.fileName} />
+        </div>
+      </ZoomView>
+      {info && a.description && <p className="lightbox-caption">{a.description}</p>}
       <button type="button" className="lightbox-close" onClick={onClose} aria-label={t('media.close')}>
         <IoClose aria-hidden />
       </button>
+      {a.description && (
+        <button
+          type="button"
+          className={`lightbox-info${info ? ' on' : ''}`}
+          onClick={() => setInfo((i) => !i)}
+          aria-expanded={info}
+          aria-label={t('media.description')}
+          title={t('media.description')}>
+          {info ? <IoInformationCircle aria-hidden /> : <IoInformationCircleOutline aria-hidden />}
+        </button>
+      )}
       {images.length > 1 && (
         <>
           <button type="button" className="lightbox-prev" onClick={(e) => (e.stopPropagation(), step(-1))} aria-label="‹">
@@ -135,7 +157,9 @@ function Lightbox({ images, index, onIndex, onClose }: { images: Attachment[]; i
           </span>
         </>
       )}
-    </div>
+    </div>,
+    document.body,
+    )
   )
 }
 

@@ -643,6 +643,7 @@ export const he: Messages = {
   'settings.phoneCal.denied': 'לא ניתנה גישה ליומן. אפשרו אותה בהגדרות הטלפון: אפליקציות - Gatazee - הרשאות.',
   'settings.phoneCal.status': 'רשומות: {count} · עודכן ב-{time}',
   'settings.phoneCal.failed': 'לא ניתן היה לעדכן את היומן בטלפון: {error}',
+  'media.description': 'תיאור',
   'account.title': 'חשבון',
   'account.signedInAs': 'מחובר/ת בתור {email}',
   'account.export': 'הורדת הנתונים שלי',

@@ -643,6 +643,7 @@ export const tr: Messages = {
   'settings.phoneCal.denied': 'Takvim erişimine izin verilmedi. Telefon ayarlarından izin verin: Uygulamalar - Gatazee - İzinler.',
   'settings.phoneCal.status': 'Kayıt: {count} · {time} güncellendi',
   'settings.phoneCal.failed': 'Telefon takvimi güncellenemedi: {error}',
+  'media.description': 'Açıklama',
   'account.title': 'Hesap',
   'account.signedInAs': '{email} olarak giriş yapıldı',
   'account.export': 'Verilerimi indir',

@@ -647,6 +647,7 @@ export const en = {
   'settings.phoneCal.denied': 'Calendar access was not allowed. Allow it in the phone settings: Apps - Gatazee - Permissions.',
   'settings.phoneCal.status': 'Entries: {count} · updated {time}',
   'settings.phoneCal.failed': 'Could not update the phone calendar: {error}',
+  'media.description': 'Description',
   'account.title': 'Account',
   'account.signedInAs': 'Signed in as {email}',
   'account.export': 'Download my data',

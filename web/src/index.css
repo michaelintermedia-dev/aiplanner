@@ -2884,6 +2884,48 @@ button.media-file {
   max-height: 100dvh;
 }
 
+/* Zoom (ZoomView): the whole screen takes the gestures; the picture scales inside. */
+.zoom-view {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  cursor: zoom-in;
+}
+
+.zoom-view.zoomed {
+  cursor: grab;
+}
+
+.zoom-content {
+  display: grid;
+  place-items: center;
+  transform-origin: center;
+  will-change: transform;
+}
+
+.zoom-content img {
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+/* A click on the picture hides the controls, for a clean look at it. */
+.lightbox.bare :is(.lightbox-close, .lightbox-info, .lightbox-prev, .lightbox-next, .lightbox-count, .lightbox-caption) {
+  display: none;
+}
+
+.lightbox-info {
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  inset-inline-end: 12px;
+}
+
+.lightbox-info.on {
+  background: rgb(255 255 255 / 0.3) !important;
+}
+
 .lightbox-image img {
   display: block;
   max-width: 100vw;
@@ -3236,7 +3278,9 @@ html[data-wallpaper] .page-header > div:first-child {
 .lightbox-caption {
   position: absolute;
   inset-inline: 16px;
-  bottom: 48px;
+  bottom: calc(68px + env(safe-area-inset-bottom));
+  max-height: 40vh;
+  overflow-y: auto;
   margin: 0 auto;
   max-width: 640px;
   padding: 8px 12px;

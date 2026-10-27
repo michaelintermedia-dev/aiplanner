@@ -643,6 +643,7 @@ export const uk: Messages = {
   'settings.phoneCal.denied': 'Доступ до календаря не дозволено. Дозвольте його в налаштуваннях телефона: Застосунки - Gatazee - Дозволи.',
   'settings.phoneCal.status': 'Записів: {count} · оновлено о {time}',
   'settings.phoneCal.failed': 'Не вдалося оновити календар телефона: {error}',
+  'media.description': 'Опис',
   'account.title': 'Обліковий запис',
   'account.signedInAs': 'Ви ввійшли як {email}',
   'account.export': 'Завантажити мої дані',

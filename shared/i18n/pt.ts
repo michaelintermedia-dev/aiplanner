@@ -643,6 +643,7 @@ export const pt: Messages = {
   'settings.phoneCal.denied': 'O acesso à agenda não foi permitido. Permita nas configurações do celular: Apps - Gatazee - Permissões.',
   'settings.phoneCal.status': 'Itens: {count} · atualizado às {time}',
   'settings.phoneCal.failed': 'Não foi possível atualizar a agenda do celular: {error}',
+  'media.description': 'Descrição',
   'account.title': 'Conta',
   'account.signedInAs': 'Conectado como {email}',
   'account.export': 'Baixar meus dados',

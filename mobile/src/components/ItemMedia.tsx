@@ -3,12 +3,14 @@ import { t } from '@shared/i18n'
 import { formatSize, splitMedia } from '@shared/media'
 import type { Attachment, ItemType } from '@shared/types'
 import { Image } from 'expo-image'
-import { useState, type ReactNode } from 'react'
-import { ActivityIndicator, FlatList, I18nManager, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
+import { useCallback, useState, type ReactNode } from 'react'
+import { ActivityIndicator, FlatList, I18nManager, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { attachmentSource, openAttachment, pickDocuments, pickPhotos, useAttachments, type Picked, type PendingMedia } from '@/lib/media'
 import { useColors } from '@/theme'
 import { useCardStyle } from './panel'
+import { ZoomableImage } from './ZoomableImage'
 
 const COLUMNS = 3
 const GAP = 6
@@ -138,19 +140,30 @@ function RemoveToggle({ removed, onPress, onCard }: { removed: boolean; onPress:
   )
 }
 
-/** The pictures full screen, swiping between them. */
+/**
+ * The pictures full screen, swiping between them. Pinch / double-tap to zoom
+ * (ZoomableImage); a tap hides or shows the controls; the description only
+ * when asked for (the i button) - it used to cover the picture (2026-10-27).
+ */
 function Viewer({ images, index, onClose }: { images: Attachment[]; index: number | null; onClose: () => void }) {
   const { width, height } = useWindowDimensions()
   const insets = useSafeAreaInsets()
   const [at, setAt] = useState(0)
+  const [zoomed, setZoomed] = useState(false)
+  const [chrome, setChrome] = useState(true)
+  const [info, setInfo] = useState(false)
+  const toggleChrome = useCallback(() => setChrome((c) => !c), [])
+  const description = images[at]?.description
   return (
     <Modal visible={index !== null} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <View style={styles.viewer}>
+      {/* Gestures inside a Modal need their own root on Android. */}
+      <GestureHandlerRootView style={styles.viewer}>
         {index !== null && (
           <FlatList
             data={images}
             horizontal
             pagingEnabled
+            scrollEnabled={!zoomed}
             inverted={I18nManager.isRTL}
             initialScrollIndex={index}
             getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
@@ -159,28 +172,46 @@ function Viewer({ images, index, onClose }: { images: Attachment[]; index: numbe
             onMomentumScrollEnd={(e) => setAt(Math.round(e.nativeEvent.contentOffset.x / width))}
             onLayout={() => setAt(index)}
             renderItem={({ item }) => (
-              <View style={{ width, height }} accessibilityLabel={item.description ?? item.fileName}>
-                <StoredImage id={item.id} fit="contain" />
+              <View style={{ width, height, overflow: 'hidden' }} accessibilityLabel={item.description ?? item.fileName}>
+                <ZoomableImage width={width} height={height} onZoomChange={setZoomed} onTap={toggleChrome}>
+                  <StoredImage id={item.id} fit="contain" />
+                </ZoomableImage>
               </View>
             )}
           />
         )}
-        <Pressable
-          onPress={onClose}
-          style={[styles.viewerClose, { top: insets.top + 12 }]}
-          accessibilityRole="button"
-          accessibilityLabel={t('media.close')}>
-          <Ionicons name="close" size={26} color="#fff" />
-        </Pressable>
-        {!!images[at]?.description && (
-          <Text style={[styles.viewerCaption, { bottom: insets.bottom + (images.length > 1 ? 44 : 16) }]}>{images[at].description}</Text>
+        {chrome && (
+          <>
+            <Pressable
+              onPress={onClose}
+              style={[styles.viewerClose, { top: insets.top + 12 }]}
+              accessibilityRole="button"
+              accessibilityLabel={t('media.close')}>
+              <Ionicons name="close" size={26} color="#fff" />
+            </Pressable>
+            {!!description && (
+              <Pressable
+                onPress={() => setInfo((i) => !i)}
+                style={[styles.viewerInfo, { bottom: insets.bottom + 12 }, info && styles.viewerInfoOn]}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: info }}
+                accessibilityLabel={t('media.description')}>
+                <Ionicons name={info ? 'information-circle' : 'information-circle-outline'} size={26} color="#fff" />
+              </Pressable>
+            )}
+            {info && !!description && (
+              <ScrollView style={[styles.viewerCaption, { bottom: insets.bottom + 68, maxHeight: height * 0.4 }]}>
+                <Text style={styles.viewerCaptionText}>{description}</Text>
+              </ScrollView>
+            )}
+            {images.length > 1 && (
+              <Text style={[styles.viewerCount, { bottom: insets.bottom + 22 }]}>
+                {at + 1} / {images.length}
+              </Text>
+            )}
+          </>
         )}
-        {images.length > 1 && (
-          <Text style={[styles.viewerCount, { bottom: insets.bottom + 16 }]}>
-            {at + 1} / {images.length}
-          </Text>
-        )}
-      </View>
+      </GestureHandlerRootView>
     </Modal>
   )
 }
@@ -332,14 +363,14 @@ const styles = StyleSheet.create({
   viewer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)' },
   viewerClose: { position: 'absolute', end: 12, width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.15)' },
   viewerCount: { position: 'absolute', alignSelf: 'center', color: '#fff', fontSize: 14 },
+  viewerInfo: { position: 'absolute', end: 12, width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.15)' },
+  viewerInfoOn: { backgroundColor: 'rgba(255,255,255,0.3)' },
+  viewerCaptionText: { color: '#fff', fontSize: 14, lineHeight: 20 },
   viewerCaption: {
     position: 'absolute',
     start: 16,
     end: 16,
-    color: '#fff',
-    fontSize: 14,
-    textAlign: 'center',
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.7)',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,

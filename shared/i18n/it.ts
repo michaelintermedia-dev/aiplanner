@@ -643,6 +643,7 @@ export const it: Messages = {
   'settings.phoneCal.denied': 'L’accesso al calendario non è stato consentito. Consentilo nelle impostazioni del telefono: App - Gatazee - Autorizzazioni.',
   'settings.phoneCal.status': 'Voci: {count} · aggiornato alle {time}',
   'settings.phoneCal.failed': 'Impossibile aggiornare il calendario del telefono: {error}',
+  'media.description': 'Descrizione',
   'account.title': 'Account',
   'account.signedInAs': 'Accesso come {email}',
   'account.export': 'Scarica i miei dati',

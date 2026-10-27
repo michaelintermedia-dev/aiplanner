@@ -643,6 +643,7 @@ export const ja: Messages = {
   'settings.phoneCal.denied': 'カレンダーへのアクセスが許可されていません。スマホの設定で許可してください: アプリ - Gatazee - 権限。',
   'settings.phoneCal.status': '件数: {count} · {time} に更新',
   'settings.phoneCal.failed': 'スマホのカレンダーを更新できませんでした: {error}',
+  'media.description': '説明',
   'account.title': 'アカウント',
   'account.signedInAs': '{email} でログイン中',
   'account.export': 'データをダウンロード',

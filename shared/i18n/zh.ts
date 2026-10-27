@@ -643,6 +643,7 @@ export const zh: Messages = {
   'settings.phoneCal.denied': '未获得日历权限。请在手机设置中允许：应用 - Gatazee - 权限。',
   'settings.phoneCal.status': '条目：{count} · {time} 更新',
   'settings.phoneCal.failed': '无法更新手机日历：{error}',
+  'media.description': '描述',
   'account.title': '账户',
   'account.signedInAs': '已登录为 {email}',
   'account.export': '下载我的数据',

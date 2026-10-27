@@ -643,6 +643,7 @@ export const hi: Messages = {
   'settings.phoneCal.denied': 'कैलेंडर की अनुमति नहीं मिली। फ़ोन की सेटिंग में दें: ऐप्स - Gatazee - अनुमतियाँ।',
   'settings.phoneCal.status': 'प्रविष्टियाँ: {count} · {time} पर अपडेट',
   'settings.phoneCal.failed': 'फ़ोन का कैलेंडर अपडेट नहीं हो सका: {error}',
+  'media.description': 'विवरण',
   'account.title': 'खाता',
   'account.signedInAs': '{email} के रूप में साइन इन',
   'account.export': 'मेरा डेटा डाउनलोड करें',

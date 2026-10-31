@@ -30,6 +30,8 @@ export function useSegmentRecorder() {
   const [state, setState] = useState<RecorderState>('idle')
   const [segments, setSegments] = useState<Segment[]>([])
   const busy = useRef(false)
+  /** Discarded while it was still starting (a quick release of the bubble): don't start after all. */
+  const cancelStart = useRef(false)
 
   const recordedMs = segments.reduce((sum, s) => sum + s.ms, 0)
   const currentMs = state === 'recording' ? status.durationMillis : 0
@@ -39,13 +41,26 @@ export function useSegmentRecorder() {
   const record = useCallback(async () => {
     if (busy.current || state === 'recording' || recordedMs >= MAX_MS) return
     busy.current = true
+    cancelStart.current = false
     try {
       const permission = await requestRecordingPermissionsAsync()
       if (!permission.granted) {
         throw new Error(t('mic.error.permission'))
       }
       await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true })
-      await recorder.prepareToRecordAsync()
+      try {
+        await recorder.prepareToRecordAsync()
+      } catch {
+        // A session was left open ("AudioRecorder has already been prepared" - bug fix
+        // 2026-10-31): close it and prepare again instead of failing every time from now on.
+        await recorder.stop().catch(() => {})
+        await recorder.prepareToRecordAsync()
+      }
+      if (cancelStart.current) {
+        await recorder.stop().catch(() => {})
+        setState(recordedMs > 0 ? 'paused' : 'idle')
+        return
+      }
       recorder.record()
       setState('recording')
     } finally {
@@ -94,7 +109,8 @@ export function useSegmentRecorder() {
   }, [])
 
   const discard = useCallback(async () => {
-    if (state === 'recording') await recorder.stop()
+    if (busy.current) cancelStart.current = true // still starting: record() stops it
+    if (state === 'recording' || recorder.isRecording) await recorder.stop().catch(() => {})
     setSegments([])
     setState('idle')
   }, [recorder, state])

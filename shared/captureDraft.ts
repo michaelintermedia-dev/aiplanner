@@ -1,5 +1,4 @@
-import { addDays, dateKey, timeKey, zonedToUtc } from './dates'
-import { KIND_LABEL } from './feed'
+import { addDays, dateKey, formatDue, timeKey, zonedToUtc, type ZoneContext } from './dates'
 import { t } from './i18n'
 import { recurrenceProblem } from './recurrence'
 import { remindersProblem } from './reminders'
@@ -219,10 +218,16 @@ export interface SavedNotice {
   first?: { itemType: ItemType; id: string; title: string } | null
 }
 
-export function savedNotice(capture: Capture, count: number): SavedNotice {
+/** "Saved: “Dentist” · Tue 16:00" (with the date/time when it has one - spec v2), else "Saved N items". */
+export function savedNotice(capture: Capture, count: number, zone?: ZoneContext): SavedNotice {
   const item = count === 1 ? savedItem(capture) : null
+  const source = item && capture.items.find((i) => [i.resultingTaskId, i.resultingAppointmentId, i.resultingNoteId].includes(item.id))
+  const at = source ? (source.startUtc ?? source.dueUtc) : null
+  const when = zone && source && at ? formatDue(at, source.hasTime, zone) : null
   return {
-    message: item ? t('capture.savedAs', { kind: KIND_LABEL[item.itemType], title: item.title }) : t('review.saved', { count }),
+    message: item
+      ? when ? t('capture.savedWhen', { title: item.title, when }) : t('capture.savedShort', { title: item.title })
+      : t('review.saved', { count }),
     item,
     first: savedItem(capture),
   }

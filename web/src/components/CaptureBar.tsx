@@ -2,12 +2,14 @@ import { savedNotice, type SavedNotice } from '@shared/captureDraft'
 import type { AppendTarget, Capture, ItemType } from '@shared/types'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
-import { IoArrowUp, IoAttachOutline, IoCheckmark, IoEyeOutline } from 'react-icons/io5'
+import { IoArrowUp, IoAttachOutline, IoCheckmark } from 'react-icons/io5'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { searchFilters } from '@shared/feedFilter'
 import { setFeedFilters } from '../lib/feedFilters'
 import { takeShared, useSharedIn } from '../lib/sharedIn'
-import { capturesApi, settingsApi } from '../api/endpoints'
+import { capturesApi, itemsApi, settingsApi } from '../api/endpoints'
+import { onQuickRelease } from '../lib/quickRelease'
+import { useAuth } from '../auth/useAuth'
 import { itemPath } from '../lib/itemPath'
 import { applyMedia, attachmentsKey, type PendingMedia } from '../lib/media'
 import { toWav } from '../lib/toWav'
@@ -133,6 +135,7 @@ export function CaptureBar({
   const [savedMessage, setSavedMessage] = useState<string | null>(null)
   // "Save right away": what it was saved as, to open it.
   const [savedLink, setSavedLink] = useState<string | null>(null)
+  const [savedRef, setSavedRef] = useState<{ itemType: ItemType; id: string } | null>(null)
 
   // "Saved as ..." is news for a moment, not a label: it goes after a few seconds or once something new is typed.
   useEffect(() => {
@@ -156,6 +159,7 @@ export function CaptureBar({
   const [drawer, setDrawer] = useState(false)
 
   const queryClient = useQueryClient()
+  const { zone } = useAuth()
 
   // Photos/documents go to OpenAI only with the user's OK - asked once, then it's a setting.
   const recordingSettings = useQuery({ queryKey: ['settings', 'recordings'], queryFn: settingsApi.recordings, enabled: !continueFrom })
@@ -212,11 +216,12 @@ export function CaptureBar({
         onFinished?.({ message: t('capture.searchShown'), item: null })
       } else if (result.autoSaved) {
         // Saved already (Settings - Save right away): say what it became, no review.
-        const notice = finish(savedNotice(result, 1))!
+        const notice = finish(savedNotice(result, 1, zone))!
         const item = notice.item
         setSavedMessage(notice.message)
         onFinished?.(notice)
         setSavedLink(item && itemPath(item))
+        setSavedRef(item ? { itemType: item.itemType, id: item.id } : null)
         void queryClient.invalidateQueries()
       } else setCapture(result)
       setText('')
@@ -315,9 +320,24 @@ export function CaptureBar({
         { replace: true },
       )
     }
+    if (quick) setHeld(true) // started by holding the bubble: letting go sends it
     void startRecording().catch(onMicError)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the form opens
   }, [quick])
+
+  // Holding the bubble (spec v2): let go = Save, slide away first = cancel; a blip is dropped.
+  const [held, setHeld] = useState(false)
+  useEffect(
+    () =>
+      onQuickRelease((cancel) => {
+        if (!held) return
+        setHeld(false)
+        if (cancel || recorder.seconds < 1) recorder.discard()
+        else void sendRecording(true)
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the latest recorder state on each release
+    [held, recorder.seconds],
+  )
 
   // Shared from another app (the web app as a share target - user's request, 2026-10-12):
   // its words go in and it's saved like a tap on Save; the review opens only if something's unclear.
@@ -365,6 +385,7 @@ export function CaptureBar({
           saved = finish(saved)
           setSavedMessage(saved?.message ?? null)
           setSavedLink(saved?.item ? itemPath(saved.item) : null)
+          setSavedRef(saved?.item ? { itemType: saved.item.itemType, id: saved.item.id } : null)
           onFinished?.(saved)
         }}
       />
@@ -401,6 +422,7 @@ export function CaptureBar({
             saved = finish(saved)
             setSavedMessage(saved?.message ?? null)
             setSavedLink(saved?.item ? itemPath(saved.item) : null)
+          setSavedRef(saved?.item ? { itemType: saved.item.itemType, id: saved.item.id } : null)
             // Saved or cancelled: this capture is done (the dock folds away).
             onFinished?.(saved)
           }
@@ -524,11 +546,20 @@ export function CaptureBar({
           </span>
         ) : (
           <span className="muted capture-hint">
-            {hasAudio ? '' : (savedMessage ?? t('capture.hint'))}
-            {!hasAudio && savedMessage && savedLink && (
+            {held && recorder.state === 'recording' ? t('capture.releaseHint') : hasAudio ? '' : (savedMessage ?? t('capture.hint'))}
+            {!hasAudio && savedMessage && savedLink && savedRef && (
               <>
                 {' '}
-                <Link to={savedLink}>{t('capture.open')}</Link>
+                <button
+                  type="button"
+                  className="link"
+                  onClick={() => {
+                    setSavedMessage(null)
+                    void itemsApi.delete([savedRef]).then(() => queryClient.invalidateQueries())
+                  }}>
+                  {t('common.undo')}
+                </button>{' '}
+                <Link to={`${savedLink}?edit=1`}>{t('common.edit')}</Link>
               </>
             )}
           </span>
@@ -574,14 +605,6 @@ export function CaptureBar({
             </button>
           ) : (
             <>
-              <button
-                type="button"
-                className="review-first"
-                onClick={() => (hasAudio ? withConsent(() => void sendRecording(false)) : submitText(undefined, false))}
-                disabled={busy !== null || (hasAudio && recorder.seconds < 1)}
-                title={t('capture.reviewHint')}>
-                <IoEyeOutline aria-hidden /> {t('capture.review')}
-              </button>
               <button
                 type={hasAudio ? 'button' : 'submit'}
                 className="send"

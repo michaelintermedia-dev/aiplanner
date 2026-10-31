@@ -4,9 +4,11 @@ import type { AppendTarget, Capture, ItemType } from '@shared/types'
 import { router } from 'expo-router'
 import { File } from 'expo-file-system'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
-import { capturesApi, settingsApi } from '@/api/endpoints'
+import { capturesApi, itemsApi, settingsApi } from '@/api/endpoints'
+import { onQuickRelease } from '@/lib/quickRecord'
+import { useAuth } from '@/auth/useAuth'
 import { itemPath } from '@/lib/itemPath'
 import { takeShared, type SharedContent } from '@/lib/sharedIn'
 import { setFeedFilters } from '@/lib/feedFilters'
@@ -76,7 +78,10 @@ export function CaptureBar({
   talkSignal: quickSignal,
   onFinished,
   shared,
+  focusSignal,
 }: {
+  /** Bumped when the bubble is tapped open: the text box takes the focus (keyboard up). */
+  focusSignal?: number
   /** Something shared from another app (lib/sharedIn): filled in and saved as soon as the bar is free. */
   shared?: SharedContent | null
   /** A capture is done - saved (what it became) or cancelled (null): the dock folds into its bubble. */
@@ -102,6 +107,7 @@ export function CaptureBar({
   const [savedMessage, setSavedMessage] = useState<string | null>(null)
   // "Save right away": what it was saved as, to open it.
   const [savedLink, setSavedLink] = useState<string | null>(null)
+  const [savedRef, setSavedRef] = useState<{ itemType: ItemType; id: string } | null>(null)
 
   // "Saved as ..." is news for a moment, not a label: it goes after a few seconds or once something new is typed.
   useEffect(() => {
@@ -131,6 +137,11 @@ export function CaptureBar({
   }, [recorder])
 
   const queryClient = useQueryClient()
+  const { zone } = useAuth()
+  const input = useRef<TextInput>(null)
+  useEffect(() => {
+    if (focusSignal) setTimeout(() => input.current?.focus(), 250)
+  }, [focusSignal])
 
   // Photos/documents go to OpenAI only with the user's OK - asked once, then it's a setting.
   const recordingSettings = useQuery({ queryKey: ['settings', 'recordings'], queryFn: settingsApi.recordings, enabled: !continueFrom })
@@ -188,11 +199,12 @@ export function CaptureBar({
         onFinished?.({ message: t('capture.searchShown'), item: null })
       } else if (result.autoSaved) {
         // Saved already (Settings - Save right away): say what it became, no review.
-        const notice = finish(savedNotice(result, 1))!
+        const notice = finish(savedNotice(result, 1, zone))!
         const item = notice.item
         setSavedMessage(notice.message)
         onFinished?.(notice)
         setSavedLink(item && itemPath(item))
+        setSavedRef(item ? { itemType: item.itemType, id: item.id } : null)
         void queryClient.invalidateQueries()
       } else setCapture(result)
       setText('')
@@ -263,9 +275,24 @@ export function CaptureBar({
   const talkSignal = continueFrom?.talkSignal ?? quickSignal ?? 0
   useEffect(() => {
     if (!talkSignal || recorder.state === 'recording' || busy !== null) return
+    if (!continueFrom && quickSignal) setHeld(true) // started by holding the bubble: letting go sends it
     queueMicrotask(() => startRecording().catch(onMicError))
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the signal changes
   }, [talkSignal])
+
+  // Holding the bubble (spec v2): let go = Save, slide away first = cancel; a blip is dropped.
+  const [held, setHeld] = useState(false)
+  useEffect(
+    () =>
+      onQuickRelease((cancel) => {
+        if (!held) return
+        setHeld(false)
+        if (cancel || (recorder.seconds < 1 && recorder.segments.length === 0)) void recorder.discard()
+        else withConsent(() => void send(true))
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the latest recorder state on each release
+    [held, recorder.seconds, recorder.segments.length],
+  )
 
   // Shared from another app (user's request, 2026-10-12): its words and files go in
   // and it's saved like a tap on Save - the review opens only if something's unclear.
@@ -303,6 +330,7 @@ export function CaptureBar({
           saved = finish(saved)
           setSavedMessage(saved?.message ?? null)
           setSavedLink(saved?.item ? itemPath(saved.item) : null)
+          setSavedRef(saved?.item ? { itemType: saved.item.itemType, id: saved.item.id } : null)
           onFinished?.(saved)
         }}
       />
@@ -340,6 +368,7 @@ export function CaptureBar({
             saved = finish(saved)
             setSavedMessage(saved?.message ?? null)
             setSavedLink(saved?.item ? itemPath(saved.item) : null)
+          setSavedRef(saved?.item ? { itemType: saved.item.itemType, id: saved.item.id } : null)
             // Saved or cancelled: this capture is done (the dock folds away).
             onFinished?.(saved)
           }
@@ -405,6 +434,7 @@ export function CaptureBar({
         </View>
       ) : (
         <TextInput
+          ref={input}
           style={[styles.input, { color: c.text }]}
           placeholder={continueFrom ? t('capture.continuePlaceholder') : t('capture.placeholderMobile')}
           placeholderTextColor={c.muted}
@@ -426,10 +456,22 @@ export function CaptureBar({
         savedMessage && (
           <Text style={{ color: c.muted }}>
             {savedMessage}
-            {savedLink && (
-              <Text style={{ color: c.accent }} onPress={() => router.push(savedLink as never)} accessibilityRole="link">
+            {savedRef && (
+              <Text
+                style={{ color: c.accent }}
+                onPress={() => {
+                  setSavedMessage(null)
+                  void itemsApi.delete([savedRef]).then(() => queryClient.invalidateQueries())
+                }}
+                accessibilityRole="button">
                 {'  '}
-                {t('capture.open')}
+                {t('common.undo')}
+              </Text>
+            )}
+            {savedLink && (
+              <Text style={{ color: c.accent }} onPress={() => router.push({ pathname: savedLink as never, params: { edit: '1' } })} accessibilityRole="link">
+                {'  '}
+                {t('common.edit')}
               </Text>
             )}
           </Text>
@@ -532,18 +574,6 @@ function SendButtons({
   const c = useColors()
   return (
     <>
-      {newEntry && (
-        <Pressable
-          onPress={() => onSend(false)}
-          disabled={disabled}
-          accessibilityRole="button"
-          accessibilityLabel={t('capture.reviewHint')}
-          accessibilityState={{ disabled }}
-          style={({ pressed }) => [styles.review, { borderColor: c.border, backgroundColor: c.surface, opacity: disabled ? 0.5 : pressed ? 0.7 : 1 }]}>
-          <Ionicons name="eye-outline" size={18} color={c.text} />
-          <Text style={{ color: c.text }}>{t('capture.review')}</Text>
-        </Pressable>
-      )}
       <Pressable
         onPress={() => onSend(newEntry)}
         disabled={disabled}

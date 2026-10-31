@@ -48,20 +48,17 @@ public static class ExtractionNormalizer
     private static readonly TimeSpan DefaultAppointmentLength = TimeSpan.FromHours(1);
 
     /// <param name="locale">The user's locale - the server's own questions are written in it.</param>
+    /// <param name="eventReminderMinutes">The reminder a new event gets when none was said (null/0: none) - spec v2.</param>
     public static NormalizedExtraction Normalize(
-        RawExtraction raw, string inputText, DateTime localNow, TimeZoneInfo timeZone, string? locale = null, IReadOnlyList<string>? knownTags = null)
+        RawExtraction raw, string inputText, DateTime localNow, TimeZoneInfo timeZone, string? locale = null, IReadOnlyList<string>? knownTags = null,
+        int? eventReminderMinutes = null)
     {
         var texts = ClarificationTexts.For(locale);
-        // "Find ...": a search, not new items (and no "keep the words as a note" fallback).
-        if (raw.Search is { } search)
-        {
-            return new NormalizedExtraction(
-                Clean(raw.Title, MaxTitleLength) ?? Clean(inputText, 60) ?? texts.DefaultCaptureTitle, null, [],
-                FeedSearch.From(search, knownTags ?? []));
-        }
+        // Capture never searches (spec v2, 2026-10-31): an answer that's only a search is
+        // ignored, and the words are kept as a note below like anything else.
         var items = raw.Items
             .Take(MaxItems)
-            .Select(item => NormalizeItem(item, localNow, timeZone, texts))
+            .Select(item => NormalizeItem(item, localNow, timeZone, texts, eventReminderMinutes))
             .OfType<NormalizedItem>()
             .ToList();
 
@@ -88,7 +85,8 @@ public static class ExtractionNormalizer
         return new NormalizedExtraction(title, Clean(raw.Summary, 2000), items);
     }
 
-    public static NormalizedItem? NormalizeItem(RawExtractedItem raw, DateTime localNow, TimeZoneInfo timeZone, ClarificationTexts? texts = null)
+    public static NormalizedItem? NormalizeItem(RawExtractedItem raw, DateTime localNow, TimeZoneInfo timeZone, ClarificationTexts? texts = null,
+        int? eventReminderMinutes = null)
     {
         var title = Clean(raw.Title, MaxTitleLength);
         if (title is null)
@@ -198,6 +196,11 @@ public static class ExtractionNormalizer
             .Select(r => NormalizeReminder(r, intent, hasTime, localNow, timeZone, questions))
             .OfType<ReminderDto>()
             .ToList();
+        // Every new event gets the user's usual reminder, unless one was said or they asked for none.
+        if (intent == ExtractionIntent.Appointment && reminders.Count == 0 && !raw.NoReminder && eventReminderMinutes is > 0 and <= MaxReminderMinutes)
+        {
+            reminders.Add(new ReminderDto(ReminderKind.Before, MinutesBefore: eventReminderMinutes));
+        }
 
         return new NormalizedItem(
             intent,

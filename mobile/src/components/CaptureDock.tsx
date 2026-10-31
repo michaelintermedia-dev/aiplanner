@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
+import { useQueryClient } from '@tanstack/react-query'
 import { router, useSegments } from 'expo-router'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
@@ -17,7 +18,8 @@ import {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useDockHidden } from '@/lib/dockTarget'
-import { requestQuickRecording, useQuickRecording } from '@/lib/quickRecord'
+import { releaseQuickRecording, requestQuickRecording, useQuickRecording } from '@/lib/quickRecord'
+import { itemsApi } from '@/api/endpoints'
 import { useSharedIn } from '@/lib/sharedIn'
 import * as Haptics from 'expo-haptics'
 import { useReduceMotion } from '@/lib/useReduceMotion'
@@ -50,6 +52,8 @@ import { t } from '@shared/i18n'
  */
 /** Holding the bubble this long starts recording (like Quick recording). */
 const LONG_PRESS_MS = 450
+/** Sliding this far from the bubble before letting go cancels the recording. */
+const SLIDE_TO_CANCEL = 80
 
 export function CaptureDock({ children }: { children: ReactNode }) {
   const c = useColors()
@@ -99,8 +103,10 @@ export function CaptureDock({ children }: { children: ReactNode }) {
     })
   }
 
+  const [focusSignal, setFocusSignal] = useState(0)
   const expand = () => {
     setOpen(true)
+    setFocusSignal((n) => n + 1)
     setPanelShown(true)
     animate(true, () => setMicShown(false))
   }
@@ -131,6 +137,7 @@ export function CaptureDock({ children }: { children: ReactNode }) {
   // A capture is done (saved or cancelled): fold into the bubble once the bar is
   // idle again, and say what it was saved as for a moment (with Open).
   const [notice, setNotice] = useState<SavedNotice | null>(null)
+  const queryClient = useQueryClient()
   const foldWhenIdle = useRef(false)
   const finished = useCallback((saved: SavedNotice | null) => {
     foldWhenIdle.current = true
@@ -223,7 +230,7 @@ export function CaptureDock({ children }: { children: ReactNode }) {
           onLayout={(e) => (panelHeight.current = e.nativeEvent.layout.height)}
           pointerEvents={open ? 'auto' : 'none'}>
           <ScrollView style={{ maxHeight: Math.max(160, (height - bottom - insets.top) * 0.85) }} keyboardShouldPersistTaps="handled">
-            <CaptureBar onEngagedChange={setEngaged} talkSignal={quick} onFinished={finished} shared={shared} />
+            <CaptureBar onEngagedChange={setEngaged} talkSignal={quick} onFinished={finished} shared={shared} focusSignal={focusSignal} />
           </ScrollView>
           {/* The grab handle: drag to move it up or down, swipe down to fold it away. */}
           <View style={styles.handleArea} pointerEvents="none" accessible accessibilityLabel={t('dock.handle')}>
@@ -249,15 +256,27 @@ export function CaptureDock({ children }: { children: ReactNode }) {
             {notice.message}
           </Text>
           {notice.item && (
-            <Pressable
-              onPress={() => {
-                router.push(itemPath(notice.item!) as never)
-                setNotice(null)
-              }}
-              hitSlop={10}
-              accessibilityRole="link">
-              <Text style={{ color: c.accentSoft, fontWeight: '700' }}>{t('capture.open')}</Text>
-            </Pressable>
+            <>
+              <Pressable
+                onPress={() => {
+                  const item = notice.item!
+                  setNotice(null)
+                  void itemsApi.delete([{ itemType: item.itemType, id: item.id }]).then(() => queryClient.invalidateQueries())
+                }}
+                hitSlop={10}
+                accessibilityRole="button">
+                <Text style={{ color: c.accentSoft, fontWeight: '700' }}>{t('common.undo')}</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  router.push({ pathname: itemPath(notice.item!) as never, params: { edit: '1' } })
+                  setNotice(null)
+                }}
+                hitSlop={10}
+                accessibilityRole="link">
+                <Text style={{ color: c.accentSoft, fontWeight: '700' }}>{t('common.edit')}</Text>
+              </Pressable>
+            </>
           )}
         </View>
       )}
@@ -363,7 +382,9 @@ function DraggableMic({
         onPanResponderRelease: (_e, g) => {
           if (held.current) clearTimeout(held.current)
           if (longPressed.current) {
-            position.setValue(at.current) // recording already started; the release does nothing
+            position.setValue(at.current)
+            // Let go = save it; slid away first = cancel (spec v2).
+            releaseQuickRecording(Math.hypot(g.dx, g.dy) > SLIDE_TO_CANCEL)
             return
           }
           if (!moved.current) {

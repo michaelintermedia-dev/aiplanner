@@ -22,3 +22,14 @@ export function useQuickRecording(): number {
     () => requests,
   )
 }
+
+/** Let go after holding the bubble: send the recording (Save) - or drop it when the finger slid away first. */
+type Release = (cancel: boolean) => void
+const releaseListeners = new Set<Release>()
+export function releaseQuickRecording(cancel: boolean) {
+  releaseListeners.forEach((l) => l(cancel))
+}
+export function onQuickRelease(listener: Release): () => void {
+  releaseListeners.add(listener)
+  return () => releaseListeners.delete(listener)
+}

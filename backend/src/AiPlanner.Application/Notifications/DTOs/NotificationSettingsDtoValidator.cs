@@ -7,6 +7,7 @@ public class NotificationSettingsDtoValidator : AbstractValidator<NotificationSe
 {
     public NotificationSettingsDtoValidator()
     {
+        RuleFor(x => x.EventReminderMinutes).InclusiveBetween(0, 1440).When(x => x.EventReminderMinutes is not null);
         RuleFor(x => x.DailySummaryTime).Must(t => ReminderSchedule.ParseTime(t) is not null).WithMessage("DailySummaryTime must be HH:mm.");
     }
 }

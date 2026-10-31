@@ -174,6 +174,7 @@ public class NotificationService : INotificationService
         settings.AppointmentRemindersEnabled = dto.AppointmentReminders;
         settings.DailySummaryEnabled = dto.DailySummary;
         settings.DailySummaryTime = ReminderSchedule.ParseTime(dto.DailySummaryTime)!.Value.ToTimeSpan();
+        if (dto.EventReminderMinutes is { } minutes) settings.EventReminderMinutes = minutes;
         settings.UpdatedAtUtc = _clock.UtcNow;
         await _db.SaveChangesAsync(ct);
         return ToDto(settings);
@@ -266,7 +267,8 @@ public class NotificationService : INotificationService
         s.TaskRemindersEnabled,
         s.AppointmentRemindersEnabled,
         s.DailySummaryEnabled,
-        ReminderSchedule.FormatTime(TimeOnly.FromTimeSpan(s.DailySummaryTime)));
+        ReminderSchedule.FormatTime(TimeOnly.FromTimeSpan(s.DailySummaryTime)),
+        s.EventReminderMinutes);
 
     private Guid RequireUserId() =>
         _currentUser.UserId ?? throw new UnauthorizedAccessException("No authenticated user.");

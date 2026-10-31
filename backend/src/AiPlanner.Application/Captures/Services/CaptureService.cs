@@ -445,7 +445,9 @@ public class CaptureService : ICaptureService
         var links = urls.Count > 0 ? await _linkPreviews.PreviewAsync(urls, ct) : null;
         var raw = await _extraction.ExtractAsync(
             new ExtractionContext(wordsForAi ?? text, localNow, timeZone.Id, user.Locale, previousText, currentItem, oneEntry, knownTags, media, links), ct);
-        var normalized = ExtractionNormalizer.Normalize(raw, text, localNow, timeZone, user.Locale, knownTags);
+        // A new event gets the user's usual reminder; adding to an item keeps the item's own.
+        var eventReminder = currentItem is null ? (await SettingsAsync(userId, ct)).EventReminderMinutes : 0;
+        var normalized = ExtractionNormalizer.Normalize(raw, text, localNow, timeZone, user.Locale, knownTags, eventReminder);
         if (oneEntry) normalized = SingleEntry.Merge(normalized);
         // A tag the user already has is shown and saved with their spelling ("family" -> "Family").
         normalized = normalized with
@@ -1147,10 +1149,14 @@ public class CaptureService : ICaptureService
     /// at once. Anything unclear (an event with no time, an ambiguous date) goes
     /// to the review instead of being guessed; nothing is lost either way.
     /// </summary>
+    /// <summary>Below this the smart Save opens the review instead (spec v2, 2026-10-31).</summary>
+    public const double AutoSaveConfidence = 0.7;
+
     private async Task<CaptureDto> SaveNowAsync(AIExtraction extraction, Transcript? transcript, bool saveNow, CancellationToken ct)
     {
         var pending = extraction.Items.Where(i => i.Status == ExtractionStatus.PendingReview).ToList();
-        if (!saveNow || pending.Count == 0 || pending.Any(i => !string.IsNullOrWhiteSpace(i.Clarification)))
+        // Saved at once only when the AI is sure (spec v2): no question, and confident enough.
+        if (!saveNow || pending.Count == 0 || pending.Any(i => !string.IsNullOrWhiteSpace(i.Clarification) || i.Confidence is < AutoSaveConfidence))
         {
             return ToDto(extraction, transcript);
         }

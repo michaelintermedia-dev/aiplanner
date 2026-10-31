@@ -22,6 +22,7 @@ import { Image } from 'expo-image'
 import { applyAppearance, useAppearance } from '@/lib/appearance'
 import { changeFirstDayOfWeek, useFirstDayOfWeek } from '@/lib/weekStart'
 import { FIRST_DAYS, weekdayName } from '@shared/calendar'
+import { EVENT_REMINDER_CHOICES, eventReminderLabel } from '@shared/reminders'
 import { wallpaperImage, wallpaperPhotoSource } from '@/components/Wallpaper'
 import { pickPhotos } from '@/lib/media'
 import { File } from 'expo-file-system'
@@ -216,6 +217,24 @@ export default function SettingsScreen() {
           onChange={(appointmentReminders) => change({ appointmentReminders })}
           disabled={!settings.enabled}
         />
+        <View style={{ gap: 8, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.border }}>
+          <Text style={{ color: c.text, fontSize: 16 }}>{t('settings.eventDefault')}</Text>
+          <View style={styles.languages} accessibilityRole="radiogroup" accessibilityLabel={t('settings.eventDefault')}>
+            {EVENT_REMINDER_CHOICES.map((m) => {
+              const on = (settings.eventReminderMinutes ?? 15) === m
+              return (
+                <Pressable
+                  key={m}
+                  onPress={() => change({ eventReminderMinutes: m })}
+                  style={[styles.language, { borderColor: on ? c.accent : c.border, backgroundColor: on ? c.accentSoft : c.surface }]}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: on }}>
+                  <Text style={{ color: on ? c.accent : c.text, fontSize: 15 }}>{eventReminderLabel(m)}</Text>
+                </Pressable>
+              )
+            })}
+          </View>
+        </View>
         <Row
           label={t('settings.dailySummary')}
           hint={t('settings.dailySummaryHint')}

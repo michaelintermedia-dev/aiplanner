@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import { appointmentsApi } from '../api/endpoints'
+import { useQuery } from '@tanstack/react-query'
+import { appointmentsApi, settingsApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
 import { addDays, todayKey, zonedToUtc, endsNextDay } from '@shared/dates'
 import type { Recurrence, Reminder } from '@shared/types'
@@ -17,8 +18,10 @@ export function AppointmentForm({ initialDate, onDone }: { initialDate?: string;
   const [start, setStart] = useState('09:00')
   const [end, setEnd] = useState('10:00')
   const [location, setLocation] = useState('')
-  // Events default to a reminder 30 minutes before; change or remove it below.
-  const [reminders, setReminders] = useState<Reminder[]>([{ kind: 'Before', minutesBefore: 30 }])
+  // A new event starts with the user's usual reminder (Settings - "New events remind me"); change or remove it below.
+  const usual = useQuery({ queryKey: ['settings', 'notifications'], queryFn: settingsApi.notifications }).data?.eventReminderMinutes ?? 15
+  const [chosen, setReminders] = useState<Reminder[] | null>(null)
+  const reminders = chosen ?? (usual > 0 ? [{ kind: 'Before' as const, minutesBefore: usual }] : [])
   const [recurrence, setRecurrence] = useState<Recurrence | null>(null)
   const reminderIssue = remindersProblem(reminders, { itemHasTime: true, isNote: false })
 

@@ -95,7 +95,8 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             i.Intent, i.Title, i.Summary, i.Description, i.Date, i.Time, i.EndTime, i.Location,
             i.Priority,
             i.Reminders?.Select(r => new RawReminder(r.Kind, r.MinutesBefore, r.Date, r.Time, r.Days)).ToList(),
-            i.Recurrence, i.Clarification, i.Confidence, i.AddsToCurrent ?? false, i.SourceText, i.Unrelated, i.RecurrenceDays, i.RecurrenceInterval, i.Tags)).ToList();
+            i.Recurrence, i.Clarification, i.Confidence, i.AddsToCurrent ?? false, i.SourceText, i.Unrelated, i.RecurrenceDays, i.RecurrenceInterval, i.Tags,
+            i.NoReminder ?? false)).ToList();
 
         var search = parsed.Search is { } s ? new RawSearch(s.Text, s.Tags, s.Kinds, s.When, s.Status, s.Reminders, s.FromVoice) : null;
         return new RawExtraction(parsed.Title, parsed.Summary, items, content, "OpenAI", completion.Model ?? _options.Model, search);
@@ -110,11 +111,14 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
 
             Current local date and time: {{now}} ({{weekday}}). Time zone: {{c.TimeZoneId}}. Locale: {{c.Locale}}.
 
-            Item types (intent):
-            - "appointment": an event at a specific time, usually with someone or somewhere (meeting, dentist, call scheduled with a person at a time).
-            - "task": something the user has to do, optionally with a deadline ("finish the report by Friday").
-            - "note": information to keep, with nothing to do and no time of its own.
-            There is no separate "reminder" type: a reminder belongs to an item (see "reminders" below). "Remind me to call John at 2pm" is a task due at 14:00 with a reminder of kind "before", minutesBefore 0.
+            Item types (intent) - decide in this order:
+            1. "appointment": something that HAPPENS AT A TIME, usually with someone or somewhere - a meeting, visit, class, flight, a call booked for a time, a show, a party. It needs a date and a start time; with a day but no time, leave "time" null and ask "What time is it?" in "clarification". A duration or an end ("for an hour", "until 5") sets "endTime".
+            2. Otherwise "task": something to DO - an action that can be done and ticked off - with or without a date. Signs: a verb of doing (buy, call, find, fix, send, pay, book, renew, ask, check, pick up, return), "I need to / I have to / I should / don't forget / remind me to". "Find my car keys", "look for the charger", "think about the gift" are tasks. A task never needs a date; a deadline ("by Friday") is its date.
+            3. Otherwise "note": something to KEEP, with nothing to do - a fact, number, code, idea, quote, recipe, list of options, link, receipt ("the wifi password is ...", "Noa likes lilies"). A note has no date or time of its own.
+            A question to yourself ("what should I get Noa?") is a task only if it asks to act ("decide what to get Noa"); otherwise a note with the user's words.
+            There is no separate "reminder" type: a reminder belongs to an item (see "reminders" below). "Remind me to call John at 2pm" is a task due at 14:00 with a reminder of kind "before", minutesBefore 0. "Remind me THAT the shop closes at 6" is a note with a reminder.
+            Never search: words like "find", "show", "where is" describe something TO DO and make a task.
+            An appointment with no reminder mentioned gets "reminders": [] - the app adds the user's usual one; if the user says they want no reminder ("no reminder", "don't remind me"), set "noReminder": true (otherwise false).
 
             Dates and times:
             - Resolve relative expressions against the current local date/time above. Output "date" as yyyy-MM-dd and "time"/"endTime" as 24-hour HH:mm, in the user's local time. Never convert time zones.
@@ -145,34 +149,20 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
               Examples: a photo of a lamp -> "lamp", "home"; a photo of a chair -> "chair", "furniture"; an electricity bill -> "electricity bill", "bills", "home"; "dentist on Friday" -> "dentist", "health"; "buy milk" -> "milk", "shopping".
               New tags: one or two words, lower case (names keep their capitals), in the language of the user's words (with no words, the language of the description). Also every tag the user asks for ("tag it shopping", "put it under work").
             - "clarification": a short question for the user when something important is missing or ambiguous (e.g. an appointment with no time); otherwise null.
-            - "confidence": 0 to 1, how sure you are that the item is right.
+            - "confidence": 0 to 1, how sure you are of the type, the title and the date/time together. Below 0.7 if the type is a guess, the date or time is a guess, or the message is ambiguous; if you ask something in "clarification", keep it below 0.7.
             - "sourceText": the exact words from the input this item came from, copied verbatim (same language, same wording, no paraphrase) - the whole stretch that talks about it. Used to play just that part of a voice recording.
             - Top-level "title": 2-5 words naming the whole capture. Top-level "summary": 1-2 sentences if the input is longer than one sentence, otherwise null. The summary is read by the person who said it: write it as a short note of what's planned ("Batteries tomorrow; dinner with Sara on Friday at 19:00"), never about "the user" and never in the third person.
 
             Only extract what the user actually said. Never invent items, people, places or times.
             - "addsToCurrent": false, unless the "Continuing" section below says otherwise.
             - "unrelated": null, unless the "UPDATING ONE ITEM" section below says otherwise.
-            - Top-level "search": null, unless the "FIND" section below says otherwise.
+            - Top-level "search": always null.
 
             Never return nothing: if the input is a question, an idea, or anything that isn't clearly a task or appointment, return it as a single "note" whose "description" keeps the user's words. The user can change any item's type in the review.
-            """ + OneEntry(c) + Continuing(c) + AttachedFiles(c) + LinksSection(c) + Find(c);
+            """ + OneEntry(c) + Continuing(c) + AttachedFiles(c) + LinksSection(c);
     }
 
-    /// <summary>A new capture can be a search instead ("find the photo of the wifi password").</summary>
-    private static string Find(ExtractionContext c) => c.CurrentItem is not null ? "" : $$"""
-
-
-        FIND. If the user asks to find, show, search for or look up entries they ALREADY have ("find my shopping stuff", "show me everything about the dentist", "where's the photo of the wifi password", "what's overdue", "show my notes"), create nothing: return "items": [] and fill "search":
-        - "text": the one or two most telling words to look for in the entries and in the descriptions of their attached photos and documents ("wifi", "dentist", "IKEA") - in the language the user spoke. Leave out words like find, show, my, all, items, entries, photo, picture, note, task. null when the request is only about tags, type, dates or status.
-        - "tags": tags they name, matched to their existing tags: {{KnownTags(c)}}. [] if none.
-        - "kinds": the types they name - "task", "appointment" (event, meeting), "note"; [] for all.
-        - "when": "today", "week", "overdue" or "nodate" if they name when it's due / happens; otherwise null.
-        - "status": "open" or "done" if they ask for it; otherwise null.
-        - "reminders": "with", "repeating" or "without" if they ask for it; otherwise null.
-        - "fromVoice": true only for things they recorded / said by voice.
-        - Top-level "title": what is looked for ("Find: wifi password").
-        Anything else - something to do, to remember, an event - is a new entry as usual, with "search": null. When in doubt, it's a new entry.
-        """;
+    // (The FIND section is gone: capture never searches - the search box does that. Spec v2, 2026-10-31.)
 
     /// <summary>The user's words, then each attached file: pictures and PDFs as they are, documents as text.</summary>
     private static JsonNode UserContent(ExtractionContext c)
@@ -318,7 +308,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
             ["type"] = "object",
             ["additionalProperties"] = false,
             ["required"] = new JsonArray("intent", "title", "summary", "description", "date", "time", "endTime",
-                "location", "priority", "reminders", "recurrence", "recurrenceDays", "recurrenceInterval", "tags", "clarification", "confidence", "addsToCurrent", "sourceText", "unrelated"),
+                "location", "priority", "reminders", "recurrence", "recurrenceDays", "recurrenceInterval", "tags", "clarification", "confidence", "addsToCurrent", "sourceText", "unrelated", "noReminder"),
             ["properties"] = new JsonObject
             {
                 ["intent"] = new JsonObject { ["type"] = "string", ["enum"] = new JsonArray("task", "appointment", "note") },
@@ -348,6 +338,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
                 ["addsToCurrent"] = new JsonObject { ["type"] = "boolean" },
                 ["sourceText"] = new JsonObject { ["type"] = "string", ["description"] = "Verbatim excerpt of the input this item came from" },
                 ["unrelated"] = Nullable("string", "Updating one item: verbatim words not about it"),
+                ["noReminder"] = new JsonObject { ["type"] = "boolean", ["description"] = "The user asked for no reminder" },
             },
         };
 
@@ -401,7 +392,7 @@ public class OpenAiIntentExtractionService : IIntentExtractionService
         string? Intent, string? Title, string? Summary, string? Description,
         string? Date, string? Time, string? EndTime, string? Location, string? Priority,
         List<ReminderJson>? Reminders, string? Recurrence, string? Clarification, double? Confidence, bool? AddsToCurrent, string? SourceText, string? Unrelated,
-        List<string>? RecurrenceDays, int? RecurrenceInterval, List<string>? Tags);
+        List<string>? RecurrenceDays, int? RecurrenceInterval, List<string>? Tags, bool? NoReminder);
 
     private sealed record ReminderJson(string? Kind, int? MinutesBefore, string? Date, string? Time, List<string>? Days);
 }

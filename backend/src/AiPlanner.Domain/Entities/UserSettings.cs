@@ -12,6 +12,8 @@ public class UserSettings
     public TimeSpan DailySummaryTime { get; set; } = new TimeSpan(8, 0, 0);
     public bool TaskRemindersEnabled { get; set; } = true;
     public bool AppointmentRemindersEnabled { get; set; } = true;
+    /// <summary>Every new event gets a reminder this many minutes before, unless the user says otherwise (0 = off) - spec v2.</summary>
+    public int EventReminderMinutes { get; set; } = 15;
 
     public bool AiProcessingEnabled { get; set; } = true;
     /// <summary>Unused: the capture bar's Save / Review buttons decide (2026-10-08).</summary>

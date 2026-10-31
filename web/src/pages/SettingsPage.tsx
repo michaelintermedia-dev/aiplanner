@@ -1,4 +1,5 @@
 import type { NotificationSettings } from '@shared/types'
+import { EVENT_REMINDER_CHOICES, eventReminderLabel } from '@shared/reminders'
 import { CalendarFeedSetting } from '../components/CalendarFeedSetting'
 import { WebPushToggle } from '../components/WebPushToggle'
 import { TimeZoneSetting } from '../components/TimeZoneSetting'
@@ -234,6 +235,19 @@ export function SettingsPage() {
         <fieldset className="settings-group" disabled={!settings.enabled}>
           <Toggle label={t('settings.taskReminders')} checked={settings.taskReminders} onChange={(taskReminders) => change({ taskReminders })} />
           <Toggle label={t('settings.eventReminders')} checked={settings.appointmentReminders} onChange={(appointmentReminders) => change({ appointmentReminders })} />
+          <div className="settings-row column">
+            <strong>{t('settings.eventDefault')}</strong>
+            <div className="reminder-presets" role="radiogroup" aria-label={t('settings.eventDefault')}>
+              {EVENT_REMINDER_CHOICES.map((m) => {
+                const on = (settings.eventReminderMinutes ?? 15) === m
+                return (
+                  <button key={m} type="button" role="radio" aria-checked={on} className={`chip-button${on ? ' selected' : ''}`} onClick={() => change({ eventReminderMinutes: m })}>
+                    {eventReminderLabel(m)}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
           <Toggle
             label={t('settings.dailySummary')}
             hint={t('settings.dailySummaryHint')}

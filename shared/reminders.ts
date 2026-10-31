@@ -23,6 +23,10 @@ export const REMINDER_KINDS: { kind: ReminderKind; label: string }[] = [
   { kind: 'Weekly', get label() { return t('reminder.kind.weekly') } },
 ]
 
+/** Settings - "New events remind me": the choices (0 = off). Spec v2, 2026-10-31. */
+export const EVENT_REMINDER_CHOICES = [0, 5, 15, 30, 60]
+export const eventReminderLabel = (minutes: number) => (minutes === 0 ? t('settings.off') : minutesBeforeLabel(minutes))
+
 export function minutesBeforeLabel(minutes: number): string {
   if (minutes === 0) return t('reminder.atTheTime')
   if (minutes % 1440 === 0) return t('reminder.daysBefore', { count: minutes / 1440 })

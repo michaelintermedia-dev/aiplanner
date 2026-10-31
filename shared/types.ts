@@ -484,6 +484,8 @@ export interface NotificationSettings {
   dailySummary: boolean
   /** "HH:mm", the user's local time. */
   dailySummaryTime: string
+  /** The reminder every new event gets, minutes before (0 = off). Spec v2. */
+  eventReminderMinutes?: number | null
 }
 
 /** Change an item's type (POST /items/convert). Dates override what's carried over. */

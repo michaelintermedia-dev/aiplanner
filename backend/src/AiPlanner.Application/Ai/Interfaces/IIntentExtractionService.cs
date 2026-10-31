@@ -71,7 +71,8 @@ public record RawExtractedItem(
     string? Unrelated = null, // adding to an item: the words that weren't about it
     IReadOnlyList<string>? RecurrenceDays = null, // weekly: English weekday names
     int? RecurrenceInterval = null, // every N days/weeks/months
-    IReadOnlyList<string>? Tags = null); // tags the user asked for
+    IReadOnlyList<string>? Tags = null, // tags the user asked for
+    bool NoReminder = false); // an appointment the user wants no reminder for (else the default one is added)
 
 /// <summary>
 /// A requested reminder: Kind is at/before/daily/weekdays/weekly. Date/Time are

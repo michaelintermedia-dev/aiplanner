@@ -980,6 +980,9 @@ namespace AiPlanner.Infrastructure.Migrations
                     b.Property<int>("DefaultReminderMinutesBefore")
                         .HasColumnType("integer");
 
+                    b.Property<int>("EventReminderMinutes")
+                        .HasColumnType("integer");
+
                     b.Property<string>("FirstDayOfWeek")
                         .IsRequired()
                         .HasMaxLength(10)

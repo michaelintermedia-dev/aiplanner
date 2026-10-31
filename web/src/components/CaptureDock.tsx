@@ -1,9 +1,12 @@
 import { t } from '@shared/i18n'
+import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react'
 import { IoClose, IoMic, IoPencil } from 'react-icons/io5'
 import { Link, useLocation, useSearchParams } from 'react-router'
 import type { SavedNotice } from '@shared/captureDraft'
 import { itemPath } from '../lib/itemPath'
+import { releaseQuickRecording } from '../lib/quickRelease'
+import { itemsApi } from '../api/endpoints'
 import { useIsPhone } from '../lib/useIsPhone'
 import { CaptureBar } from './CaptureBar'
 
@@ -32,6 +35,7 @@ const isItemPage = (path: string) => /^\/(tasks|appointments|notes)\/[^/]+/.test
  */
 export function CaptureDock() {
   const [, setParams] = useSearchParams()
+  const queryClient = useQueryClient()
   const isPhone = useIsPhone()
   const { pathname } = useLocation()
   // Starts folded into the bubble (user's call, 2026-10-08); a tap or Quick recording opens it.
@@ -162,9 +166,21 @@ export function CaptureDock() {
         <div className="dock-notice" style={{ bottom }} role="status">
           <span>{notice.message}</span>
           {notice.item && (
-            <Link to={itemPath(notice.item)} onClick={() => setNotice(null)}>
-              {t('capture.open')}
-            </Link>
+            <>
+              <button
+                type="button"
+                className="link"
+                onClick={() => {
+                  const item = notice.item!
+                  setNotice(null)
+                  void itemsApi.delete([{ itemType: item.itemType, id: item.id }]).then(() => queryClient.invalidateQueries())
+                }}>
+                {t('common.undo')}
+              </button>
+              <Link to={`${itemPath(notice.item)}?edit=1`} onClick={() => setNotice(null)}>
+                {t('common.edit')}
+              </Link>
+            </>
           )}
         </div>
       )}
@@ -196,7 +212,12 @@ export function CaptureDock() {
             // not kept
           }
         }}
-        onOpen={() => setOpen(true)}
+        onOpen={() => {
+          setOpen(true)
+          // A tap: ready to type at once (the mic is next to it).
+          window.setTimeout(() => panel.current?.querySelector('textarea')?.focus(), 250)
+        }}
+        onLongRelease={releaseQuickRecording}
         onLongPress={() =>
           // Like the home-screen icon's Quick recording (?record=1): the bar opens and the mic starts.
           setParams(
@@ -232,6 +253,8 @@ function clampToScreen({ x, y }: { x: number; y: number }) {
 /** The collapsed toolbar: a mic you can drag anywhere; it snaps to the nearest side. A tap opens the toolbar. */
 /** Holding the bubble this long starts recording (like Quick recording). */
 const LONG_PRESS_MS = 450
+/** Sliding this far from the bubble before letting go cancels the recording. */
+const SLIDE_TO_CANCEL = 80
 
 function Bubble({
   at,
@@ -239,6 +262,7 @@ function Bubble({
   onMove,
   onOpen,
   onLongPress,
+  onLongRelease,
 }: {
   at: { x: number; y: number }
   shown: boolean
@@ -246,13 +270,15 @@ function Bubble({
   onOpen: () => void
   /** Held without moving: start recording at once (user's request - like the widget). */
   onLongPress: () => void
+  /** Let go after holding: send it - or cancel, when the finger slid away first (spec v2). */
+  onLongRelease: (cancel: boolean) => void
 }) {
-  const drag = useRef<{ startX: number; startY: number; moved: boolean; long: boolean; timer: number } | null>(null)
+  const drag = useRef<{ startX: number; startY: number; lastX: number; lastY: number; moved: boolean; long: boolean; timer: number } | null>(null)
   const [live, setLive] = useState<{ x: number; y: number } | null>(null)
 
   const down = (e: PointerEvent<HTMLButtonElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId)
-    const d = { startX: e.clientX, startY: e.clientY, moved: false, long: false, timer: 0 }
+    const d = { startX: e.clientX, startY: e.clientY, lastX: e.clientX, lastY: e.clientY, moved: false, long: false, timer: 0 }
     d.timer = window.setTimeout(() => {
       if (d.moved) return
       d.long = true
@@ -263,6 +289,10 @@ function Bubble({
   }
   const move = (e: PointerEvent<HTMLButtonElement>) => {
     const d = drag.current
+    if (d) {
+      d.lastX = e.clientX
+      d.lastY = e.clientY
+    }
     if (!d || d.long) return
     const dx = e.clientX - d.startX
     const dy = e.clientY - d.startY
@@ -278,7 +308,8 @@ function Bubble({
     if (!d) return
     clearTimeout(d.timer)
     if (d.long) {
-      setLive(null) // recording already started; the release does nothing
+      setLive(null)
+      onLongRelease(Math.hypot(d.lastX - d.startX, d.lastY - d.startY) > SLIDE_TO_CANCEL)
       return
     }
     if (!d.moved || !live) {

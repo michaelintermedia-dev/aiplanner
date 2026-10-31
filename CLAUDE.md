@@ -510,7 +510,10 @@ Local dev notes:
   for the session; not while the keyboard is up), a quick swipe down (or a drag below its
   place) folds it into the bubble from wherever it is (not while engaged). A long press (450 ms, no move) on the
   bubble starts recording at once, like the widget (user's request, 2026-10-09;
-  mobile `requestQuickRecording`, web `?record=1`). Collapsing shrinks the toolbar into the button and opening grows it back out of it (Animated, native driver; the button's drag and its pop are two layers, since one view can't mix JS- and native-driven transforms; Reduce motion skips it). It sits above the tab bar on tab
+  mobile `requestQuickRecording`, web `?record=1`); since spec v2 (2026-10-31) letting go
+  sends it (Save) and sliding > 80 px away first cancels it (`releaseQuickRecording` /
+  `onQuickRelease`: mobile lib/quickRecord, web lib/quickRelease; under 1 s = dropped). A tap
+  opens it with the text box focused. Collapsing shrinks the toolbar into the button and opening grows it back out of it (Animated, native driver; the button's drag and its pop are two layers, since one view can't mix JS- and native-driven transforms; Reduce motion skips it). It sits above the tab bar on tab
   screens and lifts above the keyboard (edge-to-edge Android doesn't resize). It never collapses while recording/processing/reviewing
   (`CaptureBar onEngagedChange`), and typed text survives collapsing.
   When a capture is done (saved, saved right away, or the review cancelled) it
@@ -633,14 +636,13 @@ Local dev notes:
     its details in the user's words, their "before" reminders become fixed
     times, the whole recording is its clip. Not applied when adding to an
     item (that is one item anyway). Off = the old splitting.
-  - **Save / Review buttons** (user's call, 2026-10-08 - replaced the "Save
-    right away" setting): a new entry has a smart **Save** (✓, also Enter) and
-    **Review**. Save sends `saveNow` (`/captures/text` body, voice form field);
+  - **One Save button** (spec v2, 2026-10-31 - the Review button is gone;
+    before that Save + Review, 2026-10-08): a new entry has a smart **Save** (✓, also Enter). Save sends `saveNow` (`/captures/text` body, voice form field);
     `CaptureService.SaveNowAsync` saves at once only when everything is clear -
-    no clarification and it validates (checked up front: a failed confirm
+    no clarification, every item's confidence >= 0.7 (`AutoSaveConfidence`) and it validates (checked up front: a failed confirm
     leaves tracked changes) - else the review opens; nothing is guessed or
-    lost. `CaptureDto.AutoSaved` -> "Saved as Task: “...” Open", the dock
-    folds. Adding to an item keeps one send arrow (the form reviews it).
+    lost. `CaptureDto.AutoSaved` -> "Saved: “title” · Tue 16:00  Undo  Edit" (`savedNotice`
+    with the zone; Undo deletes it, Edit opens `?edit=1`), the dock folds. Adding to an item keeps one send arrow (the form reviews it).
     `UserSettings.ReviewBeforeSave` is unused now.
   - **Keep the recording**: a checkbox on the review of a voice capture
     (default `UserSettings.KeepRecordings`, on); unticked -> `confirm` with
@@ -717,7 +719,14 @@ Local dev notes:
   `Attachment.SearchText` = file name + description as lower-case letters and
   digits only (`Attachment.SearchKey`), so "wifi" finds "Wi-Fi". Shown under
   file rows and as the picture viewer's caption.
-- **"Find ..." by voice or text** (user's request, 2026-10-09, web + mobile):
+- **Capture never searches** (spec v2, 2026-10-31): the FIND section is gone from the
+  prompt, `search` is always null and ignored - "Find my car keys" is a task. The AI's types
+  decide appointment (a time) > task (anything to do) > note (to keep). New events get a
+  "before" reminder of `UserSettings.EventReminderMinutes` (default 15, 0 = off; Settings -
+  Notifications "New events remind me", `EVENT_REMINDER_CHOICES`) - the normalizer adds it
+  unless the AI set `noReminder` (EventDefaultReminderTests); the web event form starts with
+  it too. Spec v2 itself: docs/product-spec-v2.md (steps 3-8 still to do). Below, the old text:
+- **"Find ..." by voice or text** (user's request, 2026-10-09, web + mobile; REMOVED from capture 2026-10-31):
   the same capture call can answer with a search instead of items (prompt
   FIND section, top-level `search` in the schema; only for new captures).
   `FeedSearch.From` (pure, tested) validates it into the feed filter's own

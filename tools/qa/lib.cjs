@@ -4,9 +4,10 @@
 const fs = require('fs')
 const path = require('path')
 
-const API = 'http://localhost:58600/api'
+// QA_API / QA_PASSWORD: the same runs against staging (its QA account has its own password, tools/qa/.local).
+const API = process.env.QA_API ?? 'http://localhost:58600/api'
 const WEB = 'http://localhost:5173'
-const ACCOUNT = { email: 'feedtest@test.local', password: 'Feed!Test123' }
+const ACCOUNT = { email: 'feedtest@test.local', password: process.env.QA_PASSWORD ?? 'Feed!Test123' }
 const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe'
 const OUT = path.join(__dirname, 'out')
 

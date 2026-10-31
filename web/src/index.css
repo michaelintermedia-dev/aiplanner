@@ -3778,3 +3778,45 @@ html[data-wallpaper] .page-header > div:first-child {
   background: none;
   color: var(--text);
 }
+
+/* Calendar: a swipe (or ← →) slides the next / previous period in (useSwipeNav). */
+.calendar.slide-from-next {
+  animation: cal-from-next 0.2s ease-out;
+}
+
+.calendar.slide-from-prev {
+  animation: cal-from-prev 0.2s ease-out;
+}
+
+@keyframes cal-from-next {
+  from {
+    transform: translateX(40px);
+    opacity: 0.3;
+  }
+}
+
+@keyframes cal-from-prev {
+  from {
+    transform: translateX(-40px);
+    opacity: 0.3;
+  }
+}
+
+html[dir='rtl'] .calendar.slide-from-next {
+  animation-name: cal-from-prev;
+}
+
+html[dir='rtl'] .calendar.slide-from-prev {
+  animation-name: cal-from-next;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .calendar.slide-from-next,
+  .calendar.slide-from-prev {
+    animation: none;
+  }
+}
+
+.calendar {
+  touch-action: pan-y;
+}

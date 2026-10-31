@@ -12,6 +12,7 @@ import { eventPassed } from '@shared/feed'
 import { dateKey, formatDateKey, formatTime, todayKey } from '@shared/dates'
 import { t } from '@shared/i18n'
 import { useFirstDayOfWeek } from '../lib/weekStart'
+import { useSwipeNav } from '../lib/useSwipeNav'
 
 export function CalendarPage() {
   // Weeks are laid out from the chosen first day: re-render when it changes.
@@ -38,6 +39,9 @@ export function CalendarPage() {
   }, [data, zone.timeZone])
 
   const title = periodTitle(view, anchor, zone.locale)
+  const move = (direction: 1 | -1) => setAnchor((a) => stepPeriod(view, a, direction))
+  // Swipe sideways on the calendar (or ← →) = the arrows.
+  const swipe = useSwipeNav(move)
 
   return (
     <div className="page wide">
@@ -51,11 +55,11 @@ export function CalendarPage() {
               </button>
             ))}
           </div>
-          <button onClick={() => setAnchor(stepPeriod(view, anchor, -1))} aria-label={t('calendar.previous')}>
+          <button onClick={() => move(-1)} aria-label={t('calendar.previous')}>
             <span className="flip-rtl">‹</span>
           </button>
           <button onClick={() => setAnchor(today)}>{t('date.today')}</button>
-          <button onClick={() => setAnchor(stepPeriod(view, anchor, 1))} aria-label={t('calendar.next')}>
+          <button onClick={() => move(1)} aria-label={t('calendar.next')}>
             <span className="flip-rtl">›</span>
           </button>
         </div>
@@ -64,7 +68,7 @@ export function CalendarPage() {
       {addingOn && <AppointmentForm initialDate={addingOn} onDone={() => setAddingOn(null)} />}
       {error && <p className="error">{error.message}</p>}
 
-      <div className={`calendar ${view}`}>
+      <div key={swipe.slide.n} className={`calendar ${view}${swipe.slide.n ? ` slide-from-${swipe.slide.from}` : ''}`} {...swipe.handlers}>
         {days.map((day) => (
           <div
             key={day}

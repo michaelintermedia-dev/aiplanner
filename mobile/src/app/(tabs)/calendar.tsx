@@ -7,6 +7,8 @@ import { useQuery } from '@tanstack/react-query'
 import { router } from 'expo-router'
 import { useMemo, useState } from 'react'
 import { Pressable, StyleSheet, Text, View, I18nManager } from 'react-native'
+import { GestureDetector } from 'react-native-gesture-handler'
+import Animated from 'react-native-reanimated'
 import { calendarApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
 import { KIND_ICON } from '@/components/kindIcons'
@@ -15,6 +17,7 @@ import { Row } from '@/components/ui'
 import { useColors, type Colors } from '@/theme'
 import { t } from '@shared/i18n'
 import { useFirstDayOfWeek } from '@/lib/weekStart'
+import { useSwipeNav } from '@/lib/useSwipeNav'
 
 const isClosed = (item: CalendarItem) => item.status === 'Completed' || item.status === 'Cancelled'
 /** Ended events look like completed items. */
@@ -61,6 +64,8 @@ export default function CalendarScreen() {
       view === 'month' ? next.slice(0, 7) === today.slice(0, 7) : view === 'week' && visibleDays('week', next).includes(today)
     setSelected(backToNow ? today : next)
   }
+  // Swipe sideways (the grid or the day's list) = the arrows.
+  const swipe = useSwipeNav(move, 2)
 
   return (
     <Screen>
@@ -99,7 +104,8 @@ export default function CalendarScreen() {
       {error && <Text style={{ color: c.danger }}>{error.message}</Text>}
 
       {view !== 'day' && (
-        <View>
+        <GestureDetector gesture={swipe.gestures[0]}>
+        <Animated.View style={swipe.style}>
           <View style={styles.week}>
             {days.slice(0, 7).map((d) => (
               <Text key={d} style={[styles.weekday, { color: c.muted }]}>
@@ -122,11 +128,13 @@ export default function CalendarScreen() {
               />
             ))}
           </View>
-        </View>
+        </Animated.View>
+        </GestureDetector>
       )}
       </View>
 
-      <View style={{ gap: 6 }}>
+      <GestureDetector gesture={swipe.gestures[1]}>
+      <Animated.View style={[{ gap: 6, minHeight: 240 }, swipe.style]}>
         <Text style={[styles.dayTitle, { color: selected === today ? c.accent : c.muted }, c.pillStart]}>
           {formatDateKey(selected, zone.locale, { weekday: 'long', day: 'numeric', month: 'long' })}
           {selected === today ? ` · ${t('date.today')}` : ''}
@@ -164,7 +172,8 @@ export default function CalendarScreen() {
         ) : (
           <Text style={[{ color: c.muted, fontSize: 14 }, c.pillStart]}>{t('calendar.nothingPlanned')}</Text>
         )}
-      </View>
+      </Animated.View>
+      </GestureDetector>
 
       {data && data.ongoingTasks.length > 0 && (
         <View style={{ gap: 6 }}>

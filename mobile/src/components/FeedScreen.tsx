@@ -1,56 +1,60 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { feedGroupLabel, feedItemKey, groupFeed } from '@shared/feed'
-import { activeSorts } from '@shared/sortCriteria'
-import { activeFilterCount, feedFilterParams } from '@shared/feedFilter'
-import { feedSorts } from '@shared/feedViews'
+import { feedFilterParams, isFiltering, kindsOf } from '@shared/feedFilter'
+import { feedSorts } from '@shared/feedOrder'
 import { searchWords } from '@shared/highlight'
-import type { FeedItem, FeedKind } from '@shared/types'
+import { t } from '@shared/i18n'
+import type { FeedItem } from '@shared/types'
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
-import { router, useFocusEffect } from 'expo-router'
+import { useFocusEffect } from 'expo-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ActivityIndicator, BackHandler, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, BackHandler, FlatList, I18nManager, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
 import { feedApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
-import { useColors } from '@/theme'
 import { useFeedFilters } from '@/lib/feedFilters'
+import { useFeedOrder } from '@/lib/feedOrder'
 import { useDebounced } from '@/lib/useDebounced'
 import { useItemDeletion } from '@/lib/useItemDeletion'
-import { useSortChips } from '@/lib/sortChips'
+import { useColors } from '@/theme'
 import { DOCK_SPACE } from './CaptureDock'
 import { EmailConfirmBanner } from './EmailConfirmBanner'
-import { FeedFilterBar } from './FeedFilterBar'
+import { FeedChipBar } from './FeedChipBar'
 import { FeedRow } from './FeedRow'
-import { SortChips } from './SortChips'
 import { Button } from './ui'
 import { UndoToast } from './UndoToast'
-import { t } from '@shared/i18n'
 
-type ListEntry = { type: 'header'; key: string; label: string } | { type: 'item'; key: string; item: FeedItem }
+type ListEntry =
+  | { type: 'header'; key: string; label: string; done?: { count: number } }
+  | { type: 'item'; key: string; item: FeedItem }
+
+const EMPTY_KEYS = { all: 'feed.empty.all', tasks: 'feed.empty.tasks', events: 'feed.empty.events', notes: 'feed.empty.notes' } as const
 
 /**
- * The unified feed (tasks, events, notes), newest first by default. Each
- * bottom tab renders this with a different `kinds` filter. Virtualized and
- * paged: the next page loads as you approach the end.
+ * The feed (spec v2, same as the web): tasks, events and notes in one list,
+ * Smart order by default - Overdue, Today, Upcoming, No date, Notes, then Done
+ * folded away - or the order picked in ⚙. The chip row narrows it.
+ * Virtualized and paged: the next page loads as you approach the end.
  *
- * Long-press a row (or "Select") to pick several and delete them at once;
+ * Long-press a row (or "Select" in ⚙) to pick several and delete them at once;
  * an Undo toast follows (same as the web).
  */
-export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText: string }) {
+export function FeedScreen() {
   const c = useColors()
   const { zone } = useAuth()
   const queryClient = useQueryClient()
-  // Sort criteria as coloured chips, shared by all tabs.
-  const [sortChips, setSortChips] = useSortChips()
   const [refreshing, setRefreshing] = useState(false)
-  // One set of filters for every tab (switching tabs keeps them).
+  // One set of filters (kept while moving around the app); the order is kept on the phone.
   const [filters, setFilters] = useFeedFilters()
+  const [order, setOrder] = useFeedOrder()
   // Search as you type, but only ask the server once typing pauses.
   const text = useDebounced(filters.text)
-  // Searching = best match first; a quick view brings its own order; else the chips.
-  const sort = useMemo(() => feedSorts({ ...filters, text }, activeSorts(sortChips)), [filters, text, sortChips])
+  const sort = useMemo(() => feedSorts(!!text.trim(), order), [text, order])
+  const smart = sort[0] === 'Smart'
+  const kinds = useMemo(() => kindsOf(filters.show), [filters.show])
   const filterParams = feedFilterParams({ ...filters, text }, zone.timeZone)
   const words = useMemo(() => searchWords(text), [text])
-  const filtering = activeFilterCount(filters) > 0 || filters.view !== null
+  // Done stays folded until asked for.
+  const [showDone, setShowDone] = useState(false)
   // null = not selecting; otherwise the picked rows by feedItemKey.
   const [selected, setSelected] = useState<Map<string, FeedItem> | null>(null)
   const deletion = useItemDeletion()
@@ -74,16 +78,28 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
     getNextPageParam: (last) => last.nextCursor,
   })
 
-  // Flatten pages into rows with day headers in between.
-  const entries = useMemo<ListEntry[]>(() => {
-    const items = feed.data?.pages.flatMap((p) => p.items) ?? []
-    return groupFeed(items, sort, zone.timeZone).flatMap((g) => [
-      { type: 'header' as const, key: `h-${g.key}`, label: feedGroupLabel(g.key, zone) },
-      ...g.items.map((item) => ({ type: 'item' as const, key: `${item.kind}-${item.id}`, item })),
-    ])
-  }, [feed.data, sort, zone])
-
   const items = useMemo(() => feed.data?.pages.flatMap((p) => p.items) ?? [], [feed.data])
+  const counts = feed.data?.pages[0]?.sections ?? null
+  // Folded Done: no need to load its pages.
+  const doneFolded = smart && !showDone && items[items.length - 1]?.section === 'Done'
+
+  // Flatten pages into rows with section/day headers in between (folded Done: its header only).
+  const entries = useMemo<ListEntry[]>(
+    () =>
+      groupFeed(items, sort, zone.timeZone).flatMap((g) => {
+        const isDone = g.key === 's:Done'
+        const header: ListEntry = {
+          type: 'header',
+          key: `h-${g.key}`,
+          label: feedGroupLabel(g.key, zone),
+          ...(isDone ? { done: { count: counts?.Done ?? g.items.length } } : {}),
+        }
+        if (isDone && !showDone) return [header]
+        return [header, ...g.items.map((item) => ({ type: 'item' as const, key: `${item.kind}-${item.id}`, item }))]
+      }),
+    [items, sort, zone, counts, showDone],
+  )
+
   const toggle = (item: FeedItem) =>
     setSelected((s) => {
       const next = new Map(s)
@@ -100,9 +116,11 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
     setRefreshing(false)
   }
 
+  const headerStyle = [styles.header, { color: c.muted }, c.pill && { ...c.pill, alignSelf: 'flex-start' as const }]
+
   return (
     <View style={{ flex: 1, backgroundColor: c.page }}>
-      {/* Floats over the top of the list (the filters keep their place, dimmed), so nothing shifts when selecting starts. */}
+      {/* Floats over the top of the list (the chips keep their place, dimmed), so nothing shifts when selecting starts. */}
       {selected && (
         <View style={[styles.selectionBar, { backgroundColor: c.surface, borderColor: c.accent }]} accessibilityLabel={t('select.bar')}>
           <Pressable onPress={() => setSelected(null)} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('select.stop')}>
@@ -133,7 +151,25 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
         keyboardShouldPersistTaps="handled"
         renderItem={({ item: entry }) =>
           entry.type === 'header' ? (
-            <Text style={[styles.header, { color: c.muted }, c.pill && { ...c.pill, alignSelf: 'flex-start' }]}>{entry.label.toUpperCase()}</Text>
+            entry.done ? (
+              <Pressable
+                onPress={() => setShowDone((s) => !s)}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: showDone }}
+                accessibilityLabel={`${entry.label} (${entry.done.count}). ${showDone ? t('feed.hideDone') : t('feed.showDone')}`}
+                style={[styles.doneHeader, c.pill && { ...c.pill, alignSelf: 'flex-start' }]}>
+                <Ionicons
+                  name={showDone ? 'chevron-down' : I18nManager.isRTL ? 'chevron-back' : 'chevron-forward'}
+                  size={14}
+                  color={c.muted}
+                />
+                <Text style={[styles.header, styles.headerInline, { color: c.muted }]}>
+                  {entry.label.toUpperCase()} ({entry.done.count})
+                </Text>
+              </Pressable>
+            ) : (
+              <Text style={headerStyle}>{entry.label.toUpperCase()}</Text>
+            )
           ) : (
             <FeedRow
               item={entry.item}
@@ -146,43 +182,32 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
         ListHeaderComponent={
           <View style={styles.top}>
             <EmailConfirmBanner />
-            <View style={[styles.controls, selected && styles.dimmed]} pointerEvents={selected ? 'none' : 'auto'}>
-              <FeedFilterBar
+            <View style={selected && styles.dimmed} pointerEvents={selected ? 'none' : 'auto'}>
+              <FeedChipBar
                 filters={filters}
                 onChange={setFilters}
-                onView={(view, next) => {
-                  setFilters(next)
-                  if (next.view && view.show) router.navigate(`/${view.show}` as never)
-                }}
-                selectChip={
-                  <Pressable
-                    onPress={() => setSelected(new Map())}
-                    disabled={items.length === 0}
-                    style={[styles.sort, styles.select, { borderColor: c.border, backgroundColor: c.surface }]}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('select.start')}>
-                    <Ionicons name="checkmark-circle-outline" size={16} color={c.text} />
-                    <Text style={{ color: c.text }}>{t('select.start')}</Text>
-                  </Pressable>
-                }
+                order={order}
+                onOrder={setOrder}
+                onSelect={() => setSelected(new Map())}
+                canSelect={items.length > 0}
               />
-              {/* A quick view or a search orders the list itself. */}
-              {!filters.sort && !text.trim() && <SortChips chips={sortChips} onChange={setSortChips} />}
             </View>
             {deletion.error && <Text style={[{ color: c.danger }, c.pillStart]}>{deletion.error.message}</Text>}
             {feed.isPending && <Text style={[{ color: c.muted }, c.pillStart]}>{t('common.loading')}</Text>}
             {feed.error && <Text style={[{ color: c.danger }, c.pillStart]}>{feed.error.message}</Text>}
-            {feed.data && entries.length === 0 && <Text style={[{ color: c.muted }, c.pillStart]}>{filtering ? t('feed.noMatches') : emptyText}</Text>}
+            {feed.data && entries.length === 0 && (
+              <Text style={[{ color: c.muted }, c.pillStart]}>{isFiltering(filters) ? t('feed.noMatches') : t(EMPTY_KEYS[filters.show])}</Text>
+            )}
           </View>
         }
         ListFooterComponent={
           feed.isFetchingNextPage ? (
             <ActivityIndicator color={c.muted} style={{ margin: 16 }} />
-          ) : feed.data && !feed.hasNextPage && entries.length > 0 ? (
+          ) : feed.data && !feed.hasNextPage && entries.length > 0 && !doneFolded ? (
             <Text style={[styles.end, { color: c.muted }, c.pill && { ...c.pill, alignSelf: 'center' }]}>{t('feed.end')}</Text>
           ) : null
         }
-        onEndReached={() => feed.hasNextPage && !feed.isFetchingNextPage && void feed.fetchNextPage()}
+        onEndReached={() => feed.hasNextPage && !feed.isFetchingNextPage && !doneFolded && void feed.fetchNextPage()}
         onEndReachedThreshold={0.6}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.muted} />}
       />
@@ -194,10 +219,10 @@ export function FeedScreen({ kinds, emptyText }: { kinds: FeedKind[]; emptyText:
 const styles = StyleSheet.create({
   content: { padding: 16, gap: 8, paddingBottom: DOCK_SPACE },
   top: { gap: 12, marginBottom: 4 },
-  sort: { alignSelf: 'flex-end', borderWidth: 1, borderRadius: 999, paddingHorizontal: 14, minHeight: 36, justifyContent: 'center' },
   header: { fontSize: 12, fontWeight: '600', letterSpacing: 0.8, marginTop: 10, marginBottom: 2 },
+  headerInline: { marginTop: 0, marginBottom: 0 },
+  doneHeader: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 10, marginBottom: 2, minHeight: 32 },
   end: { textAlign: 'center', fontSize: 13, margin: 16 },
-  select: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   selectionBar: {
     position: 'absolute',
     top: 0,
@@ -216,5 +241,4 @@ const styles = StyleSheet.create({
     minHeight: 50,
   },
   dimmed: { opacity: 0.35 },
-  controls: { gap: 12 },
 })

@@ -1,23 +1,8 @@
 import { addDays, dateKey, formatDateKey, formatDue, formatTime, todayKey, type ZoneContext } from './dates'
 import { t } from './i18n'
-import type { FeedItem, FeedKind, FeedSort } from './types'
+import type { FeedItem, FeedKind, FeedSection, FeedSort } from './types'
 
 // Labels are getters, so they always read in the current language.
-
-/** Filters offered by both apps, in display order. */
-export const FEED_FILTERS: { label: string; kinds: FeedKind[] }[] = [
-  { get label() { return t('feed.tab.all') }, kinds: [] },
-  { get label() { return t('feed.tab.tasks') }, kinds: ['Task'] },
-  { get label() { return t('feed.tab.events') }, kinds: ['Appointment'] },
-  { get label() { return t('feed.tab.notes') }, kinds: ['Note'] },
-]
-
-export const FEED_SORTS: { label: string; sort: FeedSort }[] = [
-  { get label() { return t('feed.sort.newest') }, sort: 'CreatedDesc' },
-  { get label() { return t('feed.sort.oldest') }, sort: 'CreatedAsc' },
-  { get label() { return t('feed.sort.updated') }, sort: 'UpdatedDesc' },
-  { get label() { return t('feed.sort.date') }, sort: 'DateAsc' },
-]
 
 /** The types an item can be changed to, in display order (same labels as KIND_LABEL). */
 export const ITEM_TYPES: FeedKind[] = ['Task', 'Appointment', 'Note']
@@ -45,6 +30,8 @@ export function feedGroupKey(item: FeedItem, sorts: FeedSort | FeedSort[], timeZ
   const list = Array.isArray(sorts) ? sorts : [sorts]
   // Searching: one list, best match first - no day headers.
   if (list[0] === 'Relevance') return 'results'
+  // Smart: the item's section.
+  if (list[0] === 'Smart') return `s:${item.section ?? 'NoDate'}`
   if (list[0] === 'PriorityHigh' && item.priority === 'High') return 'high'
   const instant = groupInstant(item, list.find((s) => s !== 'PriorityHigh' && s !== 'Relevance') ?? 'CreatedDesc')
   return instant ? dateKey(instant, timeZone) : 'none'
@@ -52,6 +39,7 @@ export function feedGroupKey(item: FeedItem, sorts: FeedSort | FeedSort[], timeZ
 
 /** "Today", "Yesterday", "Tomorrow", "Mon, Sep 28" (+ year if not this year), or "No date". */
 export function feedGroupLabel(key: string, zone: ZoneContext): string {
+  if (key.startsWith('s:')) return sectionLabel(key.slice(2) as FeedSection)
   if (key === 'none') return t('date.none')
   if (key === 'high') return t('feed.group.high')
   if (key === 'results') return t('feed.group.results')
@@ -129,4 +117,45 @@ export const noteName = (note: { title: string | null; content: string }) => {
   if (note.title) return note.title
   const flat = note.content.replace(/\s+/g, ' ').trim()
   return flat.length <= 80 ? flat : `${flat.slice(0, 79).trimEnd()}…`
+}
+
+/** The Smart order's section headers. */
+export function sectionLabel(section: FeedSection): string {
+  switch (section) {
+    case 'Overdue': return t('filter.when.overdue')
+    case 'Today': return t('date.today')
+    case 'Upcoming': return t('filter.when.upcoming')
+    case 'Notes': return t('feed.tab.notes')
+    case 'Done': return t('filter.status.done')
+    default: return t('date.none')
+  }
+}
+
+/** An event's time badge on its row ("16:00"). */
+export const eventTime = (item: FeedItem, zone: ZoneContext): string | null =>
+  item.kind === 'Appointment' && item.dateUtc ? formatTime(item.dateUtc, zone) : null
+
+export type RowIndicator =
+  | { type: 'reminder'; label: string; today: boolean; repeats: boolean }
+  | { type: 'date'; label: string }
+  | { type: 'repeat' }
+  | { type: 'text'; label: string }
+
+/**
+ * The ONE thing a feed row shows after its title (spec v2), the first that
+ * applies: the next reminder (time only when it's today) -> the date when it
+ * isn't today (an event's time is on its badge; a task due today at a time
+ * shows that time) -> the repeat icon -> a note's first line.
+ */
+export function rowIndicator(item: FeedItem, zone: ZoneContext): RowIndicator | null {
+  const reminder = feedReminder(item, zone)
+  if (reminder) return { type: 'reminder', ...reminder, label: reminder.today ? formatTime(item.nextReminderUtc!, zone) : reminder.label }
+  if (item.dateUtc) {
+    const today = dateKey(item.dateUtc, zone.timeZone) === todayKey(zone.timeZone)
+    if (!today) return { type: 'date', label: formatDue(item.dateUtc, item.kind === 'Task' && item.hasTime, zone) }
+    if (item.kind === 'Task' && item.hasTime) return { type: 'date', label: formatTime(item.dateUtc, zone) }
+  }
+  if (item.repeats) return { type: 'repeat' }
+  if (item.kind === 'Note' && item.snippet) return { type: 'text', label: item.snippet.split(/\r?\n/)[0] }
+  return null
 }

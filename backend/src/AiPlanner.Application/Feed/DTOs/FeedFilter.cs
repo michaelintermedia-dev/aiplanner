@@ -18,6 +18,8 @@ namespace AiPlanner.Application.Feed.DTOs;
 /// <param name="HasFile">Has a document attached.</param>
 /// <param name="HasLink">Has a web link in its title or text.</param>
 /// <param name="HasPlace">Has a place.</param>
+/// <param name="HasMedia">Has a photo or a document (the "With media" chip).</param>
+/// <param name="WithOverdue">With a date range: open tasks due before it come too (the "Today" chip = today + overdue).</param>
 public record FeedFilter(
     string? Text = null,
     DateTime? CreatedFromUtc = null,
@@ -33,7 +35,9 @@ public record FeedFilter(
     bool HasPhoto = false,
     bool HasFile = false,
     bool HasLink = false,
-    bool HasPlace = false)
+    bool HasPlace = false,
+    bool HasMedia = false,
+    bool WithOverdue = false)
 {
     public static readonly FeedFilter None = new();
 }
@@ -44,8 +48,8 @@ public enum FeedReminderFilter { Any, With, Repeating, Without }
 public enum FeedOrigin { Any, Voice, Typed, Manual }
 
 /// <summary>
-/// Open: tasks not completed/cancelled, events still ahead. Done: completed or
-/// cancelled, plus events that have passed. Notes have no status, so a status
-/// filter leaves them out.
+/// Open: tasks not completed/cancelled, events still ahead, and notes (nothing to
+/// finish - spec v2). Done: completed or cancelled, plus events that have passed;
+/// notes are left out.
 /// </summary>
 public enum FeedStatusFilter { Any, Open, Done }

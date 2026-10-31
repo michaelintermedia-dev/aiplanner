@@ -237,6 +237,8 @@ export function createApi(request: RequestFn) {
       /** Part `part` (0-based, < Capture.audioParts) of the original recording. */
       audio: (id: string, part = 0) => request<Blob>('GET', `/captures/${id}/audio?part=${part}`, undefined, { as: 'blob' }),
       deleteAudio: (id: string) => request<void>('DELETE', `/captures/${id}/audio`),
+      /** The search box's mic: a FormData with "audio" part(s) -> the words only (no AI, nothing kept). */
+      transcribe: (form: FormData) => request<{ text: string }>('POST', '/transcribe', form),
       /** The capture an item's voice/text additions go into (made for an item created by hand). */
       forItem: (itemType: ItemType, itemId: string) => request<Capture>('POST', '/captures/for-item', { itemType, itemId }),
     },

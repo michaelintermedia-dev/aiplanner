@@ -1,98 +1,78 @@
-import { FEED_FILTERS, feedGroupLabel, feedItemKey, groupFeed } from '@shared/feed'
-import { activeSorts, parseSortChips, SORT_CHIPS_KEY, type SortChip } from '@shared/sortCriteria'
-import { activeFilterCount, feedFilterParams } from '@shared/feedFilter'
-import { feedSorts } from '@shared/feedViews'
+import { feedGroupLabel, feedItemKey, groupFeed } from '@shared/feed'
+import { feedFilterParams, isFiltering, kindsOf } from '@shared/feedFilter'
+import { feedSorts } from '@shared/feedOrder'
 import { searchWords } from '@shared/highlight'
-import { useFeedFilters } from '../lib/feedFilters'
+import { t } from '@shared/i18n'
 import type { FeedItem } from '@shared/types'
 import { useInfiniteQuery } from '@tanstack/react-query'
-import { useEffect, useRef, useState, type ComponentType } from 'react'
-import { IoAlbums, IoAlbumsOutline, IoCheckbox, IoCheckmarkCircleOutline, IoClose, IoDocumentText, IoTime, IoTrashOutline } from 'react-icons/io5'
-import { useSearchParams } from 'react-router'
+import { useEffect, useRef, useState } from 'react'
+import { IoChevronDown, IoChevronForward, IoClose, IoTrashOutline } from 'react-icons/io5'
 import { feedApi } from '../api/endpoints'
-import { useDebounced } from '../lib/useDebounced'
-import { useItemDeletion } from '../lib/useItemDeletion'
 import { useAuth } from '../auth/useAuth'
-import { useIsPhone } from '../lib/useIsPhone'
 import { CaptureBar } from '../components/CaptureBar'
-import { FeedFilterBar } from '../components/FeedFilterBar'
+import { FeedChipBar } from '../components/FeedChipBar'
 import { FeedRow } from '../components/FeedRow'
-import { KIND_ICON } from '../components/kindIcons'
-import { SortChips } from '../components/SortChips'
 import { UndoToast } from '../components/UndoToast'
-import { t } from '@shared/i18n'
+import { useFeedFilters } from '../lib/feedFilters'
+import { useFeedOrder } from '../lib/feedOrder'
+import { useDebounced } from '../lib/useDebounced'
+import { useIsPhone } from '../lib/useIsPhone'
+import { useItemDeletion } from '../lib/useItemDeletion'
 
-/** ?show= values for the filters; the URL keeps the filter so Back works. */
-const SHOW = ['all', 'tasks', 'events', 'notes'] as const
-/** Same icons as the mobile tab bar. */
-const ICONS: ComponentType[] = [IoAlbumsOutline, KIND_ICON.Task, KIND_ICON.Appointment, KIND_ICON.Note]
-/** The selected tab's icon: the filled one (same shapes as KIND_ICON). */
-const ACTIVE_ICONS: ComponentType[] = [IoAlbums, IoCheckbox, IoTime, IoDocumentText]
-const EMPTY_KEYS = ['feed.empty.all', 'feed.empty.tasks', 'feed.empty.events', 'feed.empty.notes'] as const
+const EMPTY_KEYS = { all: 'feed.empty.all', tasks: 'feed.empty.tasks', events: 'feed.empty.events', notes: 'feed.empty.notes' } as const
 
 /**
- * Home: one continuous feed of tasks, events and notes, newest first by
- * default. The bottom bar filters it (as on mobile); rows open their details.
- * "Select" picks several rows to delete at once; a row's trash button deletes
- * just that one. Either way an Undo toast follows (same as mobile).
+ * Home: one list of tasks, events and notes (spec v2). Smart order by default -
+ * Overdue, Today, Upcoming, No date, Notes, then Done folded away - or the
+ * order picked in ⚙. The chip row above narrows it; rows open their details.
+ * Long-press (or "Select" in ⚙) picks several rows to delete; a row's trash
+ * button deletes just that one. Either way an Undo toast follows (same as mobile).
  */
 export function FeedPage() {
   const isPhone = useIsPhone()
   const { zone } = useAuth()
-  const [params, setParams] = useSearchParams()
-  const showIndex = Math.max(0, SHOW.indexOf((params.get('show') ?? 'all') as (typeof SHOW)[number]))
-  const filter = FEED_FILTERS[showIndex]
-  // Sort criteria as coloured chips; kept in this browser.
-  const [sortChips, setSortChips] = useState<SortChip[]>(() => {
-    try {
-      return parseSortChips(localStorage.getItem(SORT_CHIPS_KEY))
-    } catch {
-      return parseSortChips(null)
-    }
-  })
-  const changeSortChips = (chips: SortChip[]) => {
-    setSortChips(chips)
-    try {
-      localStorage.setItem(SORT_CHIPS_KEY, JSON.stringify(chips))
-    } catch {
-      // Storage blocked: the choice just won't survive a reload.
-    }
-  }
-  // One set of filters for every tab: switching tabs keeps them.
+  // One set of filters (kept while moving around the app); the order is kept in this browser.
   const [filters, setFilters] = useFeedFilters()
+  const [order, setOrder] = useFeedOrder()
   // Search as you type, but only ask the server once typing pauses.
   const text = useDebounced(filters.text)
-  // Searching = best match first; a quick view brings its own order; else the chips.
-  const sort = feedSorts({ ...filters, text }, activeSorts(sortChips))
+  const sort = feedSorts(!!text.trim(), order)
+  const smart = sort[0] === 'Smart'
+  const kinds = kindsOf(filters.show)
   const filterParams = feedFilterParams({ ...filters, text }, zone.timeZone)
   const words = searchWords(text)
-  const filtering = activeFilterCount(filters) > 0 || filters.view !== null
+  // Done stays folded until asked for.
+  const [showDone, setShowDone] = useState(false)
   // null = not selecting; otherwise the picked rows by feedItemKey.
   const [selected, setSelected] = useState<Map<string, FeedItem> | null>(null)
   const deletion = useItemDeletion()
 
   const feed = useInfiniteQuery({
-    queryKey: ['feed', filter.kinds, sort, filterParams],
-    queryFn: ({ pageParam }) => feedApi.page({ kinds: filter.kinds, sort, cursor: pageParam, filters: filterParams }),
+    queryKey: ['feed', kinds, sort, filterParams],
+    queryFn: ({ pageParam }) => feedApi.page({ kinds, sort, cursor: pageParam, filters: filterParams }),
     initialPageParam: null as string | null,
     getNextPageParam: (last) => last.nextCursor,
   })
 
+  const items = feed.data?.pages.flatMap((p) => p.items) ?? []
+  const counts = feed.data?.pages[0]?.sections ?? null
+  // Folded Done: no need to load its pages.
+  const doneFolded = smart && !showDone && items[items.length - 1]?.section === 'Done'
+  const groups = groupFeed(items, sort, zone.timeZone)
+
   // Load the next page when the sentinel below the list scrolls into view.
   const sentinel = useRef<HTMLDivElement>(null)
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = feed
+  const canLoad = hasNextPage && !doneFolded
   useEffect(() => {
     const el = sentinel.current
     if (!el) return
     const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) void fetchNextPage()
+      if (entries[0].isIntersecting && canLoad && !isFetchingNextPage) void fetchNextPage()
     }, { rootMargin: '400px' })
     observer.observe(el)
     return () => observer.disconnect()
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
-
-  const items = feed.data?.pages.flatMap((p) => p.items) ?? []
-  const groups = groupFeed(items, sort, zone.timeZone)
+  }, [canLoad, isFetchingNextPage, fetchNextPage])
 
   const selecting = selected !== null
   useEffect(() => {
@@ -116,7 +96,7 @@ export function FeedPage() {
     <div className="page feed-page">
       {/* Phone width: the floating dock (App) has it. */}
       {!isPhone && <CaptureBar />}
-      {/* Selecting lays its bar over the filters (they keep their place, dimmed), so nothing shifts. */}
+      {/* Selecting lays its bar over the chips (they keep their place, dimmed), so nothing shifts. */}
       {selected && (
         <div className="selection-bar" role="toolbar" aria-label={t('select.bar')}>
           <button type="button" className="icon-button" onClick={() => setSelected(null)} aria-label={t('select.stop')}>
@@ -140,81 +120,59 @@ export function FeedPage() {
         </div>
       )}
       <div className={`feed-controls${selected ? ' inert' : ''}`} inert={selected ? true : undefined}>
-        <FeedFilterBar
+        <FeedChipBar
           filters={filters}
           onChange={setFilters}
-          onView={(view, next) => {
-            setFilters(next)
-            if (next.view && view.show) setParams({ show: view.show })
-            window.scrollTo({ top: 0 })
-          }}
-          sortChip={
-            <button type="button" className="chip filter-toggle" onClick={() => setSelected(new Map())} disabled={items.length === 0}>
-              <IoCheckmarkCircleOutline aria-hidden /> {t('select.start')}
-            </button>
-          }
+          order={order}
+          onOrder={setOrder}
+          onSelect={() => setSelected(new Map())}
+          canSelect={items.length > 0}
         />
-        {/* A quick view or a search orders the list itself. */}
-        {!filters.sort && !text.trim() && <SortChips chips={sortChips} onChange={changeSortChips} />}
       </div>
       {deletion.error && <p className="error">{deletion.error.message}</p>}
 
       {feed.isPending && <p className="muted">{t('common.loading')}</p>}
       {feed.error && <p className="error">{feed.error.message}</p>}
-      {feed.data && items.length === 0 && (
-        <p className="empty">
-          {filtering ? t('feed.noMatches') : t(EMPTY_KEYS[showIndex])}
-        </p>
-      )}
+      {feed.data && items.length === 0 && <p className="empty">{isFiltering(filters) ? t('feed.noMatches') : t(EMPTY_KEYS[filters.show])}</p>}
 
-      {groups.map((g) => (
-        <section key={g.key} className="feed-group">
-          <h2>{feedGroupLabel(g.key, zone)}</h2>
-          <ul className="list">
-            {g.items.map((item) => (
-              <FeedRow
-                key={feedItemKey(item)}
-                item={item}
-                words={words}
-                selection={selected ? { selected: selected.has(feedItemKey(item)), onToggle: () => toggle(item) } : undefined}
-                onDelete={() => deletion.deleteItems([item])}
-                onLongPress={selected ? undefined : () => setSelected(new Map([[feedItemKey(item), item]]))}
-              />
-            ))}
-          </ul>
-        </section>
-      ))}
+      {groups.map((g) => {
+        const isDone = g.key === 's:Done'
+        const folded = isDone && !showDone
+        const label = feedGroupLabel(g.key, zone)
+        return (
+          <section key={g.key} className={`feed-group${isDone ? ' done-group' : ''}`}>
+            {isDone ? (
+              <h2>
+                <button type="button" className="group-toggle" aria-expanded={!folded} onClick={() => setShowDone((s) => !s)} title={folded ? t('feed.showDone') : t('feed.hideDone')}>
+                  {folded ? <IoChevronForward className="flip-rtl" aria-hidden /> : <IoChevronDown aria-hidden />} {label} ({counts?.Done ?? g.items.length})
+                </button>
+              </h2>
+            ) : (
+              <h2>{label}</h2>
+            )}
+            {!folded && (
+              <ul className="list">
+                {g.items.map((item) => (
+                  <FeedRow
+                    key={feedItemKey(item)}
+                    item={item}
+                    words={words}
+                    selection={selected ? { selected: selected.has(feedItemKey(item)), onToggle: () => toggle(item) } : undefined}
+                    onDelete={() => deletion.deleteItems([item])}
+                    onLongPress={selected ? undefined : () => setSelected(new Map([[feedItemKey(item), item]]))}
+                  />
+                ))}
+              </ul>
+            )}
+          </section>
+        )
+      })}
 
       <div ref={sentinel} className="feed-end" aria-live="polite">
-        {isFetchingNextPage ? t('feed.loadingMore') : feed.data && !hasNextPage && items.length > 0 ? t('feed.end') : ''}
+        {isFetchingNextPage ? t('feed.loadingMore') : feed.data && !hasNextPage && items.length > 0 && !doneFolded ? t('feed.end') : ''}
       </div>
 
       {deletion.deleted && <UndoToast deleted={deletion.deleted} onUndo={deletion.undo} onClose={deletion.hide} />}
-
-      <nav className="tab-bar" aria-label={t('feed.show')}>
-        <div className="tab-bar-inner" role="tablist">
-          {FEED_FILTERS.map((f, i) => {
-            const Icon = i === showIndex ? ACTIVE_ICONS[i] : ICONS[i]
-            return (
-              <button
-                key={f.label}
-                role="tab"
-                aria-selected={i === showIndex}
-                className={i === showIndex ? 'active' : undefined}
-                onClick={() => {
-                  setParams(i === 0 ? {} : { show: SHOW[i] })
-                  setSelected(null)
-                  window.scrollTo({ top: 0 })
-                }}>
-                <span className="tab-icon">
-                  <Icon />
-                </span>
-                <span>{f.label}</span>
-              </button>
-            )
-          })}
-        </div>
-      </nav>
     </div>
   )
 }

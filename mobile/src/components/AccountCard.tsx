@@ -112,6 +112,8 @@ export function AccountCard() {
       )}
 
       <View style={styles.action}>
+        {/* Signing out lives here since the header's account menu went (spec v2). */}
+        <Button title={t('auth.signOut')} onPress={() => void logout()} disabled={busy !== null} />
         <Button title={t('account.signOutAll')} onPress={() => void signOutAll()} disabled={busy !== null} />
         <Text style={{ color: c.muted, fontSize: 13 }}>{t('account.signOutAllHint')}</Text>
       </View>

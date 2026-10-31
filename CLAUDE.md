@@ -260,7 +260,31 @@ Local dev notes:
   is pure backend code — ignore any generic file-creation skill guidance
   that doesn't apply to a .NET solution.
 
-## Navigation model (decided with the user, 2026-10-01)
+## Navigation model (decided with the user, 2026-10-01; redone by spec v2, 2026-10-31)
+
+- **Spec v2 (docs/product-spec-v2.md, user's go, 2026-10-31) - this wins over the
+  older bullets below where they differ.** Bottom navigation **Feed · Today ·
+  Calendar · Settings** on both (mobile `app/(tabs)`: index/today/calendar/settings;
+  web `lib/tabs.ts` + the bar in App's Layout, hidden on item pages, which get the
+  back arrow); no header icons; Sign out moved into Settings - Account. Above the
+  feed: the search box with a **mic that only transcribes** (`POST /api/transcribe`,
+  rate-limited "ai", metered; `SearchMic`) and ONE chip row (`FeedChipBar`): type
+  chips All/Tasks/Events/Notes (`FeedFilters.show`, one at a time), toggles Open /
+  Today (= today + open overdue tasks, `withOverdue`) / With media (`hasMedia`),
+  and ⚙ = the filters sheet (`FiltersSheet`: Order, What, When, Status, Made,
+  Select) with a badge; what the sheet set shows as removable chips
+  (`filterChips`, `clearSheetFilters`). Quick views and the sort chips are gone.
+  **Order** (`shared/feedOrder.ts`, kept per device): **Smart** by default -
+  `FeedSort.Smart`, sections Overdue / Today / Upcoming / No date / Notes / Done
+  (`FeedPager.SectionOf` + its own order inside each, `FeedItemDto.Section`,
+  `FeedPageDto.Sections` counts; FeedSmartOrderTests), Done folded ("Done (12)",
+  its pages aren't loaded while folded); or Newest / Oldest / Recently updated;
+  "High priority first" works inside each section. Notes count as Open.
+  **Rows** (`rowIndicator`, `eventTime` in shared/feed.ts): control (task tick box /
+  event start time badge / note icon) + title + ONE indicator (next reminder -> date
+  when not today -> repeat icon -> a note's first line); high priority = the red
+  bar on the row's edge; no kind label, tags, place, mic or badges on rows.
+  QA: `tools/qa/feed-v2.cjs`.
 
 - **The home screen is one unified feed** of tasks, events (= appointments;
   "Event" in the UI) and notes, newest first, infinite scroll, day headers.

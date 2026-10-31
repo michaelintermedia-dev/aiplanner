@@ -57,7 +57,7 @@ export default function RootLayout() {
 
 /**
  * Shows the sign-in screen until there is a user. Signed in, a stack: the tabs
- * at the bottom, with item detail screens pushed on top.
+ * (Feed · Today · Calendar · Settings) at the bottom, with item screens pushed on top.
  */
 function Gate() {
   const { user, zone } = useAuth()
@@ -102,12 +102,9 @@ function SignedIn() {
           contentStyle: { backgroundColor: c.page },
         }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="today" options={{ title: t('nav.today') }} />
-        <Stack.Screen name="calendar" options={{ title: t('nav.calendar') }} />
         <Stack.Screen name="task/[id]" options={{ title: t('kind.task') }} />
         <Stack.Screen name="appointment/[id]" options={{ title: t('kind.event') }} />
         <Stack.Screen name="note/[id]" options={{ title: t('kind.note') }} />
-        <Stack.Screen name="settings" options={{ title: t('nav.settings') }} />
       </Stack>
     </CaptureDock>
   )

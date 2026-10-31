@@ -65,9 +65,9 @@ const at = (days, hour, minute = 0) => {
     await page.goto('http://localhost:5173/feed'); await page.waitForSelector('.feed-row')
     await shot('1-feed')
 
-    await page.locator('.quick-view', { hasText: 'Today' }).click(); await page.waitForTimeout(800)
+    await page.locator('.chip-bar .bar-chip', { hasText: 'Today' }).click(); await page.waitForTimeout(800)
     await shot('2-today')
-    await page.locator('.quick-view', { hasText: 'Today' }).click()
+    await page.locator('.chip-bar .bar-chip', { hasText: 'Today' }).click()
 
     await page.goto('http://localhost:5173/calendar'); await page.waitForTimeout(1200)
     await page.getByRole('button', { name: 'Week' }).click().catch(() => {})

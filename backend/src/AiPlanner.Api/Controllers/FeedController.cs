@@ -21,12 +21,14 @@ public class FeedController : ControllerBase
     /// <summary>
     /// GET /api/feed?kinds=Task,Appointment,Note&amp;sort=CreatedDesc&amp;cursor=&amp;take=30
     /// kinds: comma-separated, omit for all. sort: one or more (comma-separated, applied
-    /// in order) of CreatedDesc (default), CreatedAsc, UpdatedDesc, DateAsc, PriorityHigh.
+    /// in order) of CreatedDesc (default), CreatedAsc, UpdatedDesc, DateAsc, PriorityHigh, Relevance,
+    /// Smart (sections: Overdue, Today, Upcoming, NoDate, Notes, Done - the apps' default).
     /// cursor: NextCursor from the previous page.
     /// Filters (all optional, combined with AND, applied within the kinds):
     /// q (text), createdFrom/createdTo (UTC), reminders (Any/With/Repeating/Without),
     /// status (Any/Open/Done), dateFrom/dateTo (UTC, due/start), noDate, fromVoice,
-    /// tags (comma-separated, any of; tasks only).
+    /// tags (comma-separated, any of), hasPhoto/hasFile/hasLink/hasPlace/hasMedia, and
+    /// withOverdue (with dateFrom: open tasks due before it too - the "Today" chip).
     /// </summary>
     [HttpGet]
     public async Task<ActionResult<FeedPageDto>> Get(
@@ -49,6 +51,8 @@ public class FeedController : ControllerBase
         [FromQuery] bool hasFile = false,
         [FromQuery] bool hasLink = false,
         [FromQuery] bool hasPlace = false,
+        [FromQuery] bool hasMedia = false,
+        [FromQuery] bool withOverdue = false,
         CancellationToken ct = default)
     {
         var parsed = new List<FeedKind>();
@@ -78,7 +82,7 @@ public class FeedController : ControllerBase
 
         static DateTime? Utc(DateTime? d) => d is { } v ? (v.Kind == DateTimeKind.Utc ? v : v.ToUniversalTime()) : null;
         var tagList = (tags ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var filter = new FeedFilter(q, Utc(createdFrom), Utc(createdTo), reminders, status, Utc(dateFrom), Utc(dateTo), noDate, fromVoice, tagList, origin, hasPhoto, hasFile, hasLink, hasPlace);
+        var filter = new FeedFilter(q, Utc(createdFrom), Utc(createdTo), reminders, status, Utc(dateFrom), Utc(dateTo), noDate, fromVoice, tagList, origin, hasPhoto, hasFile, hasLink, hasPlace, hasMedia, withOverdue);
         return Ok(await _feed.GetPageAsync(new FeedQueryParameters(parsed, sorts, cursor, take, filter), ct));
     }
 

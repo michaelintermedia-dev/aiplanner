@@ -125,7 +125,9 @@ export interface CreateAppointmentRequest {
 
 /** "Appointment" is shown to users as "Event". */
 export type FeedKind = 'Task' | 'Appointment' | 'Note'
-export type FeedSort = 'CreatedDesc' | 'CreatedAsc' | 'UpdatedDesc' | 'DateAsc' | 'PriorityHigh' | 'Relevance'
+export type FeedSort = 'CreatedDesc' | 'CreatedAsc' | 'UpdatedDesc' | 'DateAsc' | 'PriorityHigh' | 'Relevance' | 'Smart'
+/** The Smart order's sections, top to bottom (spec v2). */
+export type FeedSection = 'Overdue' | 'Today' | 'Upcoming' | 'NoDate' | 'Notes' | 'Done'
 
 export interface FeedItem {
   /** When its next reminder goes off (null/absent = none coming). */
@@ -154,12 +156,16 @@ export interface FeedItem {
   fromVoice?: boolean
   createdAtUtc: string
   updatedAtUtc: string
+  /** Its section in the Smart order. */
+  section?: FeedSection | null
 }
 
 export interface FeedPage {
   items: FeedItem[]
   /** Pass back to get the next page; null at the end. */
   nextCursor: string | null
+  /** Smart order: how many items each section has in all ("Done (12)"). */
+  sections?: Partial<Record<FeedSection, number>> | null
 }
 
 /** Information to keep, with nothing to do - optionally with a reminder. */

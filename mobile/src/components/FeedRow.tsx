@@ -1,4 +1,6 @@
-import { feedItemPassed, feedWhen, isDone, KIND_LABEL, feedReminder } from '@shared/feed'
+import { eventTime, feedItemPassed, isDone, rowIndicator } from '@shared/feed'
+import { highlight } from '@shared/highlight'
+import { t } from '@shared/i18n'
 import type { FeedItem } from '@shared/types'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { router } from 'expo-router'
@@ -8,13 +10,6 @@ import { useAuth } from '@/auth/useAuth'
 import { useAction } from '@/lib/useAction'
 import { useColors, type Colors } from '@/theme'
 import { KIND_ICON } from './kindIcons'
-import { highlight } from '@shared/highlight'
-import { Badge } from './ui'
-import { t } from '@shared/i18n'
-import { priorityLabel, statusLabel } from '@shared/labels'
-
-const kindColor = (item: FeedItem, c: Colors) =>
-  item.kind === 'Appointment' ? c.appointment : item.kind === 'Note' ? c.warn : c.task
 
 function openDetail(item: FeedItem) {
   if (item.kind === 'Task') router.push({ pathname: '/task/[id]', params: { id: item.id } })
@@ -23,8 +18,11 @@ function openDetail(item: FeedItem) {
 }
 
 /**
- * One feed entry, marked with its type's filter-tab icon. A task's icon is its
- * tick box (empty square / filled check); tapping the row opens the detail view.
+ * One feed entry, for triage (spec v2, same as the web): its control (a task's
+ * tick box, an event's start time, a note's icon), the title and ONE
+ * indicator - the next reminder, else the date when it isn't today, else the
+ * repeat icon, else a note's first line (rowIndicator). High priority is the
+ * bar on its edge. Place, people, tags and the rest are on the item's screen.
  *
  * Long-press starts selecting (`onLongPress`). While selecting (`selection`
  * set) a tap picks the row instead.
@@ -38,7 +36,7 @@ export function FeedRow({
   item: FeedItem
   selection?: { selected: boolean; onToggle: () => void }
   onLongPress?: () => void
-  /** Search words to mark in the title and snippet. */
+  /** Search words to mark in the title. */
   words?: string[]
 }) {
   const c = useColors()
@@ -47,17 +45,16 @@ export function FeedRow({
   const reopen = useAction(tasksApi.reopen)
   const done = isDone(item)
   const passed = feedItemPassed(item)
-  const when = feedWhen(item, zone)
-  const reminder = feedReminder(item, zone)
-  const showStatus = item.status && !['Scheduled', 'Planned', 'Inbox'].includes(item.status)
-
+  const indicator = rowIndicator(item, zone)
+  const time = eventTime(item, zone)
   const selected = selection?.selected ?? false
+  const high = item.priority === 'High'
 
   return (
     <View
       style={[
         styles.row,
-        { backgroundColor: selected ? c.accentSoft : c.surface, borderColor: selected ? c.accent : c.border, borderLeftColor: kindColor(item, c) },
+        { backgroundColor: selected ? c.accentSoft : c.surface, borderColor: selected ? c.accent : c.border, borderLeftColor: high ? c.danger : 'transparent' },
       ]}>
       {selection ? (
         <Pressable
@@ -80,9 +77,13 @@ export function FeedRow({
           style={styles.iconBox}>
           <Ionicons name={item.status === 'Completed' ? 'checkbox' : 'square-outline'} size={24} color={c.task} />
         </Pressable>
+      ) : time ? (
+        <View style={[styles.time, { backgroundColor: passed ? 'transparent' : c.accentSoft }]}>
+          <Text style={[styles.timeText, { color: passed ? c.muted : c.appointment }]}>{time}</Text>
+        </View>
       ) : (
         <View style={styles.iconBox}>
-          <Ionicons name={KIND_ICON[item.kind]} size={24} color={kindColor(item, c)} />
+          <Ionicons name={KIND_ICON[item.kind]} size={24} color={c.warn} />
         </View>
       )}
       <Pressable
@@ -93,44 +94,30 @@ export function FeedRow({
         onLongPress={selection ? selection.onToggle : onLongPress}
         accessibilityRole="button"
         accessibilityHint={selection ? (selected ? t('select.hintUnselect') : t('select.hintSelect')) : t('feed.rowHint')}>
-        <Text style={[styles.title, { color: done || passed ? c.muted : c.text }, (done || passed) && styles.struck]} numberOfLines={2}>
-          <Marked text={item.title} words={words} c={c} />
-        </Text>
-        {item.snippet && (
-          <Text style={{ color: c.muted, fontSize: 14 }} numberOfLines={2}>
-            <Marked text={item.snippet} words={words} c={c} />
+        <View style={styles.line}>
+          <Text style={[styles.title, { color: done || passed ? c.muted : c.text }, (done || passed) && styles.struck]} numberOfLines={2}>
+            <Marked text={item.title} words={words} c={c} />
+          </Text>
+          {indicator && indicator.type !== 'text' && (
+            <View style={styles.indicator}>
+              {indicator.type === 'reminder' ? (
+                <View style={styles.indicator} accessible accessibilityLabel={t('feed.reminderAt', { when: indicator.label })}>
+                  <Ionicons name={indicator.repeats ? 'repeat' : 'notifications-outline'} size={14} color={indicator.today ? c.accent : c.muted} />
+                  <Text style={[styles.meta, { color: indicator.today ? c.accent : c.muted, fontWeight: indicator.today ? '600' : '400' }]}>{indicator.label}</Text>
+                </View>
+              ) : indicator.type === 'repeat' ? (
+                <Ionicons name="repeat" size={15} color={c.muted} accessibilityLabel={t('repeat.repeats')} />
+              ) : (
+                <Text style={[styles.meta, { color: c.muted }]}>{indicator.label}</Text>
+              )}
+            </View>
+          )}
+        </View>
+        {indicator?.type === 'text' && (
+          <Text style={{ color: c.muted, fontSize: 14 }} numberOfLines={1}>
+            <Marked text={indicator.label} words={words} c={c} />
           </Text>
         )}
-        <View style={styles.meta}>
-          <Text style={[styles.kind, { color: c.muted }]}>{KIND_LABEL[item.kind].toUpperCase()}</Text>
-          {when && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-              {item.repeats && <Ionicons name="repeat" size={14} color={c.muted} accessibilityLabel={t('repeat.repeats')} />}
-              <Text style={[styles.metaText, { color: c.muted }]}>{when}</Text>
-            </View>
-          )}
-          {reminder && (
-            <View style={styles.reminder} accessible accessibilityLabel={t('feed.reminderAt', { when: reminder.label })}>
-              <Ionicons name="notifications-outline" size={14} color={reminder.today ? c.accent : c.muted} />
-              <Text style={[styles.metaText, { color: reminder.today ? c.accent : c.muted, fontWeight: reminder.today ? '600' : '400' }]}>
-                {reminder.label}
-              </Text>
-            </View>
-          )}
-          {item.location && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-              <Ionicons name="location-outline" size={13} color={c.muted} />
-              <Text style={[styles.metaText, { color: c.muted }]}>{item.location}</Text>
-            </View>
-          )}
-          {passed && <Badge label={t('status.passed')} />}
-          {showStatus && <Badge label={statusLabel(item.status!)} color={item.status === 'Completed' ? c.task : item.status === 'Cancelled' ? c.danger : undefined} />}
-          {item.priority && <Badge label={priorityLabel(item.priority)} color={item.priority === 'High' ? c.danger : item.priority === 'Medium' ? c.warn : undefined} />}
-          {item.tags.map((t) => (
-            <Text key={t} style={[styles.metaText, { color: c.muted }]}>#{t}</Text>
-          ))}
-          {item.fromVoice && <Ionicons name="mic-outline" size={14} color={c.muted} accessibilityLabel={t('feed.fromVoice')} />}
-        </View>
       </Pressable>
     </View>
   )
@@ -139,6 +126,7 @@ export function FeedRow({
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
     padding: 12,
     borderWidth: StyleSheet.hairlineWidth,
@@ -146,13 +134,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   iconBox: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
-  main: { flex: 1, gap: 3 },
-  title: { fontSize: 16 },
+  time: { minWidth: 48, borderRadius: 8, paddingVertical: 3, paddingHorizontal: 4, alignItems: 'center' },
+  timeText: { fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  main: { flex: 1, gap: 2 },
+  line: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  title: { flex: 1, fontSize: 16 },
   struck: { textDecorationLine: 'line-through' },
-  meta: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 2 },
-  kind: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6 },
-  metaText: { fontSize: 13 },
-  reminder: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  indicator: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  meta: { fontSize: 13 },
 })
 
 /** The text with the search words marked (nested Text keeps the line wrapping). */

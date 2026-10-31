@@ -1,21 +1,23 @@
-import { feedItemPassed, feedWhen, isDone, KIND_LABEL, feedReminder } from '@shared/feed'
+import { eventTime, feedItemPassed, isDone, rowIndicator } from '@shared/feed'
+import { highlight } from '@shared/highlight'
+import { t } from '@shared/i18n'
 import type { FeedItem } from '@shared/types'
-import { IoCheckbox, IoCheckmarkCircle, IoEllipseOutline, IoLocationOutline, IoMicOutline, IoNotificationsOutline, IoRepeat, IoSquareOutline, IoTrashOutline } from 'react-icons/io5'
+import { IoCheckbox, IoCheckmarkCircle, IoEllipseOutline, IoNotificationsOutline, IoRepeat, IoSquareOutline, IoTrashOutline } from 'react-icons/io5'
 import { Link } from 'react-router'
 import { tasksApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
-import { useLongPress } from '../lib/useLongPress'
 import { useAction } from '../lib/useAction'
+import { useLongPress } from '../lib/useLongPress'
 import { KIND_ICON } from './kindIcons'
-import { highlight } from '@shared/highlight'
-import { t } from '@shared/i18n'
-import { priorityLabel, statusLabel } from '@shared/labels'
 
 const DETAIL_PATH = { Task: 'tasks', Appointment: 'appointments', Note: 'notes' } as const
 
 /**
- * One feed entry, marked with its type's filter-tab icon. A task's icon is its
- * tick box (empty square / filled check); everything opens its detail view.
+ * One feed entry, for triage (spec v2): its control (a task's tick box, an
+ * event's start time, a note's icon), the title and ONE indicator - the next
+ * reminder, else the date when it isn't today, else the repeat icon, else a
+ * note's first line (rowIndicator). High priority is the bar on its edge.
+ * Place, people, tags and the rest are on the item's page.
  *
  * Selecting (`selection` set): the row is a checkbox - a click picks it. Not
  * selecting: a trash button on hover deletes just this one (`onDelete`).
@@ -28,7 +30,7 @@ export function FeedRow({
   words = [],
 }: {
   item: FeedItem
-  /** Search words to mark in the title and snippet. */
+  /** Search words to mark in the title. */
   words?: string[]
   selection?: { selected: boolean; onToggle: () => void }
   onDelete?: () => void
@@ -41,46 +43,40 @@ export function FeedRow({
   const reopen = useAction(tasksApi.reopen)
   const done = isDone(item)
   const passed = feedItemPassed(item)
-  const when = feedWhen(item, zone)
+  const indicator = rowIndicator(item, zone)
+  const time = eventTime(item, zone)
   const KindIcon = KIND_ICON[item.kind]
-  const reminder = feedReminder(item, zone)
+  const classes = `feed-row kind-${item.kind.toLowerCase()}${done ? ' done' : ''}${passed ? ' passed' : ''}${item.priority === 'High' ? ' high' : ''}`
 
   const content = (
     <>
-      <span className="feed-title"><Marked text={item.title} words={words} /></span>
-      {item.snippet && <span className="feed-snippet"><Marked text={item.snippet} words={words} /></span>}
-      <span className="row-meta">
-        <span className="kind-label">{KIND_LABEL[item.kind]}</span>
-        {when && (
-          <span>
-            {item.repeats && <IoRepeat className="repeat-icon" title={t('repeat.repeats')} aria-label={t('repeat.repeats')} />} {when}
+      <span className="feed-line">
+        <span className="feed-title">
+          <Marked text={item.title} words={words} />
+        </span>
+        {indicator && indicator.type !== 'text' && (
+          <span className={`row-indicator${indicator.type === 'reminder' && indicator.today ? ' today' : ''}`}>
+            {indicator.type === 'reminder' ? (
+              <>
+                {indicator.repeats ? <IoRepeat aria-hidden /> : <IoNotificationsOutline aria-hidden />}
+                <span className="visually-hidden">{t('feed.reminderAt', { when: indicator.label })}</span>
+                <span aria-hidden>{indicator.label}</span>
+              </>
+            ) : indicator.type === 'repeat' ? (
+              <IoRepeat title={t('repeat.repeats')} aria-label={t('repeat.repeats')} />
+            ) : (
+              indicator.label
+            )}
           </span>
         )}
-        {reminder && (
-          <span className={`reminder-badge${reminder.today ? ' today' : ''}`} title={t('feed.reminderAt', { when: reminder.label })}>
-            <IoNotificationsOutline aria-hidden />
-            <span className="visually-hidden">{t('feed.reminderAt', { when: reminder.label })}</span>
-            <span aria-hidden>{reminder.label}</span>
-          </span>
-        )}
-        {item.location && (
-          <span className="row-place">
-            <IoLocationOutline aria-hidden /> {item.location}
-          </span>
-        )}
-        {passed && <span className="badge status-passed">{t('status.passed')}</span>}
-        {item.status && item.status !== 'Scheduled' && item.status !== 'Planned' && item.status !== 'Inbox' && (
-          <span className={`badge status-${item.status.toLowerCase()}`}>{statusLabel(item.status)}</span>
-        )}
-        {item.priority && <span className={`badge prio-${item.priority.toLowerCase()}`}>{priorityLabel(item.priority)}</span>}
-        {item.tags.map((t) => (
-          <span key={t} className="tag">#{t}</span>
-        ))}
-        {item.fromVoice && <IoMicOutline className="muted" title={t('feed.fromVoice')} aria-label={t('feed.fromVoice')} />}
       </span>
+      {indicator?.type === 'text' && (
+        <span className="feed-snippet one-line">
+          <Marked text={indicator.label} words={words} />
+        </span>
+      )}
     </>
   )
-  const classes = `feed-row kind-${item.kind.toLowerCase()}${done ? ' done' : ''}${passed ? ' passed' : ''}`
 
   if (selection) {
     return (
@@ -112,6 +108,8 @@ export function FeedRow({
           onClick={() => (done ? reopen.mutate(item.id) : complete.mutate(item.id))}>
           {item.status === 'Completed' ? <IoCheckbox aria-hidden /> : <IoSquareOutline aria-hidden />}
         </button>
+      ) : time ? (
+        <span className="time-badge">{time}</span>
       ) : (
         <span className="kind-icon" aria-hidden="true">
           <KindIcon />

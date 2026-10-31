@@ -3,9 +3,7 @@ import type { AppendTarget, Capture, ItemType } from '@shared/types'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { IoArrowUp, IoAttachOutline, IoCheckmark } from 'react-icons/io5'
-import { Link, useNavigate, useSearchParams } from 'react-router'
-import { searchFilters } from '@shared/feedFilter'
-import { setFeedFilters } from '../lib/feedFilters'
+import { Link, useSearchParams } from 'react-router'
 import { takeShared, useSharedIn } from '../lib/sharedIn'
 import { capturesApi, itemsApi, settingsApi } from '../api/endpoints'
 import { onQuickRelease } from '../lib/quickRelease'
@@ -198,7 +196,7 @@ export function CaptureBar({
     }
     return saved
   }
-  const navigate = useNavigate()
+
   const run = async (phase: Exclude<Busy, null>, work: () => Promise<Capture>) => {
     setBusy(phase)
     setError(null)
@@ -207,14 +205,7 @@ export function CaptureBar({
     try {
       const result = await work()
       if (continueFrom?.onResult) continueFrom.onResult(result)
-      else if (result.search) {
-        // "Find ...": nothing to save - show the feed filtered by what was asked.
-        const { filters, show } = searchFilters(result.search)
-        setFeedFilters(filters)
-        navigate(`/feed?show=${show}`)
-        setSavedMessage(t('capture.searchShown'))
-        onFinished?.({ message: t('capture.searchShown'), item: null })
-      } else if (result.autoSaved) {
+      else if (result.autoSaved) {
         // Saved already (Settings - Save right away): say what it became, no review.
         const notice = finish(savedNotice(result, 1, zone))!
         const item = notice.item

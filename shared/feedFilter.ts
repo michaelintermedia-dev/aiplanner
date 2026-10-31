@@ -1,12 +1,13 @@
 import { weekStart } from './calendar'
 import { addDays, formatDateKey, todayKey, zonedToUtc } from './dates'
 import { t } from './i18n'
-import type { CaptureSearch, FeedSort } from './types'
+import type { FeedKind } from './types'
 
 /**
- * Feed filters, shared by web and mobile. One set of filters applies to
- * whichever tab is showing (All / Tasks / Events / Notes) and stays when the
- * tab changes. The server does the filtering (GET /feed), so paging still works.
+ * Feed filters, shared by web and mobile (spec v2, 2026-10-31): one chip row -
+ * the type (All / Tasks / Events / Notes, one at a time), the toggles Open /
+ * Today / With media (combinable) and ⚙ for everything else (FiltersSheet).
+ * The server does the filtering (GET /feed), so paging still works.
  */
 
 export type CreatedRange = 'any' | 'today' | '7d' | '30d' | 'custom'
@@ -14,11 +15,15 @@ export type WhenRange = 'any' | 'today' | 'week' | 'upcoming' | 'overdue' | 'nod
 /** How an item was made: spoken, typed to the AI, or by hand. */
 export type Origin = 'any' | 'voice' | 'typed' | 'manual'
 /** Something the item has: a photo, a document, a web link, a place. */
-export type Has = 'photo' | 'file' | 'link' | 'place'
+export type Has = 'photo' | 'file' | 'link' | 'place' | 'media'
+/** The type chips. */
+export type Show = 'all' | 'tasks' | 'events' | 'notes'
 export type ReminderFilter = 'Any' | 'With' | 'Repeating' | 'Without'
 export type StatusFilter = 'Any' | 'Open' | 'Done'
 
 export interface FeedFilters {
+  /** The type chip that's on. */
+  show: Show
   /** Words in titles, details, note text, location and tags. */
   text: string
   created: CreatedRange
@@ -34,13 +39,10 @@ export interface FeedFilters {
   has: Has[]
   /** Any of these, on any kind of item. */
   tags: string[]
-  /** A quick view's own order (Upcoming: by date) - wins over the sort chips while set. */
-  sort: FeedSort[] | null
-  /** The quick view these filters came from (its chip shows on); null once changed by hand. */
-  view: string | null
 }
 
 export const NO_FILTERS: FeedFilters = {
+  show: 'all',
   text: '',
   created: 'any',
   createdFrom: null,
@@ -51,9 +53,43 @@ export const NO_FILTERS: FeedFilters = {
   origin: 'any',
   has: [],
   tags: [],
-  sort: null,
-  view: null,
 }
+
+/** The type chips, in order. */
+export const SHOW_OPTIONS: { value: Show; kinds: FeedKind[]; label: string }[] = [
+  { value: 'all', kinds: [], get label() { return t('feed.tab.all') } },
+  { value: 'tasks', kinds: ['Task'], get label() { return t('feed.tab.tasks') } },
+  { value: 'events', kinds: ['Appointment'], get label() { return t('feed.tab.events') } },
+  { value: 'notes', kinds: ['Note'], get label() { return t('feed.tab.notes') } },
+]
+export const kindsOf = (show: Show): FeedKind[] => SHOW_OPTIONS.find((o) => o.value === show)?.kinds ?? []
+
+/**
+ * The toggle chips next to the type: Open (not done - notes count as open), Today
+ * (today + overdue tasks) and With media (a photo or a document). Each is one
+ * of the filters, so the sheet shows the same choice.
+ */
+export type ToggleId = 'open' | 'today' | 'media'
+export const TOGGLES: { id: ToggleId; label: string; on: (f: FeedFilters) => boolean; flip: (f: FeedFilters) => FeedFilters }[] = [
+  {
+    id: 'open',
+    get label() { return t('filter.status.open') },
+    on: (f) => f.status === 'Open',
+    flip: (f) => ({ ...f, status: f.status === 'Open' ? 'Any' : 'Open' }),
+  },
+  {
+    id: 'today',
+    get label() { return t('date.today') },
+    on: (f) => f.when === 'today',
+    flip: (f) => ({ ...f, when: f.when === 'today' ? 'any' : 'today' }),
+  },
+  {
+    id: 'media',
+    get label() { return t('filter.has.media') },
+    on: (f) => f.has.includes('media'),
+    flip: (f) => ({ ...f, has: f.has.includes('media') ? f.has.filter((h) => h !== 'media') : [...f.has, 'media'] }),
+  },
+]
 
 export const CREATED_OPTIONS: { value: CreatedRange; label: string }[] = [
   { value: 'any', get label() { return t('filter.created.any') } },
@@ -108,25 +144,31 @@ export function filterTagsShown<T extends { name: string; count: number }>(tags:
 
 const labelOf = <T extends string>(options: { value: T; label: string }[], value: T) => options.find((o) => o.value === value)?.label ?? value
 
-/** The active filters as removable chips ("Created: Last 7 days ✕"). */
+/**
+ * The filters set in the ⚙ sheet as removable chips ("Created: Last 7 days ✕") -
+ * not the search text, the type or the toggles (they show on the chip row).
+ */
 export function filterChips(f: FeedFilters, locale: string): { key: string; label: string; clear: (f: FeedFilters) => FeedFilters }[] {
   const chips: { key: string; label: string; clear: (f: FeedFilters) => FeedFilters }[] = []
-  if (f.text.trim()) chips.push({ key: 'text', label: `“${f.text.trim()}”`, clear: (x) => ({ ...x, text: '', view: null }) })
   if (f.created !== 'any') {
     const short = (key: string | null) => (key ? formatDateKey(key, locale, { month: 'short', day: 'numeric' }) : '…')
     const label = f.created === 'custom' ? `${short(f.createdFrom)} – ${short(f.createdTo)}` : labelOf(CREATED_OPTIONS, f.created)
-    chips.push({ key: 'created', label: t('filter.chip.created', { value: label }), clear: (x) => ({ ...x, created: 'any', createdFrom: null, createdTo: null, view: null }) })
+    chips.push({ key: 'created', label: t('filter.chip.created', { value: label }), clear: (x) => ({ ...x, created: 'any', createdFrom: null, createdTo: null }) })
   }
-  if (f.when !== 'any') chips.push({ key: 'when', label: t('filter.chip.when', { value: labelOf(WHEN_OPTIONS, f.when) }), clear: (x) => ({ ...x, when: 'any', view: null }) })
-  if (f.status !== 'Any') chips.push({ key: 'status', label: labelOf(STATUS_OPTIONS, f.status), clear: (x) => ({ ...x, status: 'Any', view: null }) })
-  if (f.reminders !== 'Any') chips.push({ key: 'reminders', label: labelOf(REMINDER_OPTIONS, f.reminders), clear: (x) => ({ ...x, reminders: 'Any', view: null }) })
-  if (f.origin !== 'any') chips.push({ key: 'origin', label: labelOf(ORIGIN_OPTIONS, f.origin), clear: (x) => ({ ...x, origin: 'any', view: null }) })
-  for (const h of f.has) chips.push({ key: `has:${h}`, label: labelOf(HAS_OPTIONS, h), clear: (x) => ({ ...x, has: x.has.filter((y) => y !== h), view: null }) })
+  if (f.when !== 'any' && f.when !== 'today') chips.push({ key: 'when', label: t('filter.chip.when', { value: labelOf(WHEN_OPTIONS, f.when) }), clear: (x) => ({ ...x, when: 'any' }) })
+  if (f.status !== 'Any' && f.status !== 'Open') chips.push({ key: 'status', label: labelOf(STATUS_OPTIONS, f.status), clear: (x) => ({ ...x, status: 'Any' }) })
+  if (f.reminders !== 'Any') chips.push({ key: 'reminders', label: labelOf(REMINDER_OPTIONS, f.reminders), clear: (x) => ({ ...x, reminders: 'Any' }) })
+  if (f.origin !== 'any') chips.push({ key: 'origin', label: labelOf(ORIGIN_OPTIONS, f.origin), clear: (x) => ({ ...x, origin: 'any' }) })
+  for (const h of f.has.filter((x) => x !== 'media')) chips.push({ key: `has:${h}`, label: labelOf(HAS_OPTIONS, h), clear: (x) => ({ ...x, has: x.has.filter((y) => y !== h) }) })
   for (const tag of f.tags) chips.push({ key: `tag:${tag}`, label: `#${tag}`, clear: (x) => ({ ...x, tags: x.tags.filter((t) => t !== tag) }) })
   return chips
 }
 
-export const activeFilterCount = (f: FeedFilters) => filterChips(f, 'en').length
+/** How many filters the ⚙ sheet has on (its badge). */
+export const sheetFilterCount = (f: FeedFilters) => filterChips(f, 'en').length
+
+/** Anything narrowing the list (for "Nothing matches" instead of "Nothing here yet"). */
+export const isFiltering = (f: FeedFilters) => !!f.text.trim() || sheetFilterCount(f) > 0 || TOGGLES.some((x) => x.on(f))
 
 /** Now, to the minute - so the parameters (a query key) don't change on every render. */
 const currentMinute = () => new Date(Math.floor(Date.now() / 60_000) * 60_000)
@@ -154,8 +196,10 @@ export function feedFilterParams(f: FeedFilters, timeZone: string, now = current
   }
 
   if (f.when === 'today') {
+    // Today = today's events and tasks, plus tasks still open from before.
     p.dateFrom = day(today)
     p.dateTo = day(addDays(today, 1))
+    p.withOverdue = 'true'
   } else if (f.when === 'week') {
     const monday = weekStart(today)
     p.dateFrom = day(monday)
@@ -173,25 +217,17 @@ export function feedFilterParams(f: FeedFilters, timeZone: string, now = current
   if (status !== 'Any') p.status = status
   if (f.reminders !== 'Any') p.reminders = f.reminders
   if (f.origin !== 'any') p.origin = f.origin === 'voice' ? 'Voice' : f.origin === 'typed' ? 'Typed' : 'Manual'
-  for (const h of f.has) p[h === 'photo' ? 'hasPhoto' : h === 'file' ? 'hasFile' : h === 'link' ? 'hasLink' : 'hasPlace'] = 'true'
+  for (const h of f.has) p[h === 'photo' ? 'hasPhoto' : h === 'file' ? 'hasFile' : h === 'link' ? 'hasLink' : h === 'media' ? 'hasMedia' : 'hasPlace'] = 'true'
   if (f.tags.length) p.tags = f.tags.join(',')
   return p
 }
 
-/**
- * "Find ..." said or typed in the capture bar: the filters to show, and the
- * tab - one kind asked for opens its tab, otherwise All.
- */
-export function searchFilters(search: CaptureSearch): { filters: FeedFilters; show: 'all' | 'tasks' | 'events' | 'notes' } {
-  const filters: FeedFilters = {
-    ...NO_FILTERS,
-    text: search.text ?? '',
-    tags: search.tags,
-    when: search.when ?? 'any',
-    status: search.status ?? 'Any',
-    reminders: search.reminders ?? 'Any',
-    origin: search.fromVoice ? 'voice' : 'any',
-  }
-  const one = search.kinds.length === 1 ? search.kinds[0] : null
-  return { filters, show: one === 'Task' ? 'tasks' : one === 'Appointment' ? 'events' : one === 'Note' ? 'notes' : 'all' }
-}
+/** "Clear all" for what the ⚙ sheet set: the type, the search and the toggle chips stay. */
+export const clearSheetFilters = (f: FeedFilters): FeedFilters => ({
+  ...NO_FILTERS,
+  show: f.show,
+  text: f.text,
+  status: f.status === 'Open' ? 'Open' : 'Any',
+  when: f.when === 'today' ? 'today' : 'any',
+  has: f.has.filter((h) => h === 'media'),
+})

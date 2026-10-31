@@ -112,6 +112,13 @@ export function AccountCard() {
         )}
       </div>
 
+      {/* Signing out lives here since the header's account menu went (spec v2). */}
+      <div className="account-action">
+        <button onClick={() => void logout()} disabled={busy !== null}>
+          <IoLogOutOutline aria-hidden /> {t('auth.signOut')}
+        </button>
+      </div>
+
       <div className="account-action">
         <button onClick={() => void signOutAll()} disabled={busy !== null}>
           <IoLogOutOutline aria-hidden /> {t('account.signOutAll')}

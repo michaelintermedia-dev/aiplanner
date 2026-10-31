@@ -44,9 +44,15 @@ public class FeedService : IFeedService
         var dated = f.DateFromUtc is not null || f.DateToUtc is not null;
         var tags = f.Tags?.Select(t => t.Trim()).Where(t => t.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList() ?? [];
         var origin = f.Origin == FeedOrigin.Any && f.FromVoice ? FeedOrigin.Voice : f.Origin;
-        // Notes have no status or date of their own, so those filters leave them out.
+        // Notes have no date of their own, so date filters leave them out; nothing to finish
+        // either, so they count as open (spec v2) - only "Done" leaves them out.
         bool Wants(FeedKind k) => (query.Kinds.Count == 0 || query.Kinds.Contains(k))
-            && !(k == FeedKind.Note && (f.Status != FeedStatusFilter.Any || dated));
+            && !(k == FeedKind.Note && (f.Status == FeedStatusFilter.Done || dated));
+        // The user's today, for the Smart order's sections.
+        var zone = UserTimeZoneHelper.ResolveTimeZone(await _db.Users.Where(u => u.Id == userId).Select(u => u.TimeZoneId).FirstOrDefaultAsync(ct));
+        var today = UserTimeZoneHelper.TodayInTimeZone(zone, now);
+        var todayStart = UserTimeZoneHelper.LocalDateStartToUtc(today, zone);
+        var todayEnd = UserTimeZoneHelper.LocalDateEndToUtc(today, zone);
 
         // ---- 1. Key rows (filtered) -----------------------------------------
         var keys = new List<FeedKeyRow>();
@@ -79,8 +85,18 @@ public class FeedService : IFeedService
                 FeedStatusFilter.Done => q.Where(t => t.Status == TaskItemStatus.Completed || t.Status == TaskItemStatus.Cancelled),
                 _ => q,
             };
-            if (f.DateFromUtc is { } dFrom) q = q.Where(t => t.DueDateUtc >= dFrom);
-            if (f.DateToUtc is { } dTo) q = q.Where(t => t.DueDateUtc < dTo);
+            if (f.WithOverdue && f.DateFromUtc is { } oFrom)
+            {
+                // "Today": in the range, or still open from before it.
+                var oTo = f.DateToUtc ?? DateTime.MaxValue;
+                q = q.Where(t => (t.DueDateUtc >= oFrom && t.DueDateUtc < oTo)
+                    || (t.DueDateUtc < oFrom && t.Status != TaskItemStatus.Completed && t.Status != TaskItemStatus.Cancelled));
+            }
+            else
+            {
+                if (f.DateFromUtc is { } dFrom) q = q.Where(t => t.DueDateUtc >= dFrom);
+                if (f.DateToUtc is { } dTo) q = q.Where(t => t.DueDateUtc < dTo);
+            }
             if (f.NoDate) q = q.Where(t => t.DueDateUtc == null);
             q = origin switch
             {
@@ -93,9 +109,16 @@ public class FeedService : IFeedService
             if (f.HasPhoto) q = q.Where(t => _db.Attachments.Any(x => x.ItemId == t.Id && x.Kind == AttachmentKind.Image));
             if (f.HasFile) q = q.Where(t => _db.Attachments.Any(x => x.ItemId == t.Id && x.Kind == AttachmentKind.File));
             if (f.HasPlace) q = q.Where(t => t.Location != null && t.Location != "");
+            if (f.HasMedia) q = q.Where(t => _db.Attachments.Any(x => x.ItemId == t.Id && (x.Kind == AttachmentKind.Image || x.Kind == AttachmentKind.File)));
             if (f.HasLink) q = q.Where(t => t.Title.ToLower().Contains("http") || t.Title.ToLower().Contains("www.")
                 || (t.Description != null && (t.Description.ToLower().Contains("http") || t.Description.ToLower().Contains("www."))));
-            keys.AddRange(await q.Select(t => new FeedKeyRow(t.Id, FeedKind.Task, t.CreatedAtUtc, t.UpdatedAtUtc, t.DueDateUtc, t.Priority == TaskPriority.High)).ToListAsync(ct));
+            var taskRows = await q.Select(t => new
+            {
+                t.Id, t.CreatedAtUtc, t.UpdatedAtUtc, t.DueDateUtc, High = t.Priority == TaskPriority.High,
+                Done = t.Status == TaskItemStatus.Completed || t.Status == TaskItemStatus.Cancelled,
+            }).ToListAsync(ct);
+            keys.AddRange(taskRows.Select(t => new FeedKeyRow(t.Id, FeedKind.Task, t.CreatedAtUtc, t.UpdatedAtUtc, t.DueDateUtc, t.High,
+                Section: FeedPager.SectionOf(FeedKind.Task, t.DueDateUtc, t.Done, todayStart, todayEnd))));
         }
         if (Wants(FeedKind.Appointment) && !f.NoDate) // every event has a date
         {
@@ -141,9 +164,14 @@ public class FeedService : IFeedService
             if (f.HasPhoto) q = q.Where(a => _db.Attachments.Any(x => x.ItemId == a.Id && x.Kind == AttachmentKind.Image));
             if (f.HasFile) q = q.Where(a => _db.Attachments.Any(x => x.ItemId == a.Id && x.Kind == AttachmentKind.File));
             if (f.HasPlace) q = q.Where(a => a.Location != null && a.Location != "");
+            if (f.HasMedia) q = q.Where(a => _db.Attachments.Any(x => x.ItemId == a.Id && (x.Kind == AttachmentKind.Image || x.Kind == AttachmentKind.File)));
             if (f.HasLink) q = q.Where(a => a.Title.ToLower().Contains("http") || a.Title.ToLower().Contains("www.")
                 || (a.Description != null && (a.Description.ToLower().Contains("http") || a.Description.ToLower().Contains("www."))));
-            var rows = await q.Select(a => new { a.Id, a.CreatedAtUtc, a.UpdatedAtUtc, a.StartUtc, Repeats = a.RecurrenceRuleId != null, High = a.Priority == TaskPriority.High }).ToListAsync(ct);
+            var rows = await q.Select(a => new
+            {
+                a.Id, a.CreatedAtUtc, a.UpdatedAtUtc, a.StartUtc, a.EndUtc, Repeats = a.RecurrenceRuleId != null, High = a.Priority == TaskPriority.High,
+                Scheduled = a.Status == AppointmentStatus.Scheduled,
+            }).ToListAsync(ct);
 
             // A repeating event is dated by its next occurrence (sorting, "Today", date filters).
             var next = await NextOccurrencesAsync(userId, rows.Where(r => r.Repeats).Select(r => r.Id).ToList(), now, ct);
@@ -158,7 +186,10 @@ public class FeedService : IFeedService
                     if (f.DateFromUtc is { } from && date < from) continue;
                     if (f.DateToUtc is { } to && date >= to) continue;
                 }
-                keys.Add(new FeedKeyRow(r.Id, FeedKind.Appointment, r.CreatedAtUtc, r.UpdatedAtUtc, date, r.High));
+                // Done: cancelled, or over (a one-off that ended; a series with no dates left).
+                var finished = !r.Scheduled || (r.Repeats ? next.TryGetValue(r.Id, out var left) && left is null : r.EndUtc < now);
+                keys.Add(new FeedKeyRow(r.Id, FeedKind.Appointment, r.CreatedAtUtc, r.UpdatedAtUtc, date, r.High,
+                    Section: FeedPager.SectionOf(FeedKind.Appointment, date, finished, todayStart, todayEnd)));
             }
         }
         if (Wants(FeedKind.Note))
@@ -194,9 +225,10 @@ public class FeedService : IFeedService
             if (f.HasPhoto) q = q.Where(n => _db.Attachments.Any(x => x.ItemId == n.Id && x.Kind == AttachmentKind.Image));
             if (f.HasFile) q = q.Where(n => _db.Attachments.Any(x => x.ItemId == n.Id && x.Kind == AttachmentKind.File));
             if (f.HasPlace) q = q.Where(n => n.Location != null && n.Location != "");
+            if (f.HasMedia) q = q.Where(n => _db.Attachments.Any(x => x.ItemId == n.Id && (x.Kind == AttachmentKind.Image || x.Kind == AttachmentKind.File)));
             if (f.HasLink) q = q.Where(n => n.Content.ToLower().Contains("http") || n.Content.ToLower().Contains("www.")
                 || (n.Title != null && (n.Title.ToLower().Contains("http") || n.Title.ToLower().Contains("www."))));
-            keys.AddRange(await q.Select(n => new FeedKeyRow(n.Id, FeedKind.Note, n.CreatedAtUtc, n.UpdatedAtUtc, (DateTime?)null, n.Priority == TaskPriority.High)).ToListAsync(ct));
+            keys.AddRange(await q.Select(n => new FeedKeyRow(n.Id, FeedKind.Note, n.CreatedAtUtc, n.UpdatedAtUtc, (DateTime?)null, n.Priority == TaskPriority.High, 0, FeedSection.Notes)).ToListAsync(ct));
         }
 
         // Searching: how well each one matches (its title), for the Relevance sort.
@@ -294,8 +326,10 @@ public class FeedService : IFeedService
         await AddNextRemindersAsync(userId, page.Select(r => r.Id).ToList(), details, now, ct);
 
         // Keep the pager's order; skip anything deleted between the two steps.
-        var items = page.Where(r => details.ContainsKey(r.Id)).Select(r => details[r.Id]).ToList();
-        return new FeedPageDto(items, nextCursor);
+        var items = page.Where(r => details.ContainsKey(r.Id)).Select(r => details[r.Id] with { Section = r.Section.ToString() }).ToList();
+        var smart = query.Sorts.Count > 0 && query.Sorts[0] == FeedSort.Smart;
+        var sections = smart ? keys.GroupBy(k => k.Section).ToDictionary(g => g.Key.ToString(), g => g.Count()) : null;
+        return new FeedPageDto(items, nextCursor, sections);
     }
 
     /// <summary>

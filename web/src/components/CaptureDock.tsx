@@ -5,6 +5,7 @@ import { IoClose, IoMic, IoPencil } from 'react-icons/io5'
 import { Link, useLocation, useSearchParams } from 'react-router'
 import type { SavedNotice } from '@shared/captureDraft'
 import { itemPath } from '../lib/itemPath'
+import { isTabPage } from '../lib/tabs'
 import { releaseQuickRecording } from '../lib/quickRelease'
 import { itemsApi } from '../api/endpoints'
 import { useIsPhone } from '../lib/useIsPhone'
@@ -13,7 +14,7 @@ import { CaptureBar } from './CaptureBar'
 /** The bubble's size and its distance from the screen edge. */
 const FAB = 56
 const EDGE = 12
-/** The feed's bottom filter bar (the mobile app's tab bar). */
+/** The bottom navigation (Feed · Today · Calendar · Settings). */
 const TAB_BAR = 57
 const GAP = 12
 const POSITION_KEY = 'dock-bubble'
@@ -55,7 +56,7 @@ export function CaptureDock() {
   const [pull, setPull] = useState<number | null>(null)
 
   const hidden = isItemPage(pathname) && !engaged
-  const bottom = GAP + Math.max(keyboard, pathname === '/feed' ? TAB_BAR : 0)
+  const bottom = GAP + Math.max(keyboard, isTabPage(pathname) ? TAB_BAR : 0)
 
   const collapse = useCallback(() => {
     if (!open || engaged) return

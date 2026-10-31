@@ -1320,9 +1320,9 @@ textarea {
 
 /* ---- Feed -------------------------------------------------------------- */
 
-/* Room for the fixed bottom bar. */
-.feed-page {
-  padding-bottom: 72px;
+/* Room for the fixed bottom navigation on the pages that have it. */
+.app.with-nav .content {
+  padding-bottom: 76px;
 }
 
 .chip {
@@ -1336,7 +1336,7 @@ textarea {
   margin-bottom: -8px;
 }
 
-/* Bottom filter bar - the mobile app's tab bar. */
+/* Bottom navigation (Feed · Today · Calendar · Settings) - the app's tab bar. */
 .tab-bar {
   position: fixed;
   left: 0;
@@ -1432,23 +1432,21 @@ textarea {
 
 .feed-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  border-inline-start: 3px solid var(--task);
+  /* High priority = a bar on this edge (spec v2); otherwise none. */
+  border-inline-start: 3px solid transparent;
+}
+
+.feed-row.high {
+  border-inline-start-color: var(--danger);
 }
 
 .feed-row + .feed-row {
   border-top: 1px solid var(--border);
 }
 
-.feed-row.kind-appointment {
-  border-inline-start-color: var(--appointment);
-}
-
-.feed-row.kind-note {
-  border-inline-start-color: var(--warn);
-}
 
 /* The type's filter-tab icon; for a task it is also the tick box. */
 .kind-icon {
@@ -1842,7 +1840,7 @@ button.kind-icon:hover:not(:disabled) {
   min-width: 32px;
 }
 
-.quick-views {
+.chip-bar {
   display: flex;
   gap: 6px;
   overflow-x: auto;
@@ -1850,11 +1848,11 @@ button.kind-icon:hover:not(:disabled) {
   padding-bottom: 2px;
 }
 
-.quick-views::-webkit-scrollbar {
+.chip-bar::-webkit-scrollbar {
   display: none;
 }
 
-.quick-view {
+.bar-chip {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -1862,8 +1860,8 @@ button.kind-icon:hover:not(:disabled) {
   white-space: nowrap;
 }
 
-.quick-view.active,
-.quick-view.active:hover {
+.bar-chip.active,
+.bar-chip.active:hover {
   border-color: var(--accent);
   background: var(--accent);
   color: var(--accent-text);
@@ -2106,118 +2104,6 @@ button.kind-icon:hover:not(:disabled) {
   outline-offset: 2px;
 }
 
-/* ---- Sort criteria as round chips, one icon each (same as mobile) ---- */
-
-.sort-chips-area {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-/* Under the Select button, on the end side (right; left in Hebrew). */
-.sort-chips {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-.sort-chips-area > p {
-  text-align: end;
-}
-
-.sort-chip {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  min-height: 0;
-  padding: 0;
-  border: none;
-  background: none;
-  width: 64px;
-  color: var(--text);
-}
-
-.sort-chip:hover:not(:disabled) {
-  background: none;
-}
-
-.sort-circle {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-size: 19px;
-  color: #fff;
-  background: var(--accent);
-  transition: background 0.15s, box-shadow 0.15s, color 0.15s;
-}
-
-.sort-circle.small {
-  width: 28px;
-  height: 28px;
-  font-size: 14px;
-}
-
-/* On: filled, inside a green ring. */
-.sort-chip.on .sort-circle {
-  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px #2f9e44;
-}
-
-/* Off: a pale tint, grey dashed ring - the icon keeps it recognizable. */
-.sort-chip.off .sort-circle {
-  background: var(--accent-soft);
-  color: var(--accent);
-  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--border);
-}
-
-.sort-chip.off .sort-chip-label {
-  color: var(--muted);
-}
-
-.sort-chip.edit .sort-circle {
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: inset 0 0 0 1px var(--border);
-}
-
-.sort-chip-label {
-  font-size: 0.72rem;
-  line-height: 1.2;
-  text-align: center;
-}
-
-.sort-editor {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.sort-editor-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.sort-editor-list li {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-
-.sort-editor-pick {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  font-weight: 500;
-}
 
 
 
@@ -3707,4 +3593,188 @@ html[data-wallpaper] .page-header > div:first-child {
   font: 700 10px/1.6 system-ui, sans-serif;
   letter-spacing: 0.08em;
   pointer-events: none;
+}
+
+/* ---- Feed, spec v2 (2026-10-31): one chip row, the ⚙ sheet, triage rows ---- */
+
+/* Type chips | toggles | ⚙ - one row that scrolls sideways. */
+.chip-bar {
+  align-items: center;
+}
+
+.chip-divider {
+  flex: none;
+  width: 1px;
+  height: 22px;
+  background: var(--border);
+  margin: 0 2px;
+}
+
+.bar-chip.toggle.active,
+.bar-chip.toggle.active:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.sheet-button {
+  position: relative;
+  padding-inline: 12px;
+  font-size: 1.1rem;
+}
+
+.sheet-button.set {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.chip-badge {
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  padding: 0 4px;
+}
+
+.search-mic.listening {
+  color: var(--danger);
+  animation: mic-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes mic-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .search-mic.listening {
+    animation: none;
+  }
+}
+
+/* The ⚙ sheet: from the bottom on a phone, a dialog on a wide screen. */
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.sheet {
+  width: min(560px, 100%);
+  max-height: 85vh;
+  overflow-y: auto;
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 18px 18px 0 0;
+  padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.2);
+}
+
+@media (min-width: 701px) {
+  .sheet-backdrop {
+    align-items: center;
+  }
+
+  .sheet {
+    border-radius: 18px;
+  }
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sheet-head h2 {
+  font-size: 1.05rem;
+}
+
+.sheet-actions {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* A row: control · title · one indicator. */
+.feed-line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.feed-line .feed-title {
+  flex: 1;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.row-indicator {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.82rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.row-indicator.today {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.feed-snippet.one-line {
+  -webkit-line-clamp: 1;
+}
+
+/* An event's start time where a task has its tick box. */
+.time-badge {
+  flex-shrink: 0;
+  min-width: 46px;
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--appointment);
+  background: color-mix(in srgb, var(--appointment) 12%, transparent);
+  border-radius: 8px;
+  padding: 3px 4px;
+}
+
+.feed-row.passed .time-badge {
+  color: var(--muted);
+  background: none;
+}
+
+/* "Done (12)" folds and unfolds the done items. */
+.group-toggle {
+  border: none;
+  background: none;
+  padding: 0;
+  min-height: 0;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.group-toggle:hover {
+  background: none;
+  color: var(--text);
 }

@@ -16,4 +16,10 @@ public enum FeedSort
     PriorityHigh = 4,
     /// <summary>Best match for the search words first (FeedRelevance) - the default while searching.</summary>
     Relevance = 5,
+    /// <summary>
+    /// Sections (FeedSection: Overdue, Today, Upcoming, No date, Notes, Done), each in its own
+    /// order - the default since spec v2. With PriorityHigh after it, high priority comes first
+    /// inside each section.
+    /// </summary>
+    Smart = 6,
 }

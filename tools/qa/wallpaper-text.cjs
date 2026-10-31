@@ -48,7 +48,7 @@ const FIND = () => {
   const before = (await call('GET', '/settings/appearance')).data
   const feed = (await call('GET', '/feed?take=50')).data
   const firstOf = (k) => feed.items.find((i) => i.kind === k)
-  const pages = ['/feed', '/feed?show=tasks', '/feed?show=events', '/feed?show=notes', '/today', '/calendar', '/settings']
+  const pages = ['/feed', '/today', '/calendar', '/settings']
   for (const [k, base] of [['Task', 'tasks'], ['Appointment', 'appointments'], ['Note', 'notes']]) {
     const it = firstOf(k)
     if (it) pages.push(`/${base}/${it.id}`, `/${base}/${it.id}?edit=1`)

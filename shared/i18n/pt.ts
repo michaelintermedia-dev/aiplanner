@@ -657,6 +657,7 @@ export const pt: Messages = {
   'search.voice': 'Buscar por voz',
   'search.listening': 'Ouvindo… toque para parar',
   'filter.sheet': 'Filtros e ordem',
+  'capture.keepTalking': 'Salvando… segure o microfone para continuar falando',
   'account.title': 'Conta',
   'account.signedInAs': 'Conectado como {email}',
   'account.export': 'Baixar meus dados',

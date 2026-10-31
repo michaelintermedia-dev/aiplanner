@@ -657,6 +657,7 @@ export const de: Messages = {
   'search.voice': 'Per Sprache suchen',
   'search.listening': 'Ich höre zu… zum Beenden tippen',
   'filter.sheet': 'Filter und Reihenfolge',
+  'capture.keepTalking': 'Wird gespeichert… Mikro halten, um weiterzusprechen',
   'account.title': 'Konto',
   'account.signedInAs': 'Angemeldet als {email}',
   'account.export': 'Meine Daten herunterladen',

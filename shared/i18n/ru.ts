@@ -657,6 +657,7 @@ export const ru: Messages = {
   'search.voice': 'Поиск голосом',
   'search.listening': 'Слушаю… нажмите, чтобы остановить',
   'filter.sheet': 'Фильтры и порядок',
+  'capture.keepTalking': 'Сохраняю… удерживайте микрофон, чтобы продолжить',
   'account.title': 'Аккаунт',
   'account.signedInAs': 'Вы вошли как {email}',
   'account.export': 'Скачать мои данные',

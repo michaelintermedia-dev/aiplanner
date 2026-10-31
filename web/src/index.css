@@ -672,6 +672,43 @@ label.inline-check {
   box-shadow: 0 0 0 3px var(--danger);
 }
 
+/* A quick recording waiting to be saved: a ring shrinks into the mic and fades (KEEP_TALKING_MS). */
+.mic {
+  position: relative;
+}
+
+.mic-countdown {
+  position: absolute;
+  inset: -4px;
+  border: 4px solid var(--accent);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: mic-countdown linear forwards;
+}
+
+@keyframes mic-countdown {
+  from {
+    transform: scale(1.4);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mic-countdown {
+    animation-name: mic-countdown-fade;
+  }
+
+  @keyframes mic-countdown-fade {
+    to {
+      opacity: 0;
+    }
+  }
+}
+
 .rec-dot.paused {
   animation: none;
   opacity: 0.4;

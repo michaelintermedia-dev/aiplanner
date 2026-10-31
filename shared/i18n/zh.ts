@@ -657,6 +657,7 @@ export const zh: Messages = {
   'search.voice': '语音搜索',
   'search.listening': '正在听… 点按停止',
   'filter.sheet': '筛选和排序',
+  'capture.keepTalking': '正在保存… 按住麦克风继续说',
   'account.title': '账户',
   'account.signedInAs': '已登录为 {email}',
   'account.export': '下载我的数据',

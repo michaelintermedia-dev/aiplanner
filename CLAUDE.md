@@ -537,7 +537,11 @@ Local dev notes:
   mobile `requestQuickRecording`, web `?record=1`); since spec v2 (2026-10-31) letting go
   sends it (Save) and sliding > 80 px away first cancels it (`releaseQuickRecording` /
   `onQuickRelease`: mobile lib/quickRecord, web lib/quickRelease; under 1 s = dropped). A tap
-  opens it with the text box focused. Collapsing shrinks the toolbar into the button and opening grows it back out of it (Animated, native driver; the button's drag and its pop are two layers, since one view can't mix JS- and native-driven transforms; Reduce motion skips it). It sits above the tab bar on tab
+  opens it with the text box focused.
+  Letting go doesn't save at once (user's request, 2026-10-31): the recording pauses and a ring
+  drains round the mic for `KEEP_TALKING_MS` (2.5 s, shared/captureDraft) with "Saving… hold the
+  mic to keep talking"; pressing the mic then goes on with the SAME recording (every later pause
+  waits again), else it's saved. The pause controls (player, "press the arrow...") hide meanwhile. Collapsing shrinks the toolbar into the button and opening grows it back out of it (Animated, native driver; the button's drag and its pop are two layers, since one view can't mix JS- and native-driven transforms; Reduce motion skips it). It sits above the tab bar on tab
   screens and lifts above the keyboard (edge-to-edge Android doesn't resize). It never collapses while recording/processing/reviewing
   (`CaptureBar onEngagedChange`), and typed text survives collapsing.
   When a capture is done (saved, saved right away, or the review cancelled) it

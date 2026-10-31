@@ -19,7 +19,10 @@ export function MicButton({
   pause,
   disabled,
   onError,
+  countdown,
 }: {
+  /** A quick recording waiting to be saved: a ring around the mic drains over `ms` (a new `key` restarts it). */
+  countdown?: { key: number; ms: number } | null
   state: RecorderState
   record: () => Promise<void>
   pause: () => void
@@ -88,6 +91,7 @@ export function MicButton({
       aria-label={label}
       title={label}>
       {recording ? <IoPause aria-hidden /> : <IoMic aria-hidden />}
+      {countdown && <span key={countdown.key} className="mic-countdown" style={{ animationDuration: `${countdown.ms}ms` }} aria-hidden />}
     </button>
   )
 }

@@ -657,6 +657,7 @@ export const ja: Messages = {
   'search.voice': '音声で検索',
   'search.listening': '聞いています… タップで停止',
   'filter.sheet': '絞り込みと並び順',
+  'capture.keepTalking': '保存中… 続けて話すにはマイクを長押し',
   'account.title': 'アカウント',
   'account.signedInAs': '{email} でログイン中',
   'account.export': 'データをダウンロード',

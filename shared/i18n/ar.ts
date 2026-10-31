@@ -657,6 +657,7 @@ export const ar: Messages = {
   'search.voice': 'البحث بالصوت',
   'search.listening': 'أستمع… انقر للإيقاف',
   'filter.sheet': 'التصفية والترتيب',
+  'capture.keepTalking': 'جارٍ الحفظ… اضغط مطولًا على الميكروفون لمواصلة الكلام',
   'account.title': 'الحساب',
   'account.signedInAs': 'مسجّل الدخول باسم {email}',
   'account.export': 'تنزيل بياناتي',

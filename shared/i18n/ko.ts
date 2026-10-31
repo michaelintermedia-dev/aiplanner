@@ -657,6 +657,7 @@ export const ko: Messages = {
   'search.voice': '음성으로 검색',
   'search.listening': '듣는 중… 탭하여 중지',
   'filter.sheet': '필터 및 정렬',
+  'capture.keepTalking': '저장 중… 계속 말하려면 마이크를 길게 누르세요',
   'account.title': '계정',
   'account.signedInAs': '{email}(으)로 로그인됨',
   'account.export': '내 데이터 다운로드',

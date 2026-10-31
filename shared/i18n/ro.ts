@@ -657,6 +657,7 @@ export const ro: Messages = {
   'search.voice': 'Caută vocal',
   'search.listening': 'Ascult… atinge ca să oprești',
   'filter.sheet': 'Filtre și ordine',
+  'capture.keepTalking': 'Se salvează… ține apăsat microfonul ca să continui',
   'account.title': 'Cont',
   'account.signedInAs': 'Conectat ca {email}',
   'account.export': 'Descarcă datele mele',

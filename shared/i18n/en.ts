@@ -661,6 +661,7 @@ export const en = {
   'search.voice': 'Search by voice',
   'search.listening': 'Listening… tap to stop',
   'filter.sheet': 'Filters and order',
+  'capture.keepTalking': 'Saving… hold the mic to keep talking',
   'account.title': 'Account',
   'account.signedInAs': 'Signed in as {email}',
   'account.export': 'Download my data',

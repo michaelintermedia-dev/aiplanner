@@ -657,6 +657,7 @@ export const he: Messages = {
   'search.voice': 'חיפוש בקול',
   'search.listening': 'מקשיב… הקש כדי לעצור',
   'filter.sheet': 'סינון וסדר',
+  'capture.keepTalking': 'שומר… החזק את המיקרופון כדי להמשיך לדבר',
   'account.title': 'חשבון',
   'account.signedInAs': 'מחובר/ת בתור {email}',
   'account.export': 'הורדת הנתונים שלי',

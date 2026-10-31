@@ -65,8 +65,20 @@ const check = (name, ok, detail = '') => console.log(`${ok ? 'PASS' : 'FAIL'}  $
       await page.waitForTimeout(3500) // the fake mic plays the words
       check('holding shows "Let go to save"', /Let go to save/.test(await page.locator('.dock-panel').textContent()))
       await page.mouse.up()
+      // Letting go: a moment to keep talking (ring + hint) before it's saved.
+      await page.waitForTimeout(300)
+      check('let go: the ring drains round the mic, "hold the mic to keep talking"',
+        (await page.locator('.dock-panel .mic-countdown').count()) === 1 && /keep talking/.test(await page.locator('.dock-panel').textContent()))
+      // ...press the mic in that moment: the same recording goes on.
+      const mic = await page.locator('.dock-panel .mic').boundingBox()
+      await page.mouse.move(mic.x + mic.width / 2, mic.y + mic.height / 2); await page.mouse.down()
+      await page.waitForTimeout(2500)
+      check('pressing the mic keeps talking (no save yet)', (await page.locator('.dock-notice').count()) === 0 && (await page.locator('.dock-panel .mic.recording').count()) === 1)
+      await page.mouse.up()
+      await page.waitForTimeout(300)
+      check('...let go again: the ring starts again', (await page.locator('.dock-panel .mic-countdown').count()) === 1)
       await notice.waitFor({ timeout: 90000 })
-      check('letting go saves it', /Saved: “/.test(await notice.textContent()), await notice.textContent())
+      check('then it saves it - once', /Saved: “/.test(await notice.textContent()), await notice.textContent())
       const saved = (await call('GET', '/feed?take=5&q=bread')).data.items
       saved.forEach((i) => made.push({ itemType: i.kind, id: i.id }))
       check('...the spoken words became the entry', saved.length >= 1, saved.map((i) => i.title).join(', '))

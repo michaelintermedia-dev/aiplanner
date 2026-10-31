@@ -657,6 +657,7 @@ export const hi: Messages = {
   'search.voice': 'आवाज़ से खोजें',
   'search.listening': 'सुन रहा हूँ… रोकने के लिए टैप करें',
   'filter.sheet': 'फ़िल्टर और क्रम',
+  'capture.keepTalking': 'सेव हो रहा है… बोलना जारी रखने के लिए माइक दबाए रखें',
   'account.title': 'खाता',
   'account.signedInAs': '{email} के रूप में साइन इन',
   'account.export': 'मेरा डेटा डाउनलोड करें',

@@ -657,6 +657,7 @@ export const tr: Messages = {
   'search.voice': 'Sesle ara',
   'search.listening': 'Dinliyorum… durdurmak için dokun',
   'filter.sheet': 'Filtreler ve sıralama',
+  'capture.keepTalking': 'Kaydediliyor… konuşmaya devam etmek için mikrofona basılı tut',
   'account.title': 'Hesap',
   'account.signedInAs': '{email} olarak giriş yapıldı',
   'account.export': 'Verilerimi indir',

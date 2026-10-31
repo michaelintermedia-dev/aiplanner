@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { savedNotice, type SavedNotice } from '@shared/captureDraft'
+import { KEEP_TALKING_MS, savedNotice, type SavedNotice } from '@shared/captureDraft'
 import type { AppendTarget, Capture, ItemType } from '@shared/types'
 import { router } from 'expo-router'
 import { File } from 'expo-file-system'
@@ -266,24 +266,50 @@ export function CaptureBar({
   const talkSignal = continueFrom?.talkSignal ?? quickSignal ?? 0
   useEffect(() => {
     if (!talkSignal || recorder.state === 'recording' || busy !== null) return
-    if (!continueFrom && quickSignal) setHeld(true) // started by holding the bubble: letting go sends it
+    if (!continueFrom && quickSignal) {
+      // Started by holding the bubble: letting go saves it (after a moment to keep talking).
+      setHeld(true)
+      setQuickSession(true)
+    }
     queueMicrotask(() => startRecording().catch(onMicError))
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the signal changes
   }, [talkSignal])
 
-  // Holding the bubble (spec v2): let go = Save, slide away first = cancel; a blip is dropped.
+  // Holding the bubble (spec v2): slide away first = cancel, a blip is dropped; let go = pause, and
+  // after KEEP_TALKING_MS (a ring draining round the mic) it's saved - unless the mic is pressed
+  // again to keep talking: the same recording goes on, and the next pause waits again
+  // (user's request, 2026-10-31).
   const [held, setHeld] = useState(false)
+  const [quickSession, setQuickSession] = useState(false)
+  const [waitKey, setWaitKey] = useState(0)
   useEffect(
     () =>
       onQuickRelease((cancel) => {
         if (!held) return
         setHeld(false)
-        if (cancel || (recorder.seconds < 1 && recorder.segments.length === 0)) void recorder.discard()
-        else withConsent(() => void send(true))
+        if (cancel || (recorder.seconds < 1 && recorder.segments.length === 0)) {
+          setQuickSession(false)
+          void recorder.discard()
+        } else if (recorder.state === 'recording') void recorder.pause()
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the latest recorder state on each release
-    [held, recorder.seconds, recorder.segments.length],
+    [held, recorder.seconds, recorder.segments.length, recorder.state],
   )
+  const waiting = quickSession && !held && busy === null && recorder.state === 'paused'
+  useEffect(() => {
+    if (!waiting) return
+    setWaitKey((k) => k + 1)
+    const timer = setTimeout(() => {
+      setQuickSession(false)
+      withConsent(() => void send(true))
+    }, KEEP_TALKING_MS)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- restarts on every pause of the session
+  }, [waiting])
+  // Sent or discarded: the session is over.
+  useEffect(() => {
+    if (quickSession && !held && recorder.state === 'idle' && busy === null) setQuickSession(false)
+  }, [quickSession, held, recorder.state, busy])
 
   // Shared from another app (user's request, 2026-10-12): its words and files go in
   // and it's saved like a tap on Save - the review opens only if something's unclear.
@@ -411,7 +437,11 @@ export function CaptureBar({
             <LevelMeter metering={recorder.metering} active={recorder.state === 'recording'} onSilenceChange={setSilent} />
           </View>
           <Text style={{ color: c.muted }} accessibilityLiveRegion="polite">
-            {recorder.state === 'recording'
+            {held && recorder.state === 'recording'
+              ? t('capture.releaseHint')
+              : waiting
+                ? t('capture.keepTalking')
+                : recorder.state === 'recording'
               ? t('capture.listening')
               : recorder.atLimit
                 ? t('capture.atLimit')
@@ -516,7 +546,7 @@ export function CaptureBar({
         <View style={styles.buttons}>
           {hasAudio ? (
             <>
-              {recorder.state === 'paused' && <SegmentPlayer segments={recorder.segments} />}
+              {recorder.state === 'paused' && !waiting && <SegmentPlayer segments={recorder.segments} />}
               <Button title={t('capture.discard')} variant="link" onPress={() => void recorder.discard()} disabled={busy !== null} />
               <SendButtons
                 newEntry={!continueFrom}
@@ -541,6 +571,7 @@ export function CaptureBar({
           pause={recorder.pause}
           disabled={busy !== null}
           onError={onMicError}
+          countdown={waiting ? { key: waitKey, ms: KEEP_TALKING_MS } : null}
         />
       </View>
     </View>

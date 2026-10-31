@@ -232,3 +232,10 @@ export function savedNotice(capture: Capture, count: number, zone?: ZoneContext)
     first: savedItem(capture),
   }
 }
+
+/**
+ * After letting go of the bubble (a quick recording), how long the mic waits -
+ * a ring draining around it - before saving: press it again to keep talking
+ * (the same recording goes on). User's request, 2026-10-31.
+ */
+export const KEEP_TALKING_MS = 2500

@@ -657,6 +657,7 @@ export const uk: Messages = {
   'search.voice': 'Пошук голосом',
   'search.listening': 'Слухаю… торкніться, щоб зупинити',
   'filter.sheet': 'Фільтри й порядок',
+  'capture.keepTalking': 'Зберігаю… утримуйте мікрофон, щоб говорити далі',
   'account.title': 'Обліковий запис',
   'account.signedInAs': 'Ви ввійшли як {email}',
   'account.export': 'Завантажити мої дані',

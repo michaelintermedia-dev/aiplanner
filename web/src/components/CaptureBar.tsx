@@ -1,4 +1,4 @@
-import { savedNotice, type SavedNotice } from '@shared/captureDraft'
+import { KEEP_TALKING_MS, savedNotice, type SavedNotice } from '@shared/captureDraft'
 import type { AppendTarget, Capture, ItemType } from '@shared/types'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
@@ -311,24 +311,50 @@ export function CaptureBar({
         { replace: true },
       )
     }
-    if (quick) setHeld(true) // started by holding the bubble: letting go sends it
+    if (quick) {
+      // Started by holding the bubble: letting go saves it (after a moment to keep talking).
+      setHeld(true)
+      setQuickSession(true)
+    }
     void startRecording().catch(onMicError)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the form opens
   }, [quick])
 
-  // Holding the bubble (spec v2): let go = Save, slide away first = cancel; a blip is dropped.
+  // Holding the bubble (spec v2): slide away first = cancel, a blip is dropped; let go = pause, and
+  // after KEEP_TALKING_MS (a ring draining round the mic) it's saved - unless the mic is pressed
+  // again to keep talking: the same recording goes on, and the next pause waits again
+  // (user's request, 2026-10-31; same as the app).
   const [held, setHeld] = useState(false)
+  const [quickSession, setQuickSession] = useState(false)
+  const [waitKey, setWaitKey] = useState(0)
   useEffect(
     () =>
       onQuickRelease((cancel) => {
         if (!held) return
         setHeld(false)
-        if (cancel || recorder.seconds < 1) recorder.discard()
-        else void sendRecording(true)
+        if (cancel || recorder.seconds < 1) {
+          setQuickSession(false)
+          recorder.discard()
+        } else if (recorder.state === 'recording') recorder.pause()
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the latest recorder state on each release
-    [held, recorder.seconds],
+    [held, recorder.seconds, recorder.state],
   )
+  const waiting = quickSession && !held && busy === null && recorder.state === 'paused'
+  useEffect(() => {
+    if (!waiting) return
+    setWaitKey((k) => k + 1)
+    const timer = window.setTimeout(() => {
+      setQuickSession(false)
+      void sendRecording(true)
+    }, KEEP_TALKING_MS)
+    return () => window.clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- restarts on every pause of the session
+  }, [waiting])
+  // Sent or discarded: the session is over.
+  useEffect(() => {
+    if (quickSession && !held && recorder.state === 'idle' && busy === null) setQuickSession(false)
+  }, [quickSession, held, recorder.state, busy])
 
   // Shared from another app (the web app as a share target - user's request, 2026-10-12):
   // its words go in and it's saved like a tap on Save; the review opens only if something's unclear.
@@ -465,14 +491,15 @@ export function CaptureBar({
             <LevelMeter stream={recorder.stream} active={recorder.state === 'recording'} onSilenceChange={setSilent} />
           )}
           <span className="muted" aria-live="polite">
-            {recorder.state === 'recording' ? t('capture.listening') : recorder.atLimit ? t('capture.atLimit') : t('capture.paused')}
+            {/* Waiting to save a quick recording: only the countdown's hint (below), no pause controls. */}
+            {waiting ? '' : recorder.state === 'recording' ? t('capture.listening') : recorder.atLimit ? t('capture.atLimit') : t('capture.paused')}
           </span>
           {silent && recorder.state === 'recording' && (
             <p className="mic-warning" role="alert">
               {mics.devices.length > 1 ? t('mic.silentPickAnother') : t('mic.silent')}
             </p>
           )}
-          {recorder.state === 'paused' && preview && (
+          {recorder.state === 'paused' && preview && !waiting && (
             <>
               <audio className="rec-preview" controls src={preview} aria-label={t('capture.listenSoFar')} ref={speedRef(speed)} />
               <SpeedChips />
@@ -537,7 +564,7 @@ export function CaptureBar({
           </span>
         ) : (
           <span className="muted capture-hint">
-            {held && recorder.state === 'recording' ? t('capture.releaseHint') : hasAudio ? '' : (savedMessage ?? t('capture.hint'))}
+            {held && recorder.state === 'recording' ? t('capture.releaseHint') : waiting ? t('capture.keepTalking') : hasAudio ? '' : (savedMessage ?? t('capture.hint'))}
             {!hasAudio && savedMessage && savedLink && savedRef && (
               <>
                 {' '}
@@ -615,6 +642,7 @@ export function CaptureBar({
             pause={recorder.pause}
             disabled={busy !== null}
             onError={onMicError}
+            countdown={waiting ? { key: waitKey, ms: KEEP_TALKING_MS } : null}
           />
         )}
       </div>

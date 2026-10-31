@@ -10,6 +10,16 @@ import { applyAppearance } from './lib/appearance'
 // This device's last appearance, before anything is drawn (the account's follows once signed in).
 applyAppearance()
 
+// The staging copy (deploy/compose.staging.yaml) says so on every page and in the tab's title.
+const stage = import.meta.env.VITE_STAGE as string | undefined
+if (stage) {
+  const ribbon = document.createElement('div')
+  ribbon.className = 'stage-ribbon'
+  ribbon.textContent = stage.toUpperCase()
+  document.body.appendChild(ribbon)
+  document.title = `[${stage}] ${document.title}`
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

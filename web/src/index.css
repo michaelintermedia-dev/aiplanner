@@ -3692,3 +3692,19 @@ html[data-wallpaper] .page-header > div:first-child {
   bottom: 1px;
   font-size: 15px;
 }
+
+/* Staging builds only (VITE_STAGE): a corner ribbon that never takes clicks. */
+.stage-ribbon {
+  position: fixed;
+  top: 0;
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  padding: 1px 10px;
+  border-radius: 0 0 6px 6px;
+  background: #d97706;
+  color: #fff;
+  font: 700 10px/1.6 system-ui, sans-serif;
+  letter-spacing: 0.08em;
+  pointer-events: none;
+}

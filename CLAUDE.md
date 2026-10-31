@@ -995,6 +995,14 @@ own Android client before Google Play). Not yet: Apple sign-in.
 
 ## Production (2026-10-06)
 
+**Staging first** (user's request, 2026-10-31): https://staging.gatazee.com is a second
+copy on the same server (`deploy/compose.staging.yaml`, own DB/recordings/`.env.staging`,
+owner-only sign-up, STAGING ribbon via the web build's `VITE_STAGE`, noindex), forwarded by
+production's Caddy (`STAGING_DOMAIN`, network `gatazee-edge`). Deploy with
+`tools/deploy.sh staging` (a pushed commit), check it there, then
+`tools/deploy.sh production --yes` - which deploys exactly staging's commit (the
+`production` branch, fast-forward only). Don't deploy production any other way.
+
 One server (target: Oracle Cloud Always Free, Ampere ARM), Docker Compose in
 `deploy/` - production only; local dev stays on Aspire. Services: postgres:18,
 api (`deploy/api.Dockerfile`: aspnet + ffmpeg, non-root, recordings in the

@@ -6,7 +6,9 @@ COPY shared/ shared/
 COPY web/package.json web/package-lock.json web/
 RUN cd web && npm ci
 COPY web/ web/
-RUN cd web && npm run build
+# "staging" puts a STAGING ribbon on the page (compose.staging.yaml).
+ARG VITE_STAGE=
+RUN cd web && VITE_STAGE=$VITE_STAGE npm run build
 
 FROM caddy:2-alpine
 COPY deploy/Caddyfile /etc/caddy/Caddyfile

@@ -1,3 +1,13 @@
+# Proxies whose X-Forwarded-* headers are believed. Production faces the
+# internet directly (nothing to trust); the staging copy sits behind
+# production's Caddy and sets TRUSTED_PROXIES=private_ranges, so the API still
+# sees https and the visitor's address.
+{
+	servers {
+		trusted_proxies static {$TRUSTED_PROXIES:127.0.0.1/32}
+	}
+}
+
 # The app's addresses (DOMAIN may list several, comma-separated - e.g. the new
 # one and an old one still in use): the web app, and the API under /api.
 # Caddy gets and renews the HTTPS certificates by itself.
@@ -61,6 +71,21 @@
 		Strict-Transport-Security "max-age=31536000"
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+}
+
+# Staging (deploy/compose.staging.yaml): its own stack on this server, forwarded
+# to its web container on the shared "gatazee-edge" network. Unset: a local name
+# that never asks for a certificate.
+{$STAGING_DOMAIN:staging.localhost} {
+	request_body {
+		max_size 60MB
+	}
+	reverse_proxy staging-web:80
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Robots-Tag "noindex, nofollow"
 		-Server
 	}
 }

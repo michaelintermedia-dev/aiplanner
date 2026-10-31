@@ -1,0 +1,73 @@
+# Staging (2026-10-31): a second copy of the app on the same server, for trying
+# changes before production - its own database, recordings and settings
+# (.env.staging), no backups. Reached at STAGING_DOMAIN through production's
+# Caddy (which owns ports 80/443 and forwards to "staging-web" on the shared
+# "gatazee-edge" network). Deploy with tools/deploy.sh staging; see README.
+#
+#   docker compose -f compose.staging.yaml --env-file .env.staging up -d --build
+name: gatazee-staging
+
+services:
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.staging}
+      POSTGRES_DB: aiplannerdb
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d aiplannerdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/api.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__aiplannerdb: Host=postgres;Database=aiplannerdb;Username=postgres;Password=${POSTGRES_PASSWORD}
+      Jwt__Secret: ${JWT_SECRET:?set JWT_SECRET in .env.staging}
+      AiProvider__ApiKey: ${OPENAI_API_KEY:?set OPENAI_API_KEY in .env.staging}
+      Auth__AllowedEmails: ${ALLOWED_EMAILS:?staging is private - set ALLOWED_EMAILS in .env.staging}
+      Admin__Emails: ${ADMIN_EMAILS:-}
+      Email__ApiKey: ${RESEND_API_KEY:-}
+      Email__From: ${EMAIL_FROM:-}
+      WebPush__PublicKey: ${VAPID_PUBLIC_KEY:-}
+      WebPush__PrivateKey: ${VAPID_PRIVATE_KEY:-}
+      ExternalAuth__Google__WebClientId: ${GOOGLE_WEB_CLIENT_ID:-}
+      RateLimits__AiPerDay: ${AI_PER_DAY:-100}
+    volumes:
+      - recordings:/data
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/web.Dockerfile
+      args:
+        VITE_STAGE: staging
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      # Plain HTTP inside: production's Caddy does HTTPS and forwards here.
+      DOMAIN: ":80"
+      TRUSTED_PROXIES: private_ranges
+    networks:
+      default:
+      edge:
+        aliases: [staging-web]
+
+networks:
+  edge:
+    name: gatazee-edge
+    external: true
+
+volumes:
+  pgdata:
+  recordings:

@@ -58,6 +58,7 @@ services:
       DOMAIN: ${DOMAIN:?set DOMAIN in .env}
       HOME_DOMAINS: ${HOME_DOMAINS:-www.localhost}
       HOME_REDIRECT: ${HOME_REDIRECT:-localhost}
+      STAGING_DOMAIN: ${STAGING_DOMAIN:-staging.localhost}
     ports:
       - "80:80"
       - "443:443"
@@ -67,6 +68,10 @@ services:
       - caddy_config:/config
       # Phone app downloads (/dl/...), kept across rebuilds of this image.
       - downloads:/srv/dl
+    # Also on the network the staging copy joins, to forward STAGING_DOMAIN to it.
+    networks:
+      - default
+      - edge
 
   # Every night: a database dump and an archive of the recordings, kept 14 days
   # (in the "backups" volume - copy them off the server too, see README).
@@ -126,6 +131,13 @@ services:
           rclone delete secure: --min-age 30d -v || true
           sleep 79200
         done
+
+networks:
+  # Shared with compose.staging.yaml; made once by tools/deploy.sh
+  # (docker network create gatazee-edge).
+  edge:
+    name: gatazee-edge
+    external: true
 
 volumes:
   downloads:

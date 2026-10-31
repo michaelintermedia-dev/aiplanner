@@ -46,6 +46,40 @@ cd deploy && docker compose up -d --build
 
 Migrations run when the new API starts.
 
+## Staging (try it before production)
+
+A second copy of the app on the same server: **https://staging.gatazee.com**,
+with its own database, recordings and settings (`deploy/.env.staging`), no
+backups, sign-up limited to the owner, a STAGING ribbon on every page and
+`noindex`. It is `compose.staging.yaml` (project `gatazee-staging`, checkout
+`~/gatazee-staging`); production's Caddy owns ports 80/443 and forwards
+`STAGING_DOMAIN` to it over the shared `gatazee-edge` network.
+
+The flow - production only ever gets a commit that ran on staging:
+
+```bash
+git push                                  # as usual
+bash tools/deploy.sh staging              # this commit -> staging; try it there
+bash tools/deploy.sh production --yes     # what staging runs -> production
+bash tools/deploy.sh status               # which commit each one runs
+```
+
+`production` moves the `production` branch to staging's commit (fast-forward
+only) and the server's `~/aiplanner` checkout follows that branch.
+
+First-time setup (done 2026-10-31):
+1. DNS: an A record `staging` -> the server's IP.
+2. `bash tools/deploy.sh init-staging` - clones `~/gatazee-staging` and writes
+   `.env.staging` with new secrets (the OpenAI key copied from production's).
+3. `STAGING_DOMAIN=staging.gatazee.com` in production's `deploy/.env`, then a
+   production deploy (its Caddy learns the address).
+4. `bash tools/deploy.sh staging`.
+
+Optional on staging (empty = off): email codes, web push, Google sign-in (add
+`https://staging.gatazee.com` to the Web client's JavaScript origins first).
+A staging APK: build with `EXPO_PUBLIC_API_URL=https://staging.gatazee.com` -
+note it has the same package as the real app, so it replaces it on the phone.
+
 ## Backups
 
 The `backup` service writes `db-<date>.sql.gz` and `recordings-<date>.tgz`

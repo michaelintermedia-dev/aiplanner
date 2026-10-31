@@ -119,6 +119,7 @@
       ],
       "./plugins/withPlayStoreManifest.js",
       "./plugins/withUploadSigning.js",
+      "./plugins/withStagingVariant.js",
       "expo-background-task",
       [
         "expo-calendar",

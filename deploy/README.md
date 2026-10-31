@@ -77,8 +77,11 @@ First-time setup (done 2026-10-31):
 
 Optional on staging (empty = off): email codes, web push, Google sign-in (add
 `https://staging.gatazee.com` to the Web client's JavaScript origins first).
-A staging APK: build with `EXPO_PUBLIC_API_URL=https://staging.gatazee.com` -
-note it has the same package as the real app, so it replaces it on the phone.
+A staging APK: the release build with `-PstagingApp` and
+`EXPO_PUBLIC_API_URL=https://staging.gatazee.com` - "Gatazee Staging", package
+`com.aiplanner.app.staging` (`mobile/plugins/withStagingVariant.js`), so it installs next to
+the real app. Download it from the staging site's `/dl/` (copied into the staging web container,
+gone after a staging rebuild - copy it again).
 
 ## Backups
 

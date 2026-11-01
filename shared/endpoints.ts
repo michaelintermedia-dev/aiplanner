@@ -143,7 +143,8 @@ export function createApi(request: RequestFn) {
       remove: (id: string) => request<void>('DELETE', `/notes/${id}`),
     },
     today: {
-      get: () => request<Today>('GET', '/today'),
+      /** A day ("yyyy-MM-dd"; none = today): another day has its events and tasks due, not overdue/ongoing/reminders. */
+      get: (date?: string) => request<Today>('GET', date ? `/today?date=${date}` : '/today'),
     },
     items: {
       /** Turn a task / event / note into another type; the old item is replaced. */

@@ -1,0 +1,38 @@
+// Today page: other days by swiping, ‹ › or ← → (2026-11-01). Seeded QA account (node seed.cjs). No AI calls.
+const { openApp } = require('./lib.cjs')
+const check = (n, ok, d = '') => console.log(`${ok ? 'PASS' : 'FAIL'}  ${n}${d ? '  -- ' + d : ''}`)
+;(async () => {
+  const { browser, page, errors, shot } = await openApp({ width: 420, height: 900 })
+  try {
+    await page.goto('http://localhost:5173/today'); await page.waitForSelector('.sections')
+    const h1 = () => page.locator('.page-header h1').textContent()
+    const sections = () => page.locator('.sections .section h2').allTextContents()
+    const today = await h1()
+    check('today: ongoing and overdue are there', (await sections()).some((s) => s.startsWith('Ongoing')) && (await sections()).some((s) => s.startsWith('Overdue')), (await sections()).join(' | '))
+    await page.keyboard.press('ArrowRight'); await page.waitForTimeout(800)
+    const tomorrow = await h1()
+    check('→: the next day', tomorrow !== today, `${today} -> ${tomorrow}`)
+    const s2 = await sections()
+    check('another day: no overdue / ongoing, "Due"', !s2.some((s) => /^(Overdue|Ongoing)/.test(s)) && s2.some((s) => /^Due(?! today)/.test(s)), s2.join(' | '))
+    check('...a "Today" button to come back', (await page.getByRole('main').getByRole('button', { name: 'Today', exact: true }).count()) === 1)
+    await shot('today-other-day')
+    const swipe = (from, to) => page.evaluate(([a, b]) => {
+      const el = document.querySelector('.day-swipe')
+      const touch = (x) => new Touch({ identifier: 1, target: el, clientX: x, clientY: 500 })
+      el.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, touches: [touch(a)], changedTouches: [touch(a)] }))
+      el.dispatchEvent(new TouchEvent('touchend', { bubbles: true, touches: [], changedTouches: [touch(b)] }))
+    }, [from, to])
+    await swipe(350, 80); await page.waitForTimeout(800)
+    check('swipe left: one more day', (await h1()) !== tomorrow)
+    await swipe(80, 350); await page.waitForTimeout(800)
+    check('swipe right: back a day', (await h1()) === tomorrow)
+    await page.getByRole('main').getByRole('button', { name: 'Today', exact: true }).click(); await page.waitForTimeout(800)
+    check('Today button: back to today, button gone', (await h1()).startsWith(today.slice(0, 10)) && (await page.getByRole('main').getByRole('button', { name: 'Today', exact: true }).count()) === 0)
+    await page.locator('.page-header button', { hasText: '‹' }).click(); await page.waitForTimeout(800)
+    check('‹: yesterday', (await h1()) !== today)
+    console.log('page errors:', errors.filter((e) => !/401/.test(e)))
+    await page.unrouteAll({ behavior: 'ignoreErrors' })
+  } finally {
+    await browser.close()
+  }
+})()

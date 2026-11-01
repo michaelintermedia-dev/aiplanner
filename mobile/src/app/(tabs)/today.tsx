@@ -1,7 +1,11 @@
+import Ionicons from '@expo/vector-icons/Ionicons'
 import { useNow } from '@/lib/useNow'
-import { formatDateKey, formatDue, formatTime } from '@shared/dates'
+import { addDays, formatDateKey, formatDue, formatTime, todayKey } from '@shared/dates'
 import { useQuery } from '@tanstack/react-query'
-import { StyleSheet, Text, View } from 'react-native'
+import { useState } from 'react'
+import { I18nManager, Pressable, StyleSheet, Text, View } from 'react-native'
+import { GestureDetector } from 'react-native-gesture-handler'
+import Animated from 'react-native-reanimated'
 import { todayApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
 import { AppointmentRow } from '@/components/AppointmentRow'
@@ -9,69 +13,106 @@ import { DOCK_SPACE } from '@/components/CaptureDock'
 import { Screen } from '@/components/Screen'
 import { TaskRow } from '@/components/TaskRow'
 import { Row, Section } from '@/components/ui'
+import { useSwipeNav } from '@/lib/useSwipeNav'
 import { useColors } from '@/theme'
 import { t } from '@shared/i18n'
 
+/** Chevrons point the other way in right-to-left layouts. */
+const flip = I18nManager.isRTL ? { transform: [{ scaleX: -1 }] } : undefined
 
+/**
+ * Today - and, swiping sideways or with ‹ ›, any other day (user's request,
+ * 2026-11-01; same as the web): that day's events and tasks due. Overdue,
+ * ongoing and upcoming reminders are about now, so they show on today only.
+ */
 export default function TodayScreen() {
   const c = useColors()
   const { user, zone } = useAuth()
   const now = useNow()
-  const { data, isPending, error } = useQuery({ queryKey: ['today'], queryFn: todayApi.get })
+  const today = todayKey(zone.timeZone)
+  const [day, setDay] = useState(today)
+  const isToday = day === today
+  const { data, isPending, error } = useQuery({ queryKey: ['today', day], queryFn: () => todayApi.get(isToday ? undefined : day) })
+  const move = (direction: 1 | -1) => setDay((d) => addDays(d, direction))
+  const swipe = useSwipeNav(move)
 
   return (
     <Screen bottomSpace={DOCK_SPACE}>
-      <View style={c.block && { ...c.block, alignSelf: 'flex-start' }}>
-        <Text style={{ color: c.muted }}>{t('today.hello', { name: user?.displayName ?? '' })}</Text>
-        <Text style={[styles.date, { color: c.text }]}>
-          {data ? formatDateKey(data.date, zone.locale) : t('date.today')}
-        </Text>
-        <Text style={[styles.clock, { color: c.muted }]}>{formatTime(now.toISOString(), zone)}</Text>
+      <View style={styles.head}>
+        <View style={[{ flex: 1 }, c.block && { ...c.block, alignSelf: 'flex-start' }]}>
+          {isToday && <Text style={{ color: c.muted }}>{t('today.hello', { name: user?.displayName ?? '' })}</Text>}
+          <Text style={[styles.date, { color: isToday ? c.text : c.accent }]}>{formatDateKey(day, zone.locale)}</Text>
+          {isToday && <Text style={[styles.clock, { color: c.muted }]}>{formatTime(now.toISOString(), zone)}</Text>}
+        </View>
+        <View style={[styles.nav, c.pill]}>
+          <Pressable onPress={() => move(-1)} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('calendar.previous')}>
+            <Ionicons name="chevron-back" size={24} color={c.text} style={flip} />
+          </Pressable>
+          {!isToday && (
+            <Pressable onPress={() => setDay(today)} style={[styles.todayButton, { borderColor: c.border }]} accessibilityRole="button">
+              <Text style={{ color: c.text }}>{t('date.today')}</Text>
+            </Pressable>
+          )}
+          <Pressable onPress={() => move(1)} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('calendar.next')}>
+            <Ionicons name="chevron-forward" size={24} color={c.text} style={flip} />
+          </Pressable>
+        </View>
       </View>
 
-      {isPending && <Text style={[{ color: c.muted }, c.pillStart]}>{t('common.loading')}</Text>}
-      {error && <Text style={[{ color: c.danger }, c.pillStart]}>{error.message}</Text>}
-      {data && (
-        <>
-          <Section title={t('today.schedule')} empty={t('today.scheduleEmpty')}>
-            {data.appointmentsToday.map((a, i, all) => (
-              <AppointmentRow key={a.id} appointment={a} last={i === all.length - 1} />
-            ))}
-          </Section>
-          {data.overdueTasks.length > 0 && (
-            <Section title={t('filter.when.overdue')} tone="warn">
-              {data.overdueTasks.map((t, i, all) => (
-                <TaskRow key={t.id} task={t} last={i === all.length - 1} />
-              ))}
-            </Section>
+      <GestureDetector gesture={swipe.gestures[0]}>
+        <Animated.View style={[styles.body, swipe.style]}>
+          {isPending && <Text style={[{ color: c.muted }, c.pillStart]}>{t('common.loading')}</Text>}
+          {error && <Text style={[{ color: c.danger }, c.pillStart]}>{error.message}</Text>}
+          {data && (
+            <>
+              <Section title={t('today.schedule')} empty={isToday ? t('today.scheduleEmpty') : t('today.scheduleDayEmpty')}>
+                {data.appointmentsToday.map((a, i, all) => (
+                  <AppointmentRow key={a.id} appointment={a} last={i === all.length - 1} />
+                ))}
+              </Section>
+              {data.overdueTasks.length > 0 && (
+                <Section title={t('filter.when.overdue')} tone="warn">
+                  {data.overdueTasks.map((t, i, all) => (
+                    <TaskRow key={t.id} task={t} last={i === all.length - 1} />
+                  ))}
+                </Section>
+              )}
+              <Section title={isToday ? t('today.dueToday') : t('today.due')} empty={isToday ? t('today.dueTodayEmpty') : t('today.dueDayEmpty')}>
+                {data.tasksDueToday.map((t, i, all) => (
+                  <TaskRow key={t.id} task={t} last={i === all.length - 1} />
+                ))}
+              </Section>
+              {isToday && (
+                <Section title={t('today.ongoing')} empty={t('today.ongoingEmpty')}>
+                  {data.ongoingTasks.map((t, i, all) => (
+                    <TaskRow key={t.id} task={t} last={i === all.length - 1} />
+                  ))}
+                </Section>
+              )}
+              {data.upcomingReminders.length > 0 && (
+                <Section title={t('today.upcomingReminders')}>
+                  {data.upcomingReminders.map((r, i, all) => (
+                    <Row key={r.key} last={i === all.length - 1}>
+                      <Text style={{ color: c.text, flex: 1, fontSize: 16 }}>{r.title}</Text>
+                      <Text style={{ color: c.muted, fontSize: 13 }}>{formatDue(r.triggerAtUtc, true, zone)}</Text>
+                    </Row>
+                  ))}
+                </Section>
+              )}
+            </>
           )}
-          <Section title={t('today.dueToday')} empty={t('today.dueTodayEmpty')}>
-            {data.tasksDueToday.map((t, i, all) => (
-              <TaskRow key={t.id} task={t} last={i === all.length - 1} />
-            ))}
-          </Section>
-          <Section title={t('today.ongoing')} empty={t('today.ongoingEmpty')}>
-            {data.ongoingTasks.map((t, i, all) => (
-              <TaskRow key={t.id} task={t} last={i === all.length - 1} />
-            ))}
-          </Section>
-          {data.upcomingReminders.length > 0 && (
-            <Section title={t('today.upcomingReminders')}>
-              {data.upcomingReminders.map((r, i, all) => (
-                <Row key={r.key} last={i === all.length - 1}>
-                  <Text style={{ color: c.text, flex: 1, fontSize: 16 }}>{r.title}</Text>
-                  <Text style={{ color: c.muted, fontSize: 13 }}>{formatDue(r.triggerAtUtc, true, zone)}</Text>
-                </Row>
-              ))}
-            </Section>
-          )}
-        </>
-      )}
+        </Animated.View>
+      </GestureDetector>
     </Screen>
   )
 }
 
 const styles = StyleSheet.create({
+  head: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   date: { fontSize: 26, fontWeight: '700', marginTop: 2 },
   clock: { fontSize: 18, fontVariant: ['tabular-nums'] },
+  nav: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
+  todayButton: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4 },
+  // Room to swipe even on an empty day.
+  body: { gap: 20, minHeight: 400 },
 })

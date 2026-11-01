@@ -3817,11 +3817,13 @@ html[data-wallpaper] .page-header > div:first-child {
 }
 
 /* Calendar: a swipe (or ← →) slides the next / previous period in (useSwipeNav). */
-.calendar.slide-from-next {
+.calendar.slide-from-next,
+.day-swipe.slide-from-next {
   animation: cal-from-next 0.2s ease-out;
 }
 
-.calendar.slide-from-prev {
+.calendar.slide-from-prev,
+.day-swipe.slide-from-prev {
   animation: cal-from-prev 0.2s ease-out;
 }
 
@@ -3839,21 +3841,34 @@ html[data-wallpaper] .page-header > div:first-child {
   }
 }
 
-html[dir='rtl'] .calendar.slide-from-next {
+html[dir='rtl'] :is(.calendar, .day-swipe).slide-from-next {
   animation-name: cal-from-prev;
 }
 
-html[dir='rtl'] .calendar.slide-from-prev {
+html[dir='rtl'] :is(.calendar, .day-swipe).slide-from-prev {
   animation-name: cal-from-next;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .calendar.slide-from-next,
-  .calendar.slide-from-prev {
+  .calendar.slide-from-prev,
+  .day-swipe.slide-from-next,
+  .day-swipe.slide-from-prev {
     animation: none;
   }
 }
 
-.calendar {
+.calendar,
+.day-swipe {
   touch-action: pan-y;
+}
+
+/* Another day than today on the Today page: its date in the accent colour. */
+.page-header h1.other-day {
+  color: var(--accent);
+}
+
+/* An empty day can still be swiped. */
+.day-swipe {
+  min-height: 50vh;
 }

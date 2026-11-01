@@ -36,7 +36,11 @@ public class TodayService : ITodayService
 
         var timeZone = UserTimeZoneHelper.ResolveTimeZone(user.TimeZoneId);
         var utcNow = _dateTime.UtcNow;
-        var targetDate = date ?? UserTimeZoneHelper.TodayInTimeZone(timeZone, utcNow);
+        var realToday = UserTimeZoneHelper.TodayInTimeZone(timeZone, utcNow);
+        var targetDate = date ?? realToday;
+        // Another day (swiping through days, 2026-11-01): its events and the tasks due that day -
+        // done ones too; overdue, ongoing and upcoming reminders are about now, so today only.
+        var isToday = targetDate == realToday;
 
         var dayStartUtc = UserTimeZoneHelper.LocalDateStartToUtc(targetDate, timeZone);
         var dayEndUtc = UserTimeZoneHelper.LocalDateEndToUtc(targetDate, timeZone);
@@ -63,25 +67,26 @@ public class TodayService : ITodayService
 
         var openTaskStatuses = new[] { TaskItemStatus.Inbox, TaskItemStatus.Planned, TaskItemStatus.InProgress };
 
+        var dueStatuses = isToday ? openTaskStatuses : [.. openTaskStatuses, TaskItemStatus.Completed];
         var tasksDueToday = await _db.TaskItems
             .AsNoTracking()
             .Include(t => t.TaskTags).ThenInclude(tt => tt.Tag)
             .Where(t => t.UserId == userId
-                        && openTaskStatuses.Contains(t.Status)
+                        && dueStatuses.Contains(t.Status)
                         && t.DueDateUtc != null
                         && t.DueDateUtc >= dayStartUtc
                         && t.DueDateUtc < dayEndUtc)
             .OrderBy(t => t.DueDateUtc)
             .ToListAsync(ct);
 
-        var ongoingTasks = await _db.TaskItems
+        var ongoingTasks = !isToday ? [] : await _db.TaskItems
             .AsNoTracking()
             .Include(t => t.TaskTags).ThenInclude(tt => tt.Tag)
             .Where(t => t.UserId == userId && t.Status == TaskItemStatus.Ongoing)
             .OrderByDescending(t => t.Priority)
             .ToListAsync(ct);
 
-        var overdueTasks = await _db.TaskItems
+        var overdueTasks = !isToday ? [] : await _db.TaskItems
             .AsNoTracking()
             .Include(t => t.TaskTags).ThenInclude(tt => tt.Tag)
             .Where(t => t.UserId == userId
@@ -94,7 +99,7 @@ public class TodayService : ITodayService
         // "Upcoming" - the next 7 days of reminders (spec section 13), from the
         // same schedule notifications use, so repeating ones show too.
         var hours = (int)Math.Ceiling((dayEndUtc.AddDays(7) - utcNow).TotalHours);
-        var upcoming = hours <= 0 ? [] : (await _notifications.GetUpcomingAsync(hours, ct))
+        var upcoming = hours <= 0 || !isToday ? [] : (await _notifications.GetUpcomingAsync(hours, ct))
             .Where(n => n.ItemType is not null && n.ItemId is not null)
             .Take(20)
             .Select(n => new UpcomingReminderDto(n.Key, n.AtUtc, n.Title, n.ItemType!, n.ItemId!.Value))

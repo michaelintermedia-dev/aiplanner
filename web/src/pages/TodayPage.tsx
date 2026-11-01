@@ -9,39 +9,59 @@ import { AppointmentRow } from '../components/AppointmentRow'
 import { useIsPhone } from '../lib/useIsPhone'
 import { CaptureBar } from '../components/CaptureBar'
 import { TaskRow } from '../components/TaskRow'
-import { formatDateKey, formatDue, formatTime } from '@shared/dates'
+import { addDays, formatDateKey, formatDue, formatTime, todayKey } from '@shared/dates'
+import { useSwipeNav } from '../lib/useSwipeNav'
 import { t } from '@shared/i18n'
 
 
+/**
+ * Today - and, swiping sideways, ‹ › or ← →, any other day (user's request,
+ * 2026-11-01; same as the app): that day's events and tasks due. Overdue,
+ * ongoing and upcoming reminders are about now, so they show on today only.
+ */
 export function TodayPage() {
   const isPhone = useIsPhone()
   const { user, zone } = useAuth()
   const now = useNow()
+  const today = todayKey(zone.timeZone)
+  const [day, setDay] = useState(today)
+  const isToday = day === today
   const [addingAppointment, setAddingAppointment] = useState(false)
-  const { data, isPending, error } = useQuery({ queryKey: ['today'], queryFn: todayApi.get })
+  const { data, isPending, error } = useQuery({ queryKey: ['today', day], queryFn: () => todayApi.get(isToday ? undefined : day) })
+  const move = (direction: 1 | -1) => setDay((d) => addDays(d, direction))
+  const swipe = useSwipeNav(move)
 
   return (
     <div className="page">
       <header className="page-header">
         <div>
-          <p className="muted">{t('today.hello', { name: user?.displayName ?? '' })}</p>
-          <h1>
-            {data ? formatDateKey(data.date, zone.locale) : t('date.today')}
-            <span className="clock">{formatTime(now.toISOString(), zone)}</span>
+          {isToday && <p className="muted">{t('today.hello', { name: user?.displayName ?? '' })}</p>}
+          <h1 className={isToday ? undefined : 'other-day'}>
+            {formatDateKey(day, zone.locale)}
+            {isToday && <span className="clock">{formatTime(now.toISOString(), zone)}</span>}
           </h1>
         </div>
-        <button onClick={() => setAddingAppointment(true)}>{t('today.addEvent')}</button>
+        <div className="toolbar">
+          <button onClick={() => move(-1)} aria-label={t('calendar.previous')}>
+            <span className="flip-rtl">‹</span>
+          </button>
+          {!isToday && <button onClick={() => setDay(today)}>{t('date.today')}</button>}
+          <button onClick={() => move(1)} aria-label={t('calendar.next')}>
+            <span className="flip-rtl">›</span>
+          </button>
+          <button onClick={() => setAddingAppointment(true)}>{t('today.addEvent')}</button>
+        </div>
       </header>
 
-      {addingAppointment && <AppointmentForm initialDate={data?.date} onDone={() => setAddingAppointment(false)} />}
+      {addingAppointment && <AppointmentForm initialDate={day} onDone={() => setAddingAppointment(false)} />}
       {/* Phone width: the floating dock (App) has it. */}
       {!isPhone && <CaptureBar />}
 
       {isPending && <p className="muted">{t('common.loading')}</p>}
       {error && <p className="error">{error.message}</p>}
       {data && (
-        <div className="sections">
-          <Section title={t('today.schedule')} empty={t('today.scheduleEmpty')}>
+        <div key={swipe.slide.n} className={`sections day-swipe${swipe.slide.n ? ` slide-from-${swipe.slide.from}` : ''}`} {...swipe.handlers}>
+          <Section title={t('today.schedule')} empty={isToday ? t('today.scheduleEmpty') : t('today.scheduleDayEmpty')}>
             {data.appointmentsToday.map((a) => (
               <AppointmentRow key={a.id} appointment={a} />
             ))}
@@ -53,16 +73,18 @@ export function TodayPage() {
               ))}
             </Section>
           )}
-          <Section title={t('today.dueToday')} empty={t('today.dueTodayEmpty')}>
+          <Section title={isToday ? t('today.dueToday') : t('today.due')} empty={isToday ? t('today.dueTodayEmpty') : t('today.dueDayEmpty')}>
             {data.tasksDueToday.map((t) => (
               <TaskRow key={t.id} task={t} />
             ))}
           </Section>
-          <Section title={t('today.ongoing')} empty={t('today.ongoingEmpty')}>
-            {data.ongoingTasks.map((t) => (
-              <TaskRow key={t.id} task={t} />
-            ))}
-          </Section>
+          {isToday && (
+            <Section title={t('today.ongoing')} empty={t('today.ongoingEmpty')}>
+              {data.ongoingTasks.map((t) => (
+                <TaskRow key={t.id} task={t} />
+              ))}
+            </Section>
+          )}
           {data.upcomingReminders.length > 0 && (
             <Section title={t('today.upcomingReminders')}>
               {data.upcomingReminders.map((r) => (

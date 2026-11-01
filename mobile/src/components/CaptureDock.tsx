@@ -296,7 +296,7 @@ export function CaptureDock({ children }: { children: ReactNode }) {
 /** How long "Saved as ..." stays up after the dock folds away. */
 const NOTICE_MS = 5000
 /** Approximate bottom tab bar height (without the system inset). */
-const TAB_BAR = 56
+const TAB_BAR = 66 // keep = TAB_BAR_HEIGHT in app/(tabs)/_layout.tsx
 /** Space between the toolbar and whatever is under it. */
 const GAP = 12
 const FAB = 56

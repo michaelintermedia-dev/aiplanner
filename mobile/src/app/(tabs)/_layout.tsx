@@ -1,9 +1,13 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { router, Tabs } from 'expo-router'
 import { Image, Pressable, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useColors } from '@/theme'
 import { TabIcon } from '@/components/TabIcon'
 import { t } from '@shared/i18n'
+
+/** The bottom bar without the system inset (CaptureDock lifts the bubble above it). */
+const TAB_BAR_HEIGHT = 66
 
 /** The app icon (the Gatazee cat). */
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- a bundled image
@@ -17,6 +21,7 @@ const CAT = require('../../../assets/images/icon.png')
  */
 export default function TabLayout() {
   const c = useColors()
+  const insets = useSafeAreaInsets()
 
   return (
     <Tabs
@@ -24,10 +29,17 @@ export default function TabLayout() {
         tabBarActiveTintColor: c.accent,
         tabBarInactiveTintColor: c.muted,
         // The selected tab's label is bold too (with the pill behind its icon - TabIcon).
+        // Room for the labels with the phone's text size turned up (they were cut off at the
+        // bottom, 2026-11-01): a taller bar, and the labels grow at most 1.3x.
         tabBarLabel: ({ focused, color, children }) => (
-          <Text style={{ color, fontSize: 12, fontWeight: focused ? '700' : '400', marginTop: 2 }}>{children}</Text>
+          <Text
+            maxFontSizeMultiplier={1.3}
+            numberOfLines={1}
+            style={{ color, fontSize: 12, lineHeight: 16, fontWeight: focused ? '700' : '400', marginTop: 2 }}>
+            {children}
+          </Text>
         ),
-        tabBarStyle: { backgroundColor: c.surface, borderTopColor: c.border },
+        tabBarStyle: { backgroundColor: c.surface, borderTopColor: c.border, height: TAB_BAR_HEIGHT + insets.bottom, paddingTop: 6 },
         sceneStyle: { backgroundColor: 'transparent' },
         headerStyle: { backgroundColor: c.surface },
         headerTintColor: c.text,

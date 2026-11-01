@@ -661,6 +661,7 @@ export const ko: Messages = {
   'today.due': '마감',
   'today.scheduleDayEmpty': '이날은 일정이 없어요.',
   'today.dueDayEmpty': '이날 마감인 항목이 없어요.',
+  'today.remindersDay': '알림',
   'account.title': '계정',
   'account.signedInAs': '{email}(으)로 로그인됨',
   'account.export': '내 데이터 다운로드',

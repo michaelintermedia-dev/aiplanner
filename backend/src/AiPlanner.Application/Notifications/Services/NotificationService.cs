@@ -33,7 +33,13 @@ public class NotificationService : INotificationService
         _clock = clock;
     }
 
-    public async Task<IReadOnlyList<UpcomingNotificationDto>> GetUpcomingAsync(int hours, CancellationToken ct = default)
+    public Task<IReadOnlyList<UpcomingNotificationDto>> GetUpcomingAsync(int hours, CancellationToken ct = default)
+    {
+        var from = _clock.UtcNow;
+        return GetBetweenAsync(from, from.AddHours(Math.Clamp(hours, 1, MaxHours)), ct);
+    }
+
+    public async Task<IReadOnlyList<UpcomingNotificationDto>> GetBetweenAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct = default)
     {
         var userId = RequireUserId();
         var settings = await SettingsAsync(userId, track: false, ct);
@@ -45,9 +51,11 @@ public class NotificationService : INotificationService
         var user = await _db.Users.Where(u => u.Id == userId).Select(u => new { u.TimeZoneId, u.Locale }).FirstAsync(ct);
         var zone = UserTimeZoneHelper.ResolveTimeZone(user.TimeZoneId);
         var texts = NotificationTexts.For(user.Locale);
-        var from = _clock.UtcNow;
-        var to = from.AddHours(Math.Clamp(hours, 1, MaxHours));
+        // Never the past (what already went off isn't coming), at most MaxHours at a time.
+        var from = fromUtc < _clock.UtcNow ? _clock.UtcNow : fromUtc;
+        var to = toUtc > from.AddHours(MaxHours) ? from.AddHours(MaxHours) : toUtc;
         var result = new List<UpcomingNotificationDto>();
+        if (to <= from) return result;
 
         // ---- reminders ----
         var reminders = await _db.Reminders

@@ -39,7 +39,8 @@ public class TodayService : ITodayService
         var realToday = UserTimeZoneHelper.TodayInTimeZone(timeZone, utcNow);
         var targetDate = date ?? realToday;
         // Another day (swiping through days, 2026-11-01): its events and the tasks due that day -
-        // done ones too; overdue, ongoing and upcoming reminders are about now, so today only.
+        // done ones too, and the reminders that go off on it; overdue and ongoing are about now,
+        // so today only (today's reminders list looks a week ahead).
         var isToday = targetDate == realToday;
 
         var dayStartUtc = UserTimeZoneHelper.LocalDateStartToUtc(targetDate, timeZone);
@@ -96,10 +97,13 @@ public class TodayService : ITodayService
             .OrderBy(t => t.DueDateUtc)
             .ToListAsync(ct);
 
-        // "Upcoming" - the next 7 days of reminders (spec section 13), from the
-        // same schedule notifications use, so repeating ones show too.
+        // Reminders, from the same schedule notifications use (repeating ones too): today the
+        // next 7 days ("Upcoming", spec section 13); another day the ones going off on it.
         var hours = (int)Math.Ceiling((dayEndUtc.AddDays(7) - utcNow).TotalHours);
-        var upcoming = hours <= 0 || !isToday ? [] : (await _notifications.GetUpcomingAsync(hours, ct))
+        var reminders = isToday
+            ? (hours <= 0 ? [] : await _notifications.GetUpcomingAsync(hours, ct))
+            : await _notifications.GetBetweenAsync(dayStartUtc, dayEndUtc, ct);
+        var upcoming = reminders
             .Where(n => n.ItemType is not null && n.ItemId is not null)
             .Take(20)
             .Select(n => new UpcomingReminderDto(n.Key, n.AtUtc, n.Title, n.ItemType!, n.ItemId!.Value))

@@ -661,6 +661,7 @@ export const zh: Messages = {
   'today.due': '到期',
   'today.scheduleDayEmpty': '这一天没有活动。',
   'today.dueDayEmpty': '这一天没有到期事项。',
+  'today.remindersDay': '提醒',
   'account.title': '账户',
   'account.signedInAs': '已登录为 {email}',
   'account.export': '下载我的数据',

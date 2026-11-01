@@ -8,6 +8,9 @@ public interface INotificationService
     /// <summary>Everything that should go off for the current user in the next <paramref name="hours"/> hours, soonest first.</summary>
     Task<IReadOnlyList<UpcomingNotificationDto>> GetUpcomingAsync(int hours, CancellationToken ct = default);
 
+    /// <summary>What goes off between two moments (not before now; at most MaxHours) - a day on the Today screen.</summary>
+    Task<IReadOnlyList<UpcomingNotificationDto>> GetBetweenAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct = default);
+
     Task<Result<UpcomingNotificationDto>> SnoozeAsync(SnoozeRequest request, CancellationToken ct = default);
 
     Task<NotificationSettingsDto> GetSettingsAsync(CancellationToken ct = default);

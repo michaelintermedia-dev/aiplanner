@@ -30,6 +30,22 @@ const check = (n, ok, d = '') => console.log(`${ok ? 'PASS' : 'FAIL'}  ${n}${d ?
     check('Today button: back to today, button gone', (await h1()).startsWith(today.slice(0, 10)) && (await page.getByRole('main').getByRole('button', { name: 'Today', exact: true }).count()) === 0)
     await page.locator('.page-header button', { hasText: '‹' }).click(); await page.waitForTimeout(800)
     check('‹: yesterday', (await h1()) !== today)
+    await page.getByRole('main').getByRole('button', { name: 'Today', exact: true }).click(); await page.waitForTimeout(800)
+    // An event a few days ahead with a reminder: on its day, its reminder is listed.
+    const { api } = require('./lib.cjs')
+    const { call } = await api()
+    const at = new Date(Date.now() + 3 * 86400e3)
+    const ev = (await call('POST', '/appointments', { title: 'Reminder day check', startUtc: at.toISOString(), endUtc: new Date(at.getTime() + 3600e3).toISOString(), reminders: [{ kind: 'Before', minutesBefore: 30 }] })).data
+    for (let i = 0; i < 2; i++) await page.keyboard.press('ArrowRight')
+    let found = false
+    for (let i = 0; i < 2 && !found; i++) {
+      await page.waitForTimeout(800)
+      const box = page.locator('.sections .section', { has: page.locator('h2', { hasText: /^Reminders/ }) })
+      found = (await box.count()) === 1 && /Reminder day check/.test(await box.textContent())
+      if (!found) await page.keyboard.press('ArrowRight')
+    }
+    check("another day lists the reminders going off that day", found, (await sections()).join(' | '))
+    await call('POST', '/items/delete', { items: [{ itemType: 'Appointment', id: ev.id }] })
     console.log('page errors:', errors.filter((e) => !/401/.test(e)))
     await page.unrouteAll({ behavior: 'ignoreErrors' })
   } finally {

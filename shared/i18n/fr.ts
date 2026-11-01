@@ -661,6 +661,7 @@ export const fr: Messages = {
   'today.due': 'À faire',
   'today.scheduleDayEmpty': 'Aucun événement ce jour-là.',
   'today.dueDayEmpty': 'Rien à faire ce jour-là.',
+  'today.remindersDay': 'Rappels',
   'account.title': 'Compte',
   'account.signedInAs': 'Connecté en tant que {email}',
   'account.export': 'Télécharger mes données',

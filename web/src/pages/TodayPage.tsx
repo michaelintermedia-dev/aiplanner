@@ -16,8 +16,9 @@ import { t } from '@shared/i18n'
 
 /**
  * Today - and, swiping sideways, ‹ › or ← →, any other day (user's request,
- * 2026-11-01; same as the app): that day's events and tasks due. Overdue,
- * ongoing and upcoming reminders are about now, so they show on today only.
+ * 2026-11-01; same as the app): that day's events and tasks due. Overdue and
+ * ongoing are about now (today only); reminders: the next 7 days on today, the
+ * ones going off that day on another day.
  */
 export function TodayPage() {
   const isPhone = useIsPhone()
@@ -86,7 +87,7 @@ export function TodayPage() {
             </Section>
           )}
           {data.upcomingReminders.length > 0 && (
-            <Section title={t('today.upcomingReminders')}>
+            <Section title={isToday ? t('today.upcomingReminders') : t('today.remindersDay')}>
               {data.upcomingReminders.map((r) => (
                 <li key={r.key} className="row reminder">
                   <Link className="row-title" to={`/${r.sourceType === 'Task' ? 'tasks' : r.sourceType === 'Note' ? 'notes' : 'appointments'}/${r.sourceId}`}>

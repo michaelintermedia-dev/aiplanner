@@ -661,6 +661,7 @@ export const ro: Messages = {
   'today.due': 'Scadente',
   'today.scheduleDayEmpty': 'Niciun eveniment în ziua asta.',
   'today.dueDayEmpty': 'Nimic scadent în ziua asta.',
+  'today.remindersDay': 'Mementouri',
   'account.title': 'Cont',
   'account.signedInAs': 'Conectat ca {email}',
   'account.export': 'Descarcă datele mele',

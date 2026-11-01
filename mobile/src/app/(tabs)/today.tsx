@@ -22,8 +22,9 @@ const flip = I18nManager.isRTL ? { transform: [{ scaleX: -1 }] } : undefined
 
 /**
  * Today - and, swiping sideways or with ‹ ›, any other day (user's request,
- * 2026-11-01; same as the web): that day's events and tasks due. Overdue,
- * ongoing and upcoming reminders are about now, so they show on today only.
+ * 2026-11-01; same as the web): that day's events and tasks due. Overdue and
+ * ongoing are about now (today only); reminders: the next 7 days on today, the
+ * ones going off that day on another day.
  */
 export default function TodayScreen() {
   const c = useColors()
@@ -90,7 +91,7 @@ export default function TodayScreen() {
                 </Section>
               )}
               {data.upcomingReminders.length > 0 && (
-                <Section title={t('today.upcomingReminders')}>
+                <Section title={isToday ? t('today.upcomingReminders') : t('today.remindersDay')}>
                   {data.upcomingReminders.map((r, i, all) => (
                     <Row key={r.key} last={i === all.length - 1}>
                       <Text style={{ color: c.text, flex: 1, fontSize: 16 }}>{r.title}</Text>

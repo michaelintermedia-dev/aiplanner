@@ -661,6 +661,7 @@ export const tr: Messages = {
   'today.due': 'Son tarih',
   'today.scheduleDayEmpty': 'Bu gün etkinlik yok.',
   'today.dueDayEmpty': 'Bu gün için bir şey yok.',
+  'today.remindersDay': 'Hatırlatıcılar',
   'account.title': 'Hesap',
   'account.signedInAs': '{email} olarak giriş yapıldı',
   'account.export': 'Verilerimi indir',

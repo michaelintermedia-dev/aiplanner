@@ -1,5 +1,6 @@
-import { Tabs } from 'expo-router'
-import { Image, Text, View } from 'react-native'
+import Ionicons from '@expo/vector-icons/Ionicons'
+import { router, Tabs } from 'expo-router'
+import { Image, Pressable, Text, View } from 'react-native'
 import { useColors } from '@/theme'
 import { TabIcon } from '@/components/TabIcon'
 import { t } from '@shared/i18n'
@@ -10,8 +11,9 @@ const CAT = require('../../../assets/images/icon.png')
 
 /**
  * The bottom navigation (spec v2, 2026-10-31; same as the web): Feed · Today ·
- * Calendar · Settings. The feed's type chips (All / Tasks / Events / Notes)
- * replaced the old type tabs; item screens open on top with a back arrow.
+ * Calendar. Settings is the gear in the header's top-right corner (user's call,
+ * 2026-11-01). The feed's type chips (All / Tasks / Events / Notes) replaced the
+ * old type tabs; item screens and Settings open on top with a back arrow.
  */
 export default function TabLayout() {
   const c = useColors()
@@ -30,6 +32,16 @@ export default function TabLayout() {
         headerStyle: { backgroundColor: c.surface },
         headerTintColor: c.text,
         headerShadowVisible: false,
+        headerRight: () => (
+          <Pressable
+            onPress={() => router.push('/settings')}
+            hitSlop={8}
+            style={{ paddingHorizontal: 14 }}
+            accessibilityRole="button"
+            accessibilityLabel={t('nav.settings')}>
+            <Ionicons name="settings-outline" size={23} color={c.text} />
+          </Pressable>
+        ),
       }}>
       <Tabs.Screen
         name="index"
@@ -52,10 +64,6 @@ export default function TabLayout() {
       <Tabs.Screen
         name="calendar"
         options={{ title: t('nav.calendar'), tabBarIcon: ({ color, focused }) => <TabIcon focused={focused} icon="calendar-outline" activeIcon="calendar" color={color} /> }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{ title: t('nav.settings'), tabBarIcon: ({ color, focused }) => <TabIcon focused={focused} icon="settings-outline" activeIcon="settings" color={color} /> }}
       />
     </Tabs>
   )

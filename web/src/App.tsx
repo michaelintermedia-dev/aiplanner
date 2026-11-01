@@ -6,7 +6,6 @@ import {
   IoArrowBack,
   IoCalendar,
   IoCalendarOutline,
-  IoSettings,
   IoSettingsOutline,
   IoSunny,
   IoSunnyOutline,
@@ -36,7 +35,6 @@ const TAB_ICONS: [ComponentType, ComponentType][] = [
   [IoAlbumsOutline, IoAlbums],
   [IoSunnyOutline, IoSunny],
   [IoCalendarOutline, IoCalendar],
-  [IoSettingsOutline, IoSettings],
 ]
 
 /** Header titles per route - same as the mobile app's screen titles. */
@@ -82,6 +80,12 @@ function Layout() {
             {titleFor(pathname) === t('app.name') && <img src="/icon-192.png" alt="" className="app-logo" />}
             {titleFor(pathname)}
           </h1>
+          {/* Settings: top-right, like the app (user's call, 2026-11-01). */}
+          {!pathname.startsWith('/settings') && (
+            <button className="icon-button" onClick={() => navigate('/settings')} aria-label={t('nav.settings')} title={t('nav.settings')}>
+              <IoSettingsOutline />
+            </button>
+          )}
         </div>
       </header>
       <main className="content">

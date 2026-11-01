@@ -264,7 +264,7 @@ Local dev notes:
 
 - **Spec v2 (docs/product-spec-v2.md, user's go, 2026-10-31) - this wins over the
   older bullets below where they differ.** Bottom navigation **Feed · Today ·
-  Calendar · Settings** on both (mobile `app/(tabs)`: index/today/calendar/settings;
+  Calendar** on both, Settings = the gear top-right in the header (user's call, 2026-11-01; opens on top) (mobile `app/(tabs)`: index/today/calendar/settings;
   web `lib/tabs.ts` + the bar in App's Layout, hidden on item pages, which get the
   back arrow); no header icons; Sign out moved into Settings - Account. Above the
   feed: the search box with a **mic that only transcribes** (`POST /api/transcribe`,

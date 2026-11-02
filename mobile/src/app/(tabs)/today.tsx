@@ -31,10 +31,13 @@ export default function TodayScreen() {
   const { user, zone } = useAuth()
   const now = useNow()
   const today = todayKey(zone.timeZone)
-  const [day, setDay] = useState(today)
-  const isToday = day === today
+  // Days away from today, not a date: left open overnight it moves on to the new today
+  // (it showed yesterday - bug fix 2026-11-02). useNow re-renders it every minute.
+  const [offset, setOffset] = useState(0)
+  const day = addDays(today, offset)
+  const isToday = offset === 0
   const { data, isPending, error } = useQuery({ queryKey: ['today', day], queryFn: () => todayApi.get(isToday ? undefined : day) })
-  const move = (direction: 1 | -1) => setDay((d) => addDays(d, direction))
+  const move = (direction: 1 | -1) => setOffset((o) => o + direction)
   const swipe = useSwipeNav(move)
 
   return (
@@ -50,7 +53,7 @@ export default function TodayScreen() {
             <Ionicons name="chevron-back" size={24} color={c.text} style={flip} />
           </Pressable>
           {!isToday && (
-            <Pressable onPress={() => setDay(today)} style={[styles.todayButton, { borderColor: c.border }]} accessibilityRole="button">
+            <Pressable onPress={() => setOffset(0)} style={[styles.todayButton, { borderColor: c.border }]} accessibilityRole="button">
               <Text style={{ color: c.text }}>{t('date.today')}</Text>
             </Pressable>
           )}

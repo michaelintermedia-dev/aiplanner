@@ -25,11 +25,14 @@ export function TodayPage() {
   const { user, zone } = useAuth()
   const now = useNow()
   const today = todayKey(zone.timeZone)
-  const [day, setDay] = useState(today)
-  const isToday = day === today
+  // Days away from today, not a date: left open overnight it moves on to the new today
+  // (it showed yesterday - bug fix 2026-11-02). useNow re-renders it every minute.
+  const [offset, setOffset] = useState(0)
+  const day = addDays(today, offset)
+  const isToday = offset === 0
   const [addingAppointment, setAddingAppointment] = useState(false)
   const { data, isPending, error } = useQuery({ queryKey: ['today', day], queryFn: () => todayApi.get(isToday ? undefined : day) })
-  const move = (direction: 1 | -1) => setDay((d) => addDays(d, direction))
+  const move = (direction: 1 | -1) => setOffset((o) => o + direction)
   const swipe = useSwipeNav(move)
 
   return (
@@ -46,7 +49,7 @@ export function TodayPage() {
           <button onClick={() => move(-1)} aria-label={t('calendar.previous')}>
             <span className="flip-rtl">‹</span>
           </button>
-          {!isToday && <button onClick={() => setDay(today)}>{t('date.today')}</button>}
+          {!isToday && <button onClick={() => setOffset(0)}>{t('date.today')}</button>}
           <button onClick={() => move(1)} aria-label={t('calendar.next')}>
             <span className="flip-rtl">›</span>
           </button>

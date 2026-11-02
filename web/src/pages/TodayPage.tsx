@@ -12,6 +12,7 @@ import { TaskRow } from '../components/TaskRow'
 import { addDays, formatDateKey, formatDue, formatTime, todayKey } from '@shared/dates'
 import { useSwipeNav } from '../lib/useSwipeNav'
 import { t } from '@shared/i18n'
+import type { Today } from '@shared/types'
 
 
 /**
@@ -65,11 +66,15 @@ export function TodayPage() {
       {error && <p className="error">{error.message}</p>}
       {data && (
         <div key={swipe.slide.n} className={`sections day-swipe${swipe.slide.n ? ` slide-from-${swipe.slide.from}` : ''}`} {...swipe.handlers}>
-          <Section title={t('today.schedule')} empty={isToday ? t('today.scheduleEmpty') : t('today.scheduleDayEmpty')}>
-            {data.appointmentsToday.map((a) => (
-              <AppointmentRow key={a.id} appointment={a} />
-            ))}
-          </Section>
+          {/* Only sections with something in them; an empty day says so once (2026-11-02). */}
+          {nothing(data, isToday) && <p className="empty">{t('calendar.nothingPlanned')}</p>}
+          {data.appointmentsToday.length > 0 && (
+            <Section title={t('today.schedule')}>
+              {data.appointmentsToday.map((a) => (
+                <AppointmentRow key={a.id} appointment={a} />
+              ))}
+            </Section>
+          )}
           {data.overdueTasks.length > 0 && (
             <Section title={t('filter.when.overdue')} tone="warn">
               {data.overdueTasks.map((t) => (
@@ -77,13 +82,15 @@ export function TodayPage() {
               ))}
             </Section>
           )}
-          <Section title={isToday ? t('today.dueToday') : t('today.due')} empty={isToday ? t('today.dueTodayEmpty') : t('today.dueDayEmpty')}>
-            {data.tasksDueToday.map((t) => (
-              <TaskRow key={t.id} task={t} />
-            ))}
-          </Section>
-          {isToday && (
-            <Section title={t('today.ongoing')} empty={t('today.ongoingEmpty')}>
+          {data.tasksDueToday.length > 0 && (
+            <Section title={isToday ? t('today.dueToday') : t('today.due')}>
+              {data.tasksDueToday.map((t) => (
+                <TaskRow key={t.id} task={t} />
+              ))}
+            </Section>
+          )}
+          {isToday && data.ongoingTasks.length > 0 && (
+            <Section title={t('today.ongoing')}>
               {data.ongoingTasks.map((t) => (
                 <TaskRow key={t.id} task={t} />
               ))}
@@ -106,6 +113,11 @@ export function TodayPage() {
     </div>
   )
 }
+
+/** A day with nothing on it at all. */
+const nothing = (d: Today, isToday: boolean) =>
+  d.appointmentsToday.length === 0 && d.tasksDueToday.length === 0 && d.overdueTasks.length === 0 &&
+  (!isToday || d.ongoingTasks.length === 0) && d.upcomingReminders.length === 0
 
 function Section({
   title,

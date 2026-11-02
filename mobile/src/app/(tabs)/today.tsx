@@ -16,6 +16,7 @@ import { Row, Section } from '@/components/ui'
 import { useSwipeNav } from '@/lib/useSwipeNav'
 import { useColors } from '@/theme'
 import { t } from '@shared/i18n'
+import type { Today } from '@shared/types'
 
 /** Chevrons point the other way in right-to-left layouts. */
 const flip = I18nManager.isRTL ? { transform: [{ scaleX: -1 }] } : undefined
@@ -69,11 +70,15 @@ export default function TodayScreen() {
           {error && <Text style={[{ color: c.danger }, c.pillStart]}>{error.message}</Text>}
           {data && (
             <>
-              <Section title={t('today.schedule')} empty={isToday ? t('today.scheduleEmpty') : t('today.scheduleDayEmpty')}>
-                {data.appointmentsToday.map((a, i, all) => (
-                  <AppointmentRow key={a.id} appointment={a} last={i === all.length - 1} />
-                ))}
-              </Section>
+              {/* Only sections with something in them; an empty day says so once (2026-11-02). */}
+              {nothing(data, isToday) && <Text style={[{ color: c.muted, fontSize: 15 }, c.pillStart]}>{t('calendar.nothingPlanned')}</Text>}
+              {data.appointmentsToday.length > 0 && (
+                <Section title={t('today.schedule')}>
+                  {data.appointmentsToday.map((a, i, all) => (
+                    <AppointmentRow key={a.id} appointment={a} last={i === all.length - 1} />
+                  ))}
+                </Section>
+              )}
               {data.overdueTasks.length > 0 && (
                 <Section title={t('filter.when.overdue')} tone="warn">
                   {data.overdueTasks.map((t, i, all) => (
@@ -81,13 +86,15 @@ export default function TodayScreen() {
                   ))}
                 </Section>
               )}
-              <Section title={isToday ? t('today.dueToday') : t('today.due')} empty={isToday ? t('today.dueTodayEmpty') : t('today.dueDayEmpty')}>
-                {data.tasksDueToday.map((t, i, all) => (
-                  <TaskRow key={t.id} task={t} last={i === all.length - 1} />
-                ))}
-              </Section>
-              {isToday && (
-                <Section title={t('today.ongoing')} empty={t('today.ongoingEmpty')}>
+              {data.tasksDueToday.length > 0 && (
+                <Section title={isToday ? t('today.dueToday') : t('today.due')}>
+                  {data.tasksDueToday.map((t, i, all) => (
+                    <TaskRow key={t.id} task={t} last={i === all.length - 1} />
+                  ))}
+                </Section>
+              )}
+              {isToday && data.ongoingTasks.length > 0 && (
+                <Section title={t('today.ongoing')}>
                   {data.ongoingTasks.map((t, i, all) => (
                     <TaskRow key={t.id} task={t} last={i === all.length - 1} />
                   ))}
@@ -110,6 +117,11 @@ export default function TodayScreen() {
     </Screen>
   )
 }
+
+/** A day with nothing on it at all. */
+const nothing = (d: Today, isToday: boolean) =>
+  d.appointmentsToday.length === 0 && d.tasksDueToday.length === 0 && d.overdueTasks.length === 0 &&
+  (!isToday || d.ongoingTasks.length === 0) && d.upcomingReminders.length === 0
 
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },

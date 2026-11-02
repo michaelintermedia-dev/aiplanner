@@ -13,7 +13,7 @@ const check = (n, ok, d = '') => console.log(`${ok ? 'PASS' : 'FAIL'}  ${n}${d ?
     const tomorrow = await h1()
     check('→: the next day', tomorrow !== today, `${today} -> ${tomorrow}`)
     const s2 = await sections()
-    check('another day: no overdue / ongoing, "Due"', !s2.some((s) => /^(Overdue|Ongoing)/.test(s)) && s2.some((s) => /^Due(?! today)/.test(s)), s2.join(' | '))
+    check('another day: no overdue / ongoing, no empty headings', !s2.some((s) => /^(Overdue|Ongoing|Due today)/.test(s)), s2.join(' | '))
     check('...a "Today" button to come back', (await page.getByRole('main').getByRole('button', { name: 'Today', exact: true }).count()) === 1)
     await shot('today-other-day')
     const swipe = (from, to) => page.evaluate(([a, b]) => {
@@ -46,6 +46,11 @@ const check = (n, ok, d = '') => console.log(`${ok ? 'PASS' : 'FAIL'}  ${n}${d ?
     }
     check("another day lists the reminders going off that day", found, (await sections()).join(' | '))
     await call('POST', '/items/delete', { items: [{ itemType: 'Appointment', id: ev.id }] })
+    // A day far back with nothing on it: one line, no headings.
+    await page.getByRole('main').getByRole('button', { name: 'Today', exact: true }).click(); await page.waitForTimeout(500)
+    for (let i = 0; i < 40; i++) await page.keyboard.press('ArrowLeft')
+    await page.waitForTimeout(1200)
+    check('an empty day: "Nothing planned", no headings', (await sections()).length === 0 && /Nothing planned/.test(await page.locator('main').textContent()), (await sections()).join(' | '))
     console.log('page errors:', errors.filter((e) => !/401/.test(e)))
     await page.unrouteAll({ behavior: 'ignoreErrors' })
   } finally {

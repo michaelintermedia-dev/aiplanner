@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
+import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { useKeyboardState } from 'react-native-keyboard-controller'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { authApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
@@ -61,16 +61,23 @@ export function AuthScreen() {
     reset: t('auth.resetPrompt', { email: email.trim() }),
   }[mode]
   const action = { login: t('auth.signIn'), register: t('auth.createAccount'), forgot: t('auth.sendCode'), reset: t('auth.resetSave') }[mode]
+  // While typing (2026-11-05): the form moves to the top and the brand shrinks, so the fields
+  // and the main button all fit above the keyboard, whatever its size.
+  const typing = useKeyboardState((k) => k.isVisible)
+  const keyboardHeight = useKeyboardState((k) => k.height)
   const ready = mode === 'forgot' ? !!email : mode === 'reset' ? !!code && password.length >= 8 : !!email && !!password
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: c.page }]}>
-      {/* The field being typed in always scrolls above the keyboard (it covered them - 2026-11-05). */}
-      <KeyboardAwareScrollView contentContainerStyle={styles.center} keyboardShouldPersistTaps="handled" bottomOffset={110}>
+      {/* Typing: the compact form at the top fits above the keyboard (it covered the fields -
+          2026-11-05); room under it for the keyboard, should a small screen need to scroll. */}
+      <ScrollView
+        contentContainerStyle={[typing ? styles.top : styles.center, typing && { paddingBottom: keyboardHeight + 24 }]}
+        keyboardShouldPersistTaps="handled">
         <View style={[styles.form, c.panel]}>
           <View style={styles.brandRow}>
-            <Image source={CAT} style={styles.logo} accessibilityIgnoresInvertColors />
-            <Text style={[styles.brand, { color: c.text }]}>{t('app.name')}</Text>
+            <Image source={CAT} style={typing ? styles.logoSmall : styles.logo} accessibilityIgnoresInvertColors />
+            <Text style={[typing ? styles.brandSmall : styles.brand, { color: c.text }]}>{t('app.name')}</Text>
           </View>
           <Text style={{ color: c.muted, marginBottom: 12 }}>{prompt}</Text>
           {mode === 'register' && (
@@ -136,7 +143,7 @@ export function AuthScreen() {
           </Pressable>
           {(mode === 'login' || mode === 'register') && <SocialSignIn onError={setError} />}
         </View>
-      </KeyboardAwareScrollView>
+      </ScrollView>
     </SafeAreaView>
   )
 }
@@ -144,6 +151,9 @@ export function AuthScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   center: { flexGrow: 1, justifyContent: 'center', padding: 24 },
+  top: { flexGrow: 1, justifyContent: 'flex-start', paddingHorizontal: 24, paddingTop: 12, paddingBottom: 24 },
+  brandSmall: { fontSize: 22, fontWeight: '700' },
+  logoSmall: { width: 32, height: 32, borderRadius: 8 },
   form: { gap: 12 },
   brand: { fontSize: 30, fontWeight: '700' },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },

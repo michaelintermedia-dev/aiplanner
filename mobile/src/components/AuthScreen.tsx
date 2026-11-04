@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { authApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/useAuth'
@@ -64,7 +65,8 @@ export function AuthScreen() {
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: c.page }]}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.center}>
+      {/* The field being typed in always scrolls above the keyboard (it covered them - 2026-11-05). */}
+      <KeyboardAwareScrollView contentContainerStyle={styles.center} keyboardShouldPersistTaps="handled" bottomOffset={110}>
         <View style={[styles.form, c.panel]}>
           <View style={styles.brandRow}>
             <Image source={CAT} style={styles.logo} accessibilityIgnoresInvertColors />
@@ -134,14 +136,14 @@ export function AuthScreen() {
           </Pressable>
           {(mode === 'login' || mode === 'register') && <SocialSignIn onError={setError} />}
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  center: { flex: 1, justifyContent: 'center', padding: 24 },
+  center: { flexGrow: 1, justifyContent: 'center', padding: 24 },
   form: { gap: 12 },
   brand: { fontSize: 30, fontWeight: '700' },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },

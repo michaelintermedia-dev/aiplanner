@@ -1,5 +1,6 @@
 import { languageOf, setLocale, t } from '@shared/i18n'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
+import { KeyboardProvider } from 'react-native-keyboard-controller'
 import { ShareIntentProvider } from 'expo-share-intent'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router'
@@ -38,6 +39,8 @@ export default function RootLayout() {
   return (
     // Gesture handler root: the floating toolbar's drag/swipe is a native pan gesture.
     <GestureHandlerRootView style={{ flex: 1 }}>
+      {/* Keyboard-aware screens (Screen, sign-in) - the keyboard covered the fields. */}
+      <KeyboardProvider>
       {/* Shares from other apps (Android share sheet) - kept here until signed in (ShareIntake). */}
       <ShareIntentProvider>
       <ThemeProvider value={{ ...base, colors: { ...base.colors, background: 'transparent', primary: c.accent } }}>
@@ -51,6 +54,7 @@ export default function RootLayout() {
         </QueryClientProvider>
       </ThemeProvider>
       </ShareIntentProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   )
 }

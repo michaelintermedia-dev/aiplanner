@@ -1,11 +1,16 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native'
+import { RefreshControl, StyleSheet, View } from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
 import { useColors } from '@/theme'
 import { DOCK_SPACE } from './CaptureDock'
 import { InPanel } from './panel'
 
-/** Scrollable screen body with pull-to-refresh that refetches all data. */
+/**
+ * Scrollable screen body with pull-to-refresh that refetches all data. The field being typed in
+ * always scrolls above the keyboard (edge-to-edge Android doesn't resize the window, so the
+ * keyboard covered the fields - 2026-11-05; KeyboardProvider in the root layout).
+ */
 /** Room at the end so the content can scroll clear of the floating new-entry toolbar. */
 // `panel`: with a wallpaper the content sits on one frosted panel, so every line of it reads.
 export function Screen({ children, bottomSpace = DOCK_SPACE, panel }: { children: ReactNode; bottomSpace?: number; panel?: boolean }) {
@@ -20,7 +25,8 @@ export function Screen({ children, bottomSpace = DOCK_SPACE, panel }: { children
   }
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollView
+      bottomOffset={40}
       style={{ backgroundColor: c.page }}
       contentContainerStyle={[styles.content, { paddingBottom: bottomSpace }]}
       keyboardShouldPersistTaps="handled"
@@ -32,7 +38,7 @@ export function Screen({ children, bottomSpace = DOCK_SPACE, panel }: { children
       ) : (
         children
       )}
-    </ScrollView>
+    </KeyboardAwareScrollView>
   )
 }
 

@@ -41,8 +41,10 @@ export function TodayPage() {
       <header className="page-header">
         <div>
           {isToday && <p className="muted">{t('today.hello', { name: user?.displayName ?? '' })}</p>}
+          {/* The weekday small above the date: one long line ("воскресенье, 8 ноября") wrapped (2026-11-08). */}
+          <p className={`today-weekday${isToday ? '' : ' other-day'}`}>{formatDateKey(day, zone.locale, { weekday: 'long' })}</p>
           <h1 className={isToday ? undefined : 'other-day'}>
-            {formatDateKey(day, zone.locale)}
+            {formatDateKey(day, zone.locale, { day: 'numeric', month: 'long' })}
             {isToday && <span className="clock">{formatTime(now.toISOString(), zone)}</span>}
           </h1>
         </div>

@@ -3872,3 +3872,15 @@ html[dir='rtl'] :is(.calendar, .day-swipe).slide-from-prev {
 .day-swipe {
   min-height: 50vh;
 }
+
+/* Today: the weekday on its own small line above the date. */
+.today-weekday {
+  margin: 2px 0 0;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: capitalize;
+}
+
+.today-weekday.other-day {
+  color: var(--accent);
+}

@@ -46,7 +46,9 @@ export default function TodayScreen() {
       <View style={styles.head}>
         <View style={[{ flex: 1 }, c.block && { ...c.block, alignSelf: 'flex-start' }]}>
           {isToday && <Text style={{ color: c.muted }}>{t('today.hello', { name: user?.displayName ?? '' })}</Text>}
-          <Text style={[styles.date, { color: isToday ? c.text : c.accent }]}>{formatDateKey(day, zone.locale)}</Text>
+          {/* The weekday small above the date: one long line ("воскресенье, 8 ноября") wrapped (2026-11-08). */}
+          <Text style={[styles.weekday, { color: isToday ? c.muted : c.accent }]}>{formatDateKey(day, zone.locale, { weekday: 'long' })}</Text>
+          <Text style={[styles.date, { color: isToday ? c.text : c.accent }]}>{formatDateKey(day, zone.locale, { day: 'numeric', month: 'long' })}</Text>
           {isToday && <Text style={[styles.clock, { color: c.muted }]}>{formatTime(now.toISOString(), zone)}</Text>}
         </View>
         <View style={[styles.nav, c.pill]}>
@@ -125,7 +127,8 @@ const nothing = (d: Today, isToday: boolean) =>
 
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  date: { fontSize: 26, fontWeight: '700', marginTop: 2 },
+  weekday: { fontSize: 15, fontWeight: '600', marginTop: 2, textTransform: 'capitalize' },
+  date: { fontSize: 26, fontWeight: '700' },
   clock: { fontSize: 18, fontVariant: ['tabular-nums'] },
   nav: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
   todayButton: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4 },

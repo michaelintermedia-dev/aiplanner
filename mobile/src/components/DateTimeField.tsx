@@ -5,6 +5,10 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useAuth } from '@/auth/useAuth'
 import { useColors } from '@/theme'
 import { t } from '@shared/i18n'
+import { useFirstDayOfWeek } from '@/lib/weekStart'
+
+/** The picker's week starts on the user's day (Settings - Calendar), like our calendar - 0 = Sunday. */
+const PICKER_DAY = { Sunday: 0, Monday: 1, Saturday: 6 } as const
 
 /**
  * A tappable chip that picks a date ("yyyy-MM-dd") or time ("HH:mm") as a
@@ -36,6 +40,7 @@ export function DateTimeField({
 
   const day = mode === 'date' ? (value ?? todayKey(zone.timeZone)) : (date ?? todayKey(zone.timeZone))
   const current = new Date(zonedToUtc(day, mode === 'time' ? (value ?? '09:00') : '12:00', zone.timeZone))
+  const firstDay = PICKER_DAY[useFirstDayOfWeek() as keyof typeof PICKER_DAY] ?? 1
   const pick = (picked: Date) => onChange(mode === 'date' ? dateKey(picked, zone.timeZone) : timeKey(picked, zone.timeZone))
 
   const open = () => {
@@ -45,6 +50,7 @@ export function DateTimeField({
         mode,
         is24Hour: true,
         timeZoneName: zone.timeZone,
+        firstDayOfWeek: firstDay,
         onValueChange: (_, picked) => pick(picked),
       })
     } else {
@@ -75,6 +81,7 @@ export function DateTimeField({
           mode={mode}
           display={mode === 'date' ? 'inline' : 'spinner'}
           timeZoneName={zone.timeZone}
+          firstDayOfWeek={firstDay}
           onValueChange={(_, picked) => pick(picked)}
         />
       )}

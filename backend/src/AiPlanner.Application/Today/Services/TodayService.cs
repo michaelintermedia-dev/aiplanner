@@ -103,9 +103,8 @@ public class TodayService : ITodayService
         var reminders = isToday
             ? (hours <= 0 ? [] : await _notifications.GetUpcomingAsync(hours, ct))
             : await _notifications.GetBetweenAsync(dayStartUtc, dayEndUtc, ct);
-        var upcoming = reminders
-            .Where(n => n.ItemType is not null && n.ItemId is not null)
-            .Take(20)
+        // One line per item: its next reminder (TodayReminders).
+        var upcoming = TodayReminders.NearestPerItem(reminders)
             .Select(n => new UpcomingReminderDto(n.Key, n.AtUtc, n.Title, n.ItemType!, n.ItemId!.Value))
             .ToList();
 

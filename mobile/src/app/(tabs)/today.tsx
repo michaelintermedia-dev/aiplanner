@@ -14,6 +14,8 @@ import { Screen } from '@/components/Screen'
 import { TaskRow } from '@/components/TaskRow'
 import { Row, Section } from '@/components/ui'
 import { useSwipeNav } from '@/lib/useSwipeNav'
+import { itemPath } from '@/lib/itemPath'
+import { router } from 'expo-router'
 import { useColors } from '@/theme'
 import { t } from '@shared/i18n'
 import type { Today } from '@shared/types'
@@ -104,11 +106,19 @@ export default function TodayScreen() {
               )}
               {data.upcomingReminders.length > 0 && (
                 <Section title={isToday ? t('today.upcomingReminders') : t('today.remindersDay')}>
+                  {/* A reminder opens its item (like the web's links - 2026-11-09). */}
                   {data.upcomingReminders.map((r, i, all) => (
-                    <Row key={r.key} last={i === all.length - 1}>
-                      <Text style={{ color: c.text, flex: 1, fontSize: 16 }}>{r.title}</Text>
-                      <Text style={{ color: c.muted, fontSize: 13 }}>{formatDue(r.triggerAtUtc, true, zone)}</Text>
-                    </Row>
+                    <Pressable
+                      key={r.key}
+                      onPress={() => router.push(itemPath({ itemType: r.sourceType, id: r.sourceId }) as never)}
+                      accessibilityRole="button"
+                      style={({ pressed }) => pressed && { opacity: 0.6 }}>
+                      <Row last={i === all.length - 1}>
+                        <Text style={{ color: c.text, flex: 1, fontSize: 16 }}>{r.title}</Text>
+                        <Text style={{ color: c.muted, fontSize: 13 }}>{formatDue(r.triggerAtUtc, true, zone)}</Text>
+                        <Ionicons name="chevron-forward" size={16} color={c.muted} style={flip} />
+                      </Row>
+                    </Pressable>
                   ))}
                 </Section>
               )}

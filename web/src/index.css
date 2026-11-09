@@ -3957,3 +3957,37 @@ html[dir='rtl'] :is(.calendar, .day-swipe).slide-from-prev {
 .icon-button.discard-recording:hover {
   background: color-mix(in srgb, var(--danger) 10%, transparent);
 }
+
+/* Calendar: a click selects a day (like the app) - outlined; its items are listed below. */
+.calendar .day {
+  cursor: pointer;
+}
+
+.calendar .day.selected {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.cal-day-list h2.is-today {
+  color: var(--accent);
+}
+
+.cal-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cal-row-time {
+  min-width: 64px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.cal-row.status-completed .row-title,
+.cal-row.status-cancelled .row-title,
+.cal-row.passed .row-title {
+  color: var(--muted);
+  text-decoration: line-through;
+}

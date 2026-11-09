@@ -662,6 +662,7 @@ export const pl: Messages = {
   'today.scheduleDayEmpty': 'Brak wydarzeń tego dnia.',
   'today.dueDayEmpty': 'Nic na ten dzień.',
   'today.remindersDay': 'Przypomnienia',
+  'media.share': 'Udostępnij',
   'account.title': 'Konto',
   'account.signedInAs': 'Zalogowano jako {email}',
   'account.export': 'Pobierz moje dane',

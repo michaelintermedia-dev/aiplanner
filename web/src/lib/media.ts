@@ -53,6 +53,22 @@ export function saveBlob(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 10_000)
 }
 
+/**
+ * Shares a stored picture to another app (user's request, 2026-11-09): the browser's share
+ * sheet when it can share files (phones, most browsers), else it's downloaded.
+ */
+export async function shareAttachment(a: { id: string; fileName: string; contentType: string }) {
+  const blob = await api.attachments.content(a.id)
+  const file = new File([blob], a.fileName, { type: a.contentType || blob.type })
+  if (navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: a.fileName })
+    } catch (e) {
+      if (!(e instanceof DOMException && e.name === 'AbortError')) saveBlob(blob, a.fileName)
+    }
+  } else saveBlob(blob, a.fileName)
+}
+
 /** A photo or document picked in the Edit page, uploaded on Save. */
 export interface PendingMedia {
   key: string

@@ -662,6 +662,7 @@ export const ja: Messages = {
   'today.scheduleDayEmpty': 'この日の予定はありません。',
   'today.dueDayEmpty': 'この日が期限のものはありません。',
   'today.remindersDay': 'リマインダー',
+  'media.share': '共有',
   'account.title': 'アカウント',
   'account.signedInAs': '{email} でログイン中',
   'account.export': 'データをダウンロード',

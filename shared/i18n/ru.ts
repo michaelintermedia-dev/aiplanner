@@ -662,6 +662,7 @@ export const ru: Messages = {
   'today.scheduleDayEmpty': 'В этот день нет событий.',
   'today.dueDayEmpty': 'На этот день ничего нет.',
   'today.remindersDay': 'Напоминания',
+  'media.share': 'Поделиться',
   'account.title': 'Аккаунт',
   'account.signedInAs': 'Вы вошли как {email}',
   'account.export': 'Скачать мои данные',

@@ -2843,7 +2843,7 @@ button.media-file {
 }
 
 /* A click on the picture hides the controls, for a clean look at it. */
-.lightbox.bare :is(.lightbox-close, .lightbox-info, .lightbox-prev, .lightbox-next, .lightbox-count, .lightbox-caption) {
+.lightbox.bare :is(.lightbox-close, .lightbox-share, .lightbox-info, .lightbox-prev, .lightbox-next, .lightbox-count, .lightbox-caption) {
   display: none;
 }
 
@@ -3883,4 +3883,10 @@ html[dir='rtl'] :is(.calendar, .day-swipe).slide-from-prev {
 
 .today-weekday.other-day {
   color: var(--accent);
+}
+
+/* Share the picture, next to the close button. */
+.lightbox-share {
+  top: calc(12px + env(safe-area-inset-top));
+  inset-inline-end: 64px;
 }

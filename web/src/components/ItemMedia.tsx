@@ -9,6 +9,7 @@ import {
   IoChevronBack,
   IoChevronForward,
   IoClose,
+  IoShareSocialOutline,
   IoDocumentTextOutline,
   IoImageOutline,
   IoImagesOutline,
@@ -18,7 +19,7 @@ import {
 import { ZoomView } from './ZoomView'
 import { createPortal } from 'react-dom'
 import { api } from '../api/endpoints'
-import { saveBlob, shrinkImage, useAttachments, usePictureUrl, type PendingMedia } from '../lib/media'
+import { saveBlob, shrinkImage, useAttachments, usePictureUrl, type PendingMedia, shareAttachment } from '../lib/media'
 import { useIsPhone } from '../lib/useIsPhone'
 
 /** A stored picture (fetched once per session). */
@@ -132,6 +133,9 @@ function Lightbox({ images, index, onIndex, onClose }: { images: Attachment[]; i
       {info && a.description && <p className="lightbox-caption">{a.description}</p>}
       <button type="button" className="lightbox-close" onClick={onClose} aria-label={t('media.close')}>
         <IoClose aria-hidden />
+      </button>
+      <button type="button" className="lightbox-share" onClick={() => void shareAttachment(a)} aria-label={t('media.share')} title={t('media.share')}>
+        <IoShareSocialOutline aria-hidden />
       </button>
       {a.description && (
         <button

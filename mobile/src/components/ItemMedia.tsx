@@ -154,6 +154,20 @@ function Viewer({ images, index, onClose }: { images: Attachment[]; index: numbe
   const [info, setInfo] = useState(false)
   const toggleChrome = useCallback(() => setChrome((c) => !c), [])
   const description = images[at]?.description
+  // Share the picture to another app (user's request, 2026-11-09): the same share sheet documents use.
+  const [sharing, setSharing] = useState(false)
+  const share = async () => {
+    const a = images[at]
+    if (!a || sharing) return
+    setSharing(true)
+    try {
+      await openAttachment(a)
+    } catch {
+      // cancelled or offline: nothing to do
+    } finally {
+      setSharing(false)
+    }
+  }
   return (
     <Modal visible={index !== null} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       {/* Gestures inside a Modal need their own root on Android. */}
@@ -188,6 +202,14 @@ function Viewer({ images, index, onClose }: { images: Attachment[]; index: numbe
               accessibilityRole="button"
               accessibilityLabel={t('media.close')}>
               <Ionicons name="close" size={26} color="#fff" />
+            </Pressable>
+            <Pressable
+              onPress={() => void share()}
+              disabled={sharing}
+              style={[styles.viewerClose, styles.viewerShare, { top: insets.top + 12 }]}
+              accessibilityRole="button"
+              accessibilityLabel={t('media.share')}>
+              {sharing ? <ActivityIndicator color="#fff" /> : <Ionicons name="share-social-outline" size={24} color="#fff" />}
             </Pressable>
             {!!description && (
               <Pressable
@@ -362,6 +384,7 @@ const styles = StyleSheet.create({
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
   viewer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)' },
   viewerClose: { position: 'absolute', end: 12, width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.15)' },
+  viewerShare: { end: 64 },
   viewerCount: { position: 'absolute', alignSelf: 'center', color: '#fff', fontSize: 14 },
   viewerInfo: { position: 'absolute', end: 12, width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.15)' },
   viewerInfoOn: { backgroundColor: 'rgba(255,255,255,0.3)' },

@@ -662,6 +662,7 @@ export const hi: Messages = {
   'today.scheduleDayEmpty': 'इस दिन कोई इवेंट नहीं।',
   'today.dueDayEmpty': 'इस दिन कुछ नियत नहीं।',
   'today.remindersDay': 'रिमाइंडर',
+  'media.share': 'शेयर करें',
   'account.title': 'खाता',
   'account.signedInAs': '{email} के रूप में साइन इन',
   'account.export': 'मेरा डेटा डाउनलोड करें',

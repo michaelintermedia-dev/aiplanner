@@ -662,6 +662,7 @@ export const he: Messages = {
   'today.scheduleDayEmpty': 'אין אירועים ביום הזה.',
   'today.dueDayEmpty': 'אין משימות ליום הזה.',
   'today.remindersDay': 'תזכורות',
+  'media.share': 'שתף',
   'account.title': 'חשבון',
   'account.signedInAs': 'מחובר/ת בתור {email}',
   'account.export': 'הורדת הנתונים שלי',

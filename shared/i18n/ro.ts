@@ -662,6 +662,7 @@ export const ro: Messages = {
   'today.scheduleDayEmpty': 'Niciun eveniment în ziua asta.',
   'today.dueDayEmpty': 'Nimic scadent în ziua asta.',
   'today.remindersDay': 'Mementouri',
+  'media.share': 'Distribuie',
   'account.title': 'Cont',
   'account.signedInAs': 'Conectat ca {email}',
   'account.export': 'Descarcă datele mele',

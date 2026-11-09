@@ -547,7 +547,16 @@ export function CaptureBar({
           {hasAudio ? (
             <>
               {recorder.state === 'paused' && !waiting && <SegmentPlayer segments={recorder.segments} />}
-              <Button title={t('capture.discard')} variant="link" onPress={() => void recorder.discard()} disabled={busy !== null} />
+              {/* Discard the recording: a round X (the word looked like text, not a button - 2026-11-09). */}
+              <Pressable
+                onPress={() => void recorder.discard()}
+                disabled={busy !== null}
+                hitSlop={6}
+                style={({ pressed }) => [styles.discard, { borderColor: c.danger, opacity: busy !== null ? 0.5 : pressed ? 0.7 : 1 }]}
+                accessibilityRole="button"
+                accessibilityLabel={t('capture.discard')}>
+                <Ionicons name="close" size={22} color={c.danger} />
+              </Pressable>
               <SendButtons
                 newEntry={!continueFrom}
                 label={t('capture.sendRecording')}
@@ -610,6 +619,7 @@ function SendButtons({
 }
 
 const styles = StyleSheet.create({
+  discard: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   pending: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 4, borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
   send: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   review: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 40, borderWidth: 1, borderRadius: 999, paddingHorizontal: 14 },

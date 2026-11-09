@@ -2,7 +2,7 @@ import { KEEP_TALKING_MS, savedNotice, type SavedNotice } from '@shared/captureD
 import type { AppendTarget, Capture, ItemType } from '@shared/types'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
-import { IoArrowUp, IoAttachOutline, IoCheckmark } from 'react-icons/io5'
+import { IoArrowUp, IoAttachOutline, IoCheckmark, IoClose } from 'react-icons/io5'
 import { Link, useSearchParams } from 'react-router'
 import { takeShared, useSharedIn } from '../lib/sharedIn'
 import { capturesApi, itemsApi, settingsApi } from '../api/endpoints'
@@ -598,9 +598,10 @@ export function CaptureBar({
             </select>
           </label>
         )}
+        {/* Discard the recording: a round X (the word looked like text, not a button - 2026-11-09; same as the app). */}
         {hasAudio && (
-          <button type="button" className="link" onClick={recorder.discard}>
-            {t('capture.discard')}
+          <button type="button" className="icon-button discard-recording" onClick={recorder.discard} aria-label={t('capture.discard')} title={t('capture.discard')}>
+            <IoClose aria-hidden />
           </button>
         )}
         {continueFrom?.onClose && !hasAudio && !busy && (

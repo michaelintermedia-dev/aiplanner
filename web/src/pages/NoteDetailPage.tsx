@@ -4,7 +4,7 @@ import { formFromNote } from '@shared/itemForm'
 import { describeReminder, repeats } from '@shared/reminders'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { IoNotificationsOutline, IoRepeat } from 'react-icons/io5'
+import { IoNotificationsOutline, IoRepeat, IoClose } from 'react-icons/io5'
 import { Link, useNavigate, useParams } from 'react-router'
 import { notesApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
@@ -98,13 +98,15 @@ export function NoteDetailPage() {
           <div className="detail-actions">
             <EditButtons onEdit={edit.edit} onTalk={edit.talk} />
             <button
-              className="link danger"
+              className="icon-button delete-button"
+              aria-label={t('common.delete')}
+              title={t('common.delete')}
               disabled={remove.isPending}
               onClick={() =>
                 window.confirm(t('note.confirmDelete')) &&
                 (setDeleting(true), remove.mutate(note.id, { onSuccess: () => navigate('/notes'), onError: () => setDeleting(false) }))
               }>
-              {t('common.delete')}
+              <IoClose aria-hidden />
             </button>
           </div>
         </>

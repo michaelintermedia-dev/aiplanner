@@ -2,7 +2,7 @@ import { useNow } from '../lib/useNow'
 import { EventDates } from '../components/EventDates'
 import { LinkedText } from '../components/LinkedText'
 import { PlaceLink } from '../components/PlaceLink'
-import { IoRepeat } from 'react-icons/io5'
+import { IoRepeat, IoClose } from 'react-icons/io5'
 import { describeRecurrence, occurrences } from '@shared/recurrence'
 import { dateKey, formatDateKey, formatTime } from '@shared/dates'
 import { eventPassed } from '@shared/feed'
@@ -160,12 +160,14 @@ export function AppointmentDetailPage() {
             )}
             <EditButtons onEdit={edit.edit} onTalk={edit.talk} disabled={busy} />
             <button
-              className="link danger"
+              className="icon-button delete-button"
+              aria-label={t('common.delete')}
+              title={t('common.delete')}
               disabled={busy}
               onClick={() =>
                 window.confirm(t('item.confirmDelete', { title: appt.title })) && (setDeleting(true), remove.mutate(appt.id, { onSuccess: () => navigate('/calendar'), onError: () => setDeleting(false) }))
               }>
-              {t('common.delete')}
+              <IoClose aria-hidden />
             </button>
           </div>
         </>

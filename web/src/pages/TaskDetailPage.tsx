@@ -1,4 +1,4 @@
-import { IoRepeat } from 'react-icons/io5'
+import { IoRepeat, IoClose } from 'react-icons/io5'
 import { describeRecurrence } from '@shared/recurrence'
 import { dateKey, formatDateKey, formatDue, formatTime } from '@shared/dates'
 import { formFromTask } from '@shared/itemForm'
@@ -129,12 +129,14 @@ export function TaskDetailPage() {
             )}
             <EditButtons onEdit={edit.edit} onTalk={edit.talk} disabled={busy} />
             <button
-              className="link danger"
+              className="icon-button delete-button"
+              aria-label={t('common.delete')}
+              title={t('common.delete')}
               disabled={busy}
               onClick={() =>
                 window.confirm(t('item.confirmDelete', { title: task.title })) && (setDeleting(true), remove.mutate(task.id, { onSuccess: () => navigate('/tasks'), onError: () => setDeleting(false) }))
               }>
-              {t('common.delete')}
+              <IoClose aria-hidden />
             </button>
           </div>
         </>

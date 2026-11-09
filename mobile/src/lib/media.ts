@@ -10,6 +10,7 @@ import * as IntentLauncher from 'expo-intent-launcher'
 import * as MediaLibrary from 'expo-media-library/legacy'
 import { AppState, Linking, Platform } from 'react-native'
 import * as Sharing from 'expo-sharing'
+import Share from 'react-native-share'
 import { API_URL, getAccessToken } from '@/api/client'
 import { api } from '@/api/endpoints'
 
@@ -217,6 +218,12 @@ export async function pickDocuments(): Promise<Picked | null> {
  * the system's share sheet - "Open with" another app, save, or send.
  */
 export async function openAttachment(a: Attachment) {
+  const target = await downloadAttachment(a)
+  await Sharing.shareAsync(target.uri, { mimeType: a.contentType, dialogTitle: a.fileName })
+}
+
+/** A stored file on the phone (the cache), downloaded with the sign-in. */
+async function downloadAttachment(a: Attachment): Promise<File> {
   // A folder per attachment, so the file keeps its own name in the other app.
   const folder = new Directory(Paths.cache, 'attachments', a.id)
   folder.create({ intermediates: true, idempotent: true })
@@ -226,7 +233,22 @@ export async function openAttachment(a: Attachment) {
       headers: { Authorization: `Bearer ${getAccessToken() ?? ''}` },
     })
   }
-  await Sharing.shareAsync(target.uri, { mimeType: a.contentType, dialogTitle: a.fileName })
+  return target
+}
+
+/**
+ * Several files to another app at once (an item's Media - Select, user's request 2026-11-09).
+ * expo-sharing takes one file; react-native-share hands Android's share sheet them all.
+ */
+export async function shareAttachments(list: Attachment[]) {
+  if (list.length === 1) return openAttachment(list[0])
+  const files = await Promise.all(list.map(downloadAttachment))
+  const types = [...new Set(list.map((a) => a.contentType))]
+  await Share.open({
+    urls: files.map((f) => f.uri),
+    type: types.length === 1 ? types[0] : types.every((t) => t.startsWith('image/')) ? 'image/*' : '*/*',
+    failOnCancel: false,
+  })
 }
 
 /**

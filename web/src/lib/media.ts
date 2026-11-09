@@ -57,16 +57,24 @@ export function saveBlob(blob: Blob, name: string) {
  * Shares a stored picture to another app (user's request, 2026-11-09): the browser's share
  * sheet when it can share files (phones, most browsers), else it's downloaded.
  */
-export async function shareAttachment(a: { id: string; fileName: string; contentType: string }) {
-  const blob = await api.attachments.content(a.id)
-  const file = new File([blob], a.fileName, { type: a.contentType || blob.type })
-  if (navigator.canShare?.({ files: [file] })) {
+export const shareAttachment = (a: { id: string; fileName: string; contentType: string }) => shareAttachments([a])
+
+/** Several at once (an item's Media - Select, 2026-11-09): one share sheet, else each is downloaded. */
+export async function shareAttachments(list: { id: string; fileName: string; contentType: string }[]) {
+  const files = await Promise.all(
+    list.map(async (a) => {
+      const blob = await api.attachments.content(a.id)
+      return new File([blob], a.fileName, { type: a.contentType || blob.type })
+    }),
+  )
+  const downloadAll = () => files.forEach((f) => saveBlob(f, f.name))
+  if (navigator.canShare?.({ files })) {
     try {
-      await navigator.share({ files: [file], title: a.fileName })
+      await navigator.share({ files, title: files.length === 1 ? files[0].name : undefined })
     } catch (e) {
-      if (!(e instanceof DOMException && e.name === 'AbortError')) saveBlob(blob, a.fileName)
+      if (!(e instanceof DOMException && e.name === 'AbortError')) downloadAll()
     }
-  } else saveBlob(blob, a.fileName)
+  } else downloadAll()
 }
 
 /** A photo or document picked in the Edit page, uploaded on Save. */

@@ -8,7 +8,9 @@ import {
   IoCameraOutline,
   IoChevronBack,
   IoChevronForward,
+  IoCheckmarkCircle,
   IoClose,
+  IoEllipseOutline,
   IoShareSocialOutline,
   IoDocumentTextOutline,
   IoImageOutline,
@@ -19,7 +21,7 @@ import {
 import { ZoomView } from './ZoomView'
 import { createPortal } from 'react-dom'
 import { api } from '../api/endpoints'
-import { saveBlob, shrinkImage, useAttachments, usePictureUrl, type PendingMedia, shareAttachment } from '../lib/media'
+import { saveBlob, shrinkImage, useAttachments, usePictureUrl, type PendingMedia, shareAttachment, shareAttachments } from '../lib/media'
 import { useIsPhone } from '../lib/useIsPhone'
 
 /** A stored picture (fetched once per session). */
@@ -29,34 +31,93 @@ function StoredImage({ id, alt }: { id: string; alt: string }) {
   return url ? <img src={url} alt={alt} /> : <span className="media-loading" />
 }
 
-/** The item's photos and documents, on its page (nothing when it has none). */
+/**
+ * The item's photos and documents, on its page (nothing when it has none). Select (2 or more)
+ * picks several to share at once (user's request, 2026-11-09; same as the app).
+ */
 export function ItemMedia({ itemType, id }: { itemType: ItemType; id: string }) {
   const { data } = useAttachments(itemType, id)
   const [open, setOpen] = useState<number | null>(null)
+  // null = not selecting; otherwise the picked attachment ids.
+  const [picked, setPicked] = useState<string[] | null>(null)
+  const [sharing, setSharing] = useState(false)
   if (!data?.length) return null
   const { images, files } = splitMedia(data)
+  const toggle = (aid: string) => setPicked((p) => (p ? (p.includes(aid) ? p.filter((x) => x !== aid) : [...p, aid]) : p))
+  const share = async () => {
+    if (!picked?.length) return
+    setSharing(true)
+    try {
+      await shareAttachments(data.filter((a) => picked.includes(a.id)))
+      setPicked(null)
+    } finally {
+      setSharing(false)
+    }
+  }
 
   return (
-    <section className="card media" aria-label={t('media.title')}>
-      <h2 className="source-heading">
-        <IoImagesOutline aria-hidden /> {t('media.title')}
-      </h2>
+    <section className={`card media${picked ? ' selecting' : ''}`} aria-label={t('media.title')}>
+      <div className="media-head">
+        <h2 className="source-heading">
+          <IoImagesOutline aria-hidden /> {t('media.title')}
+        </h2>
+        {data.length > 1 && !picked && (
+          <button type="button" className="link" onClick={() => setPicked([])}>
+            {t('select.start')}
+          </button>
+        )}
+      </div>
       {images.length > 0 && (
         <div className="media-grid">
-          {images.map((a, i) => (
-            <button key={a.id} type="button" className="media-thumb" onClick={() => setOpen(i)} aria-label={t('media.open', { name: a.fileName })} title={a.description ?? undefined}>
-              <StoredImage id={a.id} alt={a.description ?? a.fileName} />
-            </button>
-          ))}
+          {images.map((a, i) => {
+            const on = picked?.includes(a.id) ?? false
+            return (
+              <button
+                key={a.id}
+                type="button"
+                className={`media-thumb${on ? ' picked' : ''}`}
+                onClick={() => (picked ? toggle(a.id) : setOpen(i))}
+                aria-pressed={picked ? on : undefined}
+                aria-label={picked ? t('select.item', { title: a.fileName }) : t('media.open', { name: a.fileName })}
+                title={a.description ?? undefined}>
+                <StoredImage id={a.id} alt={a.description ?? a.fileName} />
+                {picked && <span className="media-check">{on ? <IoCheckmarkCircle aria-hidden /> : <IoEllipseOutline aria-hidden />}</span>}
+              </button>
+            )
+          })}
         </div>
       )}
-      {files.length > 0 && <FileList files={files} />}
+      {files.length > 0 && <FileList files={files} picked={picked ?? undefined} onPick={toggle} />}
+      {picked && (
+        <div className="media-select-bar" role="toolbar" aria-label={t('select.bar')}>
+          <span>{t('select.count', { count: picked.length })}</span>
+          <button type="button" className="link" onClick={() => setPicked(null)}>
+            {t('common.cancel')}
+          </button>
+          <button type="button" className="primary" disabled={!picked.length || sharing} onClick={() => void share()}>
+            <IoShareSocialOutline aria-hidden /> {t('media.share')}
+          </button>
+        </div>
+      )}
       {open !== null && <Lightbox images={images} index={open} onIndex={setOpen} onClose={() => setOpen(null)} />}
     </section>
   )
 }
 
-function FileList({ files, removed, onToggle }: { files: Attachment[]; removed?: string[]; onToggle?: (id: string) => void }) {
+function FileList({
+  files,
+  removed,
+  onToggle,
+  picked,
+  onPick,
+}: {
+  files: Attachment[]
+  removed?: string[]
+  onToggle?: (id: string) => void
+  /** Selecting (to share several): a click picks the file instead of downloading it. */
+  picked?: string[]
+  onPick?: (id: string) => void
+}) {
   const [error, setError] = useState<string | null>(null)
   const download = async (a: Attachment) => {
     setError(null)
@@ -71,10 +132,16 @@ function FileList({ files, removed, onToggle }: { files: Attachment[]; removed?:
       <ul className="media-files">
         {files.map((a) => {
           const gone = removed?.includes(a.id)
+          const on = picked?.includes(a.id) ?? false
           return (
             <li key={a.id} className={gone ? 'removed' : undefined}>
-              <button type="button" className="media-file" onClick={() => void download(a)} disabled={gone}>
-                <IoDocumentTextOutline aria-hidden />
+              <button
+                type="button"
+                className={`media-file${on ? ' picked' : ''}`}
+                onClick={() => (picked && onPick ? onPick(a.id) : void download(a))}
+                aria-pressed={picked ? on : undefined}
+                disabled={gone}>
+                {picked ? on ? <IoCheckmarkCircle aria-hidden /> : <IoEllipseOutline aria-hidden /> : <IoDocumentTextOutline aria-hidden />}
                 <span className="media-file-name">
                   {a.fileName}
                   {a.description && <span className="media-description">{a.description}</span>}

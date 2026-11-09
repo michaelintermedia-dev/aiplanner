@@ -7,7 +7,7 @@ import { useCallback, useState, type ReactNode } from 'react'
 import { ActivityIndicator, FlatList, I18nManager, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { attachmentSource, openAttachment, pickDocuments, pickPhotos, useAttachments, type Picked, type PendingMedia } from '@/lib/media'
+import { attachmentSource, openAttachment, pickDocuments, pickPhotos, shareAttachments, useAttachments, type Picked, type PendingMedia } from '@/lib/media'
 import { useColors } from '@/theme'
 import { useCardStyle } from './panel'
 import { ZoomableImage } from './ZoomableImage'
@@ -43,40 +43,107 @@ function StoredImage({ id, fit = 'cover' }: { id: string; fit?: 'cover' | 'conta
   return <Image source={attachmentSource(id)} style={StyleSheet.absoluteFill} contentFit={fit} cachePolicy="disk" recyclingKey={id} onError={() => setFailed(true)} transition={150} />
 }
 
-/** The item's photos and documents, on its screen (nothing when it has none). Same as the web's. */
+/**
+ * The item's photos and documents, on its screen (nothing when it has none). Same as the web's.
+ * Select (2 or more) picks several to share at once (user's request, 2026-11-09).
+ */
 export function ItemMedia({ itemType, id }: { itemType: ItemType; id: string }) {
   const c = useColors()
   const { data } = useAttachments(itemType, id)
   const flat = useCardStyle()
   const [open, setOpen] = useState<number | null>(null)
+  // null = not selecting; otherwise the picked attachment ids.
+  const [picked, setPicked] = useState<string[] | null>(null)
+  const [sharing, setSharing] = useState(false)
   if (!data?.length) return null
   const { images, files } = splitMedia(data)
+  const toggle = (aid: string) => setPicked((p) => (p ? (p.includes(aid) ? p.filter((x) => x !== aid) : [...p, aid]) : p))
+  const share = async () => {
+    if (!picked?.length) return
+    setSharing(true)
+    try {
+      await shareAttachments(data.filter((a) => picked.includes(a.id)))
+      setPicked(null)
+    } catch {
+      // cancelled or offline: stay in Select
+    } finally {
+      setSharing(false)
+    }
+  }
 
   return (
     <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.border }, flat]}>
       <View style={styles.head}>
         <Ionicons name="images-outline" size={14} color={c.muted} />
-        <Text style={[styles.heading, { color: c.muted }]}>{t('media.title').toUpperCase()}</Text>
+        <Text style={[styles.heading, { color: c.muted, flex: 1 }]}>{t('media.title').toUpperCase()}</Text>
+        {data.length > 1 && !picked && (
+          <Pressable onPress={() => setPicked([])} hitSlop={8} accessibilityRole="button">
+            <Text style={{ color: c.accent, fontWeight: '600' }}>{t('select.start')}</Text>
+          </Pressable>
+        )}
       </View>
       {images.length > 0 && (
         <Grid>
           {(size) =>
-            images.map((a, i) => (
-              <Pressable
-                key={a.id}
-                onPress={() => setOpen(i)}
-                style={[styles.thumb, { width: size, height: size, borderColor: c.border, backgroundColor: c.surface2 }]}
-                accessibilityRole="imagebutton"
-                accessibilityLabel={t('media.open', { name: a.fileName })}>
-                <StoredImage id={a.id} />
-              </Pressable>
-            ))
+            images.map((a, i) => {
+              const on = picked?.includes(a.id) ?? false
+              return (
+                <Pressable
+                  key={a.id}
+                  onPress={() => (picked ? toggle(a.id) : setOpen(i))}
+                  style={[
+                    styles.thumb,
+                    { width: size, height: size, borderColor: on ? c.accent : c.border, backgroundColor: c.surface2 },
+                    on && styles.thumbPicked,
+                  ]}
+                  accessibilityRole={picked ? 'checkbox' : 'imagebutton'}
+                  accessibilityState={picked ? { checked: on } : undefined}
+                  accessibilityLabel={picked ? t('select.item', { title: a.fileName }) : t('media.open', { name: a.fileName })}>
+                  <StoredImage id={a.id} />
+                  {picked && (
+                    <View style={styles.check}>
+                      <Ionicons name={on ? 'checkmark-circle' : 'ellipse-outline'} size={24} color={on ? c.accent : '#fff'} />
+                    </View>
+                  )}
+                </Pressable>
+              )
+            })
           }
         </Grid>
       )}
-      {files.map((a) => (
-        <FileRow key={a.id} attachment={a} />
-      ))}
+      {files.map((a) =>
+        picked ? (
+          <Pressable
+            key={a.id}
+            onPress={() => toggle(a.id)}
+            style={[styles.file, { borderColor: picked.includes(a.id) ? c.accent : c.border, backgroundColor: picked.includes(a.id) ? c.accentSoft : c.surface }]}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: picked.includes(a.id) }}>
+            <Ionicons name={picked.includes(a.id) ? 'checkmark-circle' : 'ellipse-outline'} size={20} color={c.accent} />
+            <Text style={{ color: c.text, flex: 1 }} numberOfLines={1}>
+              {a.fileName}
+            </Text>
+          </Pressable>
+        ) : (
+          <FileRow key={a.id} attachment={a} />
+        ),
+      )}
+      {picked && (
+        <View style={styles.selectBar}>
+          <Text style={{ color: c.text, fontWeight: '600', flex: 1 }}>{t('select.count', { count: picked.length })}</Text>
+          <Pressable onPress={() => setPicked(null)} hitSlop={8} accessibilityRole="button">
+            <Text style={{ color: c.muted }}>{t('common.cancel')}</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => void share()}
+            disabled={!picked.length || sharing}
+            style={[styles.shareButton, { backgroundColor: c.accent, opacity: !picked.length || sharing ? 0.5 : 1 }]}
+            accessibilityRole="button">
+            {sharing ? <ActivityIndicator size="small" color={c.accentText} /> : <Ionicons name="share-social-outline" size={18} color={c.accentText} />}
+            <Text style={{ color: c.accentText, fontWeight: '600' }}>{t('media.share')}</Text>
+          </Pressable>
+        </View>
+      )}
       <Viewer images={images} index={open} onClose={() => setOpen(null)} />
     </View>
   )
@@ -385,6 +452,10 @@ const styles = StyleSheet.create({
   viewer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)' },
   viewerClose: { position: 'absolute', end: 12, width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.15)' },
   viewerShare: { end: 64 },
+  thumbPicked: { borderWidth: 3 },
+  check: { position: 'absolute', top: 6, end: 6, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.25)' },
+  selectBar: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 4 },
+  shareButton: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
   viewerCount: { position: 'absolute', alignSelf: 'center', color: '#fff', fontSize: 14 },
   viewerInfo: { position: 'absolute', end: 12, width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.15)' },
   viewerInfoOn: { backgroundColor: 'rgba(255,255,255,0.3)' },

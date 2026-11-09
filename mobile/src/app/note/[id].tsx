@@ -22,7 +22,6 @@ import { priorityLabel } from '@shared/labels'
 import { useAction } from '@/lib/useAction'
 import { useColors } from '@/theme'
 import { t } from '@shared/i18n'
-import { DeleteButton } from '@/components/DeleteButton'
 
 export default function NoteDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -108,7 +107,7 @@ export default function NoteDetailScreen() {
           {remove.error && <Text style={{ color: c.danger }}>{remove.error.message}</Text>}
           <View style={s.actions}>
             <EditButtons onEdit={edit.edit} onTalk={edit.talk} />
-            <DeleteButton disabled={remove.isPending} onPress={confirmDelete} />
+            <Button title={t('common.delete')} variant="danger" disabled={remove.isPending} onPress={confirmDelete} />
           </View>
         </>
       )}

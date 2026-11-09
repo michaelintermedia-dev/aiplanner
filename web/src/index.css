@@ -3942,18 +3942,3 @@ html[dir='rtl'] :is(.calendar, .day-swipe).slide-from-prev {
   flex: 1;
   font-weight: 600;
 }
-
-/* Delete on an item's page: a round button with an X, next to Edit and the mic (2026-11-09; same as the app). */
-.icon-button.delete-button {
-  width: 44px;
-  height: 44px;
-  border: 1.5px solid var(--danger);
-  border-radius: 50%;
-  color: var(--danger);
-  background: var(--surface);
-  font-size: 1.35rem;
-}
-
-.icon-button.delete-button:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
-}

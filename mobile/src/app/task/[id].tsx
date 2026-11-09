@@ -20,7 +20,6 @@ import { useAction } from '@/lib/useAction'
 import { useColors } from '@/theme'
 import { t } from '@shared/i18n'
 import { priorityLabel, statusLabel } from '@shared/labels'
-import { DeleteButton } from '@/components/DeleteButton'
 
 export default function TaskDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -119,7 +118,7 @@ export default function TaskDetailScreen() {
               </>
             )}
             <EditButtons onEdit={edit.edit} onTalk={edit.talk} disabled={busy} />
-            <DeleteButton disabled={busy} onPress={confirmDelete} />
+            <Button title={t('common.delete')} variant="danger" disabled={busy} onPress={confirmDelete} />
           </View>
         </>
       )}

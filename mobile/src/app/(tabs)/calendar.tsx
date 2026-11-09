@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { CALENDAR_VIEWS, periodTitle, stepPeriod, visibleDays } from '@shared/calendar'
+import { periodTitle, stepPeriod, visibleDays } from '@shared/calendar'
 import { dateKey, formatDateKey, formatTime, todayKey } from '@shared/dates'
 import { eventPassed } from '@shared/feed'
 import type { CalendarItem, CalendarView } from '@shared/types'
@@ -38,7 +38,8 @@ export default function CalendarScreen() {
   const c = useColors()
   const { zone } = useAuth()
   const today = todayKey(zone.timeZone)
-  const [view, setView] = useState<CalendarView>('month')
+  // Month only (user's call, 2026-11-09): a single day is the Today screen.
+  const view = 'month' as CalendarView
   const [selected, setSelected] = useState(today)
   const days = visibleDays(view, selected)
 
@@ -71,18 +72,6 @@ export default function CalendarScreen() {
     <Screen>
       {/* The calendar itself (views, period, grid) on one frosted panel when there's a wallpaper. */}
       <View style={[styles.calendar, c.panel]}>
-      <View style={[styles.segmented, { borderColor: c.border }]}>
-        {CALENDAR_VIEWS.map((v) => (
-          <Pressable
-            key={v.view}
-            onPress={() => setView(v.view)}
-            style={[styles.segment, view === v.view && { backgroundColor: c.accent }]}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: view === v.view }}>
-            <Text style={{ color: view === v.view ? '#fff' : c.text, fontWeight: '600' }}>{v.label}</Text>
-          </Pressable>
-        ))}
-      </View>
 
       <View style={styles.header}>
         <Text style={[styles.title, { color: c.text }, c.pill]} numberOfLines={1}>
@@ -253,8 +242,6 @@ function DayCell({
 
 const styles = StyleSheet.create({
   calendar: { gap: 20 },
-  segmented: { flexDirection: 'row', borderWidth: 1, borderRadius: 10, overflow: 'hidden' },
-  segment: { flex: 1, alignItems: 'center', paddingVertical: 8 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   title: { flex: 1, fontSize: 22, fontWeight: '700' },
   todayButton: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4 },

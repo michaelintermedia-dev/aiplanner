@@ -7,7 +7,7 @@ import type { CalendarItem, CalendarView } from '@shared/types'
 import { useAuth } from '../auth/useAuth'
 import { AppointmentForm } from '../components/AppointmentForm'
 import { KindIcon } from '../components/KindIcon'
-import { CALENDAR_VIEWS, periodTitle, stepPeriod, visibleDays } from '@shared/calendar'
+import { periodTitle, stepPeriod, visibleDays } from '@shared/calendar'
 import { eventPassed } from '@shared/feed'
 import { dateKey, formatDateKey, formatTime, todayKey } from '@shared/dates'
 import { t } from '@shared/i18n'
@@ -19,7 +19,8 @@ export function CalendarPage() {
   useFirstDayOfWeek()
   const { zone } = useAuth()
   const today = todayKey(zone.timeZone)
-  const [view, setView] = useState<CalendarView>('week')
+  // Month only (user's call, 2026-11-09; same as the app): a single day is the Today page.
+  const view = 'month' as CalendarView
   const [anchor, setAnchor] = useState(today)
   const [addingOn, setAddingOn] = useState<string | null>(null)
 
@@ -48,13 +49,6 @@ export function CalendarPage() {
       <header className="page-header">
         <h1>{title}</h1>
         <div className="toolbar">
-          <div className="segmented">
-            {CALENDAR_VIEWS.map((v) => (
-              <button key={v.view} className={view === v.view ? 'active' : undefined} onClick={() => setView(v.view)}>
-                {v.label}
-              </button>
-            ))}
-          </div>
           <button onClick={() => move(-1)} aria-label={t('calendar.previous')}>
             <span className="flip-rtl">‹</span>
           </button>

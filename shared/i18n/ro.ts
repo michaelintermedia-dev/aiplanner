@@ -663,6 +663,8 @@ export const ro: Messages = {
   'today.dueDayEmpty': 'Nimic scadent în ziua asta.',
   'today.remindersDay': 'Mementouri',
   'media.share': 'Distribuie',
+  'date.dayAfterTomorrow': 'Poimâine',
+  'date.dayBeforeYesterday': 'Alaltăieri',
   'account.title': 'Cont',
   'account.signedInAs': 'Conectat ca {email}',
   'account.export': 'Descarcă datele mele',

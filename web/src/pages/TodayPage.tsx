@@ -1,6 +1,6 @@
 import { useNow } from '../lib/useNow'
 import { useQuery } from '@tanstack/react-query'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { todayApi } from '../api/endpoints'
 import { useAuth } from '../auth/useAuth'
@@ -9,7 +9,8 @@ import { AppointmentRow } from '../components/AppointmentRow'
 import { useIsPhone } from '../lib/useIsPhone'
 import { CaptureBar } from '../components/CaptureBar'
 import { TaskRow } from '../components/TaskRow'
-import { addDays, formatDateKey, formatDue, formatTime, todayKey } from '@shared/dates'
+import { addDays, formatDateKey, formatDue, formatTime, relativeDayLabel, todayKey } from '@shared/dates'
+import { onTabReselect } from '../lib/tabs'
 import { useSwipeNav } from '../lib/useSwipeNav'
 import { t } from '@shared/i18n'
 import type { Today } from '@shared/types'
@@ -34,6 +35,8 @@ export function TodayPage() {
   const [addingAppointment, setAddingAppointment] = useState(false)
   const { data, isPending, error } = useQuery({ queryKey: ['today', day], queryFn: () => todayApi.get(isToday ? undefined : day) })
   const move = (direction: 1 | -1) => setOffset((o) => o + direction)
+  // Back to today: click the Today tab again (the "Today" button here confused - 2026-11-10).
+  useEffect(() => onTabReselect('/today', () => setOffset(0)), [])
   const swipe = useSwipeNav(move)
 
   return (
@@ -42,7 +45,7 @@ export function TodayPage() {
         <div>
           {isToday && <p className="muted">{t('today.hello', { name: user?.displayName ?? '' })}</p>}
           {/* The weekday small above the date: one long line ("воскресенье, 8 ноября") wrapped (2026-11-08). */}
-          <p className={`today-weekday${isToday ? '' : ' other-day'}`}>{formatDateKey(day, zone.locale, { weekday: 'long' })}</p>
+          <p className={`today-weekday${isToday ? '' : ' other-day'}`}>{relativeDayLabel(offset, day, zone.locale)}</p>
           <h1 className={isToday ? undefined : 'other-day'}>
             {formatDateKey(day, zone.locale, { day: 'numeric', month: 'long' })}
             {isToday && <span className="clock">{formatTime(now.toISOString(), zone)}</span>}
@@ -52,7 +55,6 @@ export function TodayPage() {
           <button onClick={() => move(-1)} aria-label={t('calendar.previous')}>
             <span className="flip-rtl">‹</span>
           </button>
-          {!isToday && <button onClick={() => setOffset(0)}>{t('date.today')}</button>}
           <button onClick={() => move(1)} aria-label={t('calendar.next')}>
             <span className="flip-rtl">›</span>
           </button>

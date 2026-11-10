@@ -663,6 +663,8 @@ export const fr: Messages = {
   'today.dueDayEmpty': 'Rien à faire ce jour-là.',
   'today.remindersDay': 'Rappels',
   'media.share': 'Partager',
+  'date.dayAfterTomorrow': 'Après-demain',
+  'date.dayBeforeYesterday': 'Avant-hier',
   'account.title': 'Compte',
   'account.signedInAs': 'Connecté en tant que {email}',
   'account.export': 'Télécharger mes données',

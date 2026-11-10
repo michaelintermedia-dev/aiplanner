@@ -14,7 +14,7 @@ const check = (n, ok, d = '') => console.log(`${ok ? 'PASS' : 'FAIL'}  ${n}${d ?
     check('→: the next day', tomorrow !== today, `${today} -> ${tomorrow}`)
     const s2 = await sections()
     check('another day: no overdue / ongoing, no empty headings', !s2.some((s) => /^(Overdue|Ongoing|Due today)/.test(s)), s2.join(' | '))
-    check('...a "Today" button to come back', (await page.getByRole('main').getByRole('button', { name: 'Today', exact: true }).count()) === 1)
+    check('...says "Tomorrow" above the date, no Today button', (await page.locator('.today-weekday').textContent()) === 'Tomorrow' && (await page.getByRole('main').getByRole('button', { name: 'Today', exact: true }).count()) === 0)
     await shot('today-other-day')
     const swipe = (from, to) => page.evaluate(([a, b]) => {
       const el = document.querySelector('.day-swipe')
@@ -26,11 +26,11 @@ const check = (n, ok, d = '') => console.log(`${ok ? 'PASS' : 'FAIL'}  ${n}${d ?
     check('swipe left: one more day', (await h1()) !== tomorrow)
     await swipe(80, 350); await page.waitForTimeout(800)
     check('swipe right: back a day', (await h1()) === tomorrow)
-    await page.getByRole('main').getByRole('button', { name: 'Today', exact: true }).click(); await page.waitForTimeout(800)
-    check('Today button: back to today, button gone', (await h1()).startsWith(today.slice(0, 10)) && (await page.getByRole('main').getByRole('button', { name: 'Today', exact: true }).count()) === 0)
+    await page.locator('.tab-bar button', { hasText: 'Today' }).click(); await page.waitForTimeout(800)
+    check('the Today tab again: back to today', (await h1()) === today)
     await page.locator('.page-header button', { hasText: '‹' }).click(); await page.waitForTimeout(800)
     check('‹: yesterday', (await h1()) !== today)
-    await page.getByRole('main').getByRole('button', { name: 'Today', exact: true }).click(); await page.waitForTimeout(800)
+    await page.locator('.tab-bar button', { hasText: 'Today' }).click(); await page.waitForTimeout(800)
     // An event a few days ahead with a reminder: on its day, its reminder is listed.
     const { api } = require('./lib.cjs')
     const { call } = await api()
@@ -47,7 +47,7 @@ const check = (n, ok, d = '') => console.log(`${ok ? 'PASS' : 'FAIL'}  ${n}${d ?
     check("another day lists the reminders going off that day", found, (await sections()).join(' | '))
     await call('POST', '/items/delete', { items: [{ itemType: 'Appointment', id: ev.id }] })
     // A day far back with nothing on it: one line, no headings.
-    await page.getByRole('main').getByRole('button', { name: 'Today', exact: true }).click(); await page.waitForTimeout(500)
+    await page.locator('.tab-bar button', { hasText: 'Today' }).click(); await page.waitForTimeout(500)
     for (let i = 0; i < 40; i++) await page.keyboard.press('ArrowLeft')
     await page.waitForTimeout(1200)
     check('an empty day: "Nothing planned", no headings', (await sections()).length === 0 && /Nothing planned/.test(await page.locator('main').textContent()), (await sections()).join(' | '))

@@ -98,3 +98,17 @@ export function formatDue(utc: string, hasTime: boolean, zone: ZoneContext): str
 
 /** An event whose end time ("HH:mm") is not after its start ends the next day - say so. */
 export const endsNextDay = (start: string | null | undefined, end: string | null | undefined) => !!start && !!end && end <= start
+
+/**
+ * The Today screen's line above the date (user's call, 2026-11-10): Yesterday / Tomorrow and the day
+ * before / after that, else the weekday. `offset` = days from today.
+ */
+export function relativeDayLabel(offset: number, key: string, locale: string): string {
+  switch (offset) {
+    case -2: return t('date.dayBeforeYesterday')
+    case -1: return t('date.yesterday')
+    case 1: return t('date.tomorrow')
+    case 2: return t('date.dayAfterTomorrow')
+    default: return formatDateKey(key, locale, { weekday: 'long' })
+  }
+}

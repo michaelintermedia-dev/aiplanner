@@ -663,6 +663,8 @@ export const pt: Messages = {
   'today.dueDayEmpty': 'Nada vence neste dia.',
   'today.remindersDay': 'Lembretes',
   'media.share': 'Compartilhar',
+  'date.dayAfterTomorrow': 'Depois de amanhã',
+  'date.dayBeforeYesterday': 'Anteontem',
   'account.title': 'Conta',
   'account.signedInAs': 'Conectado como {email}',
   'account.export': 'Baixar meus dados',

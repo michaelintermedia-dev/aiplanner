@@ -667,6 +667,8 @@ export const en = {
   'today.dueDayEmpty': 'Nothing due this day.',
   'today.remindersDay': 'Reminders',
   'media.share': 'Share',
+  'date.dayAfterTomorrow': 'Day after tomorrow',
+  'date.dayBeforeYesterday': 'Day before yesterday',
   'account.title': 'Account',
   'account.signedInAs': 'Signed in as {email}',
   'account.export': 'Download my data',

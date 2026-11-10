@@ -663,6 +663,8 @@ export const it: Messages = {
   'today.dueDayEmpty': 'Niente in scadenza in questo giorno.',
   'today.remindersDay': 'Promemoria',
   'media.share': 'Condividi',
+  'date.dayAfterTomorrow': 'Dopodomani',
+  'date.dayBeforeYesterday': 'L\'altro ieri',
   'account.title': 'Account',
   'account.signedInAs': 'Accesso come {email}',
   'account.export': 'Scarica i miei dati',

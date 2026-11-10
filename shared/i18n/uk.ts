@@ -663,6 +663,8 @@ export const uk: Messages = {
   'today.dueDayEmpty': 'На цей день нічого немає.',
   'today.remindersDay': 'Нагадування',
   'media.share': 'Поділитися',
+  'date.dayAfterTomorrow': 'Післязавтра',
+  'date.dayBeforeYesterday': 'Позавчора',
   'account.title': 'Обліковий запис',
   'account.signedInAs': 'Ви ввійшли як {email}',
   'account.export': 'Завантажити мої дані',

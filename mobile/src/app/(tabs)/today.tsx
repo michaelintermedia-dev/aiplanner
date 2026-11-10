@@ -1,8 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useNow } from '@/lib/useNow'
-import { addDays, formatDateKey, formatDue, formatTime, todayKey } from '@shared/dates'
+import { addDays, formatDateKey, formatDue, formatTime, relativeDayLabel, todayKey } from '@shared/dates'
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { I18nManager, Pressable, StyleSheet, Text, View } from 'react-native'
 import { GestureDetector } from 'react-native-gesture-handler'
 import Animated from 'react-native-reanimated'
@@ -15,7 +15,7 @@ import { TaskRow } from '@/components/TaskRow'
 import { Row, Section } from '@/components/ui'
 import { useSwipeNav } from '@/lib/useSwipeNav'
 import { itemPath } from '@/lib/itemPath'
-import { router } from 'expo-router'
+import { router, useNavigation } from 'expo-router'
 import { useColors } from '@/theme'
 import { t } from '@shared/i18n'
 import type { Today } from '@shared/types'
@@ -41,6 +41,9 @@ export default function TodayScreen() {
   const isToday = offset === 0
   const { data, isPending, error } = useQuery({ queryKey: ['today', day], queryFn: () => todayApi.get(isToday ? undefined : day) })
   const move = (direction: 1 | -1) => setOffset((o) => o + direction)
+  // Back to today: tap the Today tab again (the "Today" button here confused - 2026-11-10).
+  const navigation = useNavigation()
+  useEffect(() => navigation.addListener('tabPress' as never, () => navigation.isFocused() && setOffset(0)), [navigation])
   const swipe = useSwipeNav(move)
 
   return (
@@ -49,7 +52,7 @@ export default function TodayScreen() {
         <View style={[{ flex: 1 }, c.block && { ...c.block, alignSelf: 'flex-start' }]}>
           {isToday && <Text style={{ color: c.muted }}>{t('today.hello', { name: user?.displayName ?? '' })}</Text>}
           {/* The weekday small above the date: one long line ("воскресенье, 8 ноября") wrapped (2026-11-08). */}
-          <Text style={[styles.weekday, { color: isToday ? c.muted : c.accent }]}>{formatDateKey(day, zone.locale, { weekday: 'long' })}</Text>
+          <Text style={[styles.weekday, { color: isToday ? c.muted : c.accent }]}>{relativeDayLabel(offset, day, zone.locale)}</Text>
           <Text style={[styles.date, { color: isToday ? c.text : c.accent }]}>{formatDateKey(day, zone.locale, { day: 'numeric', month: 'long' })}</Text>
           {isToday && <Text style={[styles.clock, { color: c.muted }]}>{formatTime(now.toISOString(), zone)}</Text>}
         </View>
@@ -57,11 +60,6 @@ export default function TodayScreen() {
           <Pressable onPress={() => move(-1)} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('calendar.previous')}>
             <Ionicons name="chevron-back" size={24} color={c.text} style={flip} />
           </Pressable>
-          {!isToday && (
-            <Pressable onPress={() => setOffset(0)} style={[styles.todayButton, { borderColor: c.border }]} accessibilityRole="button">
-              <Text style={{ color: c.text }}>{t('date.today')}</Text>
-            </Pressable>
-          )}
           <Pressable onPress={() => move(1)} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('calendar.next')}>
             <Ionicons name="chevron-forward" size={24} color={c.text} style={flip} />
           </Pressable>

@@ -663,6 +663,8 @@ export const ar: Messages = {
   'today.dueDayEmpty': 'لا شيء مستحق في هذا اليوم.',
   'today.remindersDay': 'التذكيرات',
   'media.share': 'مشاركة',
+  'date.dayAfterTomorrow': 'بعد غد',
+  'date.dayBeforeYesterday': 'أول أمس',
   'account.title': 'الحساب',
   'account.signedInAs': 'مسجّل الدخول باسم {email}',
   'account.export': 'تنزيل بياناتي',

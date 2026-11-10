@@ -28,7 +28,7 @@ import { EmailConfirmBanner } from './components/EmailConfirmBanner'
 import { SharePage } from './pages/SharePage'
 import { TaskDetailPage } from './pages/TaskDetailPage'
 import { TodayPage } from './pages/TodayPage'
-import { isTabPage, TABS } from './lib/tabs'
+import { isTabPage, TABS, tabReselected } from './lib/tabs'
 
 /** Each tab's icon, and the filled one while it's open (same as the app). */
 const TAB_ICONS: [ComponentType, ComponentType][] = [
@@ -107,7 +107,10 @@ function Layout() {
                   className={active ? 'active' : undefined}
                   aria-current={active ? 'page' : undefined}
                   onClick={() => {
-                    if (active) window.scrollTo({ top: 0, behavior: 'smooth' })
+                    if (active) {
+                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                      tabReselected(tab.path)
+                    }
                     else navigate(tab.path)
                   }}>
                   <span className="tab-icon">

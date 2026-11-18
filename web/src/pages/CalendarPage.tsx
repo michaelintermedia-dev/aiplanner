@@ -70,6 +70,12 @@ export function CalendarPage() {
       {error && <p className="error">{error.message}</p>}
 
       <div key={swipe.slide.n} className={`calendar ${view}${swipe.slide.n ? ` slide-from-${swipe.slide.from}` : ''}`} {...swipe.handlers}>
+        {/* The weekday names above the days (the app has them too - 2026-11-18); weeks start on the user's day. */}
+        {days.slice(0, 7).map((d) => (
+          <div key={`wd-${d}`} className="cal-weekday" aria-hidden="true">
+            {formatDateKey(d, zone.locale, { weekday: 'short' })}
+          </div>
+        ))}
         {days.map((day) => (
           <div
             key={day}

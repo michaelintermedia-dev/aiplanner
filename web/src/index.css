@@ -3991,3 +3991,18 @@ html[dir='rtl'] :is(.calendar, .day-swipe).slide-from-prev {
   color: var(--muted);
   text-decoration: line-through;
 }
+
+/* The weekday names row at the top of the month grid. */
+.calendar .cal-weekday {
+  background: var(--surface-2, var(--surface));
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 6px 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
